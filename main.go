@@ -30,9 +30,7 @@ type Config struct {
 type program struct {
 	exit    chan struct{}
 	service service.Service
-
 	*Config
-
 	cmd *exec.Cmd
 }
 
@@ -54,15 +52,26 @@ func (p *program) Start(s service.Service) error {
 	return nil
 }
 
+func (p *program) Restart(s service.Service) error {
+	logger.Info("Restarting nxlog")
+
+	p.Stop(s)
+	time.Sleep(3 * time.Second)
+	p.exit = make(chan struct{})
+	p.Start(s)
+
+	return nil
+}
+
 func (p *program) run() {
-	logger.Info("Starting ", p.DisplayName)
-	defer func() {
-		if service.Interactive() {
-			p.Stop(p.service)
-		} else {
-			p.service.Stop()
-		}
-	}()
+	logger.Info("Starting nxlog")
+	//	defer func() {
+	//		if service.Interactive() {
+	//			p.Stop(p.service)
+	//		} else {
+	//			p.service.Stop()
+	//		}
+	//	}()
 
 	if p.Stderr != "" {
 		f, err := os.OpenFile(p.Stderr, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0777)
@@ -83,23 +92,22 @@ func (p *program) run() {
 		p.cmd.Stdout = f
 	}
 
-	err := p.cmd.Run()
-	if err != nil {
-		logger.Warningf("Error running: %v", err)
-	}
+	p.cmd.Run()
+	//if err != nil {
+	//	logger.Warningf("Error running: %v", err)
+	//}
 
 	return
 }
 
 func (p *program) Stop(s service.Service) error {
-	close(p.exit)
 	logger.Info("Stopping ", p.DisplayName)
-	if p.cmd.ProcessState.Exited() == false {
-		p.cmd.Process.Kill()
-	}
-	if service.Interactive() {
-		os.Exit(0)
-	}
+	close(p.exit)
+	p.cmd.Process.Kill()
+
+	//if service.Interactive() {
+	//	os.Exit(0)
+	//}
 	return nil
 }
 
@@ -116,8 +124,8 @@ func getGxlogPath() (string, error) {
 func main() {
 	gxlogPath, _ := getGxlogPath()
 	conf, _ := globalconf.NewWithOptions(&globalconf.Options{
-	    Filename:  filepath.Join(gxlogPath, "gxlog.ini"),
-	    EnvPrefix: "GXLOG_",
+		Filename:  filepath.Join(gxlogPath, "gxlog.ini"),
+		EnvPrefix: "GXLOG_",
 	})
 	//conf, _ := globalconf.New("gxlog")
 
@@ -125,7 +133,7 @@ func main() {
 		svcFlag  = flag.String("service", "", "Control the system service.")
 		nxPath   = flag.String("nxpath", "", "Path to nxlog installation")
 		glServer = flag.String("glserver", "", "Graylog server IP")
-		glPort   = flag.String("glport", "", "Graylog server GELF port")
+		glPort   = flag.Int("glport", 12201, "Graylog server GELF port")
 	)
 	conf.ParseAll()
 
@@ -179,15 +187,17 @@ func main() {
 
 	go func() {
 		for {
-			nxc.FetchFromServer(*glServer)
-			needsRestart, _ := nxc.RenderToFile(filepath.Join(gxlogPath, "nxlog", "nxlog.conf"))
-			if (needsRestart) {
+			tmpConfig := nxc.FetchFromServer(*glServer)
+			if !nxc.Equals(tmpConfig) {
 				log.Printf("Config updated!")
+				nxc = tmpConfig
+				nxc.RenderToFile(filepath.Join(gxlogPath, "nxlog", "nxlog.conf"))
+				prg.Restart(s)
 			}
-			time.Sleep((10)*time.Second)
+			time.Sleep((10) * time.Second)
 		}
 	}()
-	
+
 	if len(*svcFlag) != 0 {
 		err := service.Control(s, *svcFlag)
 		if err != nil {

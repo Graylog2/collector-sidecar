@@ -2,15 +2,17 @@ package nxconfig
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
+	"reflect"
 	"strconv"
-	"strings"
 
 	"mariussturm/gxlog/api"
 )
 
 type NxConfig struct {
+	server      string
+	port        int
+	nxpath      string
 	Definitions []nxdefinition
 	Paths       []nxpath
 	Extensions  []nxextension
@@ -55,8 +57,11 @@ type nxmatch struct {
 	properties map[string]string
 }
 
-func NewNxConfig(server string, port string, nxPath string) *NxConfig {
+func NewNxConfig(glServer string, glPort int, nxPath string) *NxConfig {
 	nxc := &NxConfig{
+		server:      glServer,
+		port:        glPort,
+		nxpath:      nxPath,
 		Definitions: []nxdefinition{{name: "ROOT", value: nxPath}},
 		Paths: []nxpath{{name: "Moduledir", path: "%ROOT%\\modules"},
 			{name: "CacheDir", path: "%ROOT%\\data"},
@@ -65,8 +70,8 @@ func NewNxConfig(server string, port string, nxPath string) *NxConfig {
 			{name: "LogFile", path: "%ROOT%\\data\\nxlog.log"}},
 		Extensions: []nxextension{{name: "gelf", properties: map[string]string{"Module": "xm_gelf"}}},
 		Outputs: []nxoutput{{name: "gelf-udp", properties: map[string]string{"Module": "om_udp",
-			"Host":       server,
-			"Port":       port,
+			"Host":       glServer,
+			"Port":       strconv.Itoa(glPort),
 			"OutputType": "GELF"}}},
 	}
 	return nxc
@@ -187,23 +192,22 @@ func (nxc *NxConfig) Render() bytes.Buffer {
 	return result
 }
 
-func (nxc *NxConfig) RenderToFile(path string) (bool, error) {
-	oldconfig, err := ioutil.ReadFile(path)
-	newconfig := nxc.Render()
-
-	err = ioutil.WriteFile(path, newconfig.Bytes(), 0644)
-	if (strings.Compare(string(oldconfig), string(newconfig.Bytes())) == 0) {
-		fmt.Println("Config changed")
-		return true, err
-	}
-	return false, err
+func (nxc *NxConfig) RenderToFile(path string) error {
+	stringConfig := nxc.Render()
+	err := ioutil.WriteFile(path, stringConfig.Bytes(), 0644)
+	return err
 }
 
-func (nxc *NxConfig) FetchFromServer(server string) error {
-	config := api.RequestConfiguration(server)
-	for i, input := range config.Inputs {
-		nxc.AddInput(input.Name, input.Properties)
-		nxc.AddRoute("route-" + strconv.Itoa(i), map[string]string{"Path": input.Name + " => gelf-udp"})
+func (nxc *NxConfig) Equals(a *NxConfig) bool {
+	return reflect.DeepEqual(nxc, a)
+}
+
+func (nxc *NxConfig) FetchFromServer(server string) *NxConfig {
+	jsonConfig := api.RequestConfiguration(server)
+	nxConfig := NewNxConfig(nxc.server, nxc.port, nxc.nxpath)
+	for i, input := range jsonConfig.Inputs {
+		nxConfig.AddInput(input.Name, input.Properties)
+		nxConfig.AddRoute("route-"+strconv.Itoa(i), map[string]string{"Path": input.Name + " => gelf-udp"})
 	}
-	return nil
+	return nxConfig
 }
