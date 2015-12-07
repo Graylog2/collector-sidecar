@@ -23,7 +23,7 @@ get '/configuration' do
     config['inputs'] << {'name' => 'windows-eventlog', 'properties' => {'Module' => 'im_msvistalog'}}
   end
   if $inputs[1]
-    config['inputs'] << {'name' => 'file-log', 'properties' => {'Module' => 'im_file', 'File' => '/var/log/foo'}}
+    config['inputs'] << {'name' => 'file-log', 'properties' => {'Module' => 'im_file', 'File' => '"/var/log/foo"'}}
   end
   config.to_json
 end
