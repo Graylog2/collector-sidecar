@@ -25,7 +25,7 @@ func GetRootPath() (string, error) {
 func AppendIfDir(dir string, appendix string) (string, error) {
 	file, err := os.Open(dir)
 	if err != nil {
-		logrus.Error("Can not access path %s", dir)
+		logrus.Error("Can not access ", dir)
 		return dir, err
 	}
 

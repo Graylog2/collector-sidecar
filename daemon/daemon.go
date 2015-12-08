@@ -32,7 +32,7 @@ type Program struct {
 	cmd *exec.Cmd
 }
 
-func NewConfig(glServer string, glPort int, nxPath string) *Config {
+func NewConfig(nxPath string) *Config {
 	rootDir, err := util.GetRootPath()
 	if err != nil {
 		logrus.Error("Can not access root directory")
@@ -100,8 +100,6 @@ func (p *Program) Stop(s service.Service) error {
 }
 
 func (p *Program) Restart(s service.Service) error {
-	logrus.Info("Restarting nxlog")
-
 	for p.checkConfigurtionFile() != nil {
 		logrus.Info("Configuration file for nxlog is not valid, waiting for update...")
 		time.Sleep(30 * time.Second)
@@ -145,6 +143,8 @@ func (p *Program) checkConfigurtionFile() error {
 	gxlogPath, _ := util.GetGxlogPath()
 	cmd := exec.Command(p.Exec, "-v", "-c", filepath.Join(gxlogPath, "nxlog", "nxlog.conf"))
 	err := cmd.Run()
-	logrus.Infof("Config validation: %v", err)
+	if err != nil {
+		logrus.Error("Error during configuration validation: ", err)
+	}
 	return err
 }

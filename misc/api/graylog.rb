@@ -1,5 +1,6 @@
 require 'sinatra'
 require 'json'
+require 'socket'
 
 $inputs = Array.new(2, false)
 
@@ -18,12 +19,22 @@ end
 
 get '/configuration' do
   content_type :json
-  config = {'inputs' => []}
+  config = {'inputs' => [], 'outputs' => []}
   if $inputs[0]
-    config['inputs'] << {'name' => 'windows-eventlog', 'properties' => {'Module' => 'im_msvistalog'}}
+    config['inputs'] << {'type' => 'nxlog', 'name' => 'windows-eventlog', 'forward_to' => 'gelf-udp', 'properties' => {'Module' => 'im_msvistalog'}}
   end
   if $inputs[1]
-    config['inputs'] << {'name' => 'file-log', 'properties' => {'Module' => 'im_file', 'File' => '"/var/log/foo"'}}
+    config['inputs'] << {'type' => 'nxlog', 'name' => 'file-log', 'properties' => {'Module' => 'im_file', 'File' => '"/var/log/foo"'}}
   end
+  config['outputs'] << {'type' => 'nxlog', 'name' => 'gelf-udp', 'properties' => {'Module' => 'om_udp', 'Host' => "#{public_address_ipv4}", 'Port' => '12201', 'OutputType' => 'GELF'}}
   config.to_json
+end
+
+put '/system/collectors/:id' do
+  puts "Collector update: #{request.body.read}"
+end
+
+def public_address_ipv4
+  addr = Socket.ip_address_list.detect{|intf| intf.ipv4? and !intf.ipv4_loopback? and !intf.ipv4_multicast?}
+  return addr.ip_address
 end
