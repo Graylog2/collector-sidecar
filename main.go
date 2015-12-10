@@ -9,9 +9,9 @@ import (
 	"github.com/kardianos/service"
 	"github.com/rakyll/globalconf"
 
-	"github.com/Graylog2/nxlog-sidecar/backends/nxlog"
-	"github.com/Graylog2/nxlog-sidecar/daemon"
 	"github.com/Graylog2/nxlog-sidecar/util"
+	"github.com/Graylog2/nxlog-sidecar/context"
+	"github.com/Graylog2/nxlog-sidecar/services"
 )
 
 func main() {
@@ -30,11 +30,12 @@ func main() {
 		svcFlag   = flag.String("service", "", "Control the system service.")
 		nxlogPath = flag.String("nxlog-path", "", "Path to nxlog installation")
 		serverUrl = flag.String("server-url", "", "Graylog server URL")
+		nodeId 	  = flag.String("node-id", "graylog-collector", "Collector identification string")
 	)
 	conf.ParseAll()
 
 	// initilaize application context
-	context := daemon.Context(*serverUrl, *nxlogPath)
+	context := context.NewContext(*serverUrl, *nxlogPath, *nodeId)
 
 	// setup system service
 	serviceConfig := &service.Config{
@@ -60,7 +61,7 @@ func main() {
 	}
 
 	// start main loop
-	nxlog.StartPeriodicals(context)
+	services.StartPeriodicals(context)
 	err = s.Run()
 	if err != nil {
 		logrus.Fatal(err)

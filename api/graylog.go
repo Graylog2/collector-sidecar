@@ -6,6 +6,9 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"gopkg.in/jmcvetta/napping.v3"
+
+	"github.com/Graylog2/nxlog-sidecar/util"
+	"github.com/Graylog2/nxlog-sidecar/context"
 )
 
 type ResponseCollectorConfiguration struct {
@@ -31,8 +34,8 @@ type RegistrationRequest struct {
 	NodeDetails map[string]string `json:"node_details"`
 }
 
-func RequestConfiguration(server string) (ResponseCollectorConfiguration, error) {
-	host := strings.Replace(server, "12900", "8000", 1)
+func RequestConfiguration(context *context.Ctx) (ResponseCollectorConfiguration, error) {
+	host := strings.Replace(context.ServerUrl.String(), "12900", "8000", 1)
 	s := napping.Session{}
 	url := host + "/configuration"
 	res := ResponseCollectorConfiguration{}
@@ -45,20 +48,20 @@ func RequestConfiguration(server string) (ResponseCollectorConfiguration, error)
 	return res, err
 }
 
-func UpdateRegistration(server string) {
+func UpdateRegistration(context *context.Ctx) {
 	s := napping.Session{}
 
 	registration := RegistrationRequest{}
-	registration.NodeId = "sidecar"
+	registration.NodeId = context.NodeId
 	registration.NodeDetails = make(map[string]string)
-	registration.NodeDetails["operating_system"] = "Linux"
+	registration.NodeDetails["operating_system"] = util.GetSystemName()
 
 	h := http.Header{}
-	h.Add("User-Agent", "Graylog Collector v0.0.1")
-	h.Add("X-Graylog-Collector-Version", "0.0.1")
+	h.Add("User-Agent", "Graylog Collector v" + util.CollectorVersion)
+	h.Add("X-Graylog-Collector-Version", util.CollectorVersion)
 
 	r := napping.Request{
-		Url:     server + "/system/collectors/3511945d-d16c-4000-9072-98ee1a77abb9",
+		Url:     context.ServerUrl.String() + "/system/collectors/3511945d-d16c-4000-9072-98ee1a77abb9",
 		Method:  "PUT",
 		Payload: registration,
 		Header:  &h,

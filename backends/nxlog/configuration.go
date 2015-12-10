@@ -4,15 +4,10 @@ import (
 	"bytes"
 	"io/ioutil"
 	"reflect"
-	"strconv"
-
-	"github.com/Sirupsen/logrus"
-
-	"github.com/Graylog2/nxlog-sidecar/api"
 )
 
 type NxConfig struct {
-	nxpath      string
+	Nxpath      string
 	Definitions []nxdefinition
 	Paths       []nxpath
 	Extensions  []nxextension
@@ -59,7 +54,7 @@ type nxmatch struct {
 
 func NewNxConfig(nxPath string) *NxConfig {
 	nxc := &NxConfig{
-		nxpath:      nxPath,
+		Nxpath:      nxPath,
 		Definitions: []nxdefinition{{name: "ROOT", value: nxPath}},
 		Paths: []nxpath{{name: "Moduledir", path: "%ROOT%\\modules"},
 			{name: "CacheDir", path: "%ROOT%\\data"},
@@ -67,10 +62,6 @@ func NewNxConfig(nxPath string) *NxConfig {
 			{name: "SpoolDir", path: "%ROOT%\\data"},
 			{name: "LogFile", path: "%ROOT%\\data\\nxlog.log"}},
 		Extensions: []nxextension{{name: "gelf", properties: map[string]string{"Module": "xm_gelf"}}},
-//		Outputs: []nxoutput{{name: "gelf-udp", properties: map[string]string{"Module": "om_udp",
-//			"Host":       glServer,
-//			"Port":       strconv.Itoa(glPort),
-//			"OutputType": "GELF"}}},
 	}
 	return nxc
 }
@@ -198,26 +189,4 @@ func (nxc *NxConfig) RenderToFile(path string) error {
 
 func (nxc *NxConfig) Equals(a *NxConfig) bool {
 	return reflect.DeepEqual(nxc, a)
-}
-
-func (nxc *NxConfig) FetchFromServer(server string) (*NxConfig, error) {
-	jsonConfig, err := api.RequestConfiguration(server)
-	if err != nil {
-		logrus.Error("Can't fetch configuration from Graylog API: ", err)
-		return nil, err
-	}
-
-	nxConfig := NewNxConfig(nxc.nxpath)
-	for _, output := range jsonConfig.Outputs {
-		if output.Type == "nxlog" {
-			nxConfig.AddOutput(output.Name, output.Properties)
-		}
-	}
-	for i, input := range jsonConfig.Inputs {
-		if input.Type == "nxlog" {
-			nxConfig.AddInput(input.Name, input.Properties)
-			nxConfig.AddRoute("route-" + strconv.Itoa(i), map[string]string{"Path": input.Name + " => " + input.ForwardTo})
-		}
-	}
-	return nxConfig, err
 }

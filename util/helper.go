@@ -6,6 +6,8 @@ import (
 
 	"github.com/kardianos/osext"
 	"github.com/Sirupsen/logrus"
+	"runtime"
+	"unicode"
 )
 
 func GetGxlogPath() (string, error) {
@@ -20,6 +22,13 @@ func GetGxlogPath() (string, error) {
 
 func GetRootPath() (string, error) {
 	return filepath.Abs("/")
+}
+
+func GetSystemName() (string) {
+	os := runtime.GOOS
+	osRunes := []rune(os)
+	osRunes[0] = unicode.ToUpper(osRunes[0])
+	return string(osRunes)
 }
 
 func AppendIfDir(dir string, appendix string) (string, error) {
