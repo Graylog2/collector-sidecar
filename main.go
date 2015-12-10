@@ -9,9 +9,9 @@ import (
 	"github.com/kardianos/service"
 	"github.com/rakyll/globalconf"
 
-	"mariussturm/gxlog/backends/nxlog"
-	"mariussturm/gxlog/daemon"
-	"mariussturm/gxlog/util"
+	"github.com/Graylog2/nxlog-sidecar/backends/nxlog"
+	"github.com/Graylog2/nxlog-sidecar/daemon"
+	"github.com/Graylog2/nxlog-sidecar/util"
 )
 
 func main() {

@@ -5,9 +5,10 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"mariussturm/gxlog/daemon"
-	"mariussturm/gxlog/util"
-	"mariussturm/gxlog/api"
+
+	"github.com/Graylog2/nxlog-sidecar/daemon"
+	"github.com/Graylog2/nxlog-sidecar/util"
+	"github.com/Graylog2/nxlog-sidecar/api"
 )
 
 func StartPeriodicals(context *daemon.Ctx) {

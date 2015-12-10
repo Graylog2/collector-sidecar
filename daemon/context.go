@@ -6,7 +6,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/kardianos/service"
 
-	"mariussturm/gxlog/backends/nxlog/configuration"
+	"github.com/Graylog2/nxlog-sidecar/backends/nxlog/configuration"
 )
 
 type Ctx struct {

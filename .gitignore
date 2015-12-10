@@ -23,10 +23,13 @@ _testmain.go
 *.test
 *.prof
 
+/.idea/
+/vendor/
+/nxlog/
+/log/
+
 gxlog
 gxlog.exe
+gxlog-build
 misc/nxmock/nxlog
 misc/nxmock/nxlog.exe
-
-/log/
-/nxlog/

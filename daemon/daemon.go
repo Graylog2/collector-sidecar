@@ -6,12 +6,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"time"
+	"runtime"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/kardianos/service"
 
-	"mariussturm/gxlog/util"
-	"runtime"
+	"github.com/Graylog2/nxlog-sidecar/util"
 )
 
 type Config struct {

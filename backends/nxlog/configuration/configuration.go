@@ -8,7 +8,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 
-	"mariussturm/gxlog/api"
+	"github.com/Graylog2/nxlog-sidecar/api"
 )
 
 type NxConfig struct {
