@@ -9,3 +9,6 @@ import:
 - package: github.com/rakyll/globalconf
 - package: github.com/kardianos/osext
 - package: github.com/rakyll/goini
+- package: code.google.com/p/go-uuid
+  subpackages:
+  - /uuid

@@ -24,6 +24,7 @@ _testmain.go
 *.prof
 
 /.idea/
+/config/
 /vendor/
 /nxlog/
 /log/

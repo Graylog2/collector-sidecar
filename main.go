@@ -31,11 +31,12 @@ func main() {
 		nxlogPath = flag.String("nxlog-path", "", "Path to nxlog installation")
 		serverUrl = flag.String("server-url", "", "Graylog server URL")
 		nodeId 	  = flag.String("node-id", "graylog-collector", "Collector identification string")
+		collectorId = flag.String("collector-id", "", "UUID used for collector registration")
 	)
 	conf.ParseAll()
 
 	// initilaize application context
-	context := context.NewContext(*serverUrl, *nxlogPath, *nodeId)
+	context := context.NewContext(*serverUrl, *nxlogPath, *nodeId, *collectorId)
 
 	// setup system service
 	serviceConfig := &service.Config{
