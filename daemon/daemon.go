@@ -5,8 +5,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"time"
 	"runtime"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/kardianos/service"
@@ -49,7 +49,7 @@ func NewConfig(nxPath string) *Config {
 		execPath, err = util.AppendIfDir(nxPath, "nxlog")
 	}
 	if err != nil {
-			logrus.Error("Failed to auto-complete nxlog path. Please provide full path to binary")
+		logrus.Error("Failed to auto-complete nxlog path. Please provide full path to binary")
 	}
 
 	c := &Config{

@@ -7,8 +7,8 @@ import (
 	"github.com/Sirupsen/logrus"
 	"gopkg.in/jmcvetta/napping.v3"
 
-	"github.com/Graylog2/nxlog-sidecar/util"
 	"github.com/Graylog2/nxlog-sidecar/context"
+	"github.com/Graylog2/nxlog-sidecar/util"
 )
 
 type ResponseCollectorConfiguration struct {
@@ -57,7 +57,7 @@ func UpdateRegistration(context *context.Ctx) {
 	registration.NodeDetails["operating_system"] = util.GetSystemName()
 
 	h := http.Header{}
-	h.Add("User-Agent", "Graylog Collector v" + util.CollectorVersion)
+	h.Add("User-Agent", "Graylog Collector v"+util.CollectorVersion)
 	h.Add("X-Graylog-Collector-Version", util.CollectorVersion)
 
 	r := napping.Request{

@@ -4,13 +4,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/kardianos/osext"
-	"github.com/Sirupsen/logrus"
-	"runtime"
-	"unicode"
-	"strings"
 	"github.com/Graylog2/nxlog-sidecar/vendor/code.google.com/p/go-uuid/uuid"
+	"github.com/Sirupsen/logrus"
+	"github.com/kardianos/osext"
 	"io/ioutil"
+	"runtime"
+	"strings"
+	"unicode"
 )
 
 func GetGxlogPath() (string, error) {
@@ -27,14 +27,14 @@ func GetRootPath() (string, error) {
 	return filepath.Abs("/")
 }
 
-func GetSystemName() (string) {
+func GetSystemName() string {
 	os := runtime.GOOS
 	osRunes := []rune(os)
 	osRunes[0] = unicode.ToUpper(osRunes[0])
 	return string(osRunes)
 }
 
-func GetCollectorId(collectorId string) (string) {
+func GetCollectorId(collectorId string) string {
 	id := collectorId
 	if strings.HasPrefix(collectorId, "file:") {
 		filePath := strings.SplitAfter(collectorId, ":")[1]
@@ -44,9 +44,9 @@ func GetCollectorId(collectorId string) (string) {
 			ioutil.WriteFile(filePath, []byte(RandomUuid()), 0644)
 		}
 		file, err := ioutil.ReadFile(filePath)
-    	if err != nil {
-        	logrus.Fatal("Can not read collector-id file: ", err)
-    	}
+		if err != nil {
+			logrus.Fatal("Can not read collector-id file: ", err)
+		}
 		id = string(file)
 	}
 
@@ -57,7 +57,7 @@ func GetCollectorId(collectorId string) (string) {
 	return id
 }
 
-func RandomUuid() (string) {
+func RandomUuid() string {
 	return uuid.NewRandom().String()
 }
 
@@ -68,7 +68,7 @@ func AppendIfDir(dir string, appendix string) (string, error) {
 		return dir, err
 	}
 
-	fileInfo, err := file.Stat();
+	fileInfo, err := file.Stat()
 	switch {
 	case err != nil:
 		return "", err

@@ -7,10 +7,10 @@ import (
 
 	"github.com/Sirupsen/logrus"
 
-	"github.com/Graylog2/nxlog-sidecar/util"
+	"github.com/Graylog2/nxlog-sidecar/api"
 	"github.com/Graylog2/nxlog-sidecar/backends/nxlog"
 	"github.com/Graylog2/nxlog-sidecar/context"
-	"github.com/Graylog2/nxlog-sidecar/api"
+	"github.com/Graylog2/nxlog-sidecar/util"
 )
 
 func StartPeriodicals(context *context.Ctx) {
@@ -19,7 +19,7 @@ func StartPeriodicals(context *context.Ctx) {
 }
 
 // fetch configuration periodically
-func fetchConfiguration (context *context.Ctx) {
+func fetchConfiguration(context *context.Ctx) {
 	nxc := context.NxConfig
 	gxlogPath, _ := util.GetGxlogPath()
 
@@ -45,7 +45,7 @@ func fetchConfiguration (context *context.Ctx) {
 	}()
 }
 
-func updateCollectorRegistration (context *context.Ctx) {
+func updateCollectorRegistration(context *context.Ctx) {
 	go func() {
 		for {
 			time.Sleep(10 * time.Second)
@@ -72,7 +72,7 @@ func fetchConfigurationFromServer(context *context.Ctx) (*nxlog.NxConfig, error)
 	for i, input := range jsonConfig.Inputs {
 		if input.Type == "nxlog" {
 			nxConfig.AddInput(input.Name, input.Properties)
-			nxConfig.AddRoute("route-" + strconv.Itoa(i), map[string]string{"Path": input.Name + " => " + input.ForwardTo})
+			nxConfig.AddRoute("route-"+strconv.Itoa(i), map[string]string{"Path": input.Name + " => " + input.ForwardTo})
 		}
 	}
 	return nxConfig, err
