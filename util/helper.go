@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Graylog2/nxlog-sidecar/vendor/code.google.com/p/go-uuid/uuid"
+	"code.google.com/p/go-uuid/uuid"
 	"github.com/Sirupsen/logrus"
 	"github.com/kardianos/osext"
 	"io/ioutil"
