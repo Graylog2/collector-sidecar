@@ -2,7 +2,6 @@ package api
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/Sirupsen/logrus"
 	"gopkg.in/jmcvetta/napping.v3"
@@ -35,9 +34,8 @@ type RegistrationRequest struct {
 }
 
 func RequestConfiguration(context *context.Ctx) (ResponseCollectorConfiguration, error) {
-	host := strings.Replace(context.ServerUrl.String(), "12900", "8000", 1)
 	s := napping.Session{}
-	url := host + "/configuration"
+	url := context.ServerUrl.String() + "/plugins/org.graylog.plugins.collector/" + context.CollectorId
 	res := ResponseCollectorConfiguration{}
 
 	resp, err := s.Get(url, nil, &res, nil)
@@ -57,7 +55,7 @@ func UpdateRegistration(context *context.Ctx) {
 	registration.NodeDetails["operating_system"] = util.GetSystemName()
 
 	h := http.Header{}
-	h.Add("User-Agent", "Graylog Collector v"+util.CollectorVersion)
+	h.Add("User-Agent", "Graylog Collector v" + util.CollectorVersion)
 	h.Add("X-Graylog-Collector-Version", util.CollectorVersion)
 
 	r := napping.Request{

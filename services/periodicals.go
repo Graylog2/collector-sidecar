@@ -37,6 +37,7 @@ func fetchConfiguration(context *context.Ctx) {
 				nxc = tmpConfig
 				nxc.RenderToFile(filepath.Join(gxlogPath, "nxlog", "nxlog.conf"))
 				err = context.Program.Restart(context.Service)
+
 				if err != nil {
 					logrus.Error("Failed to restart nxlog %v", err)
 				}
