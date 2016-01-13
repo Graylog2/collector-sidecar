@@ -95,7 +95,9 @@ func (p *Program) Start(s service.Service) error {
 func (p *Program) Stop(s service.Service) error {
 	logrus.Info("Stopping nxlog")
 	close(p.exit)
-	p.cmd.Process.Kill()
+	if (p.cmd.Process != nil) {
+		p.cmd.Process.Kill()
+	}
 	return nil
 }
 
@@ -135,7 +137,14 @@ func (p *Program) run() {
 		p.cmd.Stdout = f
 	}
 
+
+	startTime := time.Now()
 	p.cmd.Run()
+
+	if (time.Since(startTime) < 3 * time.Second) {
+		logrus.Error("nxlog exits immediately, this should not happen! Please check your collector configuration!")
+	}
+
 	return
 }
 
