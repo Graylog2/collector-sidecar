@@ -79,7 +79,8 @@ func (p *Program) BindToService(s service.Service) {
 }
 
 func (p *Program) Start(s service.Service) error {
-	fullExec, err := exec.LookPath(p.Exec)
+	absPath, _ := filepath.Abs(p.Exec)
+	fullExec, err := exec.LookPath(absPath)
 	if err != nil {
 		return fmt.Errorf("Failed to find nxlog executable %q: %v", p.Exec, err)
 	}
