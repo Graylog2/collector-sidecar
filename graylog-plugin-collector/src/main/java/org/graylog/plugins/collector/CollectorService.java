@@ -7,12 +7,14 @@ import org.graylog.plugins.collector.rest.models.CollectorConfiguration;
 import org.graylog.plugins.collector.rest.models.CollectorInput;
 import org.graylog.plugins.collector.rest.models.CollectorOutput;
 import org.graylog2.bindings.providers.MongoJackObjectMapperProvider;
+import org.graylog2.collectors.CollectorServiceImpl;
 import org.graylog2.database.MongoConnection;
 import org.mongojack.DBQuery;
 import org.mongojack.JacksonDBCollection;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import java.util.ArrayList;
 import java.util.List;
 
 @Singleton
@@ -20,15 +22,28 @@ public class CollectorService {
     private static final String COLLECTION_NAME = "collector_configurations";
 
     private final JacksonDBCollection<CollectorConfiguration, ObjectId> dbCollection;
+    private final CollectorServiceImpl serverCollectorService;
 
     @Inject
     public CollectorService(MongoConnection mongoConnection,
-                            MongoJackObjectMapperProvider mapper) {
+                            MongoJackObjectMapperProvider mapper,
+                            CollectorServiceImpl serverCollectorService) {
+        this.serverCollectorService = serverCollectorService;
         dbCollection = JacksonDBCollection.wrap(
                 mongoConnection.getDatabase().getCollection(COLLECTION_NAME),
                 CollectorConfiguration.class,
                 ObjectId.class,
                 mapper.get());
+    }
+
+    public CollectorConfiguration createIfRegistered(String collectorId) {
+        if (serverCollectorService.findById(collectorId) != null) {
+            CollectorConfiguration newConfiguration = CollectorConfiguration.create(collectorId,
+                    new ArrayList<CollectorInput>(), new ArrayList<CollectorOutput>());
+            save(newConfiguration);
+            return newConfiguration;
+        }
+        return null;
     }
 
     public CollectorConfiguration findById(String collectorId) {

@@ -82,7 +82,11 @@ public class CollectorConfigurationResource extends RestResource implements Plug
     public CollectorConfiguration getConfiguration(@ApiParam(name = "collectorId",
             required = true) @PathParam("collectorId") String collectorId) throws NotFoundException {
 
-        return collectorService.findById(collectorId);
+        CollectorConfiguration collectorConfiguration = collectorService.findById(collectorId);
+        if (collectorConfiguration == null) {
+            collectorConfiguration = collectorService.createIfRegistered(collectorId);
+        }
+        return collectorConfiguration;
     }
 
     @DELETE
