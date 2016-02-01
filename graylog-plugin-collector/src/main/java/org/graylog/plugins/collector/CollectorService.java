@@ -105,13 +105,17 @@ public class CollectorService {
 
     public CollectorConfiguration withInputFromRequest(String collectorId, CollectorInput input) {
         CollectorConfiguration collectorConfiguration = dbCollection.findOne(DBQuery.is("collector_id", collectorId));
-        collectorConfiguration.inputs().add(input);
+        if (collectorConfiguration != null) {
+            collectorConfiguration.inputs().add(input);
+        }
         return collectorConfiguration;
     }
 
     public CollectorConfiguration withOutputFromRequest(String collectorId, CollectorOutput output) {
         CollectorConfiguration collectorConfiguration = dbCollection.findOne(DBQuery.is("collector_id", collectorId));
-        collectorConfiguration.outputs().add(output);
+        if (collectorConfiguration != null) {
+            collectorConfiguration.outputs().add(output);
+        }
         return collectorConfiguration;
     }
 }
