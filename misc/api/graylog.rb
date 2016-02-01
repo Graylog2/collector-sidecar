@@ -4,6 +4,14 @@ require 'socket'
 
 $inputs = Array.new(2, false)
 
+before do
+  if request.request_method == 'OPTIONS'
+    response.headers["Access-Control-Allow-Origin"] = "*"
+
+    halt 200
+  end
+end
+
 get '/' do
   erb '<head><style>a.btn { font: bold 11px Arial; text-decoration: none; background-color: #EEEEEE; color: #333333; padding: 2px 6px 2px 6px; border-top: 1px solid #CCCCCC; border-right: 1px solid #333333; border-bottom: 1px solid #333333; border-left: 1px solid #CCCCCC; }</style></head>
         <h2>Graylog Collector Inputs</h2><br>
@@ -32,6 +40,10 @@ end
 
 put '/system/collectors/:id' do
   puts "Collector update: #{request.body.read}"
+end
+
+post '/:id/inputs' do
+  puts "Create input: #{request.body.read}"
 end
 
 def public_address_ipv4
