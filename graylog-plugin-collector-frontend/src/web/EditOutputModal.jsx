@@ -2,12 +2,13 @@ import React from 'react';
 import { Input } from 'react-bootstrap';
 
 import BootstrapModalForm from 'components/bootstrap/BootstrapModalForm';
+import { KeyValueTable } from 'components/common';
 
 const EditOutputModal = React.createClass({
     propTypes: {
         id: React.PropTypes.string,
         name: React.PropTypes.string,
-        properties: React.PropTypes.string,
+        properties: React.PropTypes.object,
         create: React.PropTypes.bool,
         saveOutput: React.PropTypes.func.isRequired,
         validOutputName: React.PropTypes.func.isRequired,
@@ -54,8 +55,8 @@ const EditOutputModal = React.createClass({
         this.setState({name: event.target.value})
     },
 
-    _changeProperties(event) {
-        this.setState({properties: event.target.value})
+    _changeProperties(properties) {
+        this.setState({properties: properties})
     },
 
     render() {
@@ -85,12 +86,7 @@ const EditOutputModal = React.createClass({
                                help={this.state.error ? this.state.error_message : null}
                                autoFocus
                                required/>
-                        <Input type="textarea"
-                               id={this._getId('output-properties')}
-                               label="Properties"
-                               defaultValue={this.state.properties}
-                               onChange={this._changeProperties}
-                               required/>
+                        <KeyValueTable pairs={this.state.properties} onChange={this._changeProperties} editable />
                     </fieldset>
                 </BootstrapModalForm>
             </span>

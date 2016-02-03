@@ -1,14 +1,12 @@
 const PluginWebpackConfig = require('graylog-web-plugin').PluginWebpackConfig;
+const loadBuildConfig = require('graylog-web-plugin').loadBuildConfig;
 const path = require('path');
-const ROOT_PATH = path.resolve(__dirname);
-const BUILD_PATH = path.resolve(ROOT_PATH, 'build');
-const ENTRY_PATH = path.resolve(ROOT_PATH, 'src/web/index.jsx');
 
-module.exports = new PluginWebpackConfig('org.graylog.plugins.collector.CollectorFrontend', {
-  root_path: ROOT_PATH,
-  build_path: BUILD_PATH,
-  entry_path: ENTRY_PATH 
-},
-{
-  // Here goes your additional webpack configuration.
+module.exports = new PluginWebpackConfig('org.graylog.plugins.collector.CollectorFrontend', loadBuildConfig(path.resolve(__dirname, './build.config')), {
+  loaders: [
+    { test: /\.ts$/, loader: 'babel-loader!ts-loader', exclude: /node_modules|\.node_cache/ },
+  ],
+  resolve: {
+    extensions: ['.ts'],
+  }
 });

@@ -42,17 +42,12 @@ const CollectorsStore = Reflux.createStore({
         CollectorsActions.getConfiguration.promise(promise);
     },
 
-    saveInput(input, collectorid, callback) {
-        var failCallback = (error) => {
-            UserNotification.error("Saving input \"" + input.name + "\" failed with status: " + error.message,
-                "Could not save Input");
-        };
-
+    saveInput(input, collectorid) {
         const requestInput = {
             type: 'nxlog',
             name: input.name,
             forward_to: input.forwardto,
-            properties: JSON.parse(input.properties),
+            properties: input.properties,
         };
 
         let url =  URLUtils.qualifyUrl(this.sourceUrl + '/' + collectorid + '/inputs');
@@ -64,54 +59,78 @@ const CollectorsStore = Reflux.createStore({
             url += '/' + input.id;
             method = 'PUT';
         }
-        fetch(method, url, requestInput).then(() => {
-            callback();
-            var action = input.id === "" ? "created" : "updated";
-            var message = "Collector input \"" + input.name + "\" successfully " + action;
-            UserNotification.success(message);
-        }).catch(failCallback);
+
+        const promise = fetch(method, url, requestInput);
+        promise
+            .then(() => {
+                    var action = input.id === "" ? "created" : "updated";
+                    var message = "Collector input \"" + input.name + "\" successfully " + action;
+                    UserNotification.success(message);
+                }, (error) => {
+                    UserNotification.error("Saving input \"" + input.name + "\" failed with status: " + error.message,
+                        "Could not save Input");
+                });
+
+        CollectorsActions.saveInput.promise(promise);
     },
 
-    deleteInput(input, collectorid, callback) {
-        var failCallback = (error) => {
-            UserNotification.error("Deleting Input \"" + input.name + "\" failed with status: " + error.message,
-                "Could not delete Input");
-        };
-
+    deleteInput(input, collectorid) {
         let url =  URLUtils.qualifyUrl(this.sourceUrl + '/' + collectorid + '/inputs');
-        fetch('DELETE', url + "/" + input.input_id).then(() => {
-            callback();
-            UserNotification.success("Input \"" + input.name + "\" successfully deleted");
-        }).catch(failCallback);
+        const promise = fetch('DELETE', url + "/" + input.input_id);
+        promise
+            .then(() => {
+                UserNotification.success("Input \"" + input.name + "\" successfully deleted");
+            }, (error) => {
+                UserNotification.error("Deleting Input \"" + input.name + "\" failed with status: " + error.message,
+                    "Could not delete Input");
+            });
+
+        CollectorsActions.deleteInput.promise(promise);
     },
 
-    saveOutput(output, collectorid, callback) {
-        var failCallback = (error) => {
-            UserNotification.error("Saving output \"" + output.name + "\" failed with status: " + error.message,
-                "Could not save Output");
-        };
-
+    saveOutput(output, collectorid) {
         const requestOutput = {
             type: 'nxlog',
             name: output.name,
-            properties: JSON.parse(output.properties),
+            properties: output.properties,
         };
 
         let url =  URLUtils.qualifyUrl(this.sourceUrl + '/' + collectorid + '/outputs');
         let method;
-        if (input.id === "") {
+        if (output.id === "") {
             method = 'POST';
         } else {
             requestOutput.output_id = output.id;
             url += '/' + output.id;
             method = 'PUT';
         }
-        fetch(method, url, requestOutput).then(() => {
-            callback();
-            var action = output.id === "" ? "created" : "updated";
-            var message = "Collector output \"" + output.name + "\" successfully " + action;
-            UserNotification.success(message);
-        }).catch(failCallback);
+
+        const promise = fetch(method, url, requestOutput);
+        promise
+            .then(() => {
+                var action = output.id === "" ? "created" : "updated";
+                var message = "Collector output \"" + output.name + "\" successfully " + action;
+                UserNotification.success(message);
+            }, (error) => {
+                UserNotification.error("Saving output \"" + output.name + "\" failed with status: " + error.message,
+                    "Could not save Output");
+            });
+
+        CollectorsActions.saveOutput.promise(promise);
+    },
+
+    deleteOutput(output, collectorid) {
+        let url =  URLUtils.qualifyUrl(this.sourceUrl + '/' + collectorid + '/outputs');
+        const promise = fetch('DELETE', url + "/" + output.output_id);
+        promise
+            .then(() => {
+                UserNotification.success("Output \"" + output.name + "\" successfully deleted");
+            }, (error) => {
+                UserNotification.error("Deleting Output \"" + output.name + "\" failed with status: " + error.message,
+                    "Could not delete Output");
+            });
+
+        CollectorsActions.deleteOutput.promise(promise);
     },
 
 });

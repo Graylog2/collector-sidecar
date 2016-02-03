@@ -7,6 +7,7 @@ import {DataTable, PageHeader, Spinner} from 'components/common';
 import EditInputModal from './EditInputModal';
 import EditOutputModal from './EditOutputModal';
 import DeleteInputButton from './DeleteInputButton'
+import DeleteOutputButton from './DeleteOutputButton'
 import CollectorsActions from './CollectorsActions';
 import CollectorsStore from './CollectorsStore';
 
@@ -19,11 +20,15 @@ const CollectorConfiguration = React.createClass({
     },
 
     componentDidMount() {
-        CollectorsActions.getConfiguration.triggerPromise(this.props.params.id).then(this._setConfiguration);
+        this._reloadConfiguration();
     },
 
     _setConfiguration(configuration) {
         this.setState({inputs: configuration.inputs, outputs: configuration.outputs});
+    },
+
+    _reloadConfiguration(){
+        CollectorsActions.getConfiguration.triggerPromise(this.props.params.id).then(this._setConfiguration);
     },
 
     _headerCellFormatter(header) {
@@ -51,10 +56,10 @@ const CollectorConfiguration = React.createClass({
             <tr key={input.input_id}>
                 <td>{input.name}</td>
                 <td>{input.type}</td>
+                <td>{input.properties.Module || "none"}</td>
                 <td>{input.forward_to}</td>
-                <td>{JSON.stringify(input.properties)}</td>
                 <td style={{width: 130}}><EditInputModal id={input.input_id} name={input.name}
-                                                        properties={JSON.stringify(input.properties)} create={false}
+                                                        properties={input.properties} create={false}
                                                         reload={this.loadData} savePattern={this._saveInput}
                                                         validPatternName={this.validInputName}/>
                                         <DeleteInputButton input={input} onClick={this._deleteInput}/></td>
@@ -67,31 +72,45 @@ const CollectorConfiguration = React.createClass({
             <tr key={output.input_id}>
                 <td>{output.name}</td>
                 <td>{output.type}</td>
-                <td>{JSON.stringify(output.properties)}</td>
-                <td style={{width: 70}}><EditInputModal id={output.output_id} name={output.name}
-                                                        properties={JSON.stringify(output.properties)} create={false}
+                <td>{output.properties.Module || "none"}</td>
+                <td style={{width: 140}}><EditOutputModal id={output.output_id} name={output.name}
+                                                        properties={output.properties} create={false}
                                                         reload={this.loadData} savePattern={this._saveOutput}
-                                                        validPatternName={this.validInputName}/></td>
+                                                        validPatternName={this.validInputName}/>
+                                        <DeleteOutputButton output={output} onClick={this._deleteOutput}/></td>
             </tr>
         );
     },
 
     _saveInput(input, callback) {
-        CollectorsStore.saveInput(input, this.props.params.id, () => {
-            callback();
-        });
+        CollectorsActions.saveInput.triggerPromise(input, this.props.params.id)
+            .then(() => {
+                callback();
+                this._reloadConfiguration();
+
+            });
     },
 
-    _deleteInput(input, callback) {
-        CollectorsStore.deleteInput(input, this.props.params.id, () => {
-            callback();
-        });
+    _deleteInput(input) {
+        CollectorsActions.deleteInput.triggerPromise(input, this.props.params.id)
+            .then(() => {
+                this._reloadConfiguration();
+            });
     },
 
     _saveOutput(output, callback) {
-        CollectorsStore.saveOutput(output, this.props.params.id, () => {
-            callback();
-        });
+        CollectorsActions.saveOutput.triggerPromise(output, this.props.params.id)
+            .then(() => {
+                callback();
+                this._reloadConfiguration();
+            });
+    },
+
+    _deleteOutput(output) {
+        CollectorsActions.deleteOutput.triggerPromise(output, this.props.params.id)
+            .then(() => {
+                this._reloadConfiguration();
+            });
     },
 
     _validOutputName(name) {
@@ -109,8 +128,8 @@ const CollectorConfiguration = React.createClass({
     },
 
     render() {
-        const inputHeaders = ['Input', 'Type', 'Forward To', 'Properties', 'Actions'];
-        const outputHeaders = ['Output', 'Type', 'Properties', 'Actions'];
+        const inputHeaders = ['Input', 'Type', 'Module', 'Forward To', 'Actions'];
+        const outputHeaders = ['Output', 'Type', 'Module', 'Actions'];
         const filterKeys = [];
 
         if (this._isLoading()) {
@@ -128,7 +147,7 @@ const CollectorConfiguration = React.createClass({
                 <Row className="content">
                     <Col md={12}>
                         <div className="pull-right">
-                            <EditOutputModal id={""} name={""} properties={""} create
+                            <EditOutputModal id={""} name={""} properties={{}} create
                                             reload={this.loadData}
                                             saveOutput={this._saveOutput}
                                             validOutputName={this._validOutputName}/>
@@ -147,7 +166,7 @@ const CollectorConfiguration = React.createClass({
                 <Row className="content">
                     <Col md={12}>
                         <div className="pull-right">
-                            <EditInputModal id={""} name={""} properties={""} create
+                            <EditInputModal id={""} name={""} properties={{}} outputs={this.state.outputs} create
                                             reload={this.loadData}
                                             saveInput={this._saveInput}
                                             validInputName={this._validInputName}/>

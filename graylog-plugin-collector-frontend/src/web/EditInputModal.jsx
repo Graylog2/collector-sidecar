@@ -5,7 +5,6 @@ import BootstrapModalForm from 'components/bootstrap/BootstrapModalForm';
 import { KeyValueTable, Select } from 'components/common';
 
 import CollectorsActions from './CollectorsActions';
-//import KVTable from './KVTable'
 
 const EditInputModal = React.createClass({
     propTypes: {
