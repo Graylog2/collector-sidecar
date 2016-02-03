@@ -2,14 +2,18 @@ import React from 'react';
 import { Input } from 'react-bootstrap';
 
 import BootstrapModalForm from 'components/bootstrap/BootstrapModalForm';
-import PropertiesTable from 'PropertiesTable';
+import { KeyValueTable, Select } from 'components/common';
+
+import CollectorsActions from './CollectorsActions';
+//import KVTable from './KVTable'
 
 const EditInputModal = React.createClass({
     propTypes: {
         id: React.PropTypes.string,
         name: React.PropTypes.string,
         forwardto: React.PropTypes.string,
-        properties: React.PropTypes.string,
+        properties: React.PropTypes.object,
+        outputs: React.PropTypes.array,
         create: React.PropTypes.bool,
         saveInput: React.PropTypes.func.isRequired,
         validInputName: React.PropTypes.func.isRequired,
@@ -41,7 +45,7 @@ const EditInputModal = React.createClass({
     _saved() {
         this._closeModal();
         if (this.props.create) {
-            this.setState({name: '', forwardto: '', properties: ''});
+            this.setState({name: '', forwardto: '', properties: {}});
         }
     },
 
@@ -54,15 +58,30 @@ const EditInputModal = React.createClass({
     },
 
     _changeName(event) {
-        this.setState({name: event.target.value})
+        this.setState({name: event.target.value});
     },
 
-    _changeForwardto(event) {
-        this.setState({forwardto: event.target.value})
+    _changeForwardtoDropdown(selectedValue) {
+        this.setState({forwardto: selectedValue});
     },
 
-    _changeProperties(event) {
-        this.setState({properties: event.target.value})
+    _changeProperties(properties) {
+        this.setState({properties: properties});
+    },
+
+    _formatDropdownOptions() {
+        let options = [];
+
+        if (this.props.outputs) {
+            var outputCount = this.props.outputs.length;
+            for (var i = 0; i < outputCount; i++) {
+                options.push({value: this.props.outputs[i].name, label: this.props.outputs[i].name});
+            }
+        } else {
+            options.push({value: 'none', label: 'No outputs available', disable: true});
+        }
+
+        return options;
     },
 
     render() {
@@ -72,6 +91,7 @@ const EditInputModal = React.createClass({
         } else {
             triggerButtonContent = <span>Edit</span>;
         }
+
         return (
         <span>
                 <button onClick={this.openModal}
@@ -92,26 +112,15 @@ const EditInputModal = React.createClass({
                                help={this.state.error ? this.state.error_message : null}
                                autoFocus
                                required/>
-                        <Input type="text"
-                               id={this._getId('input-forward-to')}
-                               label="Forward To"
-                               defaultValue={this.state.forwardto}
-                               onChange={this._changeForwardto}
-                               bsStyle={this.state.error ? 'error' : null}
-                               help={this.state.error ? this.state.error_message : null}
-                               required/>
-                        <Input type="textarea"
-                               id={this._getId('input-properties')}
-                               label="Properties"
-                               defaultValue={this.state.properties}
-                               onChange={this._changeProperties}
-                               required/>
-                        <PropertiesTable properties={[]}/>
+                        <Select placeholder="Forward to output"
+                                options={this._formatDropdownOptions()} matchProp="label"
+                                onValueChange={this._changeForwardtoDropdown} value={''} />
+                        <KeyValueTable pairs={this.state.properties} onChange={this._changeProperties} editable />
                     </fieldset>
                 </BootstrapModalForm>
             </span>
     );
-  },
+    },
 });
 
 export default EditInputModal;
