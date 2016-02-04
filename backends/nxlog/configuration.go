@@ -54,8 +54,8 @@ type nxmatch struct {
 }
 
 type nxsnippet struct {
-	name	string
-	value 	string
+	name  string
+	value string
 }
 
 func NewNxConfig(nxPath string) *NxConfig {

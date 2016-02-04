@@ -11,8 +11,8 @@ import (
 )
 
 type ResponseCollectorConfiguration struct {
-	Inputs  []ResponseCollectorInput  `json:"inputs"`
-	Outputs []ResponseCollectorOutput `json:"outputs"`
+	Inputs   []ResponseCollectorInput   `json:"inputs"`
+	Outputs  []ResponseCollectorOutput  `json:"outputs"`
 	Snippets []ResponseCollectorSnippet `json:"snippets"`
 }
 
@@ -30,9 +30,9 @@ type ResponseCollectorOutput struct {
 }
 
 type ResponseCollectorSnippet struct {
-	Type       string            `json:"type"`
-	Name       string            `json:"name"`
-	Value 	   string 	     `json:"snippet"`
+	Type  string `json:"type"`
+	Name  string `json:"name"`
+	Value string `json:"snippet"`
 }
 
 type RegistrationRequest struct {
@@ -62,7 +62,7 @@ func UpdateRegistration(context *context.Ctx) {
 	registration.NodeDetails["operating_system"] = util.GetSystemName()
 
 	h := http.Header{}
-	h.Add("User-Agent", "Graylog Collector v" + util.CollectorVersion)
+	h.Add("User-Agent", "Graylog Collector v"+util.CollectorVersion)
 	h.Add("X-Graylog-Collector-Version", util.CollectorVersion)
 
 	r := napping.Request{
