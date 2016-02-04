@@ -22,17 +22,23 @@ public abstract class CollectorConfiguration {
     @Nullable
     public abstract List<CollectorOutput> outputs();
 
+    @JsonProperty
+    @Nullable
+    public abstract List<CollectorConfigurationSnippet> snippets();
+
     @JsonCreator
     public static CollectorConfiguration create(@JsonProperty("_id") String objectId,
                                                 @JsonProperty("collector_id") String collectorId,
                                                 @JsonProperty("inputs") @Nullable List<CollectorInput> inputs,
-                                                @JsonProperty("outputs") @Nullable List<CollectorOutput> outputs) {
-        return new AutoValue_CollectorConfiguration(collectorId, inputs, outputs);
+                                                @JsonProperty("outputs") @Nullable List<CollectorOutput> outputs,
+                                                @JsonProperty("snippets") @Nullable List<CollectorConfigurationSnippet> snippets) {
+        return new AutoValue_CollectorConfiguration(collectorId, inputs, outputs, snippets);
     }
 
     public static CollectorConfiguration create(@NotEmpty String collectorId,
                                                 @NotEmpty List<CollectorInput> inputs,
-                                                @NotEmpty List<CollectorOutput> outputs) {
-        return create(null, collectorId, inputs, outputs);
+                                                @NotEmpty List<CollectorOutput> outputs,
+                                                @NotEmpty List<CollectorConfigurationSnippet> snippets) {
+        return create(null, collectorId, inputs, outputs, snippets);
     }
 }

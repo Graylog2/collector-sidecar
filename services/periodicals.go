@@ -76,5 +76,10 @@ func fetchConfigurationFromServer(context *context.Ctx) (*nxlog.NxConfig, error)
 			nxConfig.AddRoute("route-"+strconv.Itoa(i), map[string]string{"Path": input.Name + " => " + input.ForwardTo})
 		}
 	}
+	for _, snippet := range jsonConfig.Snippets {
+		if snippet.Type == "nxlog" {
+			nxConfig.AddSnippet(snippet.Name, snippet.Value)
+		}
+	}
 	return nxConfig, err
 }

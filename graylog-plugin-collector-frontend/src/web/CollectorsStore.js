@@ -133,6 +133,51 @@ const CollectorsStore = Reflux.createStore({
         CollectorsActions.deleteOutput.promise(promise);
     },
 
+    saveSnippet(snippet, collectorid) {
+        const requestSnippet = {
+            type: 'nxlog',
+            name: snippet.name,
+            snippet: snippet.snippet,
+        };
+
+        let url =  URLUtils.qualifyUrl(this.sourceUrl + '/' + collectorid + '/snippets');
+        let method;
+        if (snippet.id === "") {
+            method = 'POST';
+        } else {
+            requestSnippet.snippet_id = snippet.id;
+            url += '/' + snippet.id;
+            method = 'PUT';
+        }
+
+        const promise = fetch(method, url, requestSnippet);
+        promise
+            .then(() => {
+                var action = snippet.id === "" ? "created" : "updated";
+                var message = "Collector snippet \"" + snippet.name + "\" successfully " + action;
+                UserNotification.success(message);
+            }, (error) => {
+                UserNotification.error("Saving snippet \"" + snippet.name + "\" failed with status: " + error.message,
+                    "Could not save Snippet");
+            });
+
+        CollectorsActions.saveSnippet.promise(promise);
+    },
+
+    deleteSnippet(snippet, collectorid) {
+        let url =  URLUtils.qualifyUrl(this.sourceUrl + '/' + collectorid + '/snippets');
+        const promise = fetch('DELETE', url + "/" + snippet.snippet_id);
+        promise
+            .then(() => {
+                UserNotification.success("Snippet \"" + snippet.name + "\" successfully deleted");
+            }, (error) => {
+                UserNotification.error("Deleting Snippet \"" + snippet.name + "\" failed with status: " + error.message,
+                    "Could not delete Snippet");
+            });
+
+        CollectorsActions.deleteSnippet.promise(promise);
+    },
+
 });
 
 export default CollectorsStore;

@@ -15,6 +15,7 @@ type NxConfig struct {
 	Outputs     []nxoutput
 	Routes      []nxroute
 	Matches     []nxmatch
+	Snippets    []nxsnippet
 }
 
 type nxdefinition struct {
@@ -52,6 +53,11 @@ type nxmatch struct {
 	properties map[string]string
 }
 
+type nxsnippet struct {
+	name	string
+	value 	string
+}
+
 func NewNxConfig(nxPath string) *NxConfig {
 	nxc := &NxConfig{
 		Nxpath:      nxPath,
@@ -84,6 +90,16 @@ func (nxc *NxConfig) AddOutput(outputName string, outputProperties map[string]st
 func (nxc *NxConfig) AddRoute(routeName string, routeProperties map[string]string) {
 	route := &nxroute{name: routeName, properties: routeProperties}
 	nxc.Routes = append(nxc.Routes, *route)
+}
+
+func (nxc *NxConfig) AddMatch(matchName string, matchProperties map[string]string) {
+	match := &nxmatch{name: matchName, properties: matchProperties}
+	nxc.Matches = append(nxc.Matches, *match)
+}
+
+func (nxc *NxConfig) AddSnippet(snippetName string, snippetValue string) {
+	snippet := &nxsnippet{name: snippetName, value: snippetValue}
+	nxc.Snippets = append(nxc.Snippets, *snippet)
 }
 
 func (nxc *NxConfig) definitionsToString() string {
@@ -169,6 +185,15 @@ func (nxc *NxConfig) matchesToString() string {
 	return result.String()
 }
 
+func (nxc *NxConfig) snippetsToString() string {
+	var result bytes.Buffer
+	for _, snippet := range nxc.Snippets {
+		result.WriteString(snippet.value)
+	}
+	result.WriteString("\n")
+	return result.String()
+}
+
 func (nxc *NxConfig) Render() bytes.Buffer {
 	var result bytes.Buffer
 	result.WriteString(nxc.definitionsToString())
@@ -178,6 +203,7 @@ func (nxc *NxConfig) Render() bytes.Buffer {
 	result.WriteString(nxc.outputsToString())
 	result.WriteString(nxc.routesToString())
 	result.WriteString(nxc.matchesToString())
+	result.WriteString(nxc.snippetsToString())
 	return result
 }
 

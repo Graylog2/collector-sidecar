@@ -7,10 +7,12 @@ import com.google.common.primitives.Ints;
 import com.wordnik.swagger.annotations.*;
 import org.graylog.plugins.collector.CollectorService;
 import org.graylog.plugins.collector.rest.models.CollectorConfiguration;
+import org.graylog.plugins.collector.rest.models.CollectorConfigurationSnippet;
 import org.graylog.plugins.collector.rest.models.CollectorInput;
 import org.graylog.plugins.collector.rest.models.CollectorOutput;
 import org.graylog.plugins.collector.rest.responses.CollectorInputListResponse;
 import org.graylog.plugins.collector.rest.responses.CollectorOutputListResponse;
+import org.graylog.plugins.collector.rest.responses.CollectorSnippetListResponse;
 import org.graylog2.collectors.Collector;
 import org.graylog2.collectors.CollectorServiceImpl;
 import org.graylog2.collectors.Collectors;
@@ -82,11 +84,7 @@ public class CollectorConfigurationResource extends RestResource implements Plug
     public CollectorConfiguration getConfiguration(@ApiParam(name = "collectorId",
             required = true) @PathParam("collectorId") String collectorId) throws NotFoundException {
 
-        CollectorConfiguration collectorConfiguration = collectorService.findById(collectorId);
-        if (collectorConfiguration == null) {
-            collectorConfiguration = collectorService.createIfRegistered(collectorId);
-        }
-        return collectorConfiguration;
+        return collectorService.findById(collectorId);
     }
 
     @DELETE
@@ -190,6 +188,50 @@ public class CollectorConfigurationResource extends RestResource implements Plug
     }
 
     @GET
+    @Path("/{collectorId}/snippets")
+    @Produces(MediaType.APPLICATION_JSON)
+    @ApiOperation(value = "List collector configuration snippets")
+    @ApiResponses(value = {
+            @ApiResponse(code = 404, message = "Collector not found."),
+            @ApiResponse(code = 400, message = "Invalid ObjectId.")
+    })
+    public CollectorSnippetListResponse getSnippets(@ApiParam(name = "collectorId",
+            required = true) @PathParam("collectorId") String collectorId) throws NotFoundException {
+        final List<CollectorConfigurationSnippet> collectorSnippets = collectorService.loadAllSnippets(collectorId);
+        return CollectorSnippetListResponse.create(collectorSnippets.size(), collectorSnippets);
+    }
+
+    @POST
+    @Path("/{collectorId}/snippets")
+    @ApiOperation(value = "Create a collector configuration snippet",
+            notes = "This is a stateless method which inserts a collector configuration snippet")
+    @ApiResponses(value = {
+            @ApiResponse(code = 400, message = "The supplied request is not valid.")
+    })
+    public Response createSnippet(@ApiParam(name = "collectorId", required = true)
+                                @PathParam("collectorId") @NotEmpty String collectorId,
+                                @ApiParam(name = "JSON body", required = true)
+                                @Valid @NotNull CollectorConfigurationSnippet request) {
+        final CollectorConfiguration collectorConfiguration = collectorService.withSnippetFromRequest(collectorId, request);
+        collectorService.save(collectorConfiguration);
+
+        return Response.accepted().build();
+    }
+
+    @DELETE
+    @Path("/{collectorId}/snippets/{snippetId}")
+    @ApiOperation(value = "Delete a collector configuration snippet")
+    @ApiResponses(value = {
+            @ApiResponse(code = 404, message = "Collector or Snippet not found."),
+            @ApiResponse(code = 400, message = "Invalid ObjectId.")
+    })
+    public void deleteSnippet(@ApiParam(name = "collectorId", required = true)
+                            @PathParam("collectorId") String collectorId,
+                            @PathParam("snippetId") String snippetId) throws NotFoundException {
+        collectorService.deleteSnippet(collectorId, snippetId);
+    }
+
+    @GET
     @Path("/configuration/{collectorId}/new")
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(value = "Create new collector configuration")
@@ -213,6 +255,7 @@ public class CollectorConfigurationResource extends RestResource implements Plug
 
         List<CollectorInput> collectorInputs = new ArrayList<>();
         List<CollectorOutput> collectorOutputs = new ArrayList<>();
+        List<CollectorConfigurationSnippet> collectorConfigurationSnippets = new ArrayList<>();
 
         HashMap<String, Object> inputProperties = new HashMap<>();
         inputProperties.put("Module", "im_msvistalog");
@@ -225,7 +268,8 @@ public class CollectorConfigurationResource extends RestResource implements Plug
         outputProperties.put("OutputType", "GELF");
         collectorOutputs.add(CollectorOutput.create("nxlog", "gelf-udp", outputProperties));
 
-        CollectorConfiguration newConfiguration = CollectorConfiguration.create(collectorId, collectorInputs, collectorOutputs);
+        CollectorConfiguration newConfiguration = CollectorConfiguration.create(collectorId, collectorInputs,
+                collectorOutputs, collectorConfigurationSnippets);
         collectorService.save(newConfiguration);
 
         return newConfiguration;

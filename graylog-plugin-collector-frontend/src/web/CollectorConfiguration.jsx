@@ -6,8 +6,10 @@ import {DataTable, PageHeader, Spinner} from 'components/common';
 
 import EditInputModal from './EditInputModal';
 import EditOutputModal from './EditOutputModal';
+import EditSnippetModal from './EditSnippetModal';
 import DeleteInputButton from './DeleteInputButton'
 import DeleteOutputButton from './DeleteOutputButton'
+import DeleteSnippetButton from './DeleteSnippetButton'
 import CollectorsActions from './CollectorsActions';
 import CollectorsStore from './CollectorsStore';
 
@@ -16,6 +18,7 @@ const CollectorConfiguration = React.createClass({
         return {
             inputs: undefined,
             outputs: undefined,
+            snippets: undefined,
         };
     },
 
@@ -23,12 +26,12 @@ const CollectorConfiguration = React.createClass({
         this._reloadConfiguration();
     },
 
-    _setConfiguration(configuration) {
-        this.setState({inputs: configuration.inputs, outputs: configuration.outputs});
-    },
-
     _reloadConfiguration(){
         CollectorsActions.getConfiguration.triggerPromise(this.props.params.id).then(this._setConfiguration);
+    },
+
+    _setConfiguration(configuration) {
+        this.setState({inputs: configuration.inputs, outputs: configuration.outputs, snippets: configuration.snippets});
     },
 
     _headerCellFormatter(header) {
@@ -60,8 +63,8 @@ const CollectorConfiguration = React.createClass({
                 <td>{input.forward_to}</td>
                 <td style={{width: 130}}><EditInputModal id={input.input_id} name={input.name}
                                                         properties={input.properties} create={false}
-                                                        reload={this.loadData} savePattern={this._saveInput}
-                                                        validPatternName={this.validInputName}/>
+                                                        reload={this._reloadConfiguration} saveInput={this._saveInput}
+                                                        validInputName={this._validInputName}/>
                                         <DeleteInputButton input={input} onClick={this._deleteInput}/></td>
             </tr>
         );
@@ -75,9 +78,22 @@ const CollectorConfiguration = React.createClass({
                 <td>{output.properties.Module || "none"}</td>
                 <td style={{width: 140}}><EditOutputModal id={output.output_id} name={output.name}
                                                         properties={output.properties} create={false}
-                                                        reload={this.loadData} savePattern={this._saveOutput}
-                                                        validPatternName={this.validInputName}/>
+                                                        reload={this._reloadConfiguration} saveOutput={this._saveOutput}
+                                                        validOutputName={this._validOutputName}/>
                                         <DeleteOutputButton output={output} onClick={this._deleteOutput}/></td>
+            </tr>
+        );
+    },
+
+    _snippetFormatter(snippet) {
+        return (
+            <tr key={snippet.snippet_id}>
+                <td>{snippet.name}</td>
+                <td>{snippet.type}</td>
+                <td style={{width: 150}}><EditSnippetModal id={snippet.snippet_id} name={snippet.name} snippet={snippet.snippet}
+                                                           create={false} reload={this._reloadConfiguration}
+                                                           saveSnippet={this._saveSnippet} validSnippetName={this._validSnippetName}/>
+                    <DeleteSnippetButton snippet={snippet} onClick={this._deleteSnippet}/></td>
             </tr>
         );
     },
@@ -113,14 +129,34 @@ const CollectorConfiguration = React.createClass({
             });
     },
 
-    _validOutputName(name) {
-        // Check if outputs already contain an output with the given name.
-        return !this.state.outputs.some((output) => output.name === name);
+    _saveSnippet(snippet, callback) {
+        CollectorsActions.saveSnippet.triggerPromise(snippet, this.props.params.id)
+            .then(() => {
+                callback();
+                this._reloadConfiguration();
+            });
+    },
+
+    _deleteSnippet(snippet) {
+        CollectorsActions.deleteSnippet.triggerPromise(snippet, this.props.params.id)
+            .then(() => {
+                this._reloadConfiguration();
+            });
     },
 
     _validInputName(name) {
         // Check if inputs already contain an input with the given name.
         return !this.state.inputs.some((input) => input.name === name);
+    },
+
+    _validOutputName(name) {
+        // Check if outputs already contain an output with the given name.
+        return !this.state.outputs.some((output) => output.name === name);
+    },
+
+    _validSnippetName(name) {
+        // Check if snippets already contain an snippet with the given name.
+        return !this.state.snippets.some((snippet) => snippet.name === name);
     },
 
     _isLoading() {
@@ -130,6 +166,7 @@ const CollectorConfiguration = React.createClass({
     render() {
         const inputHeaders = ['Input', 'Type', 'Module', 'Forward To', 'Actions'];
         const outputHeaders = ['Output', 'Type', 'Module', 'Actions'];
+        const snippetHeaders = ['Name', 'Type', 'Actions'];
         const filterKeys = [];
 
         if (this._isLoading()) {
@@ -146,9 +183,10 @@ const CollectorConfiguration = React.createClass({
                 </PageHeader>
                 <Row className="content">
                     <Col md={12}>
+                        <h2>Outputs</h2>
                         <div className="pull-right">
                             <EditOutputModal id={""} name={""} properties={{}} create
-                                            reload={this.loadData}
+                                            reload={this._reloadConfiguration}
                                             saveOutput={this._saveOutput}
                                             validOutputName={this._validOutputName}/>
                         </div>
@@ -159,15 +197,16 @@ const CollectorConfiguration = React.createClass({
                                    sortByKey={"type"}
                                    rows={this.state.outputs}
                                    dataRowFormatter={this._outputFormatter}
-                                   filterLabel="Filter patterns"
+                                   filterLabel="Filter outputs"
                                    filterKeys={filterKeys}/>
                     </Col>
                 </Row>
                 <Row className="content">
                     <Col md={12}>
+                        <h2>Inputs</h2>
                         <div className="pull-right">
                             <EditInputModal id={""} name={""} properties={{}} outputs={this.state.outputs} create
-                                            reload={this.loadData}
+                                            reload={this._reloadConfiguration}
                                             saveInput={this._saveInput}
                                             validInputName={this._validInputName}/>
                         </div>
@@ -178,10 +217,31 @@ const CollectorConfiguration = React.createClass({
                                    sortByKey={"type"}
                                    rows={this.state.inputs}
                                    dataRowFormatter={this._inputFormatter}
-                                   filterLabel="Filter patterns"
+                                   filterLabel="Filter inputs"
                                    filterKeys={filterKeys}/>
                     </Col>
                 </Row>
+                <Row className="content">
+                    <Col md={12}>
+                        <h2>Configuration Snippets</h2>
+                        <div className="pull-right">
+                            <EditSnippetModal id={""} name={""} create
+                                            reload={this._reloadConfiguration}
+                                            saveSnippet={this._saveSnippet}
+                                            validSnippetName={this._validSnippetName}/>
+                        </div>
+                        <DataTable id="collector-snippets-list"
+                                   className="table-striped table-hover"
+                                   headers={snippetHeaders}
+                                   headerCellFormatter={this._headerCellFormatter}
+                                   sortByKey={"type"}
+                                   rows={this.state.snippets}
+                                   dataRowFormatter={this._snippetFormatter}
+                                   filterLabel="Filter snippets"
+                                   filterKeys={filterKeys}/>
+                    </Col>
+                </Row>
+
             </div>
         )
     },
