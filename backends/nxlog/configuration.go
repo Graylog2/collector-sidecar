@@ -189,8 +189,8 @@ func (nxc *NxConfig) snippetsToString() string {
 	var result bytes.Buffer
 	for _, snippet := range nxc.Snippets {
 		result.WriteString(snippet.value)
+		result.WriteString("\n")
 	}
-	result.WriteString("\n")
 	return result.String()
 }
 
