@@ -13,7 +13,7 @@ import (
 	"unicode"
 )
 
-func GetGxlogPath() (string, error) {
+func GetSidecarPath() (string, error) {
 	fullexecpath, err := osext.Executable()
 	if err != nil {
 		return "", err

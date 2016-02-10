@@ -32,37 +32,38 @@ type Program struct {
 	cmd *exec.Cmd
 }
 
-func NewConfig(nxPath string) *Config {
+func NewConfig(collectorPath string) *Config {
 	rootDir, err := util.GetRootPath()
 	if err != nil {
 		logrus.Error("Can not access root directory")
 	}
-	gxlogPath, err := util.GetGxlogPath()
+	sidecarPath, err := util.GetSidecarPath()
 	if err != nil {
-		logrus.Error("Can not access application path")
+		logrus.Error("Can not access filepath to sidecar")
 	}
 
-	execPath := nxPath
+	execPath := collectorPath
 	if runtime.GOOS == "windows" {
-		execPath, err = util.AppendIfDir(nxPath, "nxlog.exe")
+		execPath, err = util.AppendIfDir(collectorPath, "nxlog.exe")
 	} else {
-		execPath, err = util.AppendIfDir(nxPath, "nxlog")
+		execPath, err = util.AppendIfDir(collectorPath, "nxlog")
 	}
 	if err != nil {
 		logrus.Error("Failed to auto-complete nxlog path. Please provide full path to binary")
 	}
 
 	c := &Config{
-		Name:        "gxlog",
-		DisplayName: "gxlog",
-		Description: "Wrapper service for Graylog controlled nxlog",
+		Name:        "sidecar",
+		DisplayName: "sidecar",
+		Description: "Wrapper service for Graylog controlled collector",
 		Dir:         rootDir,
 		Exec:        execPath,
-		Args:        []string{"-f", "-c", filepath.Join(gxlogPath, "nxlog", "nxlog.conf")},
+		Args:        []string{"-f", "-c", filepath.Join(sidecarPath, "nxlog", "nxlog.conf")},
 		Env:         []string{},
-		Stderr:      filepath.Join(gxlogPath, "log", "gxlog_err.log"),
-		Stdout:      filepath.Join(gxlogPath, "log", "gxlog_err.log"),
+		Stderr:      filepath.Join(sidecarPath, "log", "sidecar.log"),
+		Stdout:      filepath.Join(sidecarPath, "log", "sidecar.log"),
 	}
+
 	return c
 }
 
@@ -96,7 +97,7 @@ func (p *Program) Start(s service.Service) error {
 func (p *Program) Stop(s service.Service) error {
 	logrus.Info("Stopping nxlog")
 	close(p.exit)
-	if (p.cmd.Process != nil) {
+	if p.cmd.Process != nil {
 		p.cmd.Process.Kill()
 	}
 	return nil
@@ -117,7 +118,7 @@ func (p *Program) Restart(s service.Service) error {
 }
 
 func (p *Program) run() {
-	logrus.Info("Starting nxlog")
+	logrus.Info("Starting collector")
 
 	if p.Stderr != "" {
 		f, err := os.OpenFile(p.Stderr, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0777)
@@ -138,20 +139,19 @@ func (p *Program) run() {
 		p.cmd.Stdout = f
 	}
 
-
 	startTime := time.Now()
 	p.cmd.Run()
 
-	if (time.Since(startTime) < 3 * time.Second) {
-		logrus.Error("nxlog exits immediately, this should not happen! Please check your collector configuration!")
+	if time.Since(startTime) < 3*time.Second {
+		logrus.Error("collector exits immediately, this should not happen! Please check your collector configuration!")
 	}
 
 	return
 }
 
 func (p *Program) checkConfigurtionFile() error {
-	gxlogPath, _ := util.GetGxlogPath()
-	cmd := exec.Command(p.Exec, "-v", "-c", filepath.Join(gxlogPath, "nxlog", "nxlog.conf"))
+	sidecarPath, _ := util.GetSidecarPath()
+	cmd := exec.Command(p.Exec, "-v", "-c", filepath.Join(sidecarPath, "nxlog", "nxlog.conf"))
 	err := cmd.Run()
 	if err != nil {
 		logrus.Error("Error during configuration validation: ", err)

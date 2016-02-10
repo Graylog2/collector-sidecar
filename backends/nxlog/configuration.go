@@ -3,19 +3,28 @@ package nxlog
 import (
 	"bytes"
 	"io/ioutil"
+	"path/filepath"
 	"reflect"
+	"strconv"
+
+	"github.com/Graylog2/nxlog-sidecar/api/graylog"
+	"github.com/Graylog2/nxlog-sidecar/backends"
+	"github.com/Graylog2/nxlog-sidecar/util"
+	"github.com/Sirupsen/logrus"
 )
 
+const name = "nxlog"
+
 type NxConfig struct {
-	Nxpath      string
-	Definitions []nxdefinition
-	Paths       []nxpath
-	Extensions  []nxextension
-	Inputs      []nxinput
-	Outputs     []nxoutput
-	Routes      []nxroute
-	Matches     []nxmatch
-	Snippets    []nxsnippet
+	CollectorPath string
+	Definitions   []nxdefinition
+	Paths         []nxpath
+	Extensions    []nxextension
+	Inputs        []nxinput
+	Outputs       []nxoutput
+	Routes        []nxroute
+	Matches       []nxmatch
+	Snippets      []nxsnippet
 }
 
 type nxdefinition struct {
@@ -58,10 +67,20 @@ type nxsnippet struct {
 	value string
 }
 
-func NewNxConfig(nxPath string) *NxConfig {
+func init() {
+	if err := backends.RegisterBackend(name, New); err != nil {
+		logrus.Fatal(err)
+	}
+}
+
+func New(collectorPath string) backends.Backend {
+	return NewCollectorConfig(collectorPath)
+}
+
+func NewCollectorConfig(collectorPath string) *NxConfig {
 	nxc := &NxConfig{
-		Nxpath:      nxPath,
-		Definitions: []nxdefinition{{name: "ROOT", value: nxPath}},
+		CollectorPath: collectorPath,
+		Definitions:   []nxdefinition{{name: "ROOT", value: collectorPath}},
 		Paths: []nxpath{{name: "Moduledir", path: "%ROOT%\\modules"},
 			{name: "CacheDir", path: "%ROOT%\\data"},
 			{name: "Pidfile", path: "%ROOT%\\data\\nxlog.pid"},
@@ -72,34 +91,31 @@ func NewNxConfig(nxPath string) *NxConfig {
 	return nxc
 }
 
-func (nxc *NxConfig) AddExtension(extensionName string, extensionProperties map[string]string) {
-	extension := &nxextension{name: extensionName, properties: extensionProperties}
-	nxc.Extensions = append(nxc.Extensions, *extension)
+func (nxc *NxConfig) Add(class string, name string, value interface{}) {
+	switch class {
+	case "extension":
+		addition := &nxextension{name: name, properties: value.(map[string]string)}
+		nxc.Extensions = append(nxc.Extensions, *addition)
+	case "input":
+		addition := &nxinput{name: name, properties: value.(map[string]string)}
+		nxc.Inputs = append(nxc.Inputs, *addition)
+	case "output":
+		addition := &nxoutput{name: name, properties: value.(map[string]string)}
+		nxc.Outputs = append(nxc.Outputs, *addition)
+	case "route":
+		addition := &nxroute{name: name, properties: value.(map[string]string)}
+		nxc.Routes = append(nxc.Routes, *addition)
+	case "match":
+		addition := &nxmatch{name: name, properties: value.(map[string]string)}
+		nxc.Matches = append(nxc.Matches, *addition)
+	case "snippet":
+		addition := &nxsnippet{name: name, value: value.(string)}
+		nxc.Snippets = append(nxc.Snippets, *addition)
+	}
 }
 
-func (nxc *NxConfig) AddInput(inputName string, inputProperties map[string]string) {
-	input := &nxinput{name: inputName, properties: inputProperties}
-	nxc.Inputs = append(nxc.Inputs, *input)
-}
-
-func (nxc *NxConfig) AddOutput(outputName string, outputProperties map[string]string) {
-	output := &nxoutput{name: outputName, properties: outputProperties}
-	nxc.Outputs = append(nxc.Outputs, *output)
-}
-
-func (nxc *NxConfig) AddRoute(routeName string, routeProperties map[string]string) {
-	route := &nxroute{name: routeName, properties: routeProperties}
-	nxc.Routes = append(nxc.Routes, *route)
-}
-
-func (nxc *NxConfig) AddMatch(matchName string, matchProperties map[string]string) {
-	match := &nxmatch{name: matchName, properties: matchProperties}
-	nxc.Matches = append(nxc.Matches, *match)
-}
-
-func (nxc *NxConfig) AddSnippet(snippetName string, snippetValue string) {
-	snippet := &nxsnippet{name: snippetName, value: snippetValue}
-	nxc.Snippets = append(nxc.Snippets, *snippet)
+func (nxc *NxConfig) GetCollectorPath() string {
+	return nxc.CollectorPath
 }
 
 func (nxc *NxConfig) definitionsToString() string {
@@ -215,4 +231,47 @@ func (nxc *NxConfig) RenderToFile(path string) error {
 
 func (nxc *NxConfig) Equals(a *NxConfig) bool {
 	return reflect.DeepEqual(nxc, a)
+}
+
+func (nxc *NxConfig) Update(a *NxConfig) {
+	nxc.CollectorPath = a.CollectorPath
+	nxc.Definitions   = a.Definitions
+	nxc.Paths         = a.Paths
+	nxc.Extensions    = a.Extensions
+	nxc.Inputs        = a.Inputs
+	nxc.Outputs       = a.Outputs
+	nxc.Routes        = a.Routes
+	nxc.Matches       = a.Matches
+	nxc.Snippets      = a.Snippets
+}
+
+func (nxc *NxConfig) RenderOnChange(json graylog.ResponseCollectorConfiguration) bool {
+	jsonConfig := NewCollectorConfig(nxc.CollectorPath)
+	sidecarPath, _ := util.GetSidecarPath()
+
+	for _, output := range json.Outputs {
+		if output.Type == "nxlog" {
+			jsonConfig.Add("output", output.Name, output.Properties)
+		}
+	}
+	for i, input := range json.Inputs {
+		if input.Type == "nxlog" {
+			jsonConfig.Add("input", input.Name, input.Properties)
+			jsonConfig.Add("route", "route-"+strconv.Itoa(i), map[string]string{"Path": input.Name + " => " + input.ForwardTo})
+		}
+	}
+	for _, snippet := range json.Snippets {
+		if snippet.Type == "nxlog" {
+			jsonConfig.Add("snippet", snippet.Name, snippet.Value)
+		}
+	}
+
+	if !nxc.Equals(jsonConfig) {
+		logrus.Info("Configuration change detected, rewriting configuration file.")
+		nxc.Update(jsonConfig)
+		nxc.RenderToFile(filepath.Join(sidecarPath, "nxlog", "nxlog.conf"))
+		return true
+	}
+
+	return false
 }

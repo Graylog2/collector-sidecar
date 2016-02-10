@@ -29,8 +29,7 @@ _testmain.go
 /nxlog/
 /log/
 
-gxlog
-gxlog.exe
-gxlog-build
+sidecar
+sidecar.exe
 misc/nxmock/nxlog
 misc/nxmock/nxlog.exe
