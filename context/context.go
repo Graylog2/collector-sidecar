@@ -19,14 +19,12 @@ type Ctx struct {
 	Config      *daemon.Config
 	Program     *daemon.Program
 	Service     service.Service
-	//NxConfig    *nxlog.NxConfig
 	Backend backends.Backend
 }
 
 func NewContext(serverUrl string, collectorPath string, nodeId string, collectorId string) *Ctx {
 	dc := daemon.NewConfig(collectorPath)
 	dp := daemon.NewProgram(dc)
-	//nxc := nxlog.NewCollectorConfig(collectorPath)
 
 	url, err := url.Parse(serverUrl)
 	if err != nil {
@@ -44,6 +42,5 @@ func NewContext(serverUrl string, collectorPath string, nodeId string, collector
 		NxPath:      collectorPath,
 		Config:      dc,
 		Program:     dp,
-		//NxConfig:    nxc,
 	}
 }
