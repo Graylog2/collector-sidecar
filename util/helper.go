@@ -2,15 +2,15 @@ package util
 
 import (
 	"os"
-	"path/filepath"
-
-	"code.google.com/p/go-uuid/uuid"
-	"github.com/Sirupsen/logrus"
-	"github.com/kardianos/osext"
 	"io/ioutil"
 	"runtime"
 	"strings"
 	"unicode"
+	"path/filepath"
+
+	"github.com/Sirupsen/logrus"
+	"github.com/kardianos/osext"
+	"github.com/pborman/uuid"
 )
 
 func GetSidecarPath() (string, error) {
