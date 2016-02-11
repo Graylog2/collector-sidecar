@@ -9,6 +9,7 @@ import (
 	"github.com/Graylog2/nxlog-sidecar/api/graylog"
 	"github.com/Graylog2/nxlog-sidecar/context"
 	"github.com/Graylog2/nxlog-sidecar/util"
+	"encoding/json"
 )
 
 func RequestConfiguration(context *context.Ctx) (graylog.ResponseCollectorConfiguration, error) {
@@ -16,7 +17,10 @@ func RequestConfiguration(context *context.Ctx) (graylog.ResponseCollectorConfig
 	url := context.ServerUrl.String() + "/plugins/org.graylog.plugins.collector/" + context.CollectorId
 	res := graylog.ResponseCollectorConfiguration{}
 
-	resp, err := s.Get(url, nil, &res, nil)
+	tags, _ := json.Marshal(context.Tags)
+	params := napping.Params{"tags": string(tags)}.AsUrlValues()
+
+	resp, err := s.Get(url, &params, &res, nil)
 	if err == nil && resp.Status() != 200 {
 		logrus.Error("Bad response status from Graylog server: ", resp.Status(), err)
 	}

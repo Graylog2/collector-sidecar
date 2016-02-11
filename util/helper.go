@@ -79,3 +79,7 @@ func AppendIfDir(dir string, appendix string) (string, error) {
 		return dir, nil
 	}
 }
+
+func SplitCommaList(list string) []string {
+	return strings.Split(list, ",")
+}

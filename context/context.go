@@ -15,6 +15,7 @@ type Ctx struct {
 	ServerUrl   *url.URL
 	NodeId      string
 	CollectorId string
+	Tags	    []string
 	Config      *daemon.Config
 	Program     *daemon.Program
 	Service     service.Service
