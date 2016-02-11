@@ -53,6 +53,10 @@ func main() {
 	}
 	context.Backend = nxlog(*collectorPath)
 
+	// set backend related context values
+	context.Config.Exec = context.Backend.ExecPath()
+	context.Config.Args = context.Backend.ExecArgs(sidecarPath)
+
 	// setup system service
 	serviceConfig := &service.Config{
 		Name:        context.Config.Name,

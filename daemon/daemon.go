@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -42,23 +41,11 @@ func NewConfig(collectorPath string) *Config {
 		logrus.Error("Can not access filepath to sidecar")
 	}
 
-	execPath := collectorPath
-	if runtime.GOOS == "windows" {
-		execPath, err = util.AppendIfDir(collectorPath, "nxlog.exe")
-	} else {
-		execPath, err = util.AppendIfDir(collectorPath, "nxlog")
-	}
-	if err != nil {
-		logrus.Error("Failed to auto-complete nxlog path. Please provide full path to binary")
-	}
-
 	c := &Config{
 		Name:        "sidecar",
 		DisplayName: "sidecar",
 		Description: "Wrapper service for Graylog controlled collector",
 		Dir:         rootDir,
-		Exec:        execPath,
-		Args:        []string{"-f", "-c", filepath.Join(sidecarPath, "nxlog", "nxlog.conf")},
 		Env:         []string{},
 		Stderr:      filepath.Join(sidecarPath, "log", "sidecar.log"),
 		Stdout:      filepath.Join(sidecarPath, "log", "sidecar.log"),
@@ -83,7 +70,7 @@ func (p *Program) Start(s service.Service) error {
 	absPath, _ := filepath.Abs(p.Exec)
 	fullExec, err := exec.LookPath(absPath)
 	if err != nil {
-		return fmt.Errorf("Failed to find nxlog executable %q: %v", p.Exec, err)
+		return fmt.Errorf("Failed to find collector executable %q: %v", p.Exec, err)
 	}
 
 	p.cmd = exec.Command(fullExec, p.Args...)
@@ -95,7 +82,7 @@ func (p *Program) Start(s service.Service) error {
 }
 
 func (p *Program) Stop(s service.Service) error {
-	logrus.Info("Stopping nxlog")
+	logrus.Info("Stopping collector")
 	close(p.exit)
 	if p.cmd.Process != nil {
 		p.cmd.Process.Kill()
@@ -104,11 +91,6 @@ func (p *Program) Stop(s service.Service) error {
 }
 
 func (p *Program) Restart(s service.Service) error {
-	for p.checkConfigurtionFile() != nil {
-		logrus.Info("Configuration file for nxlog is not valid, waiting for update...")
-		time.Sleep(30 * time.Second)
-	}
-
 	p.Stop(s)
 	time.Sleep(3 * time.Second)
 	p.exit = make(chan struct{})
@@ -147,14 +129,4 @@ func (p *Program) run() {
 	}
 
 	return
-}
-
-func (p *Program) checkConfigurtionFile() error {
-	sidecarPath, _ := util.GetSidecarPath()
-	cmd := exec.Command(p.Exec, "-v", "-c", filepath.Join(sidecarPath, "nxlog", "nxlog.conf"))
-	err := cmd.Run()
-	if err != nil {
-		logrus.Error("Error during configuration validation: ", err)
-	}
-	return err
 }

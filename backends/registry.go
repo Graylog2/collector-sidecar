@@ -6,7 +6,11 @@ import (
 )
 
 type Backend interface {
+	Name() string
+	ExecPath() string
+	ExecArgs(string) []string
 	RenderOnChange(graylog.ResponseCollectorConfiguration) bool
+	ValidateConfigurationFile(string) bool
 }
 
 type Creator func(string) Backend

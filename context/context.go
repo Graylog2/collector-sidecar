@@ -15,11 +15,10 @@ type Ctx struct {
 	ServerUrl   *url.URL
 	NodeId      string
 	CollectorId string
-	NxPath      string
 	Config      *daemon.Config
 	Program     *daemon.Program
 	Service     service.Service
-	Backend backends.Backend
+	Backend     backends.Backend
 }
 
 func NewContext(serverUrl string, collectorPath string, nodeId string, collectorId string) *Ctx {
@@ -39,7 +38,6 @@ func NewContext(serverUrl string, collectorPath string, nodeId string, collector
 		ServerUrl:   url,
 		NodeId:      nodeId,
 		CollectorId: util.GetCollectorId(collectorId),
-		NxPath:      collectorPath,
 		Config:      dc,
 		Program:     dp,
 	}
