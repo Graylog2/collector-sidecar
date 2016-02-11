@@ -1,6 +1,8 @@
 package api
 
 import (
+	"encoding/json"
+	"net/url"
 	"net/http"
 
 	"github.com/Sirupsen/logrus"
@@ -9,18 +11,22 @@ import (
 	"github.com/Graylog2/nxlog-sidecar/api/graylog"
 	"github.com/Graylog2/nxlog-sidecar/context"
 	"github.com/Graylog2/nxlog-sidecar/util"
-	"encoding/json"
 )
 
 func RequestConfiguration(context *context.Ctx) (graylog.ResponseCollectorConfiguration, error) {
 	s := napping.Session{}
-	url := context.ServerUrl.String() + "/plugins/org.graylog.plugins.collector/" + context.CollectorId
+	api := context.ServerUrl.String() + "/plugins/org.graylog.plugins.collector/" + context.CollectorId
 	res := graylog.ResponseCollectorConfiguration{}
+	params := &url.Values{}
 
-	tags, _ := json.Marshal(context.Tags)
-	params := napping.Params{"tags": string(tags)}.AsUrlValues()
+	tags, err := json.Marshal(context.Tags)
+	if err != nil {
+		logrus.Error("Provided tags can not be send to Graylog server!")
+	} else {
+		params.Add("tags", string(tags))
+	}
 
-	resp, err := s.Get(url, &params, &res, nil)
+	resp, err := s.Get(api, params, &res, nil)
 	if err == nil && resp.Status() != 200 {
 		logrus.Error("Bad response status from Graylog server: ", resp.Status(), err)
 	}
