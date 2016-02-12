@@ -42,7 +42,7 @@ func main() {
 		serverUrl     = flag.String("server-url", "", "Graylog server URL")
 		nodeId        = flag.String("node-id", "graylog-collector", "Collector identification string")
 		collectorId   = flag.String("collector-id", "", "UUID used for collector registration")
-		tags 	      = flag.String("tags", "", "Comma separated tag list")
+		tags          = flag.String("tags", "", "Comma separated tag list")
 	)
 	conf.ParseAll()
 
@@ -50,7 +50,7 @@ func main() {
 	context := context.NewContext(*serverUrl, *collectorPath, *nodeId, *collectorId)
 	if tags != nil {
 		context.Tags = util.SplitCommaList(*tags)
-		logrus.Info("Fetching configuration tagged by: ",context.Tags)
+		logrus.Info("Fetching configuration tagged by: ", context.Tags)
 	}
 
 	nxlog, err := backends.GetBackend("nxlog")

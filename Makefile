@@ -14,7 +14,10 @@ build-windows:
 misc:
 	$(GO) build -o misc/nxmock/nxlog misc/nxmock/main.go
 
+fmt:
+	$(GO) fmt
+
 clean:
-	rm -f main main.exe sidecar sidecar.exe 
+	rm -f sidecar sidecar.exe 
 
 .PHONY: all build build-darwin build-windows misc clean
