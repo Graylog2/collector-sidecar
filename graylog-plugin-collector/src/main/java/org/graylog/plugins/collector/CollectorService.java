@@ -4,10 +4,7 @@ package org.graylog.plugins.collector;
 import com.google.common.collect.Iterables;
 import com.mongodb.BasicDBObject;
 import org.bson.types.ObjectId;
-import org.graylog.plugins.collector.rest.models.CollectorConfiguration;
-import org.graylog.plugins.collector.rest.models.CollectorConfigurationSnippet;
-import org.graylog.plugins.collector.rest.models.CollectorInput;
-import org.graylog.plugins.collector.rest.models.CollectorOutput;
+import org.graylog.plugins.collector.rest.models.*;
 import org.graylog2.bindings.providers.MongoJackObjectMapperProvider;
 import org.graylog2.database.MongoConnection;
 import org.mongojack.DBCursor;
@@ -44,6 +41,10 @@ public class CollectorService {
         final List<CollectorConfiguration> collectorConfigurationList = new ArrayList<>();
         Iterables.addAll(collectorConfigurationList, cursor);
        return collectorConfigurationList;
+    }
+
+    public CollectorConfiguration findById(String id) {
+        return dbCollection.findOne(DBQuery.is("_id", id));
     }
 
     public CollectorConfiguration findByCollectorId(String collectorId) {

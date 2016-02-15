@@ -7,17 +7,13 @@ import com.google.common.base.Function;
 import com.google.common.primitives.Ints;
 import com.wordnik.swagger.annotations.*;
 import org.graylog.plugins.collector.CollectorService;
-import org.graylog.plugins.collector.rest.models.CollectorConfiguration;
-import org.graylog.plugins.collector.rest.models.CollectorConfigurationSnippet;
-import org.graylog.plugins.collector.rest.models.CollectorInput;
-import org.graylog.plugins.collector.rest.models.CollectorOutput;
+import org.graylog.plugins.collector.rest.models.*;
 import org.graylog.plugins.collector.rest.responses.CollectorConfigurationListResponse;
 import org.graylog.plugins.collector.rest.responses.CollectorInputListResponse;
 import org.graylog.plugins.collector.rest.responses.CollectorOutputListResponse;
 import org.graylog.plugins.collector.rest.responses.CollectorSnippetListResponse;
 import org.graylog2.collectors.Collector;
 import org.graylog2.collectors.CollectorServiceImpl;
-import org.graylog2.collectors.Collectors;
 import org.graylog2.database.NotFoundException;
 import org.graylog2.plugin.rest.PluginRestResource;
 import org.graylog2.rest.models.collector.responses.CollectorList;
@@ -41,10 +37,8 @@ import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Api(value = "Collector configuration", description = "Manage collector configurations")
 @Path("/")
@@ -72,7 +66,7 @@ public class CollectorConfigurationResource extends RestResource implements Plug
     @ApiOperation(value = "List all collectors")
     public CollectorList listCollectors() {
         final List<Collector> collectors = serverCollectorService.all();
-        final List<CollectorSummary> collectorSummaries = Collectors.toSummaryList(collectors, lostCollectorFunction);
+        final List<CollectorSummary> collectorSummaries = org.graylog2.collectors.Collectors.toSummaryList(collectors, lostCollectorFunction);
         return CollectorList.create(collectorSummaries);
     }
 
@@ -252,16 +246,21 @@ public class CollectorConfigurationResource extends RestResource implements Plug
     @Path("/configurations")
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(value = "List all collector configurations")
-    public CollectorConfigurationListResponse listConfigurations(@ApiParam(name = "tags")
-                                                    @QueryParam("tags") String queryTags) {
-        List tags = parseQueryTags(queryTags);
-        List<CollectorConfiguration> collectorConfigurationList;
-        if (tags != null) {
-            collectorConfigurationList = collectorService.findByTags(tags);
-        } else {
-            collectorConfigurationList = collectorService.loadAll();
-        }
-        return CollectorConfigurationListResponse.create(collectorConfigurationList.size(), collectorConfigurationList);
+    public CollectorConfigurationListResponse listConfigurations() {
+        final List<CollectorConfigurationSummary> result = this.collectorService.loadAll().stream()
+                .map(collectorConfiguration -> getCollectorConfigurationSummary(collectorConfiguration))
+                .collect(Collectors.toList());
+
+        return CollectorConfigurationListResponse.create(result.size(), result);
+    }
+
+    @GET
+    @Path("/configurations/{id}")
+    @Produces(MediaType.APPLICATION_JSON)
+    @ApiOperation(value = "Show collector configuration details")
+    public CollectorConfiguration getConfigurations(@ApiParam(name = "id", required = true)
+                                                    @PathParam("id") @NotEmpty String id) {
+        return this.collectorService.findById(id);
     }
 
     @PUT
@@ -354,6 +353,11 @@ public class CollectorConfigurationResource extends RestResource implements Plug
             final DateTime threshold = DateTime.now().minusSeconds(Ints.saturatedCast(timeOutInSeconds));
             return collector.getLastSeen().isAfter(threshold);
         }
+    }
+
+    private CollectorConfigurationSummary getCollectorConfigurationSummary(CollectorConfiguration collectorConfiguration) {
+        return CollectorConfigurationSummary.create(collectorConfiguration.getId(),
+                                                    collectorConfiguration.tags());
     }
 
     private List<String> parseQueryTags(String queryTags) {
