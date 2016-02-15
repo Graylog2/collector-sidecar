@@ -19,11 +19,15 @@ func RequestConfiguration(context *context.Ctx) (graylog.ResponseCollectorConfig
 	res := graylog.ResponseCollectorConfiguration{}
 	params := &url.Values{}
 
-	tags, err := json.Marshal(context.Tags)
-	if err != nil {
-		logrus.Error("Provided tags can not be send to Graylog server!")
+	if (len(context.Tags) != 0) {
+		tags, err := json.Marshal(context.Tags)
+		if err != nil {
+			logrus.Error("Provided tags can not be send to Graylog server!")
+		} else {
+			params.Add("tags", string(tags))
+		}
 	} else {
-		params.Add("tags", string(tags))
+		params = nil
 	}
 
 	resp, err := s.Get(api, params, &res, nil)

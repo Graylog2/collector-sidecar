@@ -81,5 +81,8 @@ func AppendIfDir(dir string, appendix string) (string, error) {
 }
 
 func SplitCommaList(list string) []string {
+	if list == "" {
+		return make([]string, 0)
+	}
 	return strings.Split(list, ",")
 }

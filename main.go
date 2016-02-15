@@ -48,10 +48,11 @@ func main() {
 
 	// initialize application context
 	context := context.NewContext(*serverUrl, *collectorPath, *nodeId, *collectorId)
-	if tags != nil {
-		context.Tags = util.SplitCommaList(*tags)
+	context.Tags = util.SplitCommaList(*tags)
+	if (len(context.Tags) != 0) {
 		logrus.Info("Fetching configuration tagged by: ", context.Tags)
 	}
+
 
 	nxlog, err := backends.GetBackend("nxlog")
 	if err != nil {
