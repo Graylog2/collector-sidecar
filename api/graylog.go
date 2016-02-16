@@ -8,9 +8,9 @@ import (
 	"github.com/Sirupsen/logrus"
 	"gopkg.in/jmcvetta/napping.v3"
 
-	"github.com/Graylog2/nxlog-sidecar/api/graylog"
-	"github.com/Graylog2/nxlog-sidecar/context"
-	"github.com/Graylog2/nxlog-sidecar/util"
+	"github.com/Graylog2/sidecar/api/graylog"
+	"github.com/Graylog2/sidecar/context"
+	"github.com/Graylog2/sidecar/util"
 )
 
 func RequestConfiguration(context *context.Ctx) (graylog.ResponseCollectorConfiguration, error) {

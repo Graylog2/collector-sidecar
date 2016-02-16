@@ -1,7 +1,7 @@
 package backends
 
 import (
-	"github.com/Graylog2/nxlog-sidecar/api/graylog"
+	"github.com/Graylog2/sidecar/api/graylog"
 	"github.com/Sirupsen/logrus"
 )
 

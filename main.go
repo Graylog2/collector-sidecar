@@ -10,13 +10,13 @@ import (
 	"github.com/kardianos/service"
 	"github.com/rakyll/globalconf"
 
-	"github.com/Graylog2/nxlog-sidecar/backends"
-	"github.com/Graylog2/nxlog-sidecar/context"
-	"github.com/Graylog2/nxlog-sidecar/services"
-	"github.com/Graylog2/nxlog-sidecar/util"
+	"github.com/Graylog2/sidecar/backends"
+	"github.com/Graylog2/sidecar/context"
+	"github.com/Graylog2/sidecar/services"
+	"github.com/Graylog2/sidecar/util"
 
 	// importing backend packages to ensure init() is called
-	_ "github.com/Graylog2/nxlog-sidecar/backends/nxlog"
+	_ "github.com/Graylog2/sidecar/backends/nxlog"
 )
 
 func main() {

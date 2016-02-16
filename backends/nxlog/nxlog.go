@@ -1,12 +1,13 @@
 package nxlog
 
 import (
+	"runtime"
+	"path/filepath"
+
 	"github.com/Sirupsen/logrus"
 
-	"github.com/Graylog2/nxlog-sidecar/backends"
-	"runtime"
-	"github.com/Graylog2/nxlog-sidecar/util"
-	"path/filepath"
+	"github.com/Graylog2/sidecar/backends"
+	"github.com/Graylog2/sidecar/util"
 )
 
 const name = "nxlog"

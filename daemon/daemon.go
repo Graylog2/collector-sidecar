@@ -10,7 +10,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/kardianos/service"
 
-	"github.com/Graylog2/nxlog-sidecar/util"
+	"github.com/Graylog2/sidecar/util"
 )
 
 type Config struct {

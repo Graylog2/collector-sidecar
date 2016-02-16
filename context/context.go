@@ -6,9 +6,9 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/kardianos/service"
 
-	"github.com/Graylog2/nxlog-sidecar/backends"
-	"github.com/Graylog2/nxlog-sidecar/daemon"
-	"github.com/Graylog2/nxlog-sidecar/util"
+	"github.com/Graylog2/sidecar/backends"
+	"github.com/Graylog2/sidecar/daemon"
+	"github.com/Graylog2/sidecar/util"
 )
 
 type Ctx struct {

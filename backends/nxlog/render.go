@@ -7,8 +7,8 @@ import (
 	"strconv"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/Graylog2/nxlog-sidecar/util"
-	"github.com/Graylog2/nxlog-sidecar/api/graylog"
+	"github.com/Graylog2/sidecar/util"
+	"github.com/Graylog2/sidecar/api/graylog"
 	"os/exec"
 )
 

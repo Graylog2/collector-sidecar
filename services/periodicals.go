@@ -5,9 +5,9 @@ import (
 
 	"github.com/Sirupsen/logrus"
 
-	"github.com/Graylog2/nxlog-sidecar/api"
-	"github.com/Graylog2/nxlog-sidecar/context"
-	"github.com/Graylog2/nxlog-sidecar/util"
+	"github.com/Graylog2/sidecar/api"
+	"github.com/Graylog2/sidecar/context"
+	"github.com/Graylog2/sidecar/util"
 )
 
 func StartPeriodicals(context *context.Ctx) {
