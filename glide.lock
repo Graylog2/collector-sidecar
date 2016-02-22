@@ -1,8 +1,8 @@
 hash: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 updated: 2015-12-14T11:18:32.20146797+01:00
 imports:
-- name: code.google.com/p/go-uuid
-  version: 35bc42037350
+- name: github.com/pborman/uuid
+  version: c55201b036063326c5b1b89ccfe45a184973d073
   subpackages:
   - /uuid
 - name: github.com/howeyc/gopass
