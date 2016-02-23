@@ -2,8 +2,8 @@ package api
 
 import (
 	"encoding/json"
-	"net/url"
 	"net/http"
+	"net/url"
 
 	"github.com/Sirupsen/logrus"
 	"gopkg.in/jmcvetta/napping.v3"
@@ -19,7 +19,7 @@ func RequestConfiguration(context *context.Ctx) (graylog.ResponseCollectorConfig
 	res := graylog.ResponseCollectorConfiguration{}
 	params := &url.Values{}
 
-	if (len(context.Tags) != 0) {
+	if len(context.Tags) != 0 {
 		tags, err := json.Marshal(context.Tags)
 		if err != nil {
 			logrus.Error("Provided tags can not be send to Graylog server!")
@@ -32,7 +32,7 @@ func RequestConfiguration(context *context.Ctx) (graylog.ResponseCollectorConfig
 
 	resp, err := s.Get(api, params, &res, nil)
 	if err == nil && resp.Status() != 200 {
-		logrus.Error("Bad response status from Graylog server: ", resp.Status(), err)
+		logrus.Error("[RequestConfiguration] Bad response status from Graylog server: ", resp.Status(), err)
 	}
 
 	return res, err
@@ -59,6 +59,6 @@ func UpdateRegistration(context *context.Ctx) {
 
 	resp, err := s.Send(&r)
 	if err == nil && resp.Status() != 202 {
-		logrus.Error("Bad response from Graylog server: ", resp.Status(), err)
+		logrus.Error("[UpdateRegistration] Bad response from Graylog server: ", resp.Status(), err)
 	}
 }

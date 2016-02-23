@@ -7,6 +7,7 @@ type ResponseCollectorConfiguration struct {
 }
 
 type ResponseCollectorInput struct {
+	Backend    string            `json:"backend"`
 	Type       string            `json:"type"`
 	Name       string            `json:"name"`
 	Properties map[string]string `json:"properties"`
@@ -14,13 +15,14 @@ type ResponseCollectorInput struct {
 }
 
 type ResponseCollectorOutput struct {
+	Backend    string            `json:"backend"`
 	Type       string            `json:"type"`
 	Name       string            `json:"name"`
 	Properties map[string]string `json:"properties"`
 }
 
 type ResponseCollectorSnippet struct {
-	Type  string `json:"type"`
-	Name  string `json:"name"`
-	Value string `json:"snippet"`
+	Backend string `json:"backend"`
+	Name    string `json:"name"`
+	Value   string `json:"snippet"`
 }

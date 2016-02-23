@@ -14,6 +14,7 @@ type NxConfig struct {
 	Routes        []nxroute
 	Matches       []nxmatch
 	Snippets      []nxsnippet
+	Canned        []nxcanned
 }
 
 type nxdefinition struct {
@@ -56,6 +57,12 @@ type nxsnippet struct {
 	value string
 }
 
+type nxcanned struct {
+	name       string
+	kind       string
+	properties map[string]string
+}
+
 func NewCollectorConfig(collectorPath string) *NxConfig {
 	nxc := &NxConfig{
 		CollectorPath: collectorPath,
@@ -90,18 +97,30 @@ func (nxc *NxConfig) Add(class string, name string, value interface{}) {
 	case "snippet":
 		addition := &nxsnippet{name: name, value: value.(string)}
 		nxc.Snippets = append(nxc.Snippets, *addition)
+	//pre-canned configuration types
+	case "output-gelf-udp":
+		addition := &nxcanned{name: name, kind: class, properties: value.(map[string]string)}
+		nxc.Canned = append(nxc.Canned, *addition)
+	case "input-file":
+		addition := &nxcanned{name: name, kind: class, properties: value.(map[string]string)}
+		nxc.Canned = append(nxc.Canned, *addition)
+	case "input-windows-event-log":
+		addition := &nxcanned{name: name, kind: class, properties: value.(map[string]string)}
+		nxc.Canned = append(nxc.Canned, *addition)
 	}
 }
+
 func (nxc *NxConfig) Update(a *NxConfig) {
 	nxc.CollectorPath = a.CollectorPath
-	nxc.Definitions   = a.Definitions
-	nxc.Paths         = a.Paths
-	nxc.Extensions    = a.Extensions
-	nxc.Inputs        = a.Inputs
-	nxc.Outputs       = a.Outputs
-	nxc.Routes        = a.Routes
-	nxc.Matches       = a.Matches
-	nxc.Snippets      = a.Snippets
+	nxc.Definitions = a.Definitions
+	nxc.Paths = a.Paths
+	nxc.Extensions = a.Extensions
+	nxc.Inputs = a.Inputs
+	nxc.Outputs = a.Outputs
+	nxc.Routes = a.Routes
+	nxc.Matches = a.Matches
+	nxc.Snippets = a.Snippets
+	nxc.Canned = a.Canned
 }
 
 func (nxc *NxConfig) Equals(a *NxConfig) bool {
