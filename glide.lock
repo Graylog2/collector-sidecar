@@ -1,45 +1,22 @@
-hash: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-updated: 2015-12-14T11:18:32.20146797+01:00
+hash: 1102a980bae4d4ac329c79776aa0108379db1b6f533c076763605de454f17081
+updated: 2016-02-24T16:49:17.652825084+01:00
 imports:
-- name: github.com/pborman/uuid
-  version: c55201b036063326c5b1b89ccfe45a184973d073
-  subpackages:
-  - /uuid
-- name: github.com/howeyc/gopass
-  version: ae71a9cc54fddb61d946abe9191d05a24ac0e21b
-  repo: https://github.com/howeyc/gopass
 - name: github.com/kardianos/osext
   version: 10da29423eb9a6269092eebdc2be32209612d9d2
 - name: github.com/kardianos/service
   version: 2954cfdd7b0c8ab45ef2aa22a44b5f086201836f
-- name: github.com/kr/pretty
-  version: e6ac2fc51e89a3249e82157fa0bb7a18ef9dd5bb
-  repo: https://github.com/kr/pretty
-- name: github.com/kr/pty
-  version: f7ee69f31298ecbe5d2b349c711e2547a617d398
-  repo: https://github.com/kr/pty
-- name: github.com/kr/text
-  version: bb797dc4fb8320488f47bf11de07a733d7233e1f
-  repo: https://github.com/kr/text
+- name: github.com/pborman/uuid
+  version: c55201b036063326c5b1b89ccfe45a184973d073
 - name: github.com/rakyll/globalconf
   version: 415abc325023f1a00cd2d9fa512e0e71745791a2
 - name: github.com/rakyll/goini
   version: 907cca0f578a5316fb864ec6992dc3d9730ec58c
 - name: github.com/Sirupsen/logrus
   version: 446d1c146faa8ed3f4218f056fcd165f6bcfda81
-- name: golang.org/x/crypto
-  version: 7b85b097bf7527677d54d3220065e966a0e3b613
-  repo: https://golang.org/x/crypto
 - name: golang.org/x/sys
   version: 833a04a10549a95dc34458c195cbad61bbb6cb4d
   subpackages:
-  - /windows
-- name: gopkg.in/airbrake/gobrake.v2
-  version: e5efbe565a5a63d8aafee7efa2f4fdd7f42b7bd3
-  repo: https://gopkg.in/airbrake/gobrake.v2
-- name: gopkg.in/gemnasium/logrus-airbrake-hook.v2
-  version: 31e6fd4bd5a98d8ee7673d24bc54ec73c31810dd
-  repo: https://gopkg.in/gemnasium/logrus-airbrake-hook.v2
+  - windows
 - name: gopkg.in/jmcvetta/napping.v3
   version: 58e2b10cc328913a6d3478dfa4546395c71ada81
 devImports: []
