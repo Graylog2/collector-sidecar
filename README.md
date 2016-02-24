@@ -26,14 +26,18 @@ Usage of ./sidecar:
     	Comma separated tag list
 ```
 
-Example command: `sidecar -collector-id bb62865b-ed41-4494-85b4-0df22890b784 -node-id nxlog-linux -collector-path /opt/nxlog/nxlog -server-url http://localhost:12900  -tags my,tags`
+Example command:
+
+```
+sidecar -collector-id bb62865b-ed41-4494-85b4-0df22890b784 -node-id nxlog-linux -collector-path /opt/nxlog/nxlog -server-url http://localhost:12900  -tags my,tags
+```
 
 You can also use the `sidecar.ini` file to persist startup options.
 
 Compile
 -------
 
-	* Clone the repository into your `$GOPATH` under `src/github.com/Graylog2/sidecar`
+  * Clone the repository into your `$GOPATH` under `src/github.com/Graylog2/sidecar`
   * Install the [glide package manager](https://glide.sh)
   * run `glide install` in the sidecar directory
   * (for Go <1.6 `export GO15VENDOREXPERIMENT=1`)
