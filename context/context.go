@@ -12,34 +12,36 @@ import (
 )
 
 type Ctx struct {
-	ServerUrl   *url.URL
-	NodeId      string
-	CollectorId string
-	Tags	    []string
-	Config      *daemon.Config
-	Program     *daemon.Program
-	Service     service.Service
-	Backend     backends.Backend
+	ServerUrl         *url.URL
+	NodeId            string
+	CollectorId       string
+	CollectorConfPath string
+	Tags              []string
+	Config            *daemon.Config
+	Program           *daemon.Program
+	Service           service.Service
+	Backend           backends.Backend
 }
 
-func NewContext(serverUrl string, collectorPath string, nodeId string, collectorId string) *Ctx {
-	dc := daemon.NewConfig(collectorPath)
+func NewContext(serverUrl string, collectorPath string, collectorConfPath string, nodeId string, collectorId string, logPath string) *Ctx {
+	dc := daemon.NewConfig(collectorPath, logPath)
 	dp := daemon.NewProgram(dc)
 
 	url, err := url.Parse(serverUrl)
 	if err != nil {
-		logrus.Fatal("server-url is not valid", err)
+		logrus.Fatal("Server-url is not valid", err)
 	}
 
 	if nodeId == "" {
-		logrus.Fatal("please provide a valid node-id")
+		logrus.Fatal("Please provide a valid node-id")
 	}
 
 	return &Ctx{
-		ServerUrl:   url,
-		NodeId:      nodeId,
-		CollectorId: util.GetCollectorId(collectorId),
-		Config:      dc,
-		Program:     dp,
+		ServerUrl:         url,
+		NodeId:            nodeId,
+		CollectorId:       util.GetCollectorId(collectorId),
+		CollectorConfPath: collectorConfPath,
+		Config:            dc,
+		Program:           dp,
 	}
 }

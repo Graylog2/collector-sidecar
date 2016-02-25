@@ -39,12 +39,11 @@ func checkForUpdateAndRestart(context *context.Ctx) {
 				logrus.Error("Can't fetch configuration from Graylog API: ", err)
 				continue
 			}
-			if backend.RenderOnChange(jsonConfig) {
+			if backend.RenderOnChange(jsonConfig, context.CollectorConfPath) {
 				if !backend.ValidateConfigurationFile(sidecarPath) {
 					logrus.Info("Collector configuration file is not valid, waiting for update...")
 					continue
 				}
-
 
 				err = context.Program.Restart(context.Service)
 				if err != nil {

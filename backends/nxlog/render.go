@@ -170,14 +170,15 @@ func (nxc *NxConfig) Render() bytes.Buffer {
 func (nxc *NxConfig) RenderToFile(path string) error {
 	stringConfig := nxc.Render()
 	err := util.CreatePathToFile(path)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	err = ioutil.WriteFile(path, stringConfig.Bytes(), 0644)
 	return err
 }
 
-func (nxc *NxConfig) RenderOnChange(json graylog.ResponseCollectorConfiguration) bool {
+func (nxc *NxConfig) RenderOnChange(json graylog.ResponseCollectorConfiguration, path string) bool {
 	jsonConfig := NewCollectorConfig(nxc.CollectorPath)
-	sidecarPath, _ := util.GetSidecarPath()
 
 	for _, output := range json.Outputs {
 		if output.Backend == "nxlog" {
@@ -207,7 +208,7 @@ func (nxc *NxConfig) RenderOnChange(json graylog.ResponseCollectorConfiguration)
 	if !nxc.Equals(jsonConfig) {
 		logrus.Info("Configuration change detected, rewriting configuration file.")
 		nxc.Update(jsonConfig)
-		nxc.RenderToFile(filepath.Join(sidecarPath, "nxlog", "nxlog.conf"))
+		nxc.RenderToFile(path)
 		return true
 	}
 

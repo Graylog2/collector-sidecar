@@ -2,7 +2,6 @@ package nxlog
 
 import (
 	"runtime"
-	"path/filepath"
 
 	"github.com/Sirupsen/logrus"
 
@@ -42,5 +41,9 @@ func (nxc *NxConfig) ExecPath() string {
 }
 
 func (nxc *NxConfig) ExecArgs(configurationPath string) []string {
-	return []string{"-f", "-c", filepath.Join(configurationPath, "nxlog", "nxlog.conf")}
+	err := util.FileExists(configurationPath)
+	if err != nil {
+		logrus.Error("Collector configuration file is not accessable: ", configurationPath)
+	}
+	return []string{"-f", "-c", configurationPath}
 }

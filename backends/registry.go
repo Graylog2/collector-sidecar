@@ -9,7 +9,7 @@ type Backend interface {
 	Name() string
 	ExecPath() string
 	ExecArgs(string) []string
-	RenderOnChange(graylog.ResponseCollectorConfiguration) bool
+	RenderOnChange(graylog.ResponseCollectorConfiguration, string) bool
 	ValidateConfigurationFile(string) bool
 }
 

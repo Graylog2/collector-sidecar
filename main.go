@@ -37,22 +37,23 @@ func main() {
 	})
 
 	var (
-		svcFlag       = flag.String("service", "", "Control the system service")
-		collectorPath = flag.String("collector-path", "", "Path to collector installation")
-		serverUrl     = flag.String("server-url", "", "Graylog server URL")
-		nodeId        = flag.String("node-id", "graylog-collector", "Collector identification string")
-		collectorId   = flag.String("collector-id", "", "UUID used for collector registration")
-		tags          = flag.String("tags", "", "Comma separated tag list")
+		svcFlag           = flag.String("service", "", "Control the system service")
+		collectorPath     = flag.String("collector-path", "/usr/bin/nxlog", "Path to collector installation")
+		collectorConfPath = flag.String("collector-conf-path", "/tmp/nxlog.conf", "File path to the rendered collector configuration")
+		serverUrl         = flag.String("server-url", "http://127.0.0.1:12900", "Graylog server URL")
+		nodeId            = flag.String("node-id", "graylog-sidecar", "Collector identification string")
+		collectorId       = flag.String("collector-id", "", "UUID used for collector registration")
+		tags              = flag.String("tags", "", "Comma separated tag list")
+		logPath           = flag.String("log-path", "/var/log/sidecar", "Path to log directory")
 	)
 	conf.ParseAll()
 
 	// initialize application context
-	context := context.NewContext(*serverUrl, *collectorPath, *nodeId, *collectorId)
+	context := context.NewContext(*serverUrl, *collectorPath, *collectorConfPath, *nodeId, *collectorId, *logPath)
 	context.Tags = util.SplitCommaList(*tags)
-	if (len(context.Tags) != 0) {
+	if len(context.Tags) != 0 {
 		logrus.Info("Fetching configuration tagged by: ", context.Tags)
 	}
-
 
 	nxlog, err := backends.GetBackend("nxlog")
 	if err != nil {
@@ -62,7 +63,7 @@ func main() {
 
 	// set backend related context values
 	context.Config.Exec = context.Backend.ExecPath()
-	context.Config.Args = context.Backend.ExecArgs(sidecarPath)
+	context.Config.Args = context.Backend.ExecArgs(*collectorConfPath)
 
 	// setup system service
 	serviceConfig := &service.Config{

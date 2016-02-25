@@ -12,24 +12,28 @@ Usage
 
 ```
 Usage of ./sidecar:
+  -collector-conf-path string
+      File path to the rendered collector configuration (default "/tmp/nxlog.conf")
   -collector-id string
-    	UUID used for collector registration
+      UUID used for collector registration
   -collector-path string
-    	Path to collector installation
+      Path to collector installation (default "/usr/bin/nxlog")
+  -log-path string
+      Path to log directory (default "/var/log/sidecar")
   -node-id string
-    	Collector identification string (default "graylog-collector")
+      Collector identification string (default "graylog-sidecar")
   -server-url string
-    	Graylog server URL
+      Graylog server URL (default "http://127.0.0.1:12900")
   -service string
-    	Control the system service
+      Control the system service
   -tags string
-    	Comma separated tag list
+      Comma separated tag list
 ```
 
 Example command:
 
 ```
-sidecar -collector-id bb62865b-ed41-4494-85b4-0df22890b784 -node-id nxlog-linux -collector-path /opt/nxlog/nxlog -server-url http://localhost:12900  -tags my,tags
+sidecar -collector-id bb62865b-ed41-4494-85b4-0df22890b784 -node-id nxlog-linux -collector-path /opt/nxlog/nxlog -log-path ./log -collector-conf-path ./nxlog/nxlog.conf -server-url http://localhost:12900  -tags my,tags
 ```
 
 You can also use the `sidecar.ini` file to persist startup options.

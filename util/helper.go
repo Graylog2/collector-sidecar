@@ -1,17 +1,17 @@
 package util
 
 import (
-	"os"
 	"io/ioutil"
+	"os"
+	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"unicode"
-	"path/filepath"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/kardianos/osext"
 	"github.com/pborman/uuid"
-	"path"
 )
 
 func GetSidecarPath() (string, error) {
@@ -39,9 +39,10 @@ func GetCollectorId(collectorId string) string {
 	id := collectorId
 	if strings.HasPrefix(collectorId, "file:") {
 		filePath := strings.SplitAfter(collectorId, ":")[1]
-		_, err := os.Stat(filePath)
-		if os.IsNotExist(err) {
+		err := FileExists(filePath)
+		if err != nil {
 			logrus.Info("collector-id file doesn't exist, generating a new one")
+			CreatePathToFile(filePath)
 			ioutil.WriteFile(filePath, []byte(RandomUuid()), 0644)
 		}
 		file, err := ioutil.ReadFile(filePath)
@@ -60,6 +61,15 @@ func GetCollectorId(collectorId string) string {
 
 func RandomUuid() string {
 	return uuid.NewRandom().String()
+}
+
+func FileExists(filePath string) error {
+	_, err := os.Stat(filePath)
+	if os.IsNotExist(err) {
+		return err
+	}
+	return nil
+
 }
 
 func AppendIfDir(dir string, appendix string) (string, error) {

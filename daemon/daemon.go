@@ -31,14 +31,10 @@ type Program struct {
 	cmd *exec.Cmd
 }
 
-func NewConfig(collectorPath string) *Config {
+func NewConfig(collectorPath string, logPath string) *Config {
 	rootDir, err := util.GetRootPath()
 	if err != nil {
 		logrus.Error("Can not access root directory")
-	}
-	sidecarPath, err := util.GetSidecarPath()
-	if err != nil {
-		logrus.Error("Can not access filepath to sidecar")
 	}
 
 	c := &Config{
@@ -47,8 +43,8 @@ func NewConfig(collectorPath string) *Config {
 		Description: "Wrapper service for Graylog controlled collector",
 		Dir:         rootDir,
 		Env:         []string{},
-		Stderr:      filepath.Join(sidecarPath, "log", "sidecar.log"),
-		Stdout:      filepath.Join(sidecarPath, "log", "sidecar.log"),
+		Stderr:      filepath.Join(logPath, "collector_stderr.log"),
+		Stdout:      filepath.Join(logPath, "collector_stdout.log"),
 	}
 
 	return c
