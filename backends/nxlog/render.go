@@ -180,25 +180,25 @@ func (nxc *NxConfig) RenderOnChange(json graylog.ResponseCollectorConfiguration)
 	for _, output := range json.Outputs {
 		if output.Backend == "nxlog" {
 			if len(output.Type) > 0 {
-				jsonConfig.Add("output-"+output.Type, output.Name, output.Properties)
+				jsonConfig.Add("output-"+output.Type, output.Id, output.Properties)
 			} else {
-				jsonConfig.Add("output", output.Name, output.Properties)
+				jsonConfig.Add("output", output.Id, output.Properties)
 			}
 		}
 	}
 	for i, input := range json.Inputs {
 		if input.Backend == "nxlog" {
 			if len(input.Type) > 0 {
-				jsonConfig.Add("input-"+input.Type, input.Name, input.Properties)
+				jsonConfig.Add("input-"+input.Type, input.Id, input.Properties)
 			} else {
-				jsonConfig.Add("input", input.Name, input.Properties)
+				jsonConfig.Add("input", input.ForwardTo, input.Properties)
 			}
-			jsonConfig.Add("route", "route-"+strconv.Itoa(i), map[string]string{"Path": input.Name + " => " + input.ForwardTo})
+			jsonConfig.Add("route", "route-"+strconv.Itoa(i), map[string]string{"Path": input.Id + " => " + input.ForwardTo})
 		}
 	}
 	for _, snippet := range json.Snippets {
 		if snippet.Backend == "nxlog" {
-			jsonConfig.Add("snippet", snippet.Name, snippet.Value)
+			jsonConfig.Add("snippet", snippet.Id, snippet.Value)
 		}
 	}
 

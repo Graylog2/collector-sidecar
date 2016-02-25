@@ -7,6 +7,7 @@ type ResponseCollectorConfiguration struct {
 }
 
 type ResponseCollectorInput struct {
+	Id         string            `json:"input_id"`
 	Backend    string            `json:"backend"`
 	Type       string            `json:"type"`
 	Name       string            `json:"name"`
@@ -15,6 +16,7 @@ type ResponseCollectorInput struct {
 }
 
 type ResponseCollectorOutput struct {
+	Id         string            `json:"output_id"`
 	Backend    string            `json:"backend"`
 	Type       string            `json:"type"`
 	Name       string            `json:"name"`
@@ -22,6 +24,7 @@ type ResponseCollectorOutput struct {
 }
 
 type ResponseCollectorSnippet struct {
+	Id      string `json:"snippet_id"`
 	Backend string `json:"backend"`
 	Name    string `json:"name"`
 	Value   string `json:"snippet"`
