@@ -1,6 +1,8 @@
 package nxlog
 
 import (
+	"path"
+	"path/filepath"
 	"reflect"
 )
 
@@ -15,6 +17,7 @@ type NxConfig struct {
 	Matches       []nxmatch
 	Snippets      []nxsnippet
 	Canned        []nxcanned
+	Inventory     interface{}
 }
 
 type nxdefinition struct {
@@ -66,12 +69,12 @@ type nxcanned struct {
 func NewCollectorConfig(collectorPath string) *NxConfig {
 	nxc := &NxConfig{
 		CollectorPath: collectorPath,
-		Definitions:   []nxdefinition{{name: "ROOT", value: collectorPath}},
-		Paths: []nxpath{{name: "Moduledir", path: "%ROOT%\\modules"},
-			{name: "CacheDir", path: "%ROOT%\\data"},
-			{name: "Pidfile", path: "%ROOT%\\data\\nxlog.pid"},
-			{name: "SpoolDir", path: "%ROOT%\\data"},
-			{name: "LogFile", path: "%ROOT%\\data\\nxlog.log"}},
+		Definitions:   []nxdefinition{{name: "ROOT", value: path.Dir(collectorPath)}},
+		Paths: []nxpath{{name: "Moduledir", path: filepath.Join("%ROOT%", "modules")},
+			{name: "CacheDir", path: filepath.Join("%ROOT%", "data")},
+			{name: "Pidfile", path: filepath.Join("%ROOT%", "data", "nxlog.pid")},
+			{name: "SpoolDir", path: filepath.Join("%ROOT%", "data")},
+			{name: "LogFile", path: filepath.Join("%ROOT%", "data", "nxlog.log")}},
 		Extensions: []nxextension{{name: "gelf", properties: map[string]string{"Module": "xm_gelf"}}},
 	}
 	return nxc
@@ -129,4 +132,8 @@ func (nxc *NxConfig) Equals(a *NxConfig) bool {
 
 func (nxc *NxConfig) GetCollectorPath() string {
 	return nxc.CollectorPath
+}
+
+func (nxc *NxConfig) SetInventory(inventory interface{}) {
+	nxc.Inventory = inventory
 }

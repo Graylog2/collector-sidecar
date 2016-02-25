@@ -11,6 +11,7 @@ type Backend interface {
 	ExecArgs(string) []string
 	RenderOnChange(graylog.ResponseCollectorConfiguration, string) bool
 	ValidateConfigurationFile(string) bool
+	SetInventory(interface{})
 }
 
 type Creator func(string) Backend

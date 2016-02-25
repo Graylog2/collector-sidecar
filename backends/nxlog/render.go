@@ -8,8 +8,10 @@ import (
 	"strconv"
 
 	"github.com/Graylog2/sidecar/api/graylog"
+	"github.com/Graylog2/sidecar/system"
 	"github.com/Graylog2/sidecar/util"
 	"github.com/Sirupsen/logrus"
+	"text/template"
 )
 
 func (nxc *NxConfig) definitionsToString() string {
@@ -96,9 +98,16 @@ func (nxc *NxConfig) matchesToString() string {
 }
 
 func (nxc *NxConfig) snippetsToString() string {
+	var buffer bytes.Buffer
 	var result bytes.Buffer
 	for _, snippet := range nxc.Snippets {
-		result.WriteString(snippet.value)
+		snippetTemplate, err := template.New("snippet").Parse(snippet.value)
+		if err != nil {
+			result.WriteString(snippet.value)
+		} else {
+			snippetTemplate.Execute(&buffer, nxc.Inventory)
+			result.WriteString(buffer.String())
+		}
 		result.WriteString("\n")
 	}
 	return result.String()
@@ -179,6 +188,7 @@ func (nxc *NxConfig) RenderToFile(path string) error {
 
 func (nxc *NxConfig) RenderOnChange(json graylog.ResponseCollectorConfiguration, path string) bool {
 	jsonConfig := NewCollectorConfig(nxc.CollectorPath)
+	jsonConfig.SetInventory(system.NewInventory())
 
 	for _, output := range json.Outputs {
 		if output.Backend == "nxlog" {

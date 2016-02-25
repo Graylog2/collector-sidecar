@@ -13,6 +13,7 @@ import (
 	"github.com/Graylog2/sidecar/backends"
 	"github.com/Graylog2/sidecar/context"
 	"github.com/Graylog2/sidecar/services"
+	"github.com/Graylog2/sidecar/system"
 	"github.com/Graylog2/sidecar/util"
 
 	// importing backend packages to ensure init() is called
@@ -64,6 +65,9 @@ func main() {
 	// set backend related context values
 	context.Config.Exec = context.Backend.ExecPath()
 	context.Config.Args = context.Backend.ExecArgs(*collectorConfPath)
+
+	// expose system inventory to backend
+	context.Backend.SetInventory(system.NewInventory())
 
 	// setup system service
 	serviceConfig := &service.Config{
