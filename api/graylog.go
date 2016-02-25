@@ -31,8 +31,13 @@ func RequestConfiguration(context *context.Ctx) (graylog.ResponseCollectorConfig
 	}
 
 	resp, err := s.Get(api, params, &res, nil)
-	if err == nil && resp.Status() != 200 {
-		logrus.Error("[RequestConfiguration] Bad response status from Graylog server: ", resp.Status(), err)
+	if err == nil && resp.Status() == 204 {
+		logrus.Info("[RequestConfiguration] No configuration found for this collector!")
+	} else if err == nil && resp.Status() != 200 {
+		logrus.Error("[RequestConfiguration] Bad response status from Graylog server: ", resp.Status())
+	}
+	if err != nil {
+		logrus.Error("[RequestConfiguration] Fetching configuration failed: ", err)
 	}
 
 	return res, err
