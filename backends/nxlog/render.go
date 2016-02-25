@@ -169,7 +169,9 @@ func (nxc *NxConfig) Render() bytes.Buffer {
 
 func (nxc *NxConfig) RenderToFile(path string) error {
 	stringConfig := nxc.Render()
-	err := ioutil.WriteFile(path, stringConfig.Bytes(), 0644)
+	err := util.CreatePathToFile(path)
+	if err != nil { return err }
+	err = ioutil.WriteFile(path, stringConfig.Bytes(), 0644)
 	return err
 }
 

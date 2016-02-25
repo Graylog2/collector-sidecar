@@ -65,7 +65,7 @@ func UpdateRegistration(context *context.Ctx) {
 	resp, err := s.Send(&r)
 	if err == nil && resp.Status() != 202 {
 		logrus.Error("[UpdateRegistration] Bad response from Graylog server: ", resp.Status())
-	} else {
+	} else if err != nil {
 		logrus.Error("[UpdateRegistration] Failed to report collector status to server: ", err)
 	}
 }

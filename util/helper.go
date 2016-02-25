@@ -11,6 +11,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/kardianos/osext"
 	"github.com/pborman/uuid"
+	"path"
 )
 
 func GetSidecarPath() (string, error) {
@@ -78,6 +79,20 @@ func AppendIfDir(dir string, appendix string) (string, error) {
 	default:
 		return dir, nil
 	}
+}
+
+func CreatePathToFile(filepath string) error {
+	dir := path.Dir(filepath)
+	_, err := os.Open(dir)
+	if err != nil {
+		logrus.Info("Trying to create directory for: ", filepath)
+		err = os.MkdirAll(dir, 0750)
+		if err != nil {
+			logrus.Error("Not able to create directory path: ", dir)
+			return err
+		}
+	}
+	return nil
 }
 
 func SplitCommaList(list string) []string {
