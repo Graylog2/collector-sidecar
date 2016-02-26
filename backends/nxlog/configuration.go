@@ -2,7 +2,6 @@ package nxlog
 
 import (
 	"path"
-	"path/filepath"
 	"reflect"
 )
 
@@ -70,11 +69,6 @@ func NewCollectorConfig(collectorPath string) *NxConfig {
 	nxc := &NxConfig{
 		CollectorPath: collectorPath,
 		Definitions:   []nxdefinition{{name: "ROOT", value: path.Dir(collectorPath)}},
-		Paths: []nxpath{{name: "Moduledir", path: filepath.Join("%ROOT%", "modules")},
-			{name: "CacheDir", path: filepath.Join("%ROOT%", "data")},
-			{name: "Pidfile", path: filepath.Join("%ROOT%", "data", "nxlog.pid")},
-			{name: "SpoolDir", path: filepath.Join("%ROOT%", "data")},
-			{name: "LogFile", path: filepath.Join("%ROOT%", "data", "nxlog.log")}},
 		Extensions: []nxextension{{name: "gelf", properties: map[string]string{"Module": "xm_gelf"}}},
 	}
 	return nxc
