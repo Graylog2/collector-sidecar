@@ -5,6 +5,9 @@ all: clean build
 build:
 	$(GO) build -v -i -o sidecar
 
+build-linux:
+	GOOS=linux GOARCH=amd64 $(GO) build -v -i -o sidecar
+
 build-darwin:
 	GOOS=darwin GOARCH=amd64 $(GO) build -v -i -o sidecar
 
