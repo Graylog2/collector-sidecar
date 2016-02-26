@@ -52,9 +52,8 @@ func GetCollectorId(collectorId string) string {
 		id = string(file)
 	}
 
-	logrus.Info("Using collector-id: ", id)
-	if id == "" {
-		logrus.Fatal("Couldn't find any collector-id")
+	if id != "" {
+		logrus.Info("Using collector-id: ", id)
 	}
 	return id
 }

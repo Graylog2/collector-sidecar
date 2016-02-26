@@ -18,17 +18,19 @@ import (
 
 	// importing backend packages to ensure init() is called
 	_ "github.com/Graylog2/sidecar/backends/nxlog"
+	"runtime"
 )
 
 func main() {
-	sidecarPath, err := util.GetSidecarPath()
-	if err != nil {
-		logrus.Fatal("Can not find path to Sidecar installation.")
+	sidecarConfigurationFile := ""
+	if runtime.GOOS == "windows" {
+		sidecarConfigurationFile = filepath.Join("%APPDATA%", "sidecar.ini")
+	} else {
+		sidecarConfigurationFile = filepath.Join("/etc", "sidecar", "sidecar.ini")
 	}
-
-	sidecarConfigurationFile := filepath.Join(sidecarPath, "sidecar.ini")
 	if _, err := os.Stat(sidecarConfigurationFile); os.IsNotExist(err) {
-		logrus.Fatal("Can not open configuration file " + sidecarConfigurationFile)
+		logrus.Error("Can not open sidecar configuration " + sidecarConfigurationFile)
+		sidecarConfigurationFile = ""
 	}
 
 	// parse .ini file or use command line switches
@@ -51,23 +53,6 @@ func main() {
 
 	// initialize application context
 	context := context.NewContext(*serverUrl, *collectorPath, *collectorConfPath, *nodeId, *collectorId, *logPath)
-	context.Tags = util.SplitCommaList(*tags)
-	if len(context.Tags) != 0 {
-		logrus.Info("Fetching configuration tagged by: ", context.Tags)
-	}
-
-	nxlog, err := backends.GetBackend("nxlog")
-	if err != nil {
-		logrus.Fatal("Exiting.")
-	}
-	context.Backend = nxlog(*collectorPath)
-
-	// set backend related context values
-	context.Config.Exec = context.Backend.ExecPath()
-	context.Config.Args = context.Backend.ExecArgs(*collectorConfPath)
-
-	// expose system inventory to backend
-	context.Backend.SetInventory(system.NewInventory())
 
 	// setup system service
 	serviceConfig := &service.Config{
@@ -80,16 +65,40 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	context.Program.BindToService(s)
-	context.Service = s
-
 	if len(*svcFlag) != 0 {
 		err := service.Control(s, *svcFlag)
 		if err != nil {
-			logrus.Info("Valid service actions: %q\n", service.ControlAction)
+			logrus.Info("Valid service actions:\n", service.ControlAction)
 			logrus.Fatal(err)
 		}
 		return
+	}
+
+	// configure context
+	context.Tags = util.SplitCommaList(*tags)
+	if len(context.Tags) != 0 {
+		logrus.Info("Fetching configuration tagged by: ", context.Tags)
+	}
+
+	nxlog, err := backends.GetBackend("nxlog")
+	if err != nil {
+		logrus.Fatal("Can not find backend, exiting.")
+	}
+	context.Backend = nxlog(*collectorPath)
+
+	// set backend related context values
+	context.Config.Exec = context.Backend.ExecPath()
+	context.Config.Args = context.Backend.ExecArgs(*collectorConfPath)
+
+	// expose system inventory to backend
+	context.Backend.SetInventory(system.NewInventory())
+
+	// bind service to context
+	context.Program.BindToService(s)
+	context.Service = s
+
+	if context.CollectorId == "" {
+		logrus.Fatal("No collector ID was configured, exiting!")
 	}
 
 	// start main loop

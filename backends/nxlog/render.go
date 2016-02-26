@@ -4,14 +4,13 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os/exec"
-	"path/filepath"
 	"strconv"
+	"text/template"
 
 	"github.com/Graylog2/sidecar/api/graylog"
 	"github.com/Graylog2/sidecar/system"
 	"github.com/Graylog2/sidecar/util"
 	"github.com/Sirupsen/logrus"
-	"text/template"
 )
 
 func (nxc *NxConfig) definitionsToString() string {
@@ -162,6 +161,7 @@ func (nxc *NxConfig) Render() bytes.Buffer {
 	result.WriteString(nxc.definitionsToString())
 	result.WriteString(nxc.pathsToString())
 	result.WriteString(nxc.extensionsToString())
+	result.WriteString(nxc.snippetsToString())
 	result.WriteString(nxc.inputsToString())
 	result.WriteString(nxc.outputsToString())
 	// pre-canned types
@@ -171,7 +171,6 @@ func (nxc *NxConfig) Render() bytes.Buffer {
 	//
 	result.WriteString(nxc.routesToString())
 	result.WriteString(nxc.matchesToString())
-	result.WriteString(nxc.snippetsToString())
 
 	return result
 }
@@ -226,7 +225,7 @@ func (nxc *NxConfig) RenderOnChange(json graylog.ResponseCollectorConfiguration,
 }
 
 func (nxc *NxConfig) ValidateConfigurationFile(configurationPath string) bool {
-	cmd := exec.Command(nxc.ExecPath(), "-v", "-c", filepath.Join(configurationPath, "nxlog", "nxlog.conf"))
+	cmd := exec.Command(nxc.ExecPath(), "-v", "-c", configurationPath)
 	err := cmd.Run()
 	if err != nil {
 		logrus.Error("Error during configuration validation: ", err)

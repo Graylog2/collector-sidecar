@@ -7,7 +7,6 @@ import (
 
 	"github.com/Graylog2/sidecar/api"
 	"github.com/Graylog2/sidecar/context"
-	"github.com/Graylog2/sidecar/util"
 )
 
 func StartPeriodicals(context *context.Ctx) {
@@ -29,7 +28,6 @@ func updateCollectorRegistration(context *context.Ctx) {
 // fetch configuration periodically
 func checkForUpdateAndRestart(context *context.Ctx) {
 	backend := context.Backend
-	sidecarPath, _ := util.GetSidecarPath()
 
 	go func() {
 		for {
@@ -40,7 +38,7 @@ func checkForUpdateAndRestart(context *context.Ctx) {
 				continue
 			}
 			if backend.RenderOnChange(jsonConfig, context.CollectorConfPath) {
-				if !backend.ValidateConfigurationFile(sidecarPath) {
+				if !backend.ValidateConfigurationFile(context.CollectorConfPath) {
 					logrus.Info("Collector configuration file is not valid, waiting for update...")
 					continue
 				}
