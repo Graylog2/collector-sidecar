@@ -47,7 +47,7 @@ func main() {
 		nodeId            = flag.String("node-id", "graylog-sidecar", "Collector identification string")
 		collectorId       = flag.String("collector-id", "", "UUID used for collector registration")
 		tags              = flag.String("tags", "", "Comma separated tag list")
-		logPath           = flag.String("log-path", "/var/log/sidecar", "Path to log directory")
+		logPath           = flag.String("log-path", "/var/log/sidecar", "Directory for collector output logs")
 	)
 	conf.ParseAll()
 
