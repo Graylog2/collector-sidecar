@@ -71,6 +71,19 @@ func FileExists(filePath string) error {
 
 }
 
+func IsDir(filePath string) bool {
+	fi, err := os.Stat(filePath)
+	if err != nil {
+		logrus.Error(err)
+		return false
+	}
+	if fi.Mode().IsDir() {
+		return true
+	}
+	return false
+
+}
+
 func AppendIfDir(dir string, appendix string) (string, error) {
 	file, err := os.Open(dir)
 	if err != nil {

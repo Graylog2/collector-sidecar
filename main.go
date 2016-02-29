@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"runtime"
 	"path/filepath"
 
 	"github.com/Sirupsen/logrus"
@@ -18,7 +19,6 @@ import (
 
 	// importing backend packages to ensure init() is called
 	_ "github.com/Graylog2/sidecar/backends/nxlog"
-	"runtime"
 )
 
 func main() {
@@ -42,7 +42,7 @@ func main() {
 	var (
 		svcFlag           = flag.String("service", "", "Control the system service")
 		collectorPath     = flag.String("collector-path", "/usr/bin/nxlog", "Path to collector installation")
-		collectorConfPath = flag.String("collector-conf-path", "/tmp/nxlog.conf", "File path to the rendered collector configuration")
+		collectorConfPath = flag.String("collector-conf-path", "/etc/sidecar/generated/nxlog.conf", "File path to the rendered collector configuration")
 		serverUrl         = flag.String("server-url", "http://127.0.0.1:12900", "Graylog server URL")
 		nodeId            = flag.String("node-id", "graylog-sidecar", "Collector identification string")
 		collectorId       = flag.String("collector-id", "", "UUID used for collector registration")
@@ -85,6 +85,10 @@ func main() {
 		logrus.Fatal("Can not find backend, exiting.")
 	}
 	context.Backend = nxlog(*collectorPath)
+
+	if util.IsDir(*collectorConfPath) {
+		logrus.Fatal("Please provide full path to configuration file to render.")
+	}
 
 	// set backend related context values
 	context.Config.Exec = context.Backend.ExecPath()
