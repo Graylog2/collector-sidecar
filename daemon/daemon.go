@@ -7,11 +7,12 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/kardianos/service"
 
 	"github.com/Graylog2/sidecar/util"
 )
+
+var log = util.Log()
 
 type Config struct {
 	Name, DisplayName, Description string
@@ -34,7 +35,7 @@ type Program struct {
 func NewConfig(collectorPath string, logPath string) *Config {
 	rootDir, err := util.GetRootPath()
 	if err != nil {
-		logrus.Error("Can not access root directory")
+		log.Error("Can not access root directory")
 	}
 
 	c := &Config{
@@ -78,7 +79,7 @@ func (p *Program) Start(s service.Service) error {
 }
 
 func (p *Program) Stop(s service.Service) error {
-	logrus.Info("Stopping collector")
+	log.Info("Stopping collector")
 	close(p.exit)
 	if p.cmd.Process != nil {
 		p.cmd.Process.Kill()
@@ -96,13 +97,13 @@ func (p *Program) Restart(s service.Service) error {
 }
 
 func (p *Program) run() {
-	logrus.Info("Starting collector")
+	log.Info("Starting collector")
 
 	if p.Stderr != "" {
 		err := util.CreatePathToFile(p.Stderr)
 		f, err := os.OpenFile(p.Stderr, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0777)
 		if err != nil {
-			logrus.Warningf("Failed to open std err %q: %v", p.Stderr, err)
+			log.Warningf("Failed to open std err %q: %v", p.Stderr, err)
 			return
 		}
 		defer f.Close()
@@ -112,7 +113,7 @@ func (p *Program) run() {
 		err := util.CreatePathToFile(p.Stderr)
 		f, err := os.OpenFile(p.Stdout, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0777)
 		if err != nil {
-			logrus.Warningf("Failed to open std out %q: %v", p.Stdout, err)
+			log.Warningf("Failed to open std out %q: %v", p.Stdout, err)
 			return
 		}
 		defer f.Close()
@@ -123,7 +124,7 @@ func (p *Program) run() {
 	p.cmd.Run()
 
 	if time.Since(startTime) < 3*time.Second {
-		logrus.Error("Collector exits immediately, this should not happen! Please check your collector configuration!")
+		log.Error("Collector exits immediately, this should not happen! Please check your collector configuration!")
 	}
 
 	return

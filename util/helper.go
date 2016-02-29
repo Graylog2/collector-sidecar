@@ -9,20 +9,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/Sirupsen/logrus"
-	"github.com/kardianos/osext"
 	"github.com/pborman/uuid"
 )
-
-func GetSidecarPath() (string, error) {
-	fullexecpath, err := osext.Executable()
-	if err != nil {
-		return "", err
-	}
-
-	dir, _ := filepath.Split(fullexecpath)
-	return dir, nil
-}
 
 func GetRootPath() (string, error) {
 	return filepath.Abs("/")
@@ -41,19 +29,19 @@ func GetCollectorId(collectorId string) string {
 		filePath := strings.SplitAfter(collectorId, ":")[1]
 		err := FileExists(filePath)
 		if err != nil {
-			logrus.Info("collector-id file doesn't exist, generating a new one")
+			log.Info("collector-id file doesn't exist, generating a new one")
 			CreatePathToFile(filePath)
 			ioutil.WriteFile(filePath, []byte(RandomUuid()), 0644)
 		}
 		file, err := ioutil.ReadFile(filePath)
 		if err != nil {
-			logrus.Fatal("Can not read collector-id file: ", err)
+			log.Fatal("Can not read collector-id file: ", err)
 		}
 		id = string(file)
 	}
 
 	if id != "" {
-		logrus.Info("Using collector-id: ", id)
+		log.Info("Using collector-id: ", id)
 	}
 	return id
 }
@@ -74,7 +62,7 @@ func FileExists(filePath string) error {
 func IsDir(filePath string) bool {
 	fi, err := os.Stat(filePath)
 	if err != nil {
-		logrus.Error(err)
+		log.Error(err)
 		return false
 	}
 	if fi.Mode().IsDir() {
@@ -87,7 +75,7 @@ func IsDir(filePath string) bool {
 func AppendIfDir(dir string, appendix string) (string, error) {
 	file, err := os.Open(dir)
 	if err != nil {
-		logrus.Error("Can not access ", dir)
+		log.Error("Can not access ", dir)
 		return dir, err
 	}
 
@@ -107,10 +95,10 @@ func CreatePathToFile(filepath string) error {
 	dir := path.Dir(filepath)
 	_, err := os.Open(dir)
 	if err != nil {
-		logrus.Info("Trying to create directory for: ", filepath)
+		log.Info("Trying to create directory for: ", filepath)
 		err = os.MkdirAll(dir, 0750)
 		if err != nil {
-			logrus.Error("Not able to create directory path: ", dir)
+			log.Error("Not able to create directory path: ", dir)
 			return err
 		}
 	}

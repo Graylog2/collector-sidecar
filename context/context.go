@@ -3,13 +3,14 @@ package context
 import (
 	"net/url"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/kardianos/service"
 
 	"github.com/Graylog2/sidecar/backends"
 	"github.com/Graylog2/sidecar/daemon"
 	"github.com/Graylog2/sidecar/util"
 )
+
+var log = util.Log()
 
 type Ctx struct {
 	ServerUrl         *url.URL
@@ -29,11 +30,11 @@ func NewContext(serverUrl string, collectorPath string, collectorConfPath string
 
 	url, err := url.Parse(serverUrl)
 	if err != nil {
-		logrus.Fatal("Server-url is not valid", err)
+		log.Fatal("Server-url is not valid", err)
 	}
 
 	if nodeId == "" {
-		logrus.Fatal("Please provide a valid node-id")
+		log.Fatal("Please provide a valid node-id")
 	}
 
 	return &Ctx{

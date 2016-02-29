@@ -3,11 +3,12 @@ package services
 import (
 	"time"
 
-	"github.com/Sirupsen/logrus"
-
 	"github.com/Graylog2/sidecar/api"
 	"github.com/Graylog2/sidecar/context"
+	"github.com/Graylog2/sidecar/util"
 )
+
+var log = util.Log()
 
 func StartPeriodicals(context *context.Ctx) {
 	updateCollectorRegistration(context)
@@ -34,18 +35,18 @@ func checkForUpdateAndRestart(context *context.Ctx) {
 			time.Sleep(10 * time.Second)
 			jsonConfig, err := api.RequestConfiguration(context)
 			if err != nil {
-				logrus.Error("Can't fetch configuration from Graylog API: ", err)
+				log.Error("Can't fetch configuration from Graylog API: ", err)
 				continue
 			}
 			if backend.RenderOnChange(jsonConfig, context.CollectorConfPath) {
 				if !backend.ValidateConfigurationFile(context.CollectorConfPath) {
-					logrus.Info("Collector configuration file is not valid, waiting for update...")
+					log.Info("Collector configuration file is not valid, waiting for update...")
 					continue
 				}
 
 				err = context.Program.Restart(context.Service)
 				if err != nil {
-					logrus.Error("Failed to restart collector %v", err)
+					log.Error("Failed to restart collector %v", err)
 				}
 
 			}

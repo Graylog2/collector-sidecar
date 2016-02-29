@@ -5,13 +5,14 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/Sirupsen/logrus"
 	"gopkg.in/jmcvetta/napping.v3"
 
 	"github.com/Graylog2/sidecar/api/graylog"
 	"github.com/Graylog2/sidecar/context"
 	"github.com/Graylog2/sidecar/util"
 )
+
+var log = util.Log()
 
 func RequestConfiguration(context *context.Ctx) (graylog.ResponseCollectorConfiguration, error) {
 	s := napping.Session{}
@@ -22,7 +23,7 @@ func RequestConfiguration(context *context.Ctx) (graylog.ResponseCollectorConfig
 	if len(context.Tags) != 0 {
 		tags, err := json.Marshal(context.Tags)
 		if err != nil {
-			logrus.Error("Provided tags can not be send to Graylog server!")
+			log.Error("Provided tags can not be send to Graylog server!")
 		} else {
 			params.Add("tags", string(tags))
 		}
@@ -32,12 +33,12 @@ func RequestConfiguration(context *context.Ctx) (graylog.ResponseCollectorConfig
 
 	resp, err := s.Get(api, params, &res, nil)
 	if err == nil && resp.Status() == 204 {
-		logrus.Info("[RequestConfiguration] No configuration found for this collector!")
+		log.Info("[RequestConfiguration] No configuration found for this collector!")
 	} else if err == nil && resp.Status() != 200 {
-		logrus.Error("[RequestConfiguration] Bad response status from Graylog server: ", resp.Status())
+		log.Error("[RequestConfiguration] Bad response status from Graylog server: ", resp.Status())
 	}
 	if err != nil {
-		logrus.Error("[RequestConfiguration] Fetching configuration failed: ", err)
+		log.Error("[RequestConfiguration] Fetching configuration failed: ", err)
 	}
 
 	return res, err
@@ -64,8 +65,8 @@ func UpdateRegistration(context *context.Ctx) {
 
 	resp, err := s.Send(&r)
 	if err == nil && resp.Status() != 202 {
-		logrus.Error("[UpdateRegistration] Bad response from Graylog server: ", resp.Status())
+		log.Error("[UpdateRegistration] Bad response from Graylog server: ", resp.Status())
 	} else if err != nil {
-		logrus.Error("[UpdateRegistration] Failed to report collector status to server: ", err)
+		log.Error("[UpdateRegistration] Failed to report collector status to server: ", err)
 	}
 }

@@ -2,12 +2,10 @@ package main
 
 import (
 	"flag"
-	"log"
 	"os"
 	"runtime"
 	"path/filepath"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/kardianos/service"
 	"github.com/rakyll/globalconf"
 
@@ -21,6 +19,8 @@ import (
 	_ "github.com/Graylog2/sidecar/backends/nxlog"
 )
 
+var log = util.Log()
+
 func main() {
 	sidecarConfigurationFile := ""
 	if runtime.GOOS == "windows" {
@@ -29,7 +29,7 @@ func main() {
 		sidecarConfigurationFile = filepath.Join("/etc", "sidecar", "sidecar.ini")
 	}
 	if _, err := os.Stat(sidecarConfigurationFile); os.IsNotExist(err) {
-		logrus.Error("Can not open sidecar configuration " + sidecarConfigurationFile)
+		log. Error("Can not open sidecar configuration " + sidecarConfigurationFile)
 		sidecarConfigurationFile = ""
 	}
 
@@ -68,8 +68,8 @@ func main() {
 	if len(*svcFlag) != 0 {
 		err := service.Control(s, *svcFlag)
 		if err != nil {
-			logrus.Info("Valid service actions:\n", service.ControlAction)
-			logrus.Fatal(err)
+			log.Info("Valid service actions:\n", service.ControlAction)
+			log.Fatal(err)
 		}
 		return
 	}
@@ -77,17 +77,17 @@ func main() {
 	// configure context
 	context.Tags = util.SplitCommaList(*tags)
 	if len(context.Tags) != 0 {
-		logrus.Info("Fetching configuration tagged by: ", context.Tags)
+		log.Info("Fetching configuration tagged by: ", context.Tags)
 	}
 
 	nxlog, err := backends.GetBackend("nxlog")
 	if err != nil {
-		logrus.Fatal("Can not find backend, exiting.")
+		log.Fatal("Can not find backend, exiting.")
 	}
 	context.Backend = nxlog(*collectorPath)
 
 	if util.IsDir(*collectorConfPath) {
-		logrus.Fatal("Please provide full path to configuration file to render.")
+		log.Fatal("Please provide full path to configuration file to render.")
 	}
 
 	// set backend related context values
@@ -102,13 +102,13 @@ func main() {
 	context.Service = s
 
 	if context.CollectorId == "" {
-		logrus.Fatal("No collector ID was configured, exiting!")
+		log.Fatal("No collector ID was configured, exiting!")
 	}
 
 	// start main loop
 	services.StartPeriodicals(context)
 	err = s.Run()
 	if err != nil {
-		logrus.Fatal(err)
+		log.Fatal(err)
 	}
 }

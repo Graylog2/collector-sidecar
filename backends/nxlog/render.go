@@ -10,7 +10,6 @@ import (
 	"github.com/Graylog2/sidecar/api/graylog"
 	"github.com/Graylog2/sidecar/system"
 	"github.com/Graylog2/sidecar/util"
-	"github.com/Sirupsen/logrus"
 )
 
 func (nxc *NxConfig) definitionsToString() string {
@@ -215,7 +214,7 @@ func (nxc *NxConfig) RenderOnChange(json graylog.ResponseCollectorConfiguration,
 	}
 
 	if !nxc.Equals(jsonConfig) {
-		logrus.Info("Configuration change detected, rewriting configuration file.")
+		log.Info("Configuration change detected, rewriting configuration file.")
 		nxc.Update(jsonConfig)
 		nxc.RenderToFile(path)
 		return true
@@ -228,7 +227,7 @@ func (nxc *NxConfig) ValidateConfigurationFile(configurationPath string) bool {
 	cmd := exec.Command(nxc.ExecPath(), "-v", "-c", configurationPath)
 	err := cmd.Run()
 	if err != nil {
-		logrus.Error("Error during configuration validation: ", err)
+		log.Error("Error during configuration validation: ", err)
 		return false
 	}
 

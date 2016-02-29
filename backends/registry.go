@@ -2,8 +2,10 @@ package backends
 
 import (
 	"github.com/Graylog2/sidecar/api/graylog"
-	"github.com/Sirupsen/logrus"
+	"github.com/Graylog2/sidecar/util"
 )
+
+var log = util.Log()
 
 type Backend interface {
 	Name() string
@@ -22,7 +24,7 @@ type backendFactory struct {
 
 func (bf *backendFactory) register(name string, c Creator) error {
 	if _, ok := bf.registry[name]; ok {
-		logrus.Error("Collector backend named " + name + " is already registered")
+		log.Error("Collector backend named " + name + " is already registered")
 		return nil
 	}
 	bf.registry[name] = c
@@ -32,7 +34,7 @@ func (bf *backendFactory) register(name string, c Creator) error {
 func (bf *backendFactory) get(name string) (Creator, error) {
 	c, ok := bf.registry[name]
 	if !ok {
-		logrus.Fatal("No collector backend named " + name + " is registered")
+		log.Fatal("No collector backend named " + name + " is registered")
 		return nil, nil
 	}
 	return c, nil
