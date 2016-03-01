@@ -33,3 +33,8 @@ sidecar
 sidecar.exe
 misc/nxmock/nxlog
 misc/nxmock/nxlog.exe
+
+dist/cache
+dist/pkg
+dist/tmp-build
+dist/tmp-dest
