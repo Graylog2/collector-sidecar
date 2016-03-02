@@ -148,6 +148,7 @@ func (nxc *NxConfig) gelfUdpOutputsToString() string {
 			result.WriteString("	Host " + can.properties["server"] + "\n")
 			result.WriteString("	Port " + can.properties["port"] + "\n")
 			result.WriteString("	OutputType  GELF\n")
+			result.WriteString("	Exec $short_message = $raw_event; # Avoids truncation of the short_message field.\n")
 			result.WriteString("</Output>\n")
 		}
 	}
