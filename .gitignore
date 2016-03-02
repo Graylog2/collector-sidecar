@@ -22,10 +22,12 @@ _testmain.go
 *.exe
 *.test
 *.prof
+*.iml
 
 /.idea/
 /config/
 /vendor/
+/.vendor/
 /nxlog/
 /log/
 
