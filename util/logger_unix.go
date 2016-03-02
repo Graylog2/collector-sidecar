@@ -1,3 +1,5 @@
+// +build darwin linux
+
 package util
 
 import (
@@ -16,7 +18,6 @@ func init() {
 	if err == nil {
 		log.Hooks.Add(hook)
 	}
-
 }
 
 func Log() *logrus.Logger {
