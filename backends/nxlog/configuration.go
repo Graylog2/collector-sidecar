@@ -1,7 +1,7 @@
 package nxlog
 
 import (
-	"path"
+	"path/filepath"
 	"reflect"
 )
 
@@ -68,7 +68,7 @@ type nxcanned struct {
 func NewCollectorConfig(collectorPath string) *NxConfig {
 	nxc := &NxConfig{
 		CollectorPath: collectorPath,
-		Definitions:   []nxdefinition{{name: "ROOT", value: path.Dir(collectorPath)}},
+		Definitions:   []nxdefinition{{name: "ROOT", value: filepath.Dir(collectorPath)}},
 		Extensions: []nxextension{{name: "gelf", properties: map[string]string{"Module": "xm_gelf"}}},
 	}
 	return nxc

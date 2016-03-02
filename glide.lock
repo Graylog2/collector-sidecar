@@ -1,5 +1,5 @@
-hash: 1102a980bae4d4ac329c79776aa0108379db1b6f533c076763605de454f17081
-updated: 2016-02-24T16:49:17.652825084+01:00
+hash: e67945a0ed69e04a98b4c5ec6287d7ef0e2d68f93221a514b8a5a1e92df890c4
+updated: 2016-03-02T16:05:40.533726583+01:00
 imports:
 - name: github.com/kardianos/osext
   version: 10da29423eb9a6269092eebdc2be32209612d9d2
@@ -13,10 +13,17 @@ imports:
   version: 907cca0f578a5316fb864ec6992dc3d9730ec58c
 - name: github.com/Sirupsen/logrus
   version: 446d1c146faa8ed3f4218f056fcd165f6bcfda81
+  subpackages:
+  - hooks/syslog
 - name: golang.org/x/sys
   version: 833a04a10549a95dc34458c195cbad61bbb6cb4d
   subpackages:
   - windows
+  - windows/registry
+  - windows/svc
+  - windows/svc/eventlog
+  - windows/svc/mgr
+  - unix
 - name: gopkg.in/jmcvetta/napping.v3
   version: 58e2b10cc328913a6d3478dfa4546395c71ada81
 devImports: []

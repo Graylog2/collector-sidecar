@@ -24,7 +24,7 @@ var log = util.Log()
 func main() {
 	sidecarConfigurationFile := ""
 	if runtime.GOOS == "windows" {
-		sidecarConfigurationFile = filepath.Join("%APPDATA%", "sidecar.ini")
+		sidecarConfigurationFile = filepath.Join(os.Getenv("APPDATA"), "sidecar", "sidecar.ini")
 	} else {
 		sidecarConfigurationFile = filepath.Join("/etc", "sidecar", "sidecar.ini")
 	}
@@ -51,8 +51,13 @@ func main() {
 	)
 	conf.ParseAll()
 
+	expandedCollectorPath := util.ExpandPath(*collectorPath)
+	expandedCollectorConfPath := util.ExpandPath(*collectorConfPath)
+	expandedCollectorId := util.ExpandPath(*collectorId)
+	expandedLogPath := util.ExpandPath(*logPath)
+
 	// initialize application context
-	context := context.NewContext(*serverUrl, *collectorPath, *collectorConfPath, *nodeId, *collectorId, *logPath)
+	context := context.NewContext(*serverUrl, expandedCollectorPath, expandedCollectorConfPath, *nodeId, expandedCollectorId, expandedLogPath)
 
 	// setup system service
 	serviceConfig := &service.Config{
@@ -84,15 +89,15 @@ func main() {
 	if err != nil {
 		log.Fatal("Can not find backend, exiting.")
 	}
-	context.Backend = nxlog(*collectorPath)
+	context.Backend = nxlog(expandedCollectorPath)
 
-	if util.IsDir(*collectorConfPath) {
+	if util.IsDir(expandedCollectorConfPath) {
 		log.Fatal("Please provide full path to configuration file to render.")
 	}
 
 	// set backend related context values
 	context.Config.Exec = context.Backend.ExecPath()
-	context.Config.Args = context.Backend.ExecArgs(*collectorConfPath)
+	context.Config.Args = context.Backend.ExecArgs(expandedCollectorConfPath)
 
 	// expose system inventory to backend
 	context.Backend.SetInventory(system.NewInventory())

@@ -26,7 +26,7 @@ func GetSystemName() string {
 func GetCollectorId(collectorId string) string {
 	id := collectorId
 	if strings.HasPrefix(collectorId, "file:") {
-		filePath := strings.SplitAfter(collectorId, ":")[1]
+		filePath := strings.SplitAfterN(collectorId, ":", 2)[1]
 		err := FileExists(filePath)
 		if err != nil {
 			log.Info("collector-id file doesn't exist, generating a new one")
