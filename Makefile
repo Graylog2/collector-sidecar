@@ -1,6 +1,6 @@
 GO ?= go
 
-all: clean build
+all: clean misc build
 
 build: ## Build sidecar binary for local target system
 	$(GO) build -v -i -o sidecar
@@ -26,9 +26,6 @@ clean: ## Remove binaries
 package: ## Create Linux system package
 	@rm -f dist/pkg/sidecar*
 	@fpm-cook package dist/recipe.rb
-
-package-rpm: clean build-linux ## Create RedHat/CentOS system package
-	@fpm -s dir -t rpm -n sidecar -v $(VERSION) sidecar=/usr/local/bin/sidecar sidecar.ini=/etc/sidecar/sidecar.ini
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
