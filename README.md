@@ -16,8 +16,8 @@ Install the NXLog package from the offical download [page](https://nxlog.org/pro
 ```
   $ /etc/init.d/nxlog stop
   $ update-rc.d -f nxlog remove
-	$ gpasswd -a nxlog adm
-	$ install -d -o nxlog -g nxlog /var/run/nxlog
+  $ gpasswd -a nxlog adm
+  $ install -d -o nxlog -g nxlog /var/run/nxlog
  
   $ cp sidecar /usr/bin/
   $ mkdir /var/log/sidecar
