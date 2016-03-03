@@ -16,8 +16,8 @@ func init() {
 	}
 }
 
-func New(collectorPath string) backends.Backend {
-	return NewCollectorConfig(collectorPath)
+func New(collectorPath string, collectorId string) backends.Backend {
+	return NewCollectorConfig(collectorPath, collectorId)
 }
 
 func (nxc *NxConfig) Name() string {

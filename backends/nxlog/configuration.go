@@ -7,6 +7,7 @@ import (
 
 type NxConfig struct {
 	CollectorPath string
+	CollectorId   string
 	Definitions   []nxdefinition
 	Paths         []nxpath
 	Extensions    []nxextension
@@ -65,9 +66,10 @@ type nxcanned struct {
 	properties map[string]string
 }
 
-func NewCollectorConfig(collectorPath string) *NxConfig {
+func NewCollectorConfig(collectorPath string, collectorId string) *NxConfig {
 	nxc := &NxConfig{
 		CollectorPath: collectorPath,
+		CollectorId:   collectorId,
 		Definitions:   []nxdefinition{{name: "ROOT", value: filepath.Dir(collectorPath)}},
 		Extensions: []nxextension{{name: "gelf", properties: map[string]string{"Module": "xm_gelf"}}},
 	}
