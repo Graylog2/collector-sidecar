@@ -23,7 +23,7 @@ var log = util.Log()
 func main() {
 	sidecarConfigurationFile := ""
 	if runtime.GOOS == "windows" {
-		sidecarConfigurationFile = filepath.Join(os.Getenv("APPDATA"), "sidecar", "sidecar.ini")
+		sidecarConfigurationFile = filepath.Join("C:\\", "Program Files (x86)", "sidecar", "sidecar.ini")
 	} else {
 		sidecarConfigurationFile = filepath.Join("/etc", "sidecar", "sidecar.ini")
 	}
