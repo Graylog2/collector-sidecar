@@ -57,7 +57,7 @@ func UpdateRegistration(context *context.Ctx) {
 	h.Add("X-Graylog-Collector-Version", util.CollectorVersion)
 
 	r := napping.Request{
-		Url:     context.ServerUrl.String() + "/plugins/org.graylog.plugins.collector/system/collectors/" + context.CollectorId,
+		Url:     context.ServerUrl.String() + "/plugins/org.graylog.plugins.collector/collectors/" + context.CollectorId,
 		Method:  "PUT",
 		Payload: registration,
 		Header:  &h,
