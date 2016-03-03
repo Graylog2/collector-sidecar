@@ -14,6 +14,7 @@ type Backend interface {
 	ExecArgs(string) []string
 	RenderOnChange(graylog.ResponseCollectorConfiguration, string) bool
 	ValidateConfigurationFile(string) bool
+	ValidatePreconditions() bool
 }
 
 type Creator func(*context.Ctx) Backend

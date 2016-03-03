@@ -12,7 +12,6 @@ import (
 	"github.com/Graylog2/sidecar/backends"
 	"github.com/Graylog2/sidecar/context"
 	"github.com/Graylog2/sidecar/services"
-	"github.com/Graylog2/sidecar/system"
 	"github.com/Graylog2/sidecar/util"
 
 	// importing backend packages to ensure init() is called
@@ -57,6 +56,10 @@ func main() {
 	expandedCollectorId := util.ExpandPath(*collectorIdParam)
 	expandedLogPath := util.ExpandPath(*logPathParam)
 
+	if util.IsDir(expandedCollectorConfPath) {
+		log.Fatal("Please provide full path to configuration file to render.")
+	}
+
 	// initialize application context
 	context := context.NewContext(*serverUrlParam,
 				      expandedCollectorPath,
@@ -64,6 +67,10 @@ func main() {
 				      *nodeIdParam,
 				      expandedCollectorId,
 				      expandedLogPath)
+
+	if context.CollectorId == "" {
+		log.Fatal("No collector ID was configured, exiting!")
+	}
 
 	// setup system service
 	serviceConfig := &service.Config{
@@ -88,35 +95,22 @@ func main() {
 	// configure context
 	context.Tags = util.SplitCommaList(*tagsParam)
 	if len(context.Tags) != 0 {
-		log.Info("Fetching configuration tagged by: ", context.Tags)
+		log.Info("Fetching configurations tagged by: ", context.Tags)
 	}
 
 	backendCreator, err := backends.GetBackend(*backendParam)
-	if err != nil {
-		log.Fatal("Can not find backend, exiting.")
-	}
 	backend := backendCreator(context)
-
-	if util.IsDir(expandedCollectorConfPath) {
-		log.Fatal("Please provide full path to configuration file to render.")
-	}
 
 	// set backend related context values
 	context.Config.Exec = backend.ExecPath()
 	context.Config.Args = backend.ExecArgs(expandedCollectorConfPath)
 
-	// expose system inventory to context
-	context.Inventory = system.NewInventory()
-
 	// bind service to context
 	context.Program.BindToService(s)
 	context.Service = s
 
-	if context.CollectorId == "" {
-		log.Fatal("No collector ID was configured, exiting!")
-	}
-
 	// start main loop
+	backend.ValidatePreconditions()
 	services.StartPeriodicals(context, backend)
 	err = s.Run()
 	if err != nil {

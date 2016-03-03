@@ -46,6 +46,7 @@ func NewContext(serverUrl string, collectorPath string, collectorConfPath string
 		CollectorPath:     collectorPath,
 		CollectorConfPath: collectorConfPath,
 		LogPath:           logPath,
+		Inventory: 	   system.NewInventory(),
 		Config:            dc,
 		Program:           dp,
 	}

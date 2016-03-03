@@ -47,3 +47,15 @@ func (nxc *NxConfig) ExecArgs(configurationPath string) []string {
 	}
 	return []string{"-f", "-c", configurationPath}
 }
+
+func (nxc *NxConfig) ValidatePreconditions() bool {
+	if runtime.GOOS == "linux" {
+		if !util.IsDir("/var/run/nxlog") {
+			err := util.CreatePathToFile("/var/run/nxlog/nxlog.run")
+			if err != nil {
+				return false
+			}
+		}
+	}
+	return true
+}
