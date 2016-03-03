@@ -40,25 +40,30 @@ func main() {
 	})
 
 	var (
-		svcFlag           = flag.String("service", "", "Control the system service")
-		backend 	  = flag.String("backend", "nxlog", "Set the collector backend")
-		collectorPath     = flag.String("collector-path", "/usr/bin/nxlog", "Path to collector installation")
-		collectorConfPath = flag.String("collector-conf-path", "/etc/sidecar/generated/nxlog.conf", "File path to the rendered collector configuration")
-		serverUrl         = flag.String("server-url", "http://127.0.0.1:12900", "Graylog server URL")
-		nodeId            = flag.String("node-id", "graylog-sidecar", "Collector identification string")
-		collectorId       = flag.String("collector-id", "file:/etc/sidecar/collector-id", "UUID used for collector registration")
-		tags              = flag.String("tags", "", "Comma separated tag list")
-		logPath           = flag.String("log-path", "/var/log/sidecar", "Directory for collector output logs")
+		svcFlagParam           = flag.String("service", "", "Control the system service")
+		backendParam 	       = flag.String("backend", "nxlog", "Set the collector backend")
+		collectorPathParam     = flag.String("collector-path", "/usr/bin/nxlog", "Path to collector installation")
+		collectorConfPathParam = flag.String("collector-conf-path", "/etc/sidecar/generated/nxlog.conf", "File path to the rendered collector configuration")
+		serverUrlParam         = flag.String("server-url", "http://127.0.0.1:12900", "Graylog server URL")
+		nodeIdParam            = flag.String("node-id", "graylog-sidecar", "Collector identification string")
+		collectorIdParam       = flag.String("collector-id", "file:/etc/sidecar/collector-id", "UUID used for collector registration")
+		tagsParam              = flag.String("tags", "", "Comma separated tag list")
+		logPathParam           = flag.String("log-path", "/var/log/sidecar", "Directory for collector output logs")
 	)
 	conf.ParseAll()
 
-	expandedCollectorPath := util.ExpandPath(*collectorPath)
-	expandedCollectorConfPath := util.ExpandPath(*collectorConfPath)
-	expandedCollectorId := util.ExpandPath(*collectorId)
-	expandedLogPath := util.ExpandPath(*logPath)
+	expandedCollectorPath := util.ExpandPath(*collectorPathParam)
+	expandedCollectorConfPath := util.ExpandPath(*collectorConfPathParam)
+	expandedCollectorId := util.ExpandPath(*collectorIdParam)
+	expandedLogPath := util.ExpandPath(*logPathParam)
 
 	// initialize application context
-	context := context.NewContext(*serverUrl, expandedCollectorPath, expandedCollectorConfPath, *nodeId, expandedCollectorId, expandedLogPath)
+	context := context.NewContext(*serverUrlParam,
+				      expandedCollectorPath,
+				      expandedCollectorConfPath,
+				      *nodeIdParam,
+				      expandedCollectorId,
+				      expandedLogPath)
 
 	// setup system service
 	serviceConfig := &service.Config{
@@ -71,8 +76,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if len(*svcFlag) != 0 {
-		err := service.Control(s, *svcFlag)
+	if len(*svcFlagParam) != 0 {
+		err := service.Control(s, *svcFlagParam)
 		if err != nil {
 			log.Info("Valid service actions:\n", service.ControlAction)
 			log.Fatal(err)
@@ -81,12 +86,12 @@ func main() {
 	}
 
 	// configure context
-	context.Tags = util.SplitCommaList(*tags)
+	context.Tags = util.SplitCommaList(*tagsParam)
 	if len(context.Tags) != 0 {
 		log.Info("Fetching configuration tagged by: ", context.Tags)
 	}
 
-	nxlog, err := backends.GetBackend(*backend)
+	nxlog, err := backends.GetBackend(*backendParam)
 	if err != nil {
 		log.Fatal("Can not find backend, exiting.")
 	}
