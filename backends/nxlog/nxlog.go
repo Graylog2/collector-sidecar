@@ -4,11 +4,12 @@ import (
 	"runtime"
 
 	"github.com/Graylog2/sidecar/backends"
-	"github.com/Graylog2/sidecar/util"
 	"github.com/Graylog2/sidecar/context"
+	"github.com/Graylog2/sidecar/util"
 )
 
 const name = "nxlog"
+
 var log = util.Log()
 
 func init() {

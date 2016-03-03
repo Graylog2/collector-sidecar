@@ -4,9 +4,9 @@ import (
 	"time"
 
 	"github.com/Graylog2/sidecar/api"
+	"github.com/Graylog2/sidecar/backends"
 	"github.com/Graylog2/sidecar/context"
 	"github.com/Graylog2/sidecar/util"
-	"github.com/Graylog2/sidecar/backends"
 )
 
 var log = util.Log()

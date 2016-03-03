@@ -1,4 +1,5 @@
 GO ?= go
+GOFMT ?= gofmt
 
 all: clean misc build
 
@@ -18,7 +19,7 @@ misc: ## Build NXMock for testing sidecar
 	$(GO) build -o misc/nxmock/nxlog misc/nxmock/main.go
 
 fmt: ## Run gofmt
-	$(GO) fmt
+	@find . -name '*.go' | fgrep -v vendor/ | xargs -t $(GOFMT) -w -l
 
 clean: ## Remove binaries
 	rm -f sidecar sidecar.exe

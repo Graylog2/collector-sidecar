@@ -6,8 +6,8 @@ import (
 	"github.com/kardianos/service"
 
 	"github.com/Graylog2/sidecar/daemon"
-	"github.com/Graylog2/sidecar/util"
 	"github.com/Graylog2/sidecar/system"
+	"github.com/Graylog2/sidecar/util"
 )
 
 var log = util.Log()
