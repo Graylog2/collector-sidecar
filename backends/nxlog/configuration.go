@@ -8,16 +8,16 @@ import (
 )
 
 type NxConfig struct {
-	Context       *context.Ctx
-	Definitions   []nxdefinition
-	Paths         []nxpath
-	Extensions    []nxextension
-	Inputs        []nxinput
-	Outputs       []nxoutput
-	Routes        []nxroute
-	Matches       []nxmatch
-	Snippets      []nxsnippet
-	Canned        []nxcanned
+	Context     *context.Ctx
+	Definitions []nxdefinition
+	Paths       []nxpath
+	Extensions  []nxextension
+	Inputs      []nxinput
+	Outputs     []nxoutput
+	Routes      []nxroute
+	Matches     []nxmatch
+	Snippets    []nxsnippet
+	Canned      []nxcanned
 }
 
 type nxdefinition struct {
@@ -68,9 +68,9 @@ type nxcanned struct {
 
 func NewCollectorConfig(context *context.Ctx) *NxConfig {
 	nxc := &NxConfig{
-		Context: context,
-		Definitions:   []nxdefinition{{name: "ROOT", value: filepath.Dir(context.CollectorPath)}},
-		Extensions: []nxextension{{name: "gelf", properties: map[string]string{"Module": "xm_gelf"}}},
+		Context:     context,
+		Definitions: []nxdefinition{{name: "ROOT", value: filepath.Dir(context.CollectorPath)}},
+		Extensions:  []nxextension{{name: "gelf", properties: map[string]string{"Module": "xm_gelf"}}},
 	}
 	return nxc
 }

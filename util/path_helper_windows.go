@@ -9,4 +9,3 @@ func ExpandPath(path string) string {
 	}
 	return expandedPath
 }
-

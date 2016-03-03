@@ -2,8 +2,8 @@ package backends
 
 import (
 	"github.com/Graylog2/sidecar/api/graylog"
-	"github.com/Graylog2/sidecar/util"
 	"github.com/Graylog2/sidecar/context"
+	"github.com/Graylog2/sidecar/util"
 )
 
 var log = util.Log()
