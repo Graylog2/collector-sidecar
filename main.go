@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"os"
-	"runtime"
 	"path/filepath"
+	"runtime"
 
 	"github.com/kardianos/service"
 	"github.com/rakyll/globalconf"
@@ -28,7 +28,7 @@ func main() {
 		sidecarConfigurationFile = filepath.Join("/etc", "sidecar", "sidecar.ini")
 	}
 	if _, err := os.Stat(sidecarConfigurationFile); os.IsNotExist(err) {
-		log. Error("Can not open sidecar configuration " + sidecarConfigurationFile)
+		log.Error("Can not open sidecar configuration " + sidecarConfigurationFile)
 		sidecarConfigurationFile = ""
 	}
 
@@ -40,7 +40,7 @@ func main() {
 
 	var (
 		svcFlagParam           = flag.String("service", "", "Control the system service")
-		backendParam 	       = flag.String("backend", "nxlog", "Set the collector backend")
+		backendParam           = flag.String("backend", "nxlog", "Set the collector backend")
 		collectorPathParam     = flag.String("collector-path", "/usr/bin/nxlog", "Path to collector installation")
 		collectorConfPathParam = flag.String("collector-conf-path", "/etc/sidecar/generated/nxlog.conf", "File path to the rendered collector configuration")
 		serverUrlParam         = flag.String("server-url", "http://127.0.0.1:12900", "Graylog server URL")
@@ -57,16 +57,16 @@ func main() {
 	expandedLogPath := util.ExpandPath(*logPathParam)
 
 	if util.IsDir(expandedCollectorConfPath) {
-		log.Fatal("Please provide full path to configuration file to render.")
+		log.Fatal("Please provide the full path to the configuration file to render.")
 	}
 
 	// initialize application context
 	context := context.NewContext(*serverUrlParam,
-				      expandedCollectorPath,
-				      expandedCollectorConfPath,
-				      *nodeIdParam,
-				      expandedCollectorId,
-				      expandedLogPath)
+		expandedCollectorPath,
+		expandedCollectorConfPath,
+		*nodeIdParam,
+		expandedCollectorId,
+		expandedLogPath)
 
 	if context.CollectorId == "" {
 		log.Fatal("No collector ID was configured, exiting!")
