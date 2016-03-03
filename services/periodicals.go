@@ -13,7 +13,6 @@ var log = util.Log()
 
 func StartPeriodicals(context *context.Ctx, backend backends.Backend) {
 	updateCollectorRegistration(context)
-	//fetchConfiguration(context)
 	checkForUpdateAndRestart(context, backend)
 }
 
@@ -43,9 +42,11 @@ func checkForUpdateAndRestart(context *context.Ctx, backend backends.Backend) {
 					continue
 				}
 
-				err = context.Program.Restart(context.Service)
-				if err != nil {
-					log.Error("Failed to restart collector %v", err)
+				if(context.Program.Running) { // collector was already started so a Restart will not fail
+					err = context.Program.Restart(context.Service)
+					if err != nil {
+						log.Error("Failed to restart collector %v", err)
+					}
 				}
 
 			}

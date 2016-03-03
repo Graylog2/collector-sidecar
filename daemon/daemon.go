@@ -27,6 +27,7 @@ type Config struct {
 
 type Program struct {
 	exit    chan struct{}
+	Running bool
 	service service.Service
 	*Config
 	cmd *exec.Cmd
@@ -120,6 +121,7 @@ func (p *Program) run() {
 		p.cmd.Stdout = f
 	}
 
+	p.Running = true
 	startTime := time.Now()
 	p.cmd.Run()
 
