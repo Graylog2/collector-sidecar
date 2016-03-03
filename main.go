@@ -90,7 +90,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Can not find backend, exiting.")
 	}
-	context.Backend = nxlog(expandedCollectorPath)
+	context.Backend = nxlog(expandedCollectorPath, context.CollectorId)
 
 	if util.IsDir(expandedCollectorConfPath) {
 		log.Fatal("Please provide full path to configuration file to render.")

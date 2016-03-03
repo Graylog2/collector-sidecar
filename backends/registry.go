@@ -16,7 +16,7 @@ type Backend interface {
 	SetInventory(interface{})
 }
 
-type Creator func(string) Backend
+type Creator func(string, string) Backend
 
 type backendFactory struct {
 	registry map[string]Creator
