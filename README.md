@@ -7,36 +7,31 @@ Installation
 
 [Download the binary](https://github.com/Graylog2/sidecar/releases) and place it in a directory included in your `$PATH`.
 
-Usage
------
+Install
+-------
+
+**Ubuntu**
+Install the NXLog package from the offical download [page](https://nxlog.org/products/nxlog-community-edition/download)
 
 ```
-Usage of ./sidecar:
-  -collector-conf-path string
-      File path to the rendered collector configuration (default "/tmp/nxlog.conf")
-  -collector-id string
-      UUID used for collector registration
-  -collector-path string
-      Path to collector installation (default "/usr/bin/nxlog")
-  -log-path string
-      Path to log directory (default "/var/log/sidecar")
-  -node-id string
-      Collector identification string (default "graylog-sidecar")
-  -server-url string
-      Graylog server URL (default "http://127.0.0.1:12900")
-  -service string
-      Control the system service
-  -tags string
-      Comma separated tag list
+  $ /etc/init.d/nxlog stop
+  $ update-rc.d -f nxlog remove
+	$ gpasswd -a nxlog adm
+	$ install -d -o nxlog -g nxlog /var/run/nxlog
+ 
+  $ cp sidecar /usr/bin/
+  $ mkdir /var/log/sidecar
+  $ mkdir -p /etc/sidecar/generated
+  $ cp sidecar.ini /etc/sidecar/
 ```
 
-Example command:
+Edit `/etc/sidecar/sidecar.ini`, you should set at least the correct URL to your Graylog server and proper tags.
+The tags are used to define which configurations the host should receive.
 
 ```
-sidecar -collector-id bb62865b-ed41-4494-85b4-0df22890b784 -node-id nxlog-linux -collector-path /opt/nxlog/nxlog -log-path ./log -collector-conf-path ./nxlog/nxlog.conf -server-url http://localhost:12900  -tags my,tags
+  $ sidecar -service install
+  $ start sidecar
 ```
-
-You can also use the `sidecar.ini` file to persist startup options.
 
 Compile
 -------
