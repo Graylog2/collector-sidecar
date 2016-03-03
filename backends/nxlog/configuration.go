@@ -3,11 +3,12 @@ package nxlog
 import (
 	"path/filepath"
 	"reflect"
+
+	"github.com/Graylog2/sidecar/context"
 )
 
 type NxConfig struct {
-	CollectorPath string
-	CollectorId   string
+	Context       *context.Ctx
 	Definitions   []nxdefinition
 	Paths         []nxpath
 	Extensions    []nxextension
@@ -17,7 +18,6 @@ type NxConfig struct {
 	Matches       []nxmatch
 	Snippets      []nxsnippet
 	Canned        []nxcanned
-	Inventory     interface{}
 }
 
 type nxdefinition struct {
@@ -66,11 +66,10 @@ type nxcanned struct {
 	properties map[string]string
 }
 
-func NewCollectorConfig(collectorPath string, collectorId string) *NxConfig {
+func NewCollectorConfig(context *context.Ctx) *NxConfig {
 	nxc := &NxConfig{
-		CollectorPath: collectorPath,
-		CollectorId:   collectorId,
-		Definitions:   []nxdefinition{{name: "ROOT", value: filepath.Dir(collectorPath)}},
+		Context: context,
+		Definitions:   []nxdefinition{{name: "ROOT", value: filepath.Dir(context.CollectorPath)}},
 		Extensions: []nxextension{{name: "gelf", properties: map[string]string{"Module": "xm_gelf"}}},
 	}
 	return nxc
@@ -110,7 +109,6 @@ func (nxc *NxConfig) Add(class string, name string, value interface{}) {
 }
 
 func (nxc *NxConfig) Update(a *NxConfig) {
-	nxc.CollectorPath = a.CollectorPath
 	nxc.Definitions = a.Definitions
 	nxc.Paths = a.Paths
 	nxc.Extensions = a.Extensions
@@ -124,12 +122,4 @@ func (nxc *NxConfig) Update(a *NxConfig) {
 
 func (nxc *NxConfig) Equals(a *NxConfig) bool {
 	return reflect.DeepEqual(nxc, a)
-}
-
-func (nxc *NxConfig) GetCollectorPath() string {
-	return nxc.CollectorPath
-}
-
-func (nxc *NxConfig) SetInventory(inventory interface{}) {
-	nxc.Inventory = inventory
 }

@@ -3,6 +3,7 @@ package backends
 import (
 	"github.com/Graylog2/sidecar/api/graylog"
 	"github.com/Graylog2/sidecar/util"
+	"github.com/Graylog2/sidecar/context"
 )
 
 var log = util.Log()
@@ -13,10 +14,9 @@ type Backend interface {
 	ExecArgs(string) []string
 	RenderOnChange(graylog.ResponseCollectorConfiguration, string) bool
 	ValidateConfigurationFile(string) bool
-	SetInventory(interface{})
 }
 
-type Creator func(string, string) Backend
+type Creator func(*context.Ctx) Backend
 
 type backendFactory struct {
 	registry map[string]Creator

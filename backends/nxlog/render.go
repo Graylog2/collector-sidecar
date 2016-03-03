@@ -8,7 +8,6 @@ import (
 	"text/template"
 
 	"github.com/Graylog2/sidecar/api/graylog"
-	"github.com/Graylog2/sidecar/system"
 	"github.com/Graylog2/sidecar/util"
 )
 
@@ -103,7 +102,7 @@ func (nxc *NxConfig) snippetsToString() string {
 		if err != nil {
 			result.WriteString(snippet.value)
 		} else {
-			snippetTemplate.Execute(&buffer, nxc.Inventory)
+			snippetTemplate.Execute(&buffer, nxc.Context.Inventory)
 			result.WriteString(buffer.String())
 		}
 		result.WriteString("\n")
@@ -149,7 +148,7 @@ func (nxc *NxConfig) gelfUdpOutputsToString() string {
 			result.WriteString("	Port " + can.properties["port"] + "\n")
 			result.WriteString("	OutputType  GELF\n")
 			result.WriteString("	Exec $short_message = $raw_event; # Avoids truncation of the short_message field.\n")
-			result.WriteString("	Exec $gl2_source_collector = '" + nxc.CollectorId + "';\n")
+			result.WriteString("	Exec $gl2_source_collector = '" + nxc.Context.CollectorId + "';\n")
 			result.WriteString("</Output>\n")
 		}
 	}
@@ -187,8 +186,7 @@ func (nxc *NxConfig) RenderToFile(path string) error {
 }
 
 func (nxc *NxConfig) RenderOnChange(json graylog.ResponseCollectorConfiguration, path string) bool {
-	jsonConfig := NewCollectorConfig(nxc.CollectorPath, nxc.CollectorId)
-	jsonConfig.SetInventory(system.NewInventory())
+	jsonConfig := NewCollectorConfig(nxc.Context)
 
 	for _, output := range json.Outputs {
 		if output.Backend == "nxlog" {

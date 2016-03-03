@@ -5,6 +5,7 @@ import (
 
 	"github.com/Graylog2/sidecar/backends"
 	"github.com/Graylog2/sidecar/util"
+	"github.com/Graylog2/sidecar/context"
 )
 
 const name = "nxlog"
@@ -16,8 +17,8 @@ func init() {
 	}
 }
 
-func New(collectorPath string, collectorId string) backends.Backend {
-	return NewCollectorConfig(collectorPath, collectorId)
+func New(context *context.Ctx) backends.Backend {
+	return NewCollectorConfig(context)
 }
 
 func (nxc *NxConfig) Name() string {
@@ -26,11 +27,11 @@ func (nxc *NxConfig) Name() string {
 
 func (nxc *NxConfig) ExecPath() string {
 	var err error
-	execPath := nxc.CollectorPath
+	execPath := nxc.Context.CollectorPath
 	if runtime.GOOS == "windows" {
-		execPath, err = util.AppendIfDir(nxc.CollectorPath, "nxlog.exe")
+		execPath, err = util.AppendIfDir(nxc.Context.CollectorPath, "nxlog.exe")
 	} else {
-		execPath, err = util.AppendIfDir(nxc.CollectorPath, "nxlog")
+		execPath, err = util.AppendIfDir(nxc.Context.CollectorPath, "nxlog")
 	}
 	if err != nil {
 		log.Error("Failed to auto-complete nxlog path. Please provide full path to binary")

@@ -91,22 +91,22 @@ func main() {
 		log.Info("Fetching configuration tagged by: ", context.Tags)
 	}
 
-	nxlog, err := backends.GetBackend(*backendParam)
+	backendCreator, err := backends.GetBackend(*backendParam)
 	if err != nil {
 		log.Fatal("Can not find backend, exiting.")
 	}
-	context.Backend = nxlog(expandedCollectorPath, context.CollectorId)
+	backend := backendCreator(context)
 
 	if util.IsDir(expandedCollectorConfPath) {
 		log.Fatal("Please provide full path to configuration file to render.")
 	}
 
 	// set backend related context values
-	context.Config.Exec = context.Backend.ExecPath()
-	context.Config.Args = context.Backend.ExecArgs(expandedCollectorConfPath)
+	context.Config.Exec = backend.ExecPath()
+	context.Config.Args = backend.ExecArgs(expandedCollectorConfPath)
 
-	// expose system inventory to backend
-	context.Backend.SetInventory(system.NewInventory())
+	// expose system inventory to context
+	context.Inventory = system.NewInventory()
 
 	// bind service to context
 	context.Program.BindToService(s)
@@ -117,7 +117,7 @@ func main() {
 	}
 
 	// start main loop
-	services.StartPeriodicals(context)
+	services.StartPeriodicals(context, backend)
 	err = s.Run()
 	if err != nil {
 		log.Fatal(err)

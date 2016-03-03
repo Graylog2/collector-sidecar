@@ -5,9 +5,9 @@ import (
 
 	"github.com/kardianos/service"
 
-	"github.com/Graylog2/sidecar/backends"
 	"github.com/Graylog2/sidecar/daemon"
 	"github.com/Graylog2/sidecar/util"
+	"github.com/Graylog2/sidecar/system"
 )
 
 var log = util.Log()
@@ -16,12 +16,14 @@ type Ctx struct {
 	ServerUrl         *url.URL
 	NodeId            string
 	CollectorId       string
+	CollectorPath     string
 	CollectorConfPath string
+	LogPath           string
 	Tags              []string
+	Inventory         *system.Inventory
 	Config            *daemon.Config
 	Program           *daemon.Program
 	Service           service.Service
-	Backend           backends.Backend
 }
 
 func NewContext(serverUrl string, collectorPath string, collectorConfPath string, nodeId string, collectorId string, logPath string) *Ctx {
@@ -41,7 +43,9 @@ func NewContext(serverUrl string, collectorPath string, collectorConfPath string
 		ServerUrl:         url,
 		NodeId:            nodeId,
 		CollectorId:       util.GetCollectorId(collectorId),
+		CollectorPath:     collectorPath,
 		CollectorConfPath: collectorConfPath,
+		LogPath:           logPath,
 		Config:            dc,
 		Program:           dp,
 	}

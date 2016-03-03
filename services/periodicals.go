@@ -6,14 +6,15 @@ import (
 	"github.com/Graylog2/sidecar/api"
 	"github.com/Graylog2/sidecar/context"
 	"github.com/Graylog2/sidecar/util"
+	"github.com/Graylog2/sidecar/backends"
 )
 
 var log = util.Log()
 
-func StartPeriodicals(context *context.Ctx) {
+func StartPeriodicals(context *context.Ctx, backend backends.Backend) {
 	updateCollectorRegistration(context)
 	//fetchConfiguration(context)
-	checkForUpdateAndRestart(context)
+	checkForUpdateAndRestart(context, backend)
 }
 
 // report collector status to Graylog server
@@ -27,9 +28,7 @@ func updateCollectorRegistration(context *context.Ctx) {
 }
 
 // fetch configuration periodically
-func checkForUpdateAndRestart(context *context.Ctx) {
-	backend := context.Backend
-
+func checkForUpdateAndRestart(context *context.Ctx, backend backends.Backend) {
 	go func() {
 		for {
 			time.Sleep(10 * time.Second)
