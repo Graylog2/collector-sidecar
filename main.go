@@ -41,11 +41,12 @@ func main() {
 
 	var (
 		svcFlag           = flag.String("service", "", "Control the system service")
+		backend 	  = flag.String("backend", "nxlog", "Set the collector backend")
 		collectorPath     = flag.String("collector-path", "/usr/bin/nxlog", "Path to collector installation")
 		collectorConfPath = flag.String("collector-conf-path", "/etc/sidecar/generated/nxlog.conf", "File path to the rendered collector configuration")
 		serverUrl         = flag.String("server-url", "http://127.0.0.1:12900", "Graylog server URL")
 		nodeId            = flag.String("node-id", "graylog-sidecar", "Collector identification string")
-		collectorId       = flag.String("collector-id", "", "UUID used for collector registration")
+		collectorId       = flag.String("collector-id", "file:/etc/sidecar/collector-id", "UUID used for collector registration")
 		tags              = flag.String("tags", "", "Comma separated tag list")
 		logPath           = flag.String("log-path", "/var/log/sidecar", "Directory for collector output logs")
 	)
@@ -85,7 +86,7 @@ func main() {
 		log.Info("Fetching configuration tagged by: ", context.Tags)
 	}
 
-	nxlog, err := backends.GetBackend("nxlog")
+	nxlog, err := backends.GetBackend(*backend)
 	if err != nil {
 		log.Fatal("Can not find backend, exiting.")
 	}
