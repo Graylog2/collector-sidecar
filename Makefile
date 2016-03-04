@@ -19,7 +19,7 @@ misc: ## Build NXMock for testing sidecar
 	$(GO) build -o misc/nxmock/nxlog misc/nxmock/main.go
 
 fmt: ## Run gofmt
-	@find . -name '*.go' | fgrep -v vendor/ | xargs -t $(GOFMT) -w -l
+	@GOFMT=$(GOFMT) sh ./format.sh
 
 clean: ## Remove binaries
 	rm -f sidecar sidecar.exe
@@ -33,4 +33,4 @@ help:
 
 .DEFAULT_GOAL := help
 
-.PHONY: all build build-darwin build-windows misc clean help
+.PHONY: all build build-darwin build-windows misc clean help format
