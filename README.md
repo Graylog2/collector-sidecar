@@ -17,12 +17,8 @@ Install the NXLog package from the offical download [page](https://nxlog.org/pro
   $ /etc/init.d/nxlog stop
   $ update-rc.d -f nxlog remove
   $ gpasswd -a nxlog adm
-  $ install -d -o nxlog -g nxlog /var/run/nxlog
  
-  $ cp graylog-collector-sidecar /usr/bin/
-  $ mkdir -p /var/log/graylog/collector-sidecar
-  $ mkdir -p /etc/graylog/collector-sidecar/generated
-  $ cp collector_sidecar.ini /etc/graylog/collector-sidecar/
+  $ dpkg -i collector-sidecar_0.0.1-1_amd64.deb
 ```
 
 Edit `/etc/graylog/collector-sidecar/collector_sidecar.ini`, you should set at least the correct URL to your Graylog server and proper tags.
@@ -39,16 +35,14 @@ Install the NXLog package from the offical download [page](https://nxlog.org/pro
 ```
   $ C:\Program Files (x86)\nxlog\nxlog -u
 
-  $ mkdir C:\Program Files (x86)\graylog\collector-sidecar\generated
-  $ cp graylog_collector_sidecar.exe C:\Program Files (x86)\graylog\collector-sidecar\
-  $ cp collector_sidecar_windows.ini C:\Program Files (x86)\graylog\collector-sidecar\collector_sidecar.ini
-  $ C:\Program Files (x86)\graylog\collector-sidecar\graylog_collector_sidecar.exe -service install
+  $ graylog_collector_sidecar_installer.exe
 ```
 
 Edit `C:\Program Files (x86)\graylog\collector-sidecar\collector_sidecar.ini`, you should set at least the correct URL to your Graylog server and proper tags.
 
 ```
-  $ C:\Program Files (x86)\graylog\collector-sidecar\graylog_collector_sidecar.exe -service restart
+  $ C:\Program Files (x86)\graylog\collector-sidecar\graylog_collector_sidecar.exe -service install
+  $ C:\Program Files (x86)\graylog\collector-sidecar\graylog_collector_sidecar.exe -service start
 ```
 
 Compile
