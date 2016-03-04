@@ -11,7 +11,7 @@ class GraylogSidecar < FPM::Cookery::Recipe
 
   maintainer 'Graylog, Inc. <hello@graylog.org>'
   vendor     'graylog'
-  license    'Apache2'
+  license    'GPLv3'
 
   config_files '/etc/graylog/collector-sidecar/collector_sidecar.ini'
 
