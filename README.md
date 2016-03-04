@@ -5,10 +5,8 @@
 Installation
 ------------
 
-[Download the binary](https://github.com/Graylog2/collector-sidecar/releases) and place it in a directory included in your `$PATH`.
+[Download a package](https://github.com/Graylog2/collector-sidecar/releases) and install it on the target system.
 
-Install
--------
 
 **Ubuntu**
 Install the NXLog package from the offical download [page](https://nxlog.org/products/nxlog-community-edition/download)
