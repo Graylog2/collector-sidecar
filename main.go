@@ -18,6 +18,7 @@ package main
 import (
 	"flag"
 	"os"
+	"fmt"
 	"path/filepath"
 	"runtime"
 
@@ -31,7 +32,6 @@ import (
 
 	// importing backend packages to ensure init() is called
 	_ "github.com/Graylog2/sidecar/backends/nxlog"
-	"fmt"
 )
 
 var log = util.Log()

@@ -20,9 +20,9 @@ Install the NXLog package from the offical download [page](https://nxlog.org/pro
   $ install -d -o nxlog -g nxlog /var/run/nxlog
  
   $ cp sidecar /usr/bin/
-  $ mkdir /var/log/sidecar
-  $ mkdir -p /etc/sidecar/generated
-  $ cp sidecar.ini /etc/sidecar/
+  $ mkdir -p /var/log/graylog/sidecar
+  $ mkdir -p /etc/graylog/sidecar/generated
+  $ cp sidecar.ini /etc/graylog/sidecar/
 ```
 
 Edit `/etc/sidecar/sidecar.ini`, you should set at least the correct URL to your Graylog server and proper tags.
@@ -39,17 +39,16 @@ Install the NXLog package from the offical download [page](https://nxlog.org/pro
 ```
   $ C:\Program Files (x86)\nxlog\nxlog -u
 
-  $ mkdir C:\Program Files (x86)\sidecar
-  $ mkdir C:\Program Files (x86)\sidecar\generated
-  $ cp sidecar.exe C:\Program Files (x86)\sidecar\
-  $ cp sidecar_windows.ini C:\Program Files (x86)\sidecar\sidecar.ini
-  $ C:\Program Files (x86)\sidecar\sidecar.exe -service install
+  $ mkdir C:\Program Files (x86)\graylog\sidecar\generated
+  $ cp sidecar.exe C:\Program Files (x86)\graylog\sidecar\
+  $ cp sidecar_windows.ini C:\Program Files (x86)\graylog\sidecar\sidecar.ini
+  $ C:\Program Files (x86)\graylog\sidecar\sidecar.exe -service install
 ```
 
-Edit `C:\Program Files (x86)\sidecar\sidecar.ini`, you should set at least the correct URL to your Graylog server and proper tags.
+Edit `C:\Program Files (x86)\graylog\sidecar\sidecar.ini`, you should set at least the correct URL to your Graylog server and proper tags.
 
 ```
-  $ C:\Program Files (x86)\sidecar\sidecar.exe -service restart
+  $ C:\Program Files (x86)\graylog\sidecar\sidecar.exe -service restart
 ```
 
 Compile
