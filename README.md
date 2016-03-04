@@ -25,8 +25,8 @@ Edit `/etc/graylog/collector-sidecar/collector_sidecar.ini`, you should set at l
 The tags are used to define which configurations the host should receive.
 
 ```
-  $ graylog_collector_sidecar -service install
-  $ start collector_sidecar
+  $ graylog-collector-sidecar -service install
+  $ start collector-sidecar
 ```
 
 **Windows**
@@ -41,8 +41,8 @@ Install the NXLog package from the offical download [page](https://nxlog.org/pro
 Edit `C:\Program Files (x86)\graylog\collector-sidecar\collector_sidecar.ini`, you should set at least the correct URL to your Graylog server and proper tags.
 
 ```
-  $ C:\Program Files (x86)\graylog\collector-sidecar\graylog_collector_sidecar.exe -service install
-  $ C:\Program Files (x86)\graylog\collector-sidecar\graylog_collector_sidecar.exe -service start
+  $ C:\Program Files (x86)\graylog\collector-sidecar\graylog-collector-sidecar.exe -service install
+  $ C:\Program Files (x86)\graylog\collector-sidecar\graylog-collector-sidecar.exe -service start
 ```
 
 Compile
