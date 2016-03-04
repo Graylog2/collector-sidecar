@@ -39,6 +39,11 @@ var log = util.Log()
 func main() {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: sidecar [OPTIONS] [CONFIGURATION FILE]\n")
+		if runtime.GOOS == "windows" {
+			fmt.Fprintf(os.Stderr, "Default configuration path is C:\\\\Program Files (x86)\\graylog\\sidecar\\sidecar.ini\n")
+		} else {
+			fmt.Fprintf(os.Stderr, "Default configuration path is /etc/graylog/sidecar/sidecar.ini\n")
+		}
 		fmt.Fprintf(os.Stderr, "OPTIONS can be:\n")
 		flag.PrintDefaults()
 	}

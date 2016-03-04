@@ -66,8 +66,8 @@ func (nxc *NxConfig) ExecArgs(configurationPath string) []string {
 
 func (nxc *NxConfig) ValidatePreconditions() bool {
 	if runtime.GOOS == "linux" {
-		if !util.IsDir("/var/run/nxlog") {
-			err := util.CreatePathToFile("/var/run/nxlog/nxlog.run")
+		if !util.IsDir("/var/run/graylog/sidecar") {
+			err := util.CreatePathToFile("/var/run/graylog/sidecar/nxlog.run")
 			if err != nil {
 				return false
 			}

@@ -24,9 +24,12 @@ fmt: ## Run gofmt
 clean: ## Remove binaries
 	rm -f sidecar sidecar.exe
 
-package: ## Create Linux system package
+package-linux: ## Create Linux system package
 	@rm -f dist/pkg/sidecar*
 	@fpm-cook package dist/recipe.rb
+
+package-windows: ## Create Windows installer
+	@makensis dist/recipe.nsi
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
