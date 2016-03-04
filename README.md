@@ -22,10 +22,10 @@ Install the NXLog package from the offical download [page](https://nxlog.org/pro
   $ cp graylog-collector-sidecar /usr/bin/
   $ mkdir -p /var/log/graylog/collector-sidecar
   $ mkdir -p /etc/graylog/collector-sidecar/generated
-  $ cp collector_sidecar.ini /etc/graylog/collectorr-sidecar/
+  $ cp collector_sidecar.ini /etc/graylog/collector-sidecar/
 ```
 
-Edit `/etc/graylog/collector-sidecar/collector\_sidecar.ini`, you should set at least the correct URL to your Graylog server and proper tags.
+Edit `/etc/graylog/collector-sidecar/collector_sidecar.ini`, you should set at least the correct URL to your Graylog server and proper tags.
 The tags are used to define which configurations the host should receive.
 
 ```
@@ -45,7 +45,7 @@ Install the NXLog package from the offical download [page](https://nxlog.org/pro
   $ C:\Program Files (x86)\graylog\collector-sidecar\graylog_collector_sidecar.exe -service install
 ```
 
-Edit `C:\Program Files (x86)\graylog\collector-sidecar\collector\_sidecar.ini`, you should set at least the correct URL to your Graylog server and proper tags.
+Edit `C:\Program Files (x86)\graylog\collector-sidecar\collector_sidecar.ini`, you should set at least the correct URL to your Graylog server and proper tags.
 
 ```
   $ C:\Program Files (x86)\graylog\collector-sidecar\graylog_collector_sidecar.exe -service restart
