@@ -2,9 +2,9 @@
 ; Start
  
  
-  Name "Graylog Sidecar"
+  Name "Graylog Collector Sidecar"
   !define MUI_FILE "savefile"
-  !define MUI_BRANDINGTEXT "Graylog Sidecar v0.0.1"
+  !define MUI_BRANDINGTEXT "Graylog Collector Sidecar v0.0.1"
   CRCCheck On
  
   !include "${NSISDIR}\Contrib\Modern UI\System.nsh"
@@ -13,7 +13,7 @@
 ;---------------------------------
 ;General
  
-  OutFile "sidecar_installer.exe"
+  OutFile "graylog_collector_sidecar_installer.exe"
   ShowInstDetails "nevershow"
   ShowUninstDetails "nevershow"
   ;SetCompressor "bzip2"
@@ -26,7 +26,7 @@
 ;--------------------------------
 ;Folder selection page
  
-  InstallDir "$PROGRAMFILES\graylog\sidecar"
+  InstallDir "$PROGRAMFILES\graylog\collector-sidecar"
  
  
 ;--------------------------------
@@ -67,8 +67,8 @@ Section "Install"
   SetOutPath "$INSTDIR\generated"  
   SetOutPath "$INSTDIR"
  
-  File "../sidecar.exe"
-  File /oname=sidecar.ini "../sidecar_windows.ini"
+  File "../graylog-collector-sidecar.exe"
+  File /oname=collector_sidecar.ini "../collector_sidecar_windows.ini"
   File "../LICENSE"
 
   WriteUninstaller "$INSTDIR\uninstall.exe"
@@ -96,10 +96,10 @@ SectionEnd
  
 ;Function that calls a messagebox when installation finished correctly
 Function .onInstSuccess
-  MessageBox MB_OK "You have successfully installed Graylog Sidecar."
+  MessageBox MB_OK "You have successfully installed Graylog Collector Sidecar."
 FunctionEnd
  
  
 Function un.onUninstSuccess
-  MessageBox MB_OK "You have successfully uninstalled Graylog Sidecar."
+  MessageBox MB_OK "You have successfully uninstalled Graylog Collector Sidecar."
 FunctionEnd

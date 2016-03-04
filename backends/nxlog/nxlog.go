@@ -18,9 +18,9 @@ package nxlog
 import (
 	"runtime"
 
-	"github.com/Graylog2/sidecar/backends"
-	"github.com/Graylog2/sidecar/context"
-	"github.com/Graylog2/sidecar/util"
+	"github.com/Graylog2/collector-sidecar/backends"
+	"github.com/Graylog2/collector-sidecar/context"
+	"github.com/Graylog2/collector-sidecar/util"
 )
 
 const name = "nxlog"
@@ -66,8 +66,8 @@ func (nxc *NxConfig) ExecArgs(configurationPath string) []string {
 
 func (nxc *NxConfig) ValidatePreconditions() bool {
 	if runtime.GOOS == "linux" {
-		if !util.IsDir("/var/run/graylog/sidecar") {
-			err := util.CreatePathToFile("/var/run/graylog/sidecar/nxlog.run")
+		if !util.IsDir("/var/run/graylog/collector-sidecar") {
+			err := util.CreatePathToFile("/var/run/graylog/collector-sidecar/nxlog.run")
 			if err != nil {
 				return false
 			}

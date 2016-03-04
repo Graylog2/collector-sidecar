@@ -22,8 +22,8 @@ import (
 	"strconv"
 	"text/template"
 
-	"github.com/Graylog2/sidecar/api/graylog"
-	"github.com/Graylog2/sidecar/util"
+	"github.com/Graylog2/collector-sidecar/api/graylog"
+	"github.com/Graylog2/collector-sidecar/util"
 )
 
 func (nxc *NxConfig) definitionsToString() string {

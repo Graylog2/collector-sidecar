@@ -19,7 +19,7 @@ import (
 	"path/filepath"
 	"reflect"
 
-	"github.com/Graylog2/sidecar/context"
+	"github.com/Graylog2/collector-sidecar/context"
 )
 
 type NxConfig struct {

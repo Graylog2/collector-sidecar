@@ -3,32 +3,33 @@ GOFMT ?= gofmt
 
 all: clean misc build
 
-build: ## Build sidecar binary for local target system
-	$(GO) build -v -i -o sidecar
+build: ## Build collector-sidecar binary for local target system
+	$(GO) build -v -i -o graylog-collector-sidecar
 
-build-linux: ## Build sidecar binary for Linux
-	GOOS=linux GOARCH=amd64 $(GO) build -v -i -o sidecar
+build-linux: ## Build collector-sidecar binary for Linux
+	GOOS=linux GOARCH=amd64 $(GO) build -v -i -o graylog-collector-sidecar
 
-build-darwin: ## Build sidecar binary for OSX
-	GOOS=darwin GOARCH=amd64 $(GO) build -v -i -o sidecar
+build-darwin: ## Build collector-sidecar binary for OSX
+	GOOS=darwin GOARCH=amd64 $(GO) build -v -i -o graylog-collector-sidecar
 
-build-windows: ## Build sidecar binary for Windows
-	GOOS=windows GOARCH=amd64 $(GO) build -v -i -o sidecar.exe
+build-windows: ## Build collector-sidecar binary for Windows
+	GOOS=windows GOARCH=amd64 $(GO) build -v -i -o graylog-collector-sidecar.exe
 
-misc: ## Build NXMock for testing sidecar
+misc: ## Build NXMock for testing collector-sidecar
 	$(GO) build -o misc/nxmock/nxlog misc/nxmock/main.go
 
 fmt: ## Run gofmt
 	@GOFMT=$(GOFMT) sh ./format.sh
 
 clean: ## Remove binaries
-	rm -f sidecar sidecar.exe
+	rm -f graylog-collector-sidecar graylog-collector-sidecar.exe
 
 package-linux: ## Create Linux system package
-	@rm -f dist/pkg/sidecar*
+	@rm -f dist/pkg/graylog-collector-sidecar*
 	@fpm-cook package dist/recipe.rb
 
 package-windows: ## Create Windows installer
+	@rm -f dist/graylog_collector_sidecar_installer.exe
 	@makensis dist/recipe.nsi
 
 help:

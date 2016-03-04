@@ -24,7 +24,7 @@ import (
 
 	"github.com/kardianos/service"
 
-	"github.com/Graylog2/sidecar/util"
+	"github.com/Graylog2/collector-sidecar/util"
 )
 
 var log = util.Log()
@@ -55,8 +55,8 @@ func NewConfig(collectorPath string, logPath string) *Config {
 	}
 
 	c := &Config{
-		Name:        "sidecar",
-		DisplayName: "sidecar",
+		Name:        "collector-sidecar",
+		DisplayName: "Graylog collector sidecar",
 		Description: "Wrapper service for Graylog controlled collector",
 		Dir:         rootDir,
 		Env:         []string{},

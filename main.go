@@ -17,32 +17,32 @@ package main
 
 import (
 	"flag"
-	"os"
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 
 	"github.com/kardianos/service"
 	"github.com/rakyll/globalconf"
 
-	"github.com/Graylog2/sidecar/backends"
-	"github.com/Graylog2/sidecar/context"
-	"github.com/Graylog2/sidecar/services"
-	"github.com/Graylog2/sidecar/util"
+	"github.com/Graylog2/collector-sidecar/backends"
+	"github.com/Graylog2/collector-sidecar/context"
+	"github.com/Graylog2/collector-sidecar/services"
+	"github.com/Graylog2/collector-sidecar/util"
 
 	// importing backend packages to ensure init() is called
-	_ "github.com/Graylog2/sidecar/backends/nxlog"
+	_ "github.com/Graylog2/collector-sidecar/backends/nxlog"
 )
 
 var log = util.Log()
 
 func main() {
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: sidecar [OPTIONS] [CONFIGURATION FILE]\n")
+		fmt.Fprintf(os.Stderr, "Usage: graylog-collector-sidecar [OPTIONS] [CONFIGURATION FILE]\n")
 		if runtime.GOOS == "windows" {
-			fmt.Fprintf(os.Stderr, "Default configuration path is C:\\\\Program Files (x86)\\graylog\\sidecar\\sidecar.ini\n")
+			fmt.Fprintf(os.Stderr, "Default configuration path is C:\\\\Program Files (x86)\\graylog\\collector-sidecar\\collector_sidecar.ini\n")
 		} else {
-			fmt.Fprintf(os.Stderr, "Default configuration path is /etc/graylog/sidecar/sidecar.ini\n")
+			fmt.Fprintf(os.Stderr, "Default configuration path is /etc/graylog/collector-sidecar/collector_sidecar.ini\n")
 		}
 		fmt.Fprintf(os.Stderr, "OPTIONS can be:\n")
 		flag.PrintDefaults()
@@ -51,32 +51,32 @@ func main() {
 		svcFlagParam           = flag.String("service", "", "Control the system service")
 		backendParam           = flag.String("backend", "nxlog", "Set the collector backend")
 		collectorPathParam     = flag.String("collector-path", "/usr/bin/nxlog", "Path to collector installation")
-		collectorConfPathParam = flag.String("collector-conf-path", "/etc/graylog/sidecar/generated/nxlog.conf", "File path to the rendered collector configuration")
+		collectorConfPathParam = flag.String("collector-conf-path", "/etc/graylog/collector-sidecar/generated/nxlog.conf", "File path to the rendered collector configuration")
 		serverUrlParam         = flag.String("server-url", "http://127.0.0.1:12900", "Graylog server URL")
-		nodeIdParam            = flag.String("node-id", "graylog-sidecar", "Collector identification string")
-		collectorIdParam       = flag.String("collector-id", "file:/etc/graylog/sidecar/collector-id", "UUID used for collector registration")
+		nodeIdParam            = flag.String("node-id", "graylog-collector-sidecar", "Collector identification string")
+		collectorIdParam       = flag.String("collector-id", "file:/etc/graylog/collector-sidecar/collector-id", "UUID used for collector registration")
 		tagsParam              = flag.String("tags", "", "Comma separated tag list")
-		logPathParam           = flag.String("log-path", "/var/log/graylog/sidecar", "Directory for collector output logs")
+		logPathParam           = flag.String("log-path", "/var/log/graylog/collector-sidecar", "Directory for collector output logs")
 	)
 
 	flag.Parse() // dummy parse to access flag.Arg(n)
 	sidecarConfigurationFile := flag.Arg(0)
 	if sidecarConfigurationFile == "" {
 		if runtime.GOOS == "windows" {
-			sidecarConfigurationFile = filepath.Join("C:\\", "Program Files (x86)", "graylog", "sidecar", "sidecar.ini")
+			sidecarConfigurationFile = filepath.Join("C:\\", "Program Files (x86)", "graylog", "collector-sidecar", "collector_sidecar.ini")
 		} else {
-			sidecarConfigurationFile = filepath.Join("/etc", "graylog", "sidecar", "sidecar.ini")
+			sidecarConfigurationFile = filepath.Join("/etc", "graylog", "collector-sidecar", "collector_sidecar.ini")
 		}
 	}
 	if _, err := os.Stat(sidecarConfigurationFile); os.IsNotExist(err) {
-		log.Error("Can not open sidecar configuration " + sidecarConfigurationFile)
+		log.Error("Can not open collector-sidecar configuration " + sidecarConfigurationFile)
 		sidecarConfigurationFile = ""
 	}
 
 	// parse .ini file or use command line switches
 	conf, _ := globalconf.NewWithOptions(&globalconf.Options{
 		Filename:  sidecarConfigurationFile,
-		EnvPrefix: "SIDECAR_",
+		EnvPrefix: "COLLECTOR_SIDECAR_",
 	})
 	conf.ParseAll()
 

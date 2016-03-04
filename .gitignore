@@ -31,8 +31,8 @@ _testmain.go
 /nxlog/
 /log/
 
-sidecar
-sidecar.exe
+graylog-collector-sidecar
+graylog-collector-sidecar.exe
 misc/nxmock/nxlog
 misc/nxmock/nxlog.exe
 
@@ -40,3 +40,4 @@ dist/cache
 dist/pkg
 dist/tmp-build
 dist/tmp-dest
+dist/graylog_collector_sidecar_installer.exe

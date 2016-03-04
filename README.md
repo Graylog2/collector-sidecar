@@ -1,11 +1,11 @@
-# Graylog Sidecar
+# Graylog Collector Sidecar
 
 **Required Graylog version:** 2.0 and later + installed [graylog-plugin-collector](https://github.com/Graylog2/graylog-plugin-collector/blob/master/README.md)
 
 Installation
 ------------
 
-[Download the binary](https://github.com/Graylog2/sidecar/releases) and place it in a directory included in your `$PATH`.
+[Download the binary](https://github.com/Graylog2/collector-sidecar/releases) and place it in a directory included in your `$PATH`.
 
 Install
 -------
@@ -19,18 +19,18 @@ Install the NXLog package from the offical download [page](https://nxlog.org/pro
   $ gpasswd -a nxlog adm
   $ install -d -o nxlog -g nxlog /var/run/nxlog
  
-  $ cp sidecar /usr/bin/
-  $ mkdir -p /var/log/graylog/sidecar
-  $ mkdir -p /etc/graylog/sidecar/generated
-  $ cp sidecar.ini /etc/graylog/sidecar/
+  $ cp graylog-collector-sidecar /usr/bin/
+  $ mkdir -p /var/log/graylog/collector-sidecar
+  $ mkdir -p /etc/graylog/collector-sidecar/generated
+  $ cp collector_sidecar.ini /etc/graylog/collectorr-sidecar/
 ```
 
-Edit `/etc/sidecar/sidecar.ini`, you should set at least the correct URL to your Graylog server and proper tags.
+Edit `/etc/graylog/collector-sidecar/collector\_sidecar.ini`, you should set at least the correct URL to your Graylog server and proper tags.
 The tags are used to define which configurations the host should receive.
 
 ```
-  $ sidecar -service install
-  $ start sidecar
+  $ graylog_collector_sidecar -service install
+  $ start collector_sidecar
 ```
 
 **Windows**
@@ -39,29 +39,29 @@ Install the NXLog package from the offical download [page](https://nxlog.org/pro
 ```
   $ C:\Program Files (x86)\nxlog\nxlog -u
 
-  $ mkdir C:\Program Files (x86)\graylog\sidecar\generated
-  $ cp sidecar.exe C:\Program Files (x86)\graylog\sidecar\
-  $ cp sidecar_windows.ini C:\Program Files (x86)\graylog\sidecar\sidecar.ini
-  $ C:\Program Files (x86)\graylog\sidecar\sidecar.exe -service install
+  $ mkdir C:\Program Files (x86)\graylog\collector-sidecar\generated
+  $ cp graylog_collector_sidecar.exe C:\Program Files (x86)\graylog\collector-sidecar\
+  $ cp collector_sidecar_windows.ini C:\Program Files (x86)\graylog\collector-sidecar\collector_sidecar.ini
+  $ C:\Program Files (x86)\graylog\collector-sidecar\graylog_collector_sidecar.exe -service install
 ```
 
-Edit `C:\Program Files (x86)\graylog\sidecar\sidecar.ini`, you should set at least the correct URL to your Graylog server and proper tags.
+Edit `C:\Program Files (x86)\graylog\collector-sidecar\collector\_sidecar.ini`, you should set at least the correct URL to your Graylog server and proper tags.
 
 ```
-  $ C:\Program Files (x86)\graylog\sidecar\sidecar.exe -service restart
+  $ C:\Program Files (x86)\graylog\collector-sidecar\graylog_collector_sidecar.exe -service restart
 ```
 
 Compile
 -------
 
-  * Clone the repository into your `$GOPATH` under `src/github.com/Graylog2/sidecar`
+  * Clone the repository into your `$GOPATH` under `src/github.com/Graylog2/collector-sidecar`
   * Install the [glide package manager](https://glide.sh)
-  * run `glide install` in the sidecar directory
+  * run `glide install` in the collector-sidecar directory
   * (for Go <1.6 `export GO15VENDOREXPERIMENT=1`)
   * run `make`
 
 Development
 -----------
 
-There is a collector mock programm to use the sidecar without actually running a collector like NXLog. Simply build it with
+There is a collector mock programm to use the collector-sidecar without actually running a collector like NXLog. Simply build it with
 `make misc` und use the option `-collector-path misc/nxmock/nxlog`.
