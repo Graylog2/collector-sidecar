@@ -25,6 +25,7 @@ import (
 	"unicode"
 
 	"github.com/pborman/uuid"
+	"encoding/json"
 )
 
 func GetRootPath() (string, error) {
@@ -125,4 +126,9 @@ func SplitCommaList(list string) []string {
 		return make([]string, 0)
 	}
 	return strings.Split(list, ",")
+}
+
+func Inspect(object interface{}) string {
+	jsonBytes, _ := json.Marshal(object)
+	return string(jsonBytes)
 }

@@ -32,6 +32,7 @@ import (
 
 	// importing backend packages to ensure init() is called
 	_ "github.com/Graylog2/collector-sidecar/backends/nxlog"
+	_ "github.com/Graylog2/collector-sidecar/backends/beats/topbeat"
 )
 
 var log = util.Log()

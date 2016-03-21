@@ -11,3 +11,4 @@ import:
 - package: github.com/kardianos/osext
 - package: github.com/rakyll/goini
 - package: github.com/pborman/uuid
+- package: gopkg.in/yaml.v2
