@@ -1,8 +1,6 @@
-hash: b2bf0ca36fcae3463bcd9349bc75d89ab25dabead1aa1c5ac9b4c37cc08235a3
-updated: 2016-03-16T16:49:24.290262346+01:00
+hash: a9f65311e9e28a8896b9a3cb04b9f7f9224ab486671b7ecdfce44349c34b5dbb
+updated: 2016-03-22T17:32:11.281811161+01:00
 imports:
-- name: github.com/Jeffail/gabs
-  version: 1ad8a462121027c511ab337b98028029352ca356
 - name: github.com/kardianos/osext
   version: 10da29423eb9a6269092eebdc2be32209612d9d2
 - name: github.com/kardianos/service
@@ -26,8 +24,6 @@ imports:
   - windows/svc/eventlog
   - windows/svc/mgr
   - unix
-- name: gopkg.in/jmcvetta/napping.v3
-  version: 58e2b10cc328913a6d3478dfa4546395c71ada81
 - name: gopkg.in/yaml.v2
   version: a83829b6f1293c91addabc89d0571c246397bbf4
 devImports: []
