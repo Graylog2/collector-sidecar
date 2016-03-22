@@ -16,8 +16,6 @@
 package topbeat
 
 import (
-	"errors"
-
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/backends/beats"
 )
@@ -25,11 +23,6 @@ import (
 type TopBeatConfig struct {
 	Beats *beats.BeatsConfig
 }
-
-var (
-	// ErrPathCollision - Creating a path failed because an element collided with an existing value.
-	ErrPathCollision = errors.New("encountered value collision whilst building path")
-)
 
 func NewCollectorConfig(context *context.Ctx) *TopBeatConfig {
 	bc := &beats.BeatsConfig{

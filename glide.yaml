@@ -6,7 +6,6 @@ import:
   subpackages:
   - windows
   - windows/registry
-- package: gopkg.in/jmcvetta/napping.v3
 - package: github.com/rakyll/globalconf
 - package: github.com/kardianos/osext
 - package: github.com/rakyll/goini

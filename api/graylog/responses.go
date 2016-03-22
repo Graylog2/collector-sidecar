@@ -15,6 +15,11 @@
 
 package graylog
 
+type ResponseCollectorRegistration struct {
+	Type	string		`json:"type"`
+	Message string		`json:"message`
+}
+
 type ResponseCollectorConfiguration struct {
 	Inputs   []ResponseCollectorInput   `json:"inputs"`
 	Outputs  []ResponseCollectorOutput  `json:"outputs"`

@@ -48,7 +48,6 @@ func (tbc *TopBeatConfig) Render() bytes.Buffer {
 		return result
 	}
 
-	log.Info(tbc.Beats.String())
 	result.WriteString(tbc.Beats.String())
 	result.WriteString(tbc.snippetsToString())
 
