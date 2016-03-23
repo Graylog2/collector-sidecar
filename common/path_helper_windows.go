@@ -13,12 +13,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Graylog.  If not, see <http://www.gnu.org/licenses/>.
 
-// +build darwin linux
+package common
 
-package util
-
-import "os"
+import "golang.org/x/sys/windows/registry"
 
 func ExpandPath(path string) string {
-	return os.ExpandEnv(path)
+	expandedPath, err := registry.ExpandString(path)
+	if err != nil {
+		return path
+	}
+	return expandedPath
 }

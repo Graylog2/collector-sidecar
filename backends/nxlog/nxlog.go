@@ -20,12 +20,12 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/context"
-	"github.com/Graylog2/collector-sidecar/util"
+	"github.com/Graylog2/collector-sidecar/common"
 )
 
 const name = "nxlog"
 
-var log = util.Log()
+var log = common.Log()
 
 func init() {
 	if err := backends.RegisterBackend(name, New); err != nil {
@@ -45,9 +45,9 @@ func (nxc *NxConfig) ExecPath() string {
 	var err error
 	execPath := nxc.Context.CollectorPath
 	if runtime.GOOS == "windows" {
-		execPath, err = util.AppendIfDir(nxc.Context.CollectorPath, "nxlog.exe")
+		execPath, err = common.AppendIfDir(nxc.Context.CollectorPath, "nxlog.exe")
 	} else {
-		execPath, err = util.AppendIfDir(nxc.Context.CollectorPath, "nxlog")
+		execPath, err = common.AppendIfDir(nxc.Context.CollectorPath, "nxlog")
 	}
 	if err != nil {
 		log.Error("Failed to auto-complete nxlog path. Please provide full path to binary")
@@ -57,7 +57,7 @@ func (nxc *NxConfig) ExecPath() string {
 }
 
 func (nxc *NxConfig) ExecArgs(configurationPath string) []string {
-	err := util.FileExists(configurationPath)
+	err := common.FileExists(configurationPath)
 	if err != nil {
 		log.Error("Collector configuration file is not accessable: ", configurationPath)
 	}
@@ -66,8 +66,8 @@ func (nxc *NxConfig) ExecArgs(configurationPath string) []string {
 
 func (nxc *NxConfig) ValidatePreconditions() bool {
 	if runtime.GOOS == "linux" {
-		if !util.IsDir("/var/run/graylog/collector-sidecar") {
-			err := util.CreatePathToFile("/var/run/graylog/collector-sidecar/nxlog.run")
+		if !common.IsDir("/var/run/graylog/collector-sidecar") {
+			err := common.CreatePathToFile("/var/run/graylog/collector-sidecar/nxlog.run")
 			if err != nil {
 				return false
 			}

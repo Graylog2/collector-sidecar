@@ -18,14 +18,14 @@ package topbeat
 import (
 	"runtime"
 
-	"github.com/Graylog2/collector-sidecar/util"
+	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/context"
 )
 
 const name = "topbeat"
 
-var log = util.Log()
+var log = common.Log()
 
 func init() {
 	if err := backends.RegisterBackend(name, New); err != nil {
@@ -45,9 +45,9 @@ func (tbc *TopBeatConfig) ExecPath() string {
 	var err error
 	execPath := tbc.Beats.Context.CollectorPath
 	if runtime.GOOS == "windows" {
-		execPath, err = util.AppendIfDir(tbc.Beats.Context.CollectorPath, "topbeat.exe")
+		execPath, err = common.AppendIfDir(tbc.Beats.Context.CollectorPath, "topbeat.exe")
 	} else {
-		execPath, err = util.AppendIfDir(tbc.Beats.Context.CollectorPath, "topbeat")
+		execPath, err = common.AppendIfDir(tbc.Beats.Context.CollectorPath, "topbeat")
 	}
 	if err != nil {
 		log.Error("Failed to auto-complete topbeat path. Please provide full path to binary")
@@ -57,7 +57,7 @@ func (tbc *TopBeatConfig) ExecPath() string {
 }
 
 func (tbc *TopBeatConfig) ExecArgs(configurationPath string) []string {
-	err := util.FileExists(configurationPath)
+	err := common.FileExists(configurationPath)
 	if err != nil {
 		log.Error("Collector configuration file is not accessable: ", configurationPath)
 	}

@@ -21,11 +21,11 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/context"
-	"github.com/Graylog2/collector-sidecar/util"
+	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/api/rest"
 )
 
-var log = util.Log()
+var log = common.Log()
 
 func RequestConfiguration(context *context.Ctx) (graylog.ResponseCollectorConfiguration, error) {
 	c := rest.NewClient(nil)
@@ -68,7 +68,7 @@ func UpdateRegistration(context *context.Ctx) {
 	registration := graylog.RegistrationRequest{}
 	registration.NodeId = context.NodeId
 	registration.NodeDetails = make(map[string]string)
-	registration.NodeDetails["operating_system"] = util.GetSystemName()
+	registration.NodeDetails["operating_system"] = common.GetSystemName()
 
 	r, err := c.NewRequest("PUT", "/plugins/org.graylog.plugins.collector/collectors/" + context.CollectorId, nil, registration)
 	if err != nil {

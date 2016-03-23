@@ -28,14 +28,14 @@ import (
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/services"
-	"github.com/Graylog2/collector-sidecar/util"
+	"github.com/Graylog2/collector-sidecar/common"
 
 	// importing backend packages to ensure init() is called
 	_ "github.com/Graylog2/collector-sidecar/backends/nxlog"
 	_ "github.com/Graylog2/collector-sidecar/backends/beats/topbeat"
 )
 
-var log = util.Log()
+var log = common.Log()
 
 func main() {
 	flag.Usage = func() {
@@ -81,12 +81,12 @@ func main() {
 	})
 	conf.ParseAll()
 
-	expandedCollectorPath := util.ExpandPath(*collectorPathParam)
-	expandedCollectorConfPath := util.ExpandPath(*collectorConfPathParam)
-	expandedCollectorId := util.ExpandPath(*collectorIdParam)
-	expandedLogPath := util.ExpandPath(*logPathParam)
+	expandedCollectorPath := common.ExpandPath(*collectorPathParam)
+	expandedCollectorConfPath := common.ExpandPath(*collectorConfPathParam)
+	expandedCollectorId := common.ExpandPath(*collectorIdParam)
+	expandedLogPath := common.ExpandPath(*logPathParam)
 
-	if util.IsDir(expandedCollectorConfPath) {
+	if common.IsDir(expandedCollectorConfPath) {
 		log.Fatal("Please provide the full path to the configuration file to render.")
 	}
 
@@ -123,7 +123,7 @@ func main() {
 	}
 
 	// configure context
-	context.Tags = util.SplitCommaList(*tagsParam)
+	context.Tags = common.SplitCommaList(*tagsParam)
 	if len(context.Tags) != 0 {
 		log.Info("Fetching configurations tagged by: ", context.Tags)
 	}

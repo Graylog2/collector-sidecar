@@ -24,10 +24,10 @@ import (
 
 	"github.com/kardianos/service"
 
-	"github.com/Graylog2/collector-sidecar/util"
+	"github.com/Graylog2/collector-sidecar/common"
 )
 
-var log = util.Log()
+var log = common.Log()
 
 type Config struct {
 	Name, DisplayName, Description string
@@ -49,7 +49,7 @@ type Program struct {
 }
 
 func NewConfig(collectorPath string, logPath string) *Config {
-	rootDir, err := util.GetRootPath()
+	rootDir, err := common.GetRootPath()
 	if err != nil {
 		log.Error("Can not access root directory")
 	}
@@ -116,7 +116,7 @@ func (p *Program) run() {
 	log.Info("Starting collector")
 
 	if p.Stderr != "" {
-		err := util.CreatePathToFile(p.Stderr)
+		err := common.CreatePathToFile(p.Stderr)
 		f, err := os.OpenFile(p.Stderr, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0777)
 		if err != nil {
 			log.Warningf("Failed to open std err %q: %v", p.Stderr, err)
@@ -126,7 +126,7 @@ func (p *Program) run() {
 		p.cmd.Stderr = f
 	}
 	if p.Stdout != "" {
-		err := util.CreatePathToFile(p.Stderr)
+		err := common.CreatePathToFile(p.Stderr)
 		f, err := os.OpenFile(p.Stdout, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0777)
 		if err != nil {
 			log.Warningf("Failed to open std out %q: %v", p.Stdout, err)

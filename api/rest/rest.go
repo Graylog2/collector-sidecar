@@ -26,12 +26,12 @@ import (
 	"net"
 	"time"
 
-	"github.com/Graylog2/collector-sidecar/util"
+	"github.com/Graylog2/collector-sidecar/common"
 )
 
 const (
 	defaultBaseURL = "http://127.0.0.1:12900/"
-	userAgent      = "Graylog Collector v" + util.CollectorVersion
+	userAgent      = "Graylog Collector v" + common.CollectorVersion
 	mediaType      = "application/json"
 )
 
@@ -115,7 +115,7 @@ func (c *Client) NewRequest(method, urlStr string, params map[string]string, bod
 	req.Header.Add("Content-Type", mediaType)
 	req.Header.Add("Accept", mediaType)
 	req.Header.Add("User-Agent", userAgent)
-	req.Header.Add("X-Graylog-Collector-Version", util.CollectorVersion)
+	req.Header.Add("X-Graylog-Collector-Version", common.CollectorVersion)
 	return req, nil
 }
 

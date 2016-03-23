@@ -13,14 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Graylog.  If not, see <http://www.gnu.org/licenses/>.
 
-package util
+package common
 
-import (
-	"github.com/Sirupsen/logrus"
+const (
+	CollectorVersion = "0.0.1"
 )
-
-var log = logrus.New()
-
-func Log() *logrus.Logger {
-	return log
-}

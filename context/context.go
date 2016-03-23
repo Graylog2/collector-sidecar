@@ -22,10 +22,10 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/daemon"
 	"github.com/Graylog2/collector-sidecar/system"
-	"github.com/Graylog2/collector-sidecar/util"
+	"github.com/Graylog2/collector-sidecar/common"
 )
 
-var log = util.Log()
+var log = common.Log()
 
 type Ctx struct {
 	ServerUrl         *url.URL
@@ -57,7 +57,7 @@ func NewContext(serverUrl string, collectorPath string, collectorConfPath string
 	return &Ctx{
 		ServerUrl:         url,
 		NodeId:            nodeId,
-		CollectorId:       util.GetCollectorId(collectorId),
+		CollectorId:       common.GetCollectorId(collectorId),
 		CollectorPath:     collectorPath,
 		CollectorConfPath: collectorConfPath,
 		LogPath:           logPath,

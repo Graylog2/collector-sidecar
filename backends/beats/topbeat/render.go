@@ -22,7 +22,7 @@ import (
 	"text/template"
 
 	"github.com/Graylog2/collector-sidecar/api/graylog"
-	"github.com/Graylog2/collector-sidecar/util"
+	"github.com/Graylog2/collector-sidecar/common"
 )
 
 func (tbc *TopBeatConfig) snippetsToString() string {
@@ -56,7 +56,7 @@ func (tbc *TopBeatConfig) Render() bytes.Buffer {
 
 func (tbc *TopBeatConfig) RenderToFile(path string) error {
 	stringConfig := tbc.Render()
-	err := util.CreatePathToFile(path)
+	err := common.CreatePathToFile(path)
 	if err != nil {
 		return err
 	}

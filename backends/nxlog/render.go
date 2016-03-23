@@ -23,7 +23,7 @@ import (
 	"text/template"
 
 	"github.com/Graylog2/collector-sidecar/api/graylog"
-	"github.com/Graylog2/collector-sidecar/util"
+	"github.com/Graylog2/collector-sidecar/common"
 )
 
 func (nxc *NxConfig) definitionsToString() string {
@@ -192,7 +192,7 @@ func (nxc *NxConfig) Render() bytes.Buffer {
 
 func (nxc *NxConfig) RenderToFile(path string) error {
 	stringConfig := nxc.Render()
-	err := util.CreatePathToFile(path)
+	err := common.CreatePathToFile(path)
 	if err != nil {
 		return err
 	}

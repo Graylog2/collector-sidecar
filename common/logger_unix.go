@@ -13,8 +13,28 @@
 // You should have received a copy of the GNU General Public License
 // along with Graylog.  If not, see <http://www.gnu.org/licenses/>.
 
-package util
+// +build darwin linux
 
-const (
-	CollectorVersion = "0.0.1"
+package common
+
+import (
+	"log/syslog"
+
+	"github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus/hooks/syslog"
 )
+
+var log = logrus.New()
+
+func init() {
+	// initialize logging
+	hook, err := logrus_syslog.NewSyslogHook("", "", syslog.LOG_INFO, "")
+
+	if err == nil {
+		log.Hooks.Add(hook)
+	}
+}
+
+func Log() *logrus.Logger {
+	return log
+}

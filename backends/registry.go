@@ -18,10 +18,10 @@ package backends
 import (
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/context"
-	"github.com/Graylog2/collector-sidecar/util"
+	"github.com/Graylog2/collector-sidecar/common"
 )
 
-var log = util.Log()
+var log = common.Log()
 
 type Backend interface {
 	Name() string
