@@ -1,5 +1,5 @@
-hash: a9f65311e9e28a8896b9a3cb04b9f7f9224ab486671b7ecdfce44349c34b5dbb
-updated: 2016-03-22T17:32:11.281811161+01:00
+hash: 0c7ed2cb77767784aad107aea371477d1103eb9da7675e0e48c19e6cc465ca41
+updated: 2016-03-26T11:22:15.902508971+01:00
 imports:
 - name: github.com/kardianos/osext
   version: 10da29423eb9a6269092eebdc2be32209612d9d2
@@ -7,14 +7,16 @@ imports:
   version: 2954cfdd7b0c8ab45ef2aa22a44b5f086201836f
 - name: github.com/pborman/uuid
   version: c55201b036063326c5b1b89ccfe45a184973d073
-- name: github.com/rakyll/globalconf
-  version: 415abc325023f1a00cd2d9fa512e0e71745791a2
 - name: github.com/rakyll/goini
   version: 907cca0f578a5316fb864ec6992dc3d9730ec58c
 - name: github.com/Sirupsen/logrus
   version: 446d1c146faa8ed3f4218f056fcd165f6bcfda81
   subpackages:
   - hooks/syslog
+- name: github.com/urso/ucfg
+  version: 30b040c279a4e6c83ded5cb44403a5c6fcd64e8d
+  subpackages:
+  - yaml
 - name: golang.org/x/sys
   version: 833a04a10549a95dc34458c195cbad61bbb6cb4d
   subpackages:

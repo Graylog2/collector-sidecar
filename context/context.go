@@ -16,6 +16,7 @@
 package context
 
 import (
+	"fmt"
 	"net/url"
 
 	"github.com/kardianos/service"
@@ -23,46 +24,67 @@ import (
 	"github.com/Graylog2/collector-sidecar/daemon"
 	"github.com/Graylog2/collector-sidecar/system"
 	"github.com/Graylog2/collector-sidecar/common"
+	"github.com/Graylog2/collector-sidecar/cfgfile"
 )
 
 var log = common.Log()
 
 type Ctx struct {
-	ServerUrl         *url.URL
-	NodeId            string
+	ServerUrl	  *url.URL
 	CollectorId       string
 	CollectorPath     string
 	CollectorConfPath string
-	LogPath           string
-	Tags              []string
 	Inventory         *system.Inventory
-	Config            *daemon.Config
 	Program           *daemon.Program
+	ProgramConfig     *daemon.Config
+	Config 		  *cfgfile.SidecarConfig
 	Service           service.Service
 }
 
-func NewContext(serverUrl string, collectorPath string, collectorConfPath string, nodeId string, collectorId string, logPath string) *Ctx {
-	dc := daemon.NewConfig(collectorPath, logPath)
-	dp := daemon.NewProgram(dc)
+func NewContext(collectorPath string, collectorConfPath string) *Ctx {
+	return &Ctx{
+		CollectorPath:     collectorPath,
+		CollectorConfPath: collectorConfPath,
+		Inventory:         system.NewInventory(),
+	}
+}
 
-	url, err := url.Parse(serverUrl)
+func (ctx *Ctx)LoadConfig(path *string) error {
+	err := cfgfile.Read(&ctx.Config, *path)
+	if err != nil {
+		return fmt.Errorf("loading config file error: %v\n", err)
+	}
+
+	ctx.ServerUrl, err = url.Parse(ctx.Config.ServerUrl)
 	if err != nil {
 		log.Fatal("Server-url is not valid", err)
 	}
 
-	if nodeId == "" {
+	if ctx.Config.NodeId == "" {
 		log.Fatal("Please provide a valid node-id")
 	}
 
-	return &Ctx{
-		ServerUrl:         url,
-		NodeId:            nodeId,
-		CollectorId:       common.GetCollectorId(collectorId),
-		CollectorPath:     collectorPath,
-		CollectorConfPath: collectorConfPath,
-		LogPath:           logPath,
-		Inventory:         system.NewInventory(),
-		Config:            dc,
-		Program:           dp,
+	if ctx.Config.CollectorId == "" {
+		log.Fatal("No collector ID was configured.")
+	}
+	ctx.CollectorId = common.GetCollectorId(ctx.Config.CollectorId)
+
+	if len(ctx.Config.Tags) != 0 {
+		log.Info("Fetching configurations tagged by: ", ctx.Config.Tags)
+	}
+
+	return nil
+}
+
+func (ctx *Ctx)NewBackend(collectorPath string) {
+	//if common.IsDir(ctx.Config.*.ConfigurationPath) {
+	//	log.Fatal("Please provide the full path to the configuration file to render.")
+	//}
+
+	if collectorPath != "" && ctx.Config.LogPath != "" {
+		ctx.ProgramConfig = daemon.NewConfig(collectorPath, ctx.Config.LogPath)
+		ctx.Program = daemon.NewProgram(ctx.ProgramConfig)
+	} else {
+		log.Fatal("Incomplete backend configuration, provide at least binary_path and log_path")
 	}
 }

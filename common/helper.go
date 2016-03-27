@@ -23,9 +23,9 @@ import (
 	"runtime"
 	"strings"
 	"unicode"
+	"encoding/json"
 
 	"github.com/pborman/uuid"
-	"encoding/json"
 )
 
 func GetRootPath() (string, error) {
