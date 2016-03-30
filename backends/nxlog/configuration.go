@@ -20,10 +20,12 @@ import (
 	"reflect"
 
 	"github.com/Graylog2/collector-sidecar/context"
+	"github.com/Graylog2/collector-sidecar/cfgfile"
 )
 
 type NxConfig struct {
 	Context     *context.Ctx
+	UserConfig  *cfgfile.SidecarBackend
 	Definitions []nxdefinition
 	Paths       []nxpath
 	Extensions  []nxextension
@@ -84,8 +86,12 @@ type nxcanned struct {
 func NewCollectorConfig(context *context.Ctx) *NxConfig {
 	nxc := &NxConfig{
 		Context:     context,
-		Definitions: []nxdefinition{{name: "ROOT", value: filepath.Dir(context.CollectorPath)}},
 		Extensions:  []nxextension{{name: "gelf", properties: map[string]string{"Module": "xm_gelf"}}},
+	}
+	backendIndex, err := context.UserConfig.GetIndexByName(name)
+	if err == nil {
+		nxc.UserConfig = &context.UserConfig.Backends[backendIndex]
+		nxc.Definitions = []nxdefinition{{name: "ROOT", value: filepath.Dir(context.UserConfig.Backends[backendIndex].BinaryPath)}}
 	}
 	return nxc
 }

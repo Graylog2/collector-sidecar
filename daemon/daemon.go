@@ -25,123 +25,148 @@ import (
 	"github.com/kardianos/service"
 
 	"github.com/Graylog2/collector-sidecar/common"
+	"github.com/Graylog2/collector-sidecar/backends"
+	"github.com/Graylog2/collector-sidecar/context"
 )
 
+var Daemon *DaemonConfig
 var log = common.Log()
 
-type Config struct {
-	Name, DisplayName, Description string
+type DaemonConfig struct {
+	Name        string
+	DisplayName string
+	Description string
 
-	Dir  string
-	Exec string
-	Args []string
-	Env  []string
+	Dir         string
+	Env         []string
 
+	Runner       map[string]*Runner
+}
+
+type Runner struct {
+	Name 	       string
+	Exec           string
+	Args           []string
 	Stderr, Stdout string
+	Running        bool
+	Daemon 	       *DaemonConfig
+	cmd            *exec.Cmd
+	service        service.Service
+	exit           chan struct{}
 }
 
-type Program struct {
-	exit    chan struct{}
-	Running bool
-	service service.Service
-	*Config
-	cmd *exec.Cmd
+func init() {
+	Daemon = NewConfig()
 }
 
-func NewConfig(collectorPath string, logPath string) *Config {
+func NewConfig() *DaemonConfig {
 	rootDir, err := common.GetRootPath()
 	if err != nil {
 		log.Error("Can not access root directory")
 	}
 
-	c := &Config{
+	dc := &DaemonConfig{
 		Name:        "collector-sidecar",
 		DisplayName: "Graylog collector sidecar",
 		Description: "Wrapper service for Graylog controlled collector",
 		Dir:         rootDir,
 		Env:         []string{},
-		Stderr:      filepath.Join(logPath, "collector_stderr.log"),
-		Stdout:      filepath.Join(logPath, "collector_stdout.log"),
+		Runner:	     map[string]*Runner{},
 	}
 
-	return c
+	return dc
 }
 
-func NewProgram(config *Config) *Program {
-	p := &Program{
-		exit:   make(chan struct{}),
-		Config: config,
+func (dc *DaemonConfig) NewRunner(backend backends.Backend, logPath string) *Runner {
+	r := &Runner{
+		Running: false,
+		Name:    backend.Name(),
+		Exec:	 backend.ExecPath(),
+		Args:	 backend.ExecArgs(),
+		Stderr:  filepath.Join(logPath, backend.Name() + "_stderr.log"),
+		Stdout:  filepath.Join(logPath, backend.Name() + "_stdout.log"),
+		Daemon:  dc,
+		exit:    make(chan struct{}),
 	}
-	return p
+
+	return r
 }
 
-func (p *Program) BindToService(s service.Service) {
-	p.service = s
+func (dc *DaemonConfig) AddBackendAsRunner(backend backends.Backend, context *context.Ctx) {
+	dc.Runner[backend.Name()] = dc.NewRunner(backend, context.UserConfig.LogPath)
 }
 
-func (p *Program) Start(s service.Service) error {
-	absPath, _ := filepath.Abs(p.Exec)
+func (r *Runner) BindToService(s service.Service) {
+	r.service = s
+}
+
+func (r *Runner) GetService() service.Service {
+	return r.service
+}
+
+func (r *Runner) Start(s service.Service) error {
+	absPath, _ := filepath.Abs(r.Exec)
 	fullExec, err := exec.LookPath(absPath)
 	if err != nil {
-		return fmt.Errorf("Failed to find collector executable %q: %v", p.Exec, err)
+		return fmt.Errorf("[%s] Failed to find collector executable %q: %v", r.Name, r.Exec, err)
 	}
 
-	p.cmd = exec.Command(fullExec, p.Args...)
-	p.cmd.Dir = p.Dir
-	p.cmd.Env = append(os.Environ(), p.Env...)
+	r.cmd = exec.Command(fullExec, r.Args...)
+	r.cmd.Dir = r.Daemon.Dir
+	r.cmd.Env = append(os.Environ(), r.Daemon.Env...)
 
-	go p.run()
+	go r.run()
 	return nil
 }
 
-func (p *Program) Stop(s service.Service) error {
-	log.Info("Stopping collector")
-	close(p.exit)
-	if p.cmd.Process != nil {
-		p.cmd.Process.Kill()
+func (r *Runner) Stop(s service.Service) error {
+	log.Infof("[%s] Stopping", r.Name)
+	close(r.exit)
+	if r.cmd.Process != nil {
+		r.cmd.Process.Kill()
 	}
 	return nil
 }
 
-func (p *Program) Restart(s service.Service) error {
-	p.Stop(s)
+func (r *Runner) Restart(s service.Service) error {
+	r.Stop(s)
 	time.Sleep(3 * time.Second)
-	p.exit = make(chan struct{})
-	p.Start(s)
+	r.exit = make(chan struct{})
+	r.Start(s)
 
 	return nil
 }
 
-func (p *Program) run() {
-	log.Info("Starting collector")
+func (r *Runner) run() {
+	log.Infof("[%s] Starting", r.Name)
 
-	if p.Stderr != "" {
-		err := common.CreatePathToFile(p.Stderr)
-		f, err := os.OpenFile(p.Stderr, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0777)
+	if r.Stderr != "" {
+		err := common.CreatePathToFile(r.Stderr)
+		f, err := os.OpenFile(r.Stderr, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0777)
 		if err != nil {
-			log.Warningf("Failed to open std err %q: %v", p.Stderr, err)
+			log.Warningf("[%s] Failed to open std err %q: %v", r.Name, r.Stderr, err)
 			return
 		}
 		defer f.Close()
-		p.cmd.Stderr = f
+		r.cmd.Stderr = f
 	}
-	if p.Stdout != "" {
-		err := common.CreatePathToFile(p.Stderr)
-		f, err := os.OpenFile(p.Stdout, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0777)
+	if r.Stdout != "" {
+		err := common.CreatePathToFile(r.Stderr)
+		f, err := os.OpenFile(r.Stdout, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0777)
 		if err != nil {
-			log.Warningf("Failed to open std out %q: %v", p.Stdout, err)
+			log.Warningf("[%s] Failed to open std out %q: %v", r.Name, r.Stdout, err)
 			return
 		}
 		defer f.Close()
-		p.cmd.Stdout = f
+		r.cmd.Stdout = f
 	}
 
-	p.Running = true
+	r.Running = true
 	startTime := time.Now()
-	p.cmd.Run()
+	r.cmd.Run()
 
 	if time.Since(startTime) < 3*time.Second {
-		log.Error("Collector exits immediately, this should not happen! Please check your collector configuration!")
+		log.Errorf("[%s] Collector exits immediately, this should not happen! Please check your collector configuration!", r.Name)
 	}
 
 	return

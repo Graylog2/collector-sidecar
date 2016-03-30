@@ -19,9 +19,6 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/kardianos/service"
-
-	"github.com/Graylog2/collector-sidecar/daemon"
 	"github.com/Graylog2/collector-sidecar/system"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/cfgfile"
@@ -32,59 +29,42 @@ var log = common.Log()
 type Ctx struct {
 	ServerUrl	  *url.URL
 	CollectorId       string
-	CollectorPath     string
-	CollectorConfPath string
+	UserConfig 	  *cfgfile.SidecarConfig
 	Inventory         *system.Inventory
-	Program           *daemon.Program
-	ProgramConfig     *daemon.Config
-	Config 		  *cfgfile.SidecarConfig
-	Service           service.Service
 }
 
-func NewContext(collectorPath string, collectorConfPath string) *Ctx {
+func NewContext() *Ctx {
 	return &Ctx{
-		CollectorPath:     collectorPath,
-		CollectorConfPath: collectorConfPath,
 		Inventory:         system.NewInventory(),
 	}
 }
 
-func (ctx *Ctx)LoadConfig(path *string) error {
-	err := cfgfile.Read(&ctx.Config, *path)
+func (ctx *Ctx) LoadConfig(path *string) error {
+	err := cfgfile.Read(&ctx.UserConfig, *path)
 	if err != nil {
 		return fmt.Errorf("loading config file error: %v\n", err)
 	}
 
-	ctx.ServerUrl, err = url.Parse(ctx.Config.ServerUrl)
+	// Process top-level configuration
+	ctx.ServerUrl, err = url.Parse(ctx.UserConfig.ServerUrl)
 	if err != nil {
 		log.Fatal("Server-url is not valid", err)
 	}
 
-	if ctx.Config.NodeId == "" {
+	if ctx.UserConfig.CollectorId == "" {
+		log.Fatal("No collector ID was configured.")
+	}
+	ctx.CollectorId = common.GetCollectorId(ctx.UserConfig.CollectorId)
+
+	if ctx.UserConfig.NodeId == "" {
 		log.Fatal("Please provide a valid node-id")
 	}
 
-	if ctx.Config.CollectorId == "" {
-		log.Fatal("No collector ID was configured.")
-	}
-	ctx.CollectorId = common.GetCollectorId(ctx.Config.CollectorId)
-
-	if len(ctx.Config.Tags) != 0 {
-		log.Info("Fetching configurations tagged by: ", ctx.Config.Tags)
+	if len(ctx.UserConfig.Tags) == 0 {
+		log.Fatal("Please define configuration tags")
+	} else {
+		log.Info("Fetching configurations tagged by: ", ctx.UserConfig.Tags)
 	}
 
 	return nil
-}
-
-func (ctx *Ctx)NewBackend(collectorPath string) {
-	//if common.IsDir(ctx.Config.*.ConfigurationPath) {
-	//	log.Fatal("Please provide the full path to the configuration file to render.")
-	//}
-
-	if collectorPath != "" && ctx.Config.LogPath != "" {
-		ctx.ProgramConfig = daemon.NewConfig(collectorPath, ctx.Config.LogPath)
-		ctx.Program = daemon.NewProgram(ctx.ProgramConfig)
-	} else {
-		log.Fatal("Incomplete backend configuration, provide at least binary_path and log_path")
-	}
 }

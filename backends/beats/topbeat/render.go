@@ -54,17 +54,17 @@ func (tbc *TopBeatConfig) Render() bytes.Buffer {
 	return result
 }
 
-func (tbc *TopBeatConfig) RenderToFile(path string) error {
+func (tbc *TopBeatConfig) RenderToFile() error {
 	stringConfig := tbc.Render()
-	err := common.CreatePathToFile(path)
+	err := common.CreatePathToFile(tbc.Beats.UserConfig.ConfigurationPath)
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(path, stringConfig.Bytes(), 0644)
+	err = ioutil.WriteFile(tbc.Beats.UserConfig.ConfigurationPath, stringConfig.Bytes(), 0644)
 	return err
 }
 
-func (tbc *TopBeatConfig) RenderOnChange(response graylog.ResponseCollectorConfiguration, path string) bool {
+func (tbc *TopBeatConfig) RenderOnChange(response graylog.ResponseCollectorConfiguration) bool {
 	newConfig := NewCollectorConfig(tbc.Beats.Context)
 
 	for _, output := range response.Outputs {
@@ -88,20 +88,20 @@ func (tbc *TopBeatConfig) RenderOnChange(response graylog.ResponseCollectorConfi
 	}
 
 	if !tbc.Beats.Equals(newConfig.Beats) {
-		log.Info("Configuration change detected, rewriting configuration file.")
+		log.Infof("[%s] Configuration change detected, rewriting configuration file.", tbc.Name())
 		tbc.Beats.Update(newConfig.Beats)
-		tbc.RenderToFile(path)
+		tbc.RenderToFile()
 		return true
 	}
 
 	return false
 }
 
-func (tbc *TopBeatConfig) ValidateConfigurationFile(configurationPath string) bool {
-	cmd := exec.Command(tbc.ExecPath(), "-configtest", "-c", configurationPath)
+func (tbc *TopBeatConfig) ValidateConfigurationFile() bool {
+	cmd := exec.Command(tbc.ExecPath(), "-configtest", "-c", tbc.Beats.UserConfig.ConfigurationPath)
 	err := cmd.Run()
 	if err != nil {
-		log.Error("Error during configuration validation: ", err)
+		log.Errorf("[%s] Error during configuration validation: ", tbc.Name(), err)
 		return false
 	}
 

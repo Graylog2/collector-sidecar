@@ -16,7 +16,7 @@
 package topbeat
 
 import (
-	"runtime"
+	"path/filepath"
 
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/backends"
@@ -42,26 +42,25 @@ func (tbc *TopBeatConfig) Name() string {
 }
 
 func (tbc *TopBeatConfig) ExecPath() string {
-	var err error
-	execPath := tbc.Beats.Context.CollectorPath
-	if runtime.GOOS == "windows" {
-		execPath, err = common.AppendIfDir(tbc.Beats.Context.CollectorPath, "topbeat.exe")
-	} else {
-		execPath, err = common.AppendIfDir(tbc.Beats.Context.CollectorPath, "topbeat")
-	}
-	if err != nil {
-		log.Error("Failed to auto-complete topbeat path. Please provide full path to binary")
+	execPath := tbc.Beats.UserConfig.BinaryPath
+	if common.FileExists(execPath) != nil {
+		log.Fatal("Configured path to collector binary does not exist: " + execPath)
 	}
 
 	return execPath
 }
 
-func (tbc *TopBeatConfig) ExecArgs(configurationPath string) []string {
-	err := common.FileExists(configurationPath)
-	if err != nil {
-		log.Error("Collector configuration file is not accessable: ", configurationPath)
+func (tbc *TopBeatConfig) ConfigurationPath() string {
+	configurationPath := tbc.Beats.UserConfig.ConfigurationPath
+	if !common.IsDir(filepath.Dir(configurationPath)) {
+		log.Fatal("Configured path to collector configuration does not exist: " + configurationPath)
 	}
-	return []string{"-c", configurationPath}
+
+	return configurationPath
+}
+
+func (tbc *TopBeatConfig) ExecArgs() []string {
+	return []string{"-c", tbc.ConfigurationPath()}
 }
 
 func (tbc *TopBeatConfig) ValidatePreconditions() bool {

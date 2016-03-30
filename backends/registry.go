@@ -21,14 +21,20 @@ import (
 	"github.com/Graylog2/collector-sidecar/common"
 )
 
-var log = common.Log()
+var (
+	log = common.Log()
+	// global registry
+	factory = &backendFactory{registry: make(map[string]Creator)}
+	Store = &backendStore{backends: make(map[string]Backend)}
+)
 
 type Backend interface {
 	Name() string
 	ExecPath() string
-	ExecArgs(string) []string
-	RenderOnChange(graylog.ResponseCollectorConfiguration, string) bool
-	ValidateConfigurationFile(string) bool
+	ConfigurationPath() string
+	ExecArgs() []string
+	RenderOnChange(graylog.ResponseCollectorConfiguration) bool
+	ValidateConfigurationFile() bool
 	ValidatePreconditions() bool
 }
 
@@ -36,6 +42,10 @@ type Creator func(*context.Ctx) Backend
 
 type backendFactory struct {
 	registry map[string]Creator
+}
+
+type backendStore struct {
+	backends map[string]Backend
 }
 
 func (bf *backendFactory) register(name string, c Creator) error {
@@ -56,13 +66,18 @@ func (bf *backendFactory) get(name string) (Creator, error) {
 	return c, nil
 }
 
-// global registry
-var factory = &backendFactory{registry: make(map[string]Creator)}
-
 func RegisterBackend(name string, c Creator) error {
 	return factory.register(name, c)
 }
 
-func GetBackend(name string) (Creator, error) {
+func GetCreator(name string) (Creator, error) {
 	return factory.get(name)
+}
+
+func (bs *backendStore) AddBackend(backend Backend) {
+	bs.backends[backend.Name()] = backend
+}
+
+func (bs *backendStore) GetBackend(name string) Backend {
+	return bs.backends[name]
 }

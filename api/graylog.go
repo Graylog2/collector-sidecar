@@ -32,8 +32,8 @@ func RequestConfiguration(context *context.Ctx) (graylog.ResponseCollectorConfig
 	c.BaseURL = context.ServerUrl
 
 	params := make(map[string]string)
-	if len(context.Config.Tags) != 0 {
-		tags, err := json.Marshal(context.Config.Tags)
+	if len(context.UserConfig.Tags) != 0 {
+		tags, err := json.Marshal(context.UserConfig.Tags)
 		if err != nil {
 			log.Error("Provided tags can not be send to Graylog server!")
 		} else {
@@ -66,7 +66,7 @@ func UpdateRegistration(context *context.Ctx) {
 	c.BaseURL = context.ServerUrl
 
 	registration := graylog.RegistrationRequest{}
-	registration.NodeId = context.Config.NodeId
+	registration.NodeId = context.UserConfig.NodeId
 	registration.NodeDetails = make(map[string]string)
 	registration.NodeDetails["operating_system"] = common.GetSystemName()
 

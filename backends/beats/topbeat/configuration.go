@@ -30,5 +30,9 @@ func NewCollectorConfig(context *context.Ctx) *TopBeatConfig {
 		Container:             map[string]interface{}{},
 		ContainerKeyMapping:   map[string]string{"indexname": "index"},
 	}
+	backendIndex, err := context.UserConfig.GetIndexByName(name)
+	if err == nil {
+		bc.UserConfig = &context.UserConfig.Backends[backendIndex]
+	}
 	return &TopBeatConfig{Beats: bc}
 }

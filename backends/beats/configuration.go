@@ -22,6 +22,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/Graylog2/collector-sidecar/context"
+	"github.com/Graylog2/collector-sidecar/cfgfile"
 )
 
 var (
@@ -31,8 +32,9 @@ var (
 
 type BeatsConfig struct {
 	Context               *context.Ctx
-	Container             interface{}
-	ContainerKeyMapping   map[string]string
+	UserConfig  	      *cfgfile.SidecarBackend
+	Container             interface{}		// holds the configuration object for un/marshalling
+	ContainerKeyMapping   map[string]string		// keys can be renamed before the configuration is rendered
 	Snippets              []beatSnippet
 }
 

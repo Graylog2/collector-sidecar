@@ -26,10 +26,12 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/context"
-	"github.com/Graylog2/collector-sidecar/services"
 	"github.com/Graylog2/collector-sidecar/common"
+	"github.com/Graylog2/collector-sidecar/daemon"
+	"github.com/Graylog2/collector-sidecar/services"
 
 	// importing backend packages to ensure init() is called
+	_ "github.com/Graylog2/collector-sidecar/daemon"
 	_ "github.com/Graylog2/collector-sidecar/backends/nxlog"
 	_ "github.com/Graylog2/collector-sidecar/backends/beats/topbeat"
 )
@@ -62,36 +64,29 @@ func init() {
 }
 
 func main() {
-	var (
-		backendParam           = flag.String("backend", "nxlog", "Set the collector backend")
-		collectorPathParam     = flag.String("collector-path", "/usr/bin/nxlog", "Path to collector installation")
-		collectorConfPathParam = flag.String("collector-conf-path", "/etc/graylog/collector-sidecar/generated/nxlog.conf", "File path to the rendered collector configuration")
-	)
-	if CommandLineSetup() {
+	if commandLineSetup() {
 		os.Exit(0)
 	}
 
-	expandedCollectorPath := common.ExpandPath(*collectorPathParam)
-	expandedCollectorConfPath := common.ExpandPath(*collectorConfPathParam)
-
 	// initialize application context
-	context := context.NewContext(
-		expandedCollectorPath,
-		expandedCollectorConfPath)
+	context := context.NewContext()
 	context.LoadConfig(configurationFile)
-	context.NewBackend(expandedCollectorPath)
+	backendSetup(context)
 
 	// setup system service
 	serviceConfig := &service.Config{
-		Name:        context.ProgramConfig.Name,
-		DisplayName: context.ProgramConfig.DisplayName,
-		Description: context.ProgramConfig.Description,
+		Name:        daemon.Daemon.Name,
+		DisplayName: daemon.Daemon.DisplayName,
+		Description: daemon.Daemon.Description,
 	}
 
-	s, err := service.New(context.Program, serviceConfig)
+	supervisor := daemon.Daemon.NewSupervisor()
+	s, err := service.New(supervisor, serviceConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
+	supervisor.BindToService(s)
+
 	if len(*serviceParam) != 0 {
 		err := service.Control(s, *serviceParam)
 		if err != nil {
@@ -101,27 +96,15 @@ func main() {
 		return
 	}
 
-	backendCreator, err := backends.GetBackend(*backendParam)
-	backend := backendCreator(context)
-
-	// set backend related context values
-	context.ProgramConfig.Exec = backend.ExecPath()
-	context.ProgramConfig.Args = backend.ExecArgs(expandedCollectorConfPath)
-
-	// bind service to context
-	context.Program.BindToService(s)
-	context.Service = s
-
 	// start main loop
-	backend.ValidatePreconditions()
-	services.StartPeriodicals(context, backend)
+	services.StartPeriodicals(context)
 	err = s.Run()
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func CommandLineSetup() bool {
+func commandLineSetup() bool {
 	flag.Parse()
 
 	if *printVersion {
@@ -134,5 +117,23 @@ func CommandLineSetup() bool {
 	}
 
 	return false
+}
+
+func backendSetup(context *context.Ctx) {
+	for _, collector := range context.UserConfig.Backends {
+		backendCreator, err := backends.GetCreator(collector.Name)
+		if err != nil {
+			log.Error("Unsupported collector backend found in configuration: " + collector.Name)
+			continue
+		}
+		backend := backendCreator(context)
+		backends.Store.AddBackend(backend)
+		if *collector.Enabled == true && backend.ValidatePreconditions() {
+			log.Debug("Add collector backend: " + backend.Name())
+			daemon.Daemon.AddBackendAsRunner(backend, context)
+		}
+	}
+
+
 }
 

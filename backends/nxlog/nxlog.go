@@ -21,10 +21,10 @@ import (
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/common"
+	"path/filepath"
 )
 
 const name = "nxlog"
-
 var log = common.Log()
 
 func init() {
@@ -42,26 +42,26 @@ func (nxc *NxConfig) Name() string {
 }
 
 func (nxc *NxConfig) ExecPath() string {
-	var err error
-	execPath := nxc.Context.CollectorPath
-	if runtime.GOOS == "windows" {
-		execPath, err = common.AppendIfDir(nxc.Context.CollectorPath, "nxlog.exe")
-	} else {
-		execPath, err = common.AppendIfDir(nxc.Context.CollectorPath, "nxlog")
-	}
-	if err != nil {
-		log.Error("Failed to auto-complete nxlog path. Please provide full path to binary")
+	execPath := nxc.UserConfig.BinaryPath
+	if common.FileExists(execPath) != nil {
+		log.Fatalf("[%s] Configured path to collector binary does not exist: %s", nxc.Name(), execPath)
 	}
 
 	return execPath
 }
 
-func (nxc *NxConfig) ExecArgs(configurationPath string) []string {
-	err := common.FileExists(configurationPath)
-	if err != nil {
-		log.Error("Collector configuration file is not accessable: ", configurationPath)
+func (nxc *NxConfig) ConfigurationPath() string {
+	configurationPath := nxc.UserConfig.ConfigurationPath
+	if !common.IsDir(filepath.Dir(configurationPath)) {
+		log.Fatalf("[%s] Configured path to collector configuration does not exist: %s", nxc.Name(), configurationPath)
 	}
-	return []string{"-f", "-c", configurationPath}
+
+	return configurationPath
+}
+
+
+func (nxc *NxConfig) ExecArgs() []string {
+	return []string{"-f", "-c", nxc.ConfigurationPath()}
 }
 
 func (nxc *NxConfig) ValidatePreconditions() bool {

@@ -19,52 +19,49 @@ import (
 	"time"
 
 	"github.com/Graylog2/collector-sidecar/api"
-	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/common"
+	"github.com/Graylog2/collector-sidecar/daemon"
+	"github.com/Graylog2/collector-sidecar/backends"
 )
 
 var log = common.Log()
 
-func StartPeriodicals(context *context.Ctx, backend backends.Backend) {
-	updateCollectorRegistration(context)
-	checkForUpdateAndRestart(context, backend)
+func StartPeriodicals(context *context.Ctx) {
+	go func() {for{updateCollectorRegistration(context)}}()
+	go func() {for{checkForUpdateAndRestart(context)}}()
 }
 
 // report collector status to Graylog server
 func updateCollectorRegistration(context *context.Ctx) {
-	go func() {
-		for {
-			time.Sleep(10 * time.Second)
-			api.UpdateRegistration(context)
-		}
-	}()
+	time.Sleep(10 * time.Second)
+	api.UpdateRegistration(context)
 }
 
 // fetch configuration periodically
-func checkForUpdateAndRestart(context *context.Ctx, backend backends.Backend) {
-	go func() {
-		for {
-			time.Sleep(10 * time.Second)
-			jsonConfig, err := api.RequestConfiguration(context)
-			if err != nil {
-				log.Error("Can't fetch configuration from Graylog API: ", err)
+func checkForUpdateAndRestart(context *context.Ctx) {
+	time.Sleep(10 * time.Second)
+	jsonConfig, err := api.RequestConfiguration(context)
+	if err != nil {
+		log.Error("Can't fetch configuration from Graylog API: ", err)
+		return
+	}
+	for name, runner := range daemon.Daemon.Runner {
+		backend := backends.Store.GetBackend(name)
+		if backend.RenderOnChange(jsonConfig) {
+			if !backend.ValidateConfigurationFile() {
+				log.Infof("[%s] Collector configuration file is not valid, waiting for update...", name)
 				continue
 			}
-			if backend.RenderOnChange(jsonConfig, context.CollectorConfPath) {
-				if !backend.ValidateConfigurationFile(context.CollectorConfPath) {
-					log.Info("Collector configuration file is not valid, waiting for update...")
-					continue
-				}
 
-				if context.Program.Running { // collector was already started so a Restart will not fail
-					err = context.Program.Restart(context.Service)
-					if err != nil {
-						log.Error("Failed to restart collector %v", err)
-					}
+			if runner.Running {
+				// collector was already started so a Restart will not fail
+				err = runner.Restart(runner.GetService())
+				if err != nil {
+					log.Error("Failed to restart collector %v", err)
 				}
-
 			}
+
 		}
-	}()
+	}
 }

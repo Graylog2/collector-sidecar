@@ -190,17 +190,17 @@ func (nxc *NxConfig) Render() bytes.Buffer {
 	return result
 }
 
-func (nxc *NxConfig) RenderToFile(path string) error {
+func (nxc *NxConfig) RenderToFile() error {
 	stringConfig := nxc.Render()
-	err := common.CreatePathToFile(path)
+	err := common.CreatePathToFile(nxc.UserConfig.ConfigurationPath)
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(path, stringConfig.Bytes(), 0644)
+	err = ioutil.WriteFile(nxc.UserConfig.ConfigurationPath, stringConfig.Bytes(), 0644)
 	return err
 }
 
-func (nxc *NxConfig) RenderOnChange(json graylog.ResponseCollectorConfiguration, path string) bool {
+func (nxc *NxConfig) RenderOnChange(json graylog.ResponseCollectorConfiguration) bool {
 	jsonConfig := NewCollectorConfig(nxc.Context)
 
 	for _, output := range json.Outputs {
@@ -229,20 +229,20 @@ func (nxc *NxConfig) RenderOnChange(json graylog.ResponseCollectorConfiguration,
 	}
 
 	if !nxc.Equals(jsonConfig) {
-		log.Info("Configuration change detected, rewriting configuration file.")
+		log.Infof("[%s] Configuration change detected, rewriting configuration file.", nxc.Name())
 		nxc.Update(jsonConfig)
-		nxc.RenderToFile(path)
+		nxc.RenderToFile()
 		return true
 	}
 
 	return false
 }
 
-func (nxc *NxConfig) ValidateConfigurationFile(configurationPath string) bool {
-	cmd := exec.Command(nxc.ExecPath(), "-v", "-c", configurationPath)
+func (nxc *NxConfig) ValidateConfigurationFile() bool {
+	cmd := exec.Command(nxc.ExecPath(), "-v", "-c", nxc.UserConfig.ConfigurationPath)
 	err := cmd.Run()
 	if err != nil {
-		log.Error("Error during configuration validation: ", err)
+		log.Errorf("[%s] Error during configuration validation: ", nxc.Name(), err)
 		return false
 	}
 
