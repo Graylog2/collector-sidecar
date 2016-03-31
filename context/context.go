@@ -19,23 +19,23 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/Graylog2/collector-sidecar/system"
-	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/cfgfile"
+	"github.com/Graylog2/collector-sidecar/common"
+	"github.com/Graylog2/collector-sidecar/system"
 )
 
 var log = common.Log()
 
 type Ctx struct {
-	ServerUrl	  *url.URL
-	CollectorId       string
-	UserConfig 	  *cfgfile.SidecarConfig
-	Inventory         *system.Inventory
+	ServerUrl   *url.URL
+	CollectorId string
+	UserConfig  *cfgfile.SidecarConfig
+	Inventory   *system.Inventory
 }
 
 func NewContext() *Ctx {
 	return &Ctx{
-		Inventory:         system.NewInventory(),
+		Inventory: system.NewInventory(),
 	}
 }
 
@@ -64,6 +64,10 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 		log.Fatal("Please define configuration tags")
 	} else {
 		log.Info("Fetching configurations tagged by: ", ctx.UserConfig.Tags)
+	}
+
+	if !(ctx.UserConfig.UpdateInterval > 0) {
+		log.Fatal("Please set update interval > 0 seconds")
 	}
 
 	return nil

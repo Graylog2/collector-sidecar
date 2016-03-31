@@ -17,15 +17,15 @@ package backends
 
 import (
 	"github.com/Graylog2/collector-sidecar/api/graylog"
-	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/common"
+	"github.com/Graylog2/collector-sidecar/context"
 )
 
 var (
 	log = common.Log()
 	// global registry
 	factory = &backendFactory{registry: make(map[string]Creator)}
-	Store = &backendStore{backends: make(map[string]Backend)}
+	Store   = &backendStore{backends: make(map[string]Backend)}
 )
 
 type Backend interface {

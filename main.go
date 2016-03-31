@@ -25,21 +25,21 @@ import (
 	"github.com/kardianos/service"
 
 	"github.com/Graylog2/collector-sidecar/backends"
-	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/common"
+	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/daemon"
 	"github.com/Graylog2/collector-sidecar/services"
 
 	// importing backend packages to ensure init() is called
-	_ "github.com/Graylog2/collector-sidecar/daemon"
-	_ "github.com/Graylog2/collector-sidecar/backends/nxlog"
 	_ "github.com/Graylog2/collector-sidecar/backends/beats/topbeat"
+	_ "github.com/Graylog2/collector-sidecar/backends/nxlog"
+	_ "github.com/Graylog2/collector-sidecar/daemon"
 )
 
 var (
-	log = common.Log()
-	printVersion *bool
-	serviceParam *string
+	log               = common.Log()
+	printVersion      *bool
+	serviceParam      *string
 	configurationFile *string
 )
 
@@ -51,13 +51,12 @@ func init() {
 		configurationPath = filepath.Join("/etc", "graylog", "collector-sidecar", "collector_sidecar.yml")
 	}
 
-	serviceParam = flag.String("service", "", "Control the system service")
+	serviceParam = flag.String("service", "", "Control the system service [start stop restart install uninstall]")
 	configurationFile = flag.String("c", configurationPath, "Configuration file")
 	printVersion = flag.Bool("version", false, "Print version and exit")
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: graylog-collector-sidecar [OPTIONS] -c [CONFIGURATION FILE]\n")
-		fmt.Fprintf(os.Stderr, "OPTIONS can be:\n")
+		fmt.Fprintf(os.Stderr, "Usage: graylog-collector-sidecar -c [CONFIGURATION FILE]\n")
 		flag.PrintDefaults()
 	}
 
@@ -65,13 +64,8 @@ func init() {
 
 func main() {
 	if commandLineSetup() {
-		os.Exit(0)
+		return
 	}
-
-	// initialize application context
-	context := context.NewContext()
-	context.LoadConfig(configurationFile)
-	backendSetup(context)
 
 	// setup system service
 	serviceConfig := &service.Config{
@@ -95,6 +89,11 @@ func main() {
 		}
 		return
 	}
+
+	// initialize application context
+	context := context.NewContext()
+	context.LoadConfig(configurationFile)
+	backendSetup(context)
 
 	// start main loop
 	services.StartPeriodicals(context)
@@ -134,6 +133,4 @@ func backendSetup(context *context.Ctx) {
 		}
 	}
 
-
 }
-

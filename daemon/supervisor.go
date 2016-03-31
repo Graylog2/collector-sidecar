@@ -20,9 +20,9 @@ import (
 )
 
 type Supervisor struct {
-	Running        bool
-	service        service.Service
-	exit           chan struct{}
+	Running bool
+	service service.Service
+	exit    chan struct{}
 }
 
 func (dc *DaemonConfig) NewSupervisor() *Supervisor {
@@ -39,14 +39,13 @@ func (sv *Supervisor) BindToService(s service.Service) {
 }
 
 func (sv *Supervisor) Start(s service.Service) error {
-	log.Info("Starting supervisor process")
+	log.Info("Starting collector supervisor")
 	go sv.run()
 	return nil
 }
 
 func (sv *Supervisor) Stop(s service.Service) error {
-	for name, runner := range Daemon.Runner {
-		log.Infof("Stopping '%s'", name)
+	for _, runner := range Daemon.Runner {
 		runner.Stop(sv.service)
 	}
 	close(sv.exit)
@@ -63,8 +62,7 @@ func (sv *Supervisor) Restart(s service.Service) error {
 
 func (sv *Supervisor) run() {
 	sv.Running = true
-	for name, runner := range Daemon.Runner {
-		log.Infof("Sending start signal to '%s'", name)
+	for _, runner := range Daemon.Runner {
 		runner.Start(sv.service)
 	}
 	return

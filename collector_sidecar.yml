@@ -1,8 +1,10 @@
 server_url: http://10.0.2.2:12900
 node_id: graylog-collector-sidecar
 collector_id: file:/etc/graylog/collector-sidecar/collector-id
-tags: linux
+tags:
+    - linux
 log_path: /var/log/graylog/collector-sidecar
+update_interval: 10
 backends:
     - name: nxlog
       enabled: true

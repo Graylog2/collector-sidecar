@@ -16,8 +16,8 @@
 package topbeat
 
 import (
-	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/backends/beats"
+	"github.com/Graylog2/collector-sidecar/context"
 )
 
 type TopBeatConfig struct {
@@ -26,9 +26,9 @@ type TopBeatConfig struct {
 
 func NewCollectorConfig(context *context.Ctx) *TopBeatConfig {
 	bc := &beats.BeatsConfig{
-		Context:               context,
-		Container:             map[string]interface{}{},
-		ContainerKeyMapping:   map[string]string{"indexname": "index"},
+		Context:             context,
+		Container:           map[string]interface{}{},
+		ContainerKeyMapping: map[string]string{"indexname": "index"},
 	}
 	backendIndex, err := context.UserConfig.GetIndexByName(name)
 	if err == nil {

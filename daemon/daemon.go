@@ -24,8 +24,8 @@ import (
 
 	"github.com/kardianos/service"
 
-	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/backends"
+	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
 )
 
@@ -37,19 +37,19 @@ type DaemonConfig struct {
 	DisplayName string
 	Description string
 
-	Dir         string
-	Env         []string
+	Dir string
+	Env []string
 
-	Runner       map[string]*Runner
+	Runner map[string]*Runner
 }
 
 type Runner struct {
-	Name 	       string
+	Name           string
 	Exec           string
 	Args           []string
 	Stderr, Stdout string
 	Running        bool
-	Daemon 	       *DaemonConfig
+	Daemon         *DaemonConfig
 	cmd            *exec.Cmd
 	service        service.Service
 	exit           chan struct{}
@@ -71,7 +71,7 @@ func NewConfig() *DaemonConfig {
 		Description: "Wrapper service for Graylog controlled collector",
 		Dir:         rootDir,
 		Env:         []string{},
-		Runner:	     map[string]*Runner{},
+		Runner:      map[string]*Runner{},
 	}
 
 	return dc
@@ -81,10 +81,10 @@ func (dc *DaemonConfig) NewRunner(backend backends.Backend, logPath string) *Run
 	r := &Runner{
 		Running: false,
 		Name:    backend.Name(),
-		Exec:	 backend.ExecPath(),
-		Args:	 backend.ExecArgs(),
-		Stderr:  filepath.Join(logPath, backend.Name() + "_stderr.log"),
-		Stdout:  filepath.Join(logPath, backend.Name() + "_stdout.log"),
+		Exec:    backend.ExecPath(),
+		Args:    backend.ExecArgs(),
+		Stderr:  filepath.Join(logPath, backend.Name()+"_stderr.log"),
+		Stdout:  filepath.Join(logPath, backend.Name()+"_stdout.log"),
 		Daemon:  dc,
 		exit:    make(chan struct{}),
 	}

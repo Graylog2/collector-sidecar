@@ -20,9 +20,9 @@ import (
 	"io"
 
 	"github.com/Graylog2/collector-sidecar/api/graylog"
-	"github.com/Graylog2/collector-sidecar/context"
-	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/api/rest"
+	"github.com/Graylog2/collector-sidecar/common"
+	"github.com/Graylog2/collector-sidecar/context"
 )
 
 var log = common.Log()
@@ -41,7 +41,7 @@ func RequestConfiguration(context *context.Ctx) (graylog.ResponseCollectorConfig
 		}
 	}
 
-	r, err := c.NewRequest("GET", "/plugins/org.graylog.plugins.collector/" + context.CollectorId, params, nil)
+	r, err := c.NewRequest("GET", "/plugins/org.graylog.plugins.collector/"+context.CollectorId, params, nil)
 	if err != nil {
 		log.Error("[RequestConfiguration] Can not initialize REST request")
 		return graylog.ResponseCollectorConfiguration{}, err
@@ -70,7 +70,7 @@ func UpdateRegistration(context *context.Ctx) {
 	registration.NodeDetails = make(map[string]string)
 	registration.NodeDetails["operating_system"] = common.GetSystemName()
 
-	r, err := c.NewRequest("PUT", "/plugins/org.graylog.plugins.collector/collectors/" + context.CollectorId, nil, registration)
+	r, err := c.NewRequest("PUT", "/plugins/org.graylog.plugins.collector/collectors/"+context.CollectorId, nil, registration)
 	if err != nil {
 		log.Error("[UpdateRegistration] Can not initialize REST request")
 		return

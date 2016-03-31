@@ -16,14 +16,14 @@
 package rest
 
 import (
-	"net/http"
-	"net/url"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
-	"fmt"
 	"net"
+	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/Graylog2/collector-sidecar/common"
@@ -36,9 +36,9 @@ const (
 )
 
 type Client struct {
-	client  *http.Client
-	BaseURL *url.URL
-	UserAgent string
+	client             *http.Client
+	BaseURL            *url.URL
+	UserAgent          string
 	onRequestCompleted RequestCompletionCallback
 }
 
@@ -72,7 +72,7 @@ func NewClient(httpClient *http.Client) *Client {
 			}).Dial,
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
-			DisableCompression: true,
+			DisableCompression:    true,
 		}
 	}
 
@@ -140,7 +140,6 @@ func CheckResponse(r *http.Response) error {
 
 	return errorResponse
 }
-
 
 func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
 	resp, err := c.client.Do(req)

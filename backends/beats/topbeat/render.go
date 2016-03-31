@@ -16,9 +16,9 @@
 package topbeat
 
 import (
-	"os/exec"
-	"io/ioutil"
 	"bytes"
+	"io/ioutil"
+	"os/exec"
 	"text/template"
 
 	"github.com/Graylog2/collector-sidecar/api/graylog"

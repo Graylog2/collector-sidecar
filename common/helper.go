@@ -16,6 +16,7 @@
 package common
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path"
@@ -23,7 +24,6 @@ import (
 	"runtime"
 	"strings"
 	"unicode"
-	"encoding/json"
 
 	"github.com/pborman/uuid"
 )
@@ -88,25 +88,6 @@ func IsDir(filePath string) bool {
 
 }
 
-func AppendIfDir(dir string, appendix string) (string, error) {
-	file, err := os.Open(dir)
-	if err != nil {
-		log.Error("Can not access ", dir)
-		return dir, err
-	}
-
-	fileInfo, err := file.Stat()
-	switch {
-	case err != nil:
-		return "", err
-	case fileInfo.IsDir():
-		appended := filepath.Join(dir, appendix)
-		return appended, nil
-	default:
-		return dir, nil
-	}
-}
-
 func CreatePathToFile(filepath string) error {
 	dir := path.Dir(filepath)
 	_, err := os.Open(dir)
@@ -119,13 +100,6 @@ func CreatePathToFile(filepath string) error {
 		}
 	}
 	return nil
-}
-
-func SplitCommaList(list string) []string {
-	if list == "" {
-		return make([]string, 0)
-	}
-	return strings.Split(list, ",")
 }
 
 func Inspect(object interface{}) string {

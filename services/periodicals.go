@@ -19,28 +19,36 @@ import (
 	"time"
 
 	"github.com/Graylog2/collector-sidecar/api"
-	"github.com/Graylog2/collector-sidecar/context"
-	"github.com/Graylog2/collector-sidecar/common"
-	"github.com/Graylog2/collector-sidecar/daemon"
 	"github.com/Graylog2/collector-sidecar/backends"
+	"github.com/Graylog2/collector-sidecar/common"
+	"github.com/Graylog2/collector-sidecar/context"
+	"github.com/Graylog2/collector-sidecar/daemon"
 )
 
 var log = common.Log()
 
 func StartPeriodicals(context *context.Ctx) {
-	go func() {for{updateCollectorRegistration(context)}}()
-	go func() {for{checkForUpdateAndRestart(context)}}()
+	go func() {
+		for {
+			updateCollectorRegistration(context)
+		}
+	}()
+	go func() {
+		for {
+			checkForUpdateAndRestart(context)
+		}
+	}()
 }
 
 // report collector status to Graylog server
 func updateCollectorRegistration(context *context.Ctx) {
-	time.Sleep(10 * time.Second)
+	time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
 	api.UpdateRegistration(context)
 }
 
 // fetch configuration periodically
 func checkForUpdateAndRestart(context *context.Ctx) {
-	time.Sleep(10 * time.Second)
+	time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
 	jsonConfig, err := api.RequestConfiguration(context)
 	if err != nil {
 		log.Error("Can't fetch configuration from Graylog API: ", err)

@@ -16,13 +16,13 @@
 package beats
 
 import (
-	"reflect"
 	"errors"
+	"reflect"
 
 	"gopkg.in/yaml.v2"
 
-	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/cfgfile"
+	"github.com/Graylog2/collector-sidecar/context"
 )
 
 var (
@@ -31,11 +31,11 @@ var (
 )
 
 type BeatsConfig struct {
-	Context               *context.Ctx
-	UserConfig  	      *cfgfile.SidecarBackend
-	Container             interface{}		// holds the configuration object for un/marshalling
-	ContainerKeyMapping   map[string]string		// keys can be renamed before the configuration is rendered
-	Snippets              []beatSnippet
+	Context             *context.Ctx
+	UserConfig          *cfgfile.SidecarBackend
+	Container           interface{}       // holds the configuration object for un/marshalling
+	ContainerKeyMapping map[string]string // keys can be renamed before the configuration is rendered
+	Snippets            []beatSnippet
 }
 
 type beatSnippet struct {
@@ -64,7 +64,7 @@ func (bc *BeatsConfig) Set(value interface{}, path ...string) error {
 		bc.Container = map[string]interface{}{}
 	}
 	// Unmarshal nested YAML
-	if (value != nil) {
+	if value != nil {
 		yaml.Unmarshal([]byte(value.(string)), &value)
 	}
 

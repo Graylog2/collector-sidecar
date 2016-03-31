@@ -1,0 +1,50 @@
+// This file is part of Graylog.
+//
+// Graylog is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Graylog is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Graylog.  If not, see <http://www.gnu.org/licenses/>.
+
+package cfgfile
+
+import (
+	"errors"
+)
+
+type SidecarConfig struct {
+	ServerUrl      string   `config:"server_url"`
+	NodeId         string   `config:"node_id"`
+	CollectorId    string   `config:"collector_id"`
+	Tags           []string `config:"tags"`
+	LogPath        string   `config:"log_path"`
+	UpdateInterval int      `config:"update_interval"`
+	Backends       []SidecarBackend
+}
+
+type SidecarBackend struct {
+	Name              string `config:"name"`
+	Enabled           *bool  `config:"enabled"`
+	BinaryPath        string `config:"binary_path"`
+	ConfigurationPath string `config:"configuration_path"`
+}
+
+func (sc *SidecarConfig) GetIndexByName(name string) (int, error) {
+	index := -1
+	for i, backend := range sc.Backends {
+		if backend.Name == name {
+			index = i
+		}
+	}
+	if index < 0 {
+		return index, errors.New("Can not find configuration for: " + name)
+	}
+	return index, nil
+}
