@@ -29,6 +29,8 @@ import (
 	"github.com/Graylog2/collector-sidecar/common"
 )
 
+var log = common.Log()
+
 const (
 	defaultBaseURL = "http://127.0.0.1:12900/"
 	userAgent      = "Graylog Collector v" + common.CollectorVersion
@@ -166,12 +168,12 @@ func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
 		if w, ok := v.(io.Writer); ok {
 			_, err := io.Copy(w, resp.Body)
 			if err != nil {
-				return nil, err
+				return response, err
 			}
 		} else {
 			err := json.NewDecoder(resp.Body).Decode(v)
 			if err != nil {
-				return nil, err
+				return response, err
 			}
 		}
 	}

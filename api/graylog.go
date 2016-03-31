@@ -35,7 +35,7 @@ func RequestConfiguration(context *context.Ctx) (graylog.ResponseCollectorConfig
 	if len(context.UserConfig.Tags) != 0 {
 		tags, err := json.Marshal(context.UserConfig.Tags)
 		if err != nil {
-			log.Error("Provided tags can not be send to Graylog server!")
+			log.Error("Provided tags can not be send to the Graylog server!")
 		} else {
 			params["tags"] = string(tags)
 		}
@@ -49,12 +49,13 @@ func RequestConfiguration(context *context.Ctx) (graylog.ResponseCollectorConfig
 
 	respBody := graylog.ResponseCollectorConfiguration{}
 	resp, err := c.Do(r, &respBody)
-	if err == nil && resp.StatusCode == 204 {
-		log.Info("[RequestConfiguration] No configuration found for this collector!")
-	} else if err == nil && resp.StatusCode != 200 {
+	if resp != nil && resp.StatusCode == 204 {
+		log.Info("[RequestConfiguration] No configuration found for configured tags!")
+		return graylog.ResponseCollectorConfiguration{}, nil
+	} else if resp != nil && resp.StatusCode != 200 {
 		log.Error("[RequestConfiguration] Bad response status from Graylog server: ", resp.Status)
-	}
-	if err != nil {
+		return graylog.ResponseCollectorConfiguration{}, nil
+	} else if err != nil {
 		log.Error("[RequestConfiguration] Fetching configuration failed: ", err)
 	}
 
