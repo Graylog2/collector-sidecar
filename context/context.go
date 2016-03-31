@@ -46,28 +46,46 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 	}
 
 	// Process top-level configuration
+	// server_url
 	ctx.ServerUrl, err = url.Parse(ctx.UserConfig.ServerUrl)
-	if err != nil {
-		log.Fatal("Server-url is not valid", err)
+	if err != nil || ctx.ServerUrl.Scheme == "" || ctx.ServerUrl.Host == "" {
+		log.Fatal("Server-url is not valid. Should be like http://127.0.0.1:12900 ", err)
+	}
+	if ctx.UserConfig.ServerUrl == "" {
+		log.Fatalf("Server-url is empty.")
 	}
 
+	// collector_id
 	if ctx.UserConfig.CollectorId == "" {
 		log.Fatal("No collector ID was configured.")
 	}
 	ctx.CollectorId = common.GetCollectorId(ctx.UserConfig.CollectorId)
 
+	// node_id
 	if ctx.UserConfig.NodeId == "" {
-		log.Fatal("Please provide a valid node-id")
+		log.Fatal("Please provide a valid node-id.")
 	}
 
+	// tags
 	if len(ctx.UserConfig.Tags) == 0 {
-		log.Fatal("Please define configuration tags")
+		log.Fatal("Please define configuration tags.")
 	} else {
 		log.Info("Fetching configurations tagged by: ", ctx.UserConfig.Tags)
 	}
 
+	// log_path
+	if ctx.UserConfig.LogPath == "" {
+		log.Fatal("No log directory was configured.")
+	}
+
+	// update_interval
 	if !(ctx.UserConfig.UpdateInterval > 0) {
-		log.Fatal("Please set update interval > 0 seconds")
+		log.Fatal("Please set update interval > 0 seconds.")
+	}
+
+	// backends
+	if len(ctx.UserConfig.Backends) == 0 {
+		log.Fatal("Please define at least one collector backend.")
 	}
 
 	return nil

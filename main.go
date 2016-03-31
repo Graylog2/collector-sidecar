@@ -34,6 +34,7 @@ import (
 	_ "github.com/Graylog2/collector-sidecar/backends/beats/topbeat"
 	_ "github.com/Graylog2/collector-sidecar/backends/nxlog"
 	_ "github.com/Graylog2/collector-sidecar/daemon"
+	"github.com/Graylog2/collector-sidecar/cfgfile"
 )
 
 var (
@@ -92,7 +93,15 @@ func main() {
 
 	// initialize application context
 	context := context.NewContext()
-	context.LoadConfig(configurationFile)
+	err = context.LoadConfig(configurationFile)
+	if err != nil {
+		log.Fatal("Loading configuration file failed.")
+	}
+	if cfgfile.ValidateConfig() {
+		log.Info("Config OK")
+		return
+	}
+
 	backendSetup(context)
 
 	// start main loop
