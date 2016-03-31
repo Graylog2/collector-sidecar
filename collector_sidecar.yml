@@ -1,4 +1,4 @@
-server_url: http://10.0.2.2:12900
+server_url: http://127.0.0.1:12900
 node_id: graylog-collector-sidecar
 collector_id: file:/etc/graylog/collector-sidecar/collector-id
 tags:
