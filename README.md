@@ -88,5 +88,5 @@ Compile
 Development
 -----------
 
-There is a collector mock programm to use the collector-sidecar without actually running a collector like NXLog. Simply build it with
-`make misc` und use the option `-collector-path misc/nxmock/nxlog`.
+There is a collector mock programm in order to use the collector-sidecar without actually running a collector like NXLog. Simply build it with
+`make misc` und use the option `binary_path: misc/nxmock/nxlog`.
