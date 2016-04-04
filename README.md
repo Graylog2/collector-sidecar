@@ -54,26 +54,25 @@ Configuration
 
 There are a couple of configuration settings for the Sidecar:
 
-  | Parameter       | Description                                                                                                                           |
-  |-----------------|---------------------------------------------------------------------------------------------------------------------------------------|
-  | server_url      | URL to the Graylog API, e.g. `http://127.0.0.1:12900`                                                                                 |
-  | node_id         | Name of the Sidecar instance, will also show up in the web interface                                                                  |
-  | collector_id    | Unique ID (UUID) of the instance. This can be an ID string or a path to an ID file                                                    |
-  | tags            | List of configuration tags. All configurations on the server side that match the tag list will be fetched and merged by this instance |
-  | log_path        | A path to a directory where the Sidecar can store the output of each running collector backend                                        |
-  | update_interval | The interval in seconds the sidecar will fetch new configurations from the Graylog server                                             |
-  | backends        | A list of collector backends the user wants to run on the target host                                                                 |
+| Parameter       | Description                                                                                                                           |
+|-----------------|---------------------------------------------------------------------------------------------------------------------------------------|
+| server_url      | URL to the Graylog API, e.g. `http://127.0.0.1:12900`                                                                                 |
+| node_id         | Name of the Sidecar instance, will also show up in the web interface                                                                  |
+| collector_id    | Unique ID (UUID) of the instance. This can be an ID string or a path to an ID file                                                    |
+| tags            | List of configuration tags. All configurations on the server side that match the tag list will be fetched and merged by this instance |
+| log_path        | A path to a directory where the Sidecar can store the output of each running collector backend                                        |
+| update_interval | The interval in seconds the sidecar will fetch new configurations from the Graylog server                                             |
+| backends        | A list of collector backends the user wants to run on the target host                                                                 |
 
 Each backend can be enabled/disabled and should point to a binary of the actual collector and a path to a configuration file the Sidecar can write to:
 
-  | Parameter           | Description                                                       |
-  |--------------------|-------------------------------------------------------------------|
-  | name               | The type name of the collector                                    |
-  | enabled            | Weather this backend should be started by the Sidecar or not      |
-  | binary_path        | Path to the actual collector binary                               |
-  | configuration_path | A path for this collector configuration file Sidecar can write to |
-  
-  
+| Parameter          | Description                                                       |
+|--------------------|-------------------------------------------------------------------|
+| name               | The type name of the collector                                    |
+| enabled            | Weather this backend should be started by the Sidecar or not      |
+| binary_path        | Path to the actual collector binary                               |
+| configuration_path | A path for this collector configuration file Sidecar can write to |
+    
 Compile
 -------
 
@@ -81,7 +80,7 @@ Compile
   * Install the [glide package manager](https://glide.sh)
   * run `glide install` in the collector-sidecar directory
   * (for Go <1.6 `export GO15VENDOREXPERIMENT=1`)
-  * run `make`
+  * run `make build`
 
 Development
 -----------
