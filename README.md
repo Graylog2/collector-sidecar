@@ -2,6 +2,9 @@
 
 **Required Graylog version:** 2.0 and later + installed [graylog-plugin-collector](https://github.com/Graylog2/graylog-plugin-collector/blob/master/README.md)
 
+The Graylog Collector Sidecar is a supervisor process for 3rd party log collectors like NXLog. The Sidecar program is able to fetch configurations from a Graylog server and render
+them as a valid configuration file for various log collectors. You can think of it like a centralized configuration management system for your log collectors.
+
 Installation
 ------------
 
