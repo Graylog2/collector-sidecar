@@ -4,7 +4,7 @@
  
   Name "Graylog Collector Sidecar"
   !define MUI_FILE "savefile"
-  !define MUI_BRANDINGTEXT "Graylog Collector Sidecar v0.0.1"
+  !define MUI_BRANDINGTEXT "Graylog Collector Sidecar v0.0.2"
   CRCCheck On
  
   !include "${NSISDIR}\Contrib\Modern UI\System.nsh"
@@ -68,7 +68,7 @@ Section "Install"
   SetOutPath "$INSTDIR"
  
   File "../graylog-collector-sidecar.exe"
-  File /oname=collector_sidecar.ini "../collector_sidecar_windows.ini"
+  File /oname=collector_sidecar.yml "../collector_sidecar_windows.yml"
   File "../LICENSE"
 
   WriteUninstaller "$INSTDIR\uninstall.exe"
