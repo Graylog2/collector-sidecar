@@ -13,7 +13,7 @@ class GraylogSidecar < FPM::Cookery::Recipe
   vendor     'graylog'
   license    'GPLv3'
 
-  config_files '/etc/graylog/collector-sidecar/collector_sidecar.ini'
+  config_files '/etc/graylog/collector-sidecar/collector_sidecar.yml'
 
   def build
   end

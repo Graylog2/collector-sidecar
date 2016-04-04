@@ -56,7 +56,7 @@
 ;--------------------------------
 ;Data
  
-  LicenseData "../LICENSE"
+  LicenseData "../COPYING"
  
  
 ;-------------------------------- 
@@ -69,7 +69,7 @@ Section "Install"
  
   File "../graylog-collector-sidecar.exe"
   File /oname=collector_sidecar.yml "../collector_sidecar_windows.yml"
-  File "../LICENSE"
+  File "../COPYING"
 
   WriteUninstaller "$INSTDIR\uninstall.exe"
  
