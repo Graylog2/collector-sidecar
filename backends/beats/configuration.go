@@ -64,7 +64,7 @@ func (bc *BeatsConfig) Set(value interface{}, path ...string) error {
 		bc.Container = map[string]interface{}{}
 	}
 	// Unmarshal nested YAML
-	if value != nil {
+	if value != nil && reflect.TypeOf(value).Kind() == reflect.String {
 		yaml.Unmarshal([]byte(value.(string)), &value)
 	}
 
