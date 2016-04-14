@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Graylog.  If not, see <http://www.gnu.org/licenses/>.
 
-package filebeat
+package winlogbeat
 
 import (
 	"bytes"
@@ -25,15 +25,15 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func (fbc *FileBeatConfig) snippetsToString() string {
+func (wlbc *WinLogBeatConfig) snippetsToString() string {
 	var buffer bytes.Buffer
 	var result bytes.Buffer
-	for _, snippet := range fbc.Beats.Snippets {
+	for _, snippet := range wlbc.Beats.Snippets {
 		snippetTemplate, err := template.New("snippet").Parse(snippet.Value)
 		if err != nil {
 			result.WriteString(snippet.Value)
 		} else {
-			snippetTemplate.Execute(&buffer, fbc.Beats.Context.Inventory)
+			snippetTemplate.Execute(&buffer, wlbc.Beats.Context.Inventory)
 			result.WriteString(buffer.String())
 		}
 		result.WriteString("\n")
@@ -41,37 +41,37 @@ func (fbc *FileBeatConfig) snippetsToString() string {
 	return result.String()
 }
 
-func (fbc *FileBeatConfig) Render() bytes.Buffer {
+func (wlbc *WinLogBeatConfig) Render() bytes.Buffer {
 	var result bytes.Buffer
 
-	if fbc.Beats.Data() == nil {
+	if wlbc.Beats.Data() == nil {
 		return result
 	}
 
-	result.WriteString(fbc.Beats.String())
-	result.WriteString(fbc.snippetsToString())
+	result.WriteString(wlbc.Beats.String())
+	result.WriteString(wlbc.snippetsToString())
 
 	return result
 }
 
-func (fbc *FileBeatConfig) RenderToFile() error {
-	stringConfig := fbc.Render()
-	err := common.CreatePathToFile(fbc.Beats.UserConfig.ConfigurationPath)
+func (wlbc *WinLogBeatConfig) RenderToFile() error {
+	stringConfig := wlbc.Render()
+	err := common.CreatePathToFile(wlbc.Beats.UserConfig.ConfigurationPath)
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(fbc.Beats.UserConfig.ConfigurationPath, stringConfig.Bytes(), 0644)
+	err = ioutil.WriteFile(wlbc.Beats.UserConfig.ConfigurationPath, stringConfig.Bytes(), 0644)
 	return err
 }
 
-func (fbc *FileBeatConfig) RenderOnChange(response graylog.ResponseCollectorConfiguration) bool {
-	newConfig := NewCollectorConfig(fbc.Beats.Context)
+func (wlbc *WinLogBeatConfig) RenderOnChange(response graylog.ResponseCollectorConfiguration) bool {
+	newConfig := NewCollectorConfig(wlbc.Beats.Context)
 
 	// create prospector slice
-	var prospector []map[string]interface{}
+	var eventlogs []map[string]interface{}
 
 	for _, output := range response.Outputs {
-		if output.Backend == "filebeat" {
+		if output.Backend == "winlogbeat" {
 			for property, value := range output.Properties {
 				newConfig.Beats.Set(value, "output", output.Type, property)
 			}
@@ -79,44 +79,43 @@ func (fbc *FileBeatConfig) RenderOnChange(response graylog.ResponseCollectorConf
 	}
 
 	for _, input := range response.Inputs {
-		if input.Backend == "filebeat" {
-			prospector = append(prospector, make(map[string]interface{}))
-			idx := len(prospector)-1
-			prospector[idx]["input_type"] = "log"
+		if input.Backend == "winlogbeat" {
+			eventlogs = append(eventlogs, make(map[string]interface{}))
+			idx := len(eventlogs)-1
 			for property, value := range input.Properties {
 				var vt interface{}
 				err := yaml.Unmarshal([]byte(value), &vt)
 				if err != nil {
-					log.Errorf("[%s] Nested YAML is not parsable: '%s'", fbc.Name(), value)
+					log.Errorf("[%s] Nested YAML is not parsable: '%s'", wlbc.Name(), value)
 				} else {
-					prospector[idx][property] = vt
+					eventlogs[idx][property] = vt
 				}
 			}
 		}
 	}
-	newConfig.Beats.Set(prospector, "filebeat", "prospectors")
+	newConfig.Beats.Set(eventlogs, "winlogbeat", "event_logs")
 
 	for _, snippet := range response.Snippets {
-		if snippet.Backend == "filebeat" {
+		if snippet.Backend == "winlogbeat" {
 			newConfig.Beats.AppendString(snippet.Id, snippet.Value)
 		}
 	}
 
-	if !fbc.Beats.Equals(newConfig.Beats) {
-		log.Infof("[%s] Configuration change detected, rewriting configuration file.", fbc.Name())
-		fbc.Beats.Update(newConfig.Beats)
-		fbc.RenderToFile()
+	if !wlbc.Beats.Equals(newConfig.Beats) {
+		log.Infof("[%s] Configuration change detected, rewriting configuration file.", wlbc.Name())
+		wlbc.Beats.Update(newConfig.Beats)
+		wlbc.RenderToFile()
 		return true
 	}
 
 	return false
 }
 
-func (fbc *FileBeatConfig) ValidateConfigurationFile() bool {
-	cmd := exec.Command(fbc.ExecPath(), "-configtest", "-c", fbc.Beats.UserConfig.ConfigurationPath)
+func (wlbc *WinLogBeatConfig) ValidateConfigurationFile() bool {
+	cmd := exec.Command(wlbc.ExecPath(), "-configtest", "-c", wlbc.Beats.UserConfig.ConfigurationPath)
 	err := cmd.Run()
 	if err != nil {
-		log.Errorf("[%s] Error during configuration validation: ", fbc.Name(), err)
+		log.Errorf("[%s] Error during configuration validation: ", wlbc.Name(), err)
 		return false
 	}
 
