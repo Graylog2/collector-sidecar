@@ -17,12 +17,12 @@ package filebeat
 
 import (
 	"bytes"
-	"github.com/Graylog2/collector-sidecar/common"
-	"io/ioutil"
 	"github.com/Graylog2/collector-sidecar/api/graylog"
+	"github.com/Graylog2/collector-sidecar/common"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
 	"os/exec"
 	"text/template"
-	"gopkg.in/yaml.v2"
 )
 
 func (fbc *FileBeatConfig) snippetsToString() string {
@@ -81,7 +81,7 @@ func (fbc *FileBeatConfig) RenderOnChange(response graylog.ResponseCollectorConf
 	for _, input := range response.Inputs {
 		if input.Backend == "filebeat" {
 			prospector = append(prospector, make(map[string]interface{}))
-			idx := len(prospector)-1
+			idx := len(prospector) - 1
 			prospector[idx]["input_type"] = "log"
 			for property, value := range input.Properties {
 				var vt interface{}

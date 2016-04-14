@@ -17,12 +17,12 @@ package winlogbeat
 
 import (
 	"bytes"
-	"github.com/Graylog2/collector-sidecar/common"
-	"io/ioutil"
 	"github.com/Graylog2/collector-sidecar/api/graylog"
+	"github.com/Graylog2/collector-sidecar/common"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
 	"os/exec"
 	"text/template"
-	"gopkg.in/yaml.v2"
 )
 
 func (wlbc *WinLogBeatConfig) snippetsToString() string {
@@ -81,7 +81,7 @@ func (wlbc *WinLogBeatConfig) RenderOnChange(response graylog.ResponseCollectorC
 	for _, input := range response.Inputs {
 		if input.Backend == "winlogbeat" {
 			eventlogs = append(eventlogs, make(map[string]interface{}))
-			idx := len(eventlogs)-1
+			idx := len(eventlogs) - 1
 			for property, value := range input.Properties {
 				var vt interface{}
 				err := yaml.Unmarshal([]byte(value), &vt)

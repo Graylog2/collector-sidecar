@@ -16,8 +16,8 @@
 package filebeat
 
 import (
-	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/backends"
+	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
 	"path/filepath"
 )
