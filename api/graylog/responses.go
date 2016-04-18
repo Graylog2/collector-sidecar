@@ -31,7 +31,7 @@ type ResponseCollectorInput struct {
 	Backend    string            `json:"backend"`
 	Type       string            `json:"type"`
 	Name       string            `json:"name"`
-	Properties map[string]string `json:"properties"`
+	Properties map[string]interface{} `json:"properties"`
 	ForwardTo  string            `json:"forward_to"`
 }
 
@@ -40,7 +40,7 @@ type ResponseCollectorOutput struct {
 	Backend    string            `json:"backend"`
 	Type       string            `json:"type"`
 	Name       string            `json:"name"`
-	Properties map[string]string `json:"properties"`
+	Properties map[string]interface{} `json:"properties"`
 }
 
 type ResponseCollectorSnippet struct {

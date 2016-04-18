@@ -21,6 +21,7 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/cfgfile"
 	"github.com/Graylog2/collector-sidecar/context"
+	"strconv"
 )
 
 type NxConfig struct {
@@ -80,7 +81,7 @@ type nxsnippet struct {
 type nxcanned struct {
 	name       string
 	kind       string
-	properties map[string]string
+	properties map[string]interface{}
 }
 
 func NewCollectorConfig(context *context.Ctx) *NxConfig {
@@ -118,13 +119,13 @@ func (nxc *NxConfig) Add(class string, name string, value interface{}) {
 		nxc.Snippets = append(nxc.Snippets, *addition)
 	//pre-canned configuration types
 	case "output-gelf-udp":
-		addition := &nxcanned{name: name, kind: class, properties: value.(map[string]string)}
+		addition := &nxcanned{name: name, kind: class, properties: value.(map[string]interface{})}
 		nxc.Canned = append(nxc.Canned, *addition)
 	case "input-file":
-		addition := &nxcanned{name: name, kind: class, properties: value.(map[string]string)}
+		addition := &nxcanned{name: name, kind: class, properties: value.(map[string]interface{})}
 		nxc.Canned = append(nxc.Canned, *addition)
 	case "input-windows-event-log":
-		addition := &nxcanned{name: name, kind: class, properties: value.(map[string]string)}
+		addition := &nxcanned{name: name, kind: class, properties: value.(map[string]interface{})}
 		nxc.Canned = append(nxc.Canned, *addition)
 	}
 }
@@ -143,4 +144,24 @@ func (nxc *NxConfig) Update(a *NxConfig) {
 
 func (nxc *NxConfig) Equals(a *NxConfig) bool {
 	return reflect.DeepEqual(nxc, a)
+}
+
+func (nxc *NxConfig) propertyString(p interface{}, precision int) string {
+	switch t := p.(type) {
+	default:
+		return ""
+	case string:
+		return t
+	case bool:
+		if t {
+			return "True"
+		} else {
+			return "False"
+		}
+	case int:
+		return strconv.Itoa(t)
+	case float64:
+		return strconv.FormatFloat(t, 'f', precision, 64)
+	}
+
 }

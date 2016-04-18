@@ -49,7 +49,7 @@ func (nxc *NxConfig) extensionsToString() string {
 	for _, extension := range nxc.Extensions {
 		result.WriteString("<Extension " + extension.name + ">\n")
 		for propertyName, propertyValue := range extension.properties {
-			result.WriteString("  " + propertyName + " " + propertyValue + "\n")
+			result.WriteString("  " + propertyName + " " + nxc.propertyString(propertyValue, 0) + "\n")
 		}
 		result.WriteString("</Extension>\n")
 	}
@@ -62,7 +62,7 @@ func (nxc *NxConfig) inputsToString() string {
 	for _, input := range nxc.Inputs {
 		result.WriteString("<Input " + input.name + ">\n")
 		for propertyName, propertyValue := range input.properties {
-			result.WriteString("  " + propertyName + " " + propertyValue + "\n")
+			result.WriteString("  " + propertyName + " " + nxc.propertyString(propertyValue, 0) + "\n")
 		}
 		result.WriteString("</Input>\n")
 	}
@@ -75,7 +75,7 @@ func (nxc *NxConfig) outputsToString() string {
 	for _, output := range nxc.Outputs {
 		result.WriteString("<Output " + output.name + ">\n")
 		for propertyName, propertyValue := range output.properties {
-			result.WriteString("  " + propertyName + " " + propertyValue + "\n")
+			result.WriteString("  " + propertyName + " " + nxc.propertyString(propertyValue, 0) + "\n")
 		}
 		result.WriteString("</Output>\n")
 	}
@@ -88,7 +88,7 @@ func (nxc *NxConfig) routesToString() string {
 	for _, route := range nxc.Routes {
 		result.WriteString("<Route " + route.name + ">\n")
 		for propertyName, propertyValue := range route.properties {
-			result.WriteString("  " + propertyName + " " + propertyValue + "\n")
+			result.WriteString("  " + propertyName + " " + nxc.propertyString(propertyValue, 0) + "\n")
 		}
 		result.WriteString("</Route>\n")
 	}
@@ -101,7 +101,7 @@ func (nxc *NxConfig) matchesToString() string {
 	for _, match := range nxc.Matches {
 		result.WriteString("<Match " + match.name + ">\n")
 		for propertyName, propertyValue := range match.properties {
-			result.WriteString("  " + propertyName + " " + propertyValue + "\n")
+			result.WriteString("  " + propertyName + " " + nxc.propertyString(propertyValue, 0) + "\n")
 		}
 		result.WriteString("</Match>\n")
 	}
@@ -131,8 +131,12 @@ func (nxc *NxConfig) fileInputsToString() string {
 		if can.kind == "input-file" {
 			result.WriteString("<Input " + can.name + ">\n")
 			result.WriteString("	Module im_file\n")
-			result.WriteString("	File \"" + can.properties["path"] + "\"\n")
-			result.WriteString("	SavePos	TRUE\n")
+			result.WriteString("	File \"" + nxc.propertyString(can.properties["path"], 0) + "\"\n")
+			result.WriteString("	PollInterval " + nxc.propertyString(can.properties["poll_interval"], 0) + "\n")
+			result.WriteString("	SavePos	" + nxc.propertyString(can.properties["save_position"], 0) + "\n")
+			result.WriteString("	ReadFromLast " + nxc.propertyString(can.properties["read_last"], 0) + "\n")
+			result.WriteString("	Recursive " + nxc.propertyString(can.properties["recursive"], 0) + "\n")
+			result.WriteString("	RenameCheck " + nxc.propertyString(can.properties["rename_check"], 0) + "\n")
 			result.WriteString("</Input>\n")
 		}
 	}
@@ -159,8 +163,8 @@ func (nxc *NxConfig) gelfUdpOutputsToString() string {
 		if can.kind == "output-gelf-udp" {
 			result.WriteString("<Output " + can.name + ">\n")
 			result.WriteString("	Module om_udp\n")
-			result.WriteString("	Host " + can.properties["server"] + "\n")
-			result.WriteString("	Port " + can.properties["port"] + "\n")
+			result.WriteString("	Host " + nxc.propertyString(can.properties["server"], 0) + "\n")
+			result.WriteString("	Port " + nxc.propertyString(can.properties["port"], 0) + "\n")
 			result.WriteString("	OutputType  GELF\n")
 			result.WriteString("	Exec $short_message = $raw_event; # Avoids truncation of the short_message field.\n")
 			result.WriteString("	Exec $gl2_source_collector = '" + nxc.Context.CollectorId + "';\n")
