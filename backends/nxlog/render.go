@@ -153,6 +153,15 @@ func (nxc *NxConfig) windowsEventLogInputsToString() string {
 		if can.kind == "input-windows-event-log" {
 			result.WriteString("<Input " + can.name + ">\n")
 			result.WriteString("	Module im_msvistalog\n")
+			result.WriteString("	PollInterval " + nxc.propertyString(can.properties["poll_interval"], 0) + "\n")
+			result.WriteString("	SavePos	" + nxc.propertyString(can.properties["save_position"], 0) + "\n")
+			result.WriteString("	ReadFromLast " + nxc.propertyString(can.properties["read_last"], 0) + "\n")
+			if nxc.isEnabled(can.properties["channel"]) {
+				result.WriteString("	Channel " + nxc.propertyString(can.properties["channel"], 0) + "\n")
+			}
+			if nxc.isEnabled(can.properties["query"]) {
+				result.WriteString("	Query " + nxc.propertyString(can.properties["query"], 0) + "\n")
+			}
 			result.WriteString("</Input>\n")
 		}
 	}

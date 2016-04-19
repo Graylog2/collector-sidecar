@@ -194,8 +194,15 @@ func (nxc *NxConfig) isEnabled(p interface{}) bool {
 	if p == nil {
 		return false
 	}
-	if p.(bool) {
-		return true
+	switch t := p.(type) {
+	case string:
+		if len(t) > 0 {
+			return true
+		}
+	case bool:
+		if t {
+			return true
+		}
 	}
 	return false
 }
