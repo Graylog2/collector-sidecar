@@ -122,8 +122,32 @@ func (nxc *NxConfig) Add(class string, name string, value interface{}) {
 		addition := &nxcanned{name: name, kind: class, properties: value.(map[string]interface{})}
 		nxc.Canned = append(nxc.Canned, *addition)
 	case "input-file":
-		addition := &nxcanned{name: name, kind: class, properties: value.(map[string]interface{})}
+		input_properties := value.(map[string]interface{})
+		addition := &nxcanned{name: name, kind: class, properties: input_properties}
 		nxc.Canned = append(nxc.Canned, *addition)
+
+		multiline := false
+		var multilineStart string
+		var multilineStop string
+		if input_properties["multiline"] != nil {
+			multiline = input_properties["multiline"].(bool)
+		}
+		if input_properties["multiline_start"] != nil {
+			multilineStart = input_properties["multiline_start"].(string)
+		}
+		if input_properties["multiline_stop"] != nil {
+			multilineStop = input_properties["multiline_stop"].(string)
+		}
+		if multiline {
+			extension := &nxextension{name: name + "-multiline", properties: map[string]string{"Module": "xm_multiline"}}
+			if len(multilineStart) > 0 {
+				extension.properties["HeaderLine"] = multilineStart
+			}
+			if len(multilineStop) > 0 {
+				extension.properties["EndLine"] = multilineStop
+			}
+			nxc.Extensions = append(nxc.Extensions, *extension)
+		}
 	case "input-windows-event-log":
 		addition := &nxcanned{name: name, kind: class, properties: value.(map[string]interface{})}
 		nxc.Canned = append(nxc.Canned, *addition)
@@ -164,4 +188,14 @@ func (nxc *NxConfig) propertyString(p interface{}, precision int) string {
 		return strconv.FormatFloat(t, 'f', precision, 64)
 	}
 
+}
+
+func (nxc *NxConfig) isEnabled(p interface{}) bool {
+	if p == nil {
+		return false
+	}
+	if p.(bool) {
+		return true
+	}
+	return false
 }
