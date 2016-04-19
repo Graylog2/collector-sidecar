@@ -169,6 +169,38 @@ func (nxc *NxConfig) windowsEventLogInputsToString() string {
 	return result.String()
 }
 
+func (nxc *NxConfig) udpSyslogInputsToString() string {
+	var result bytes.Buffer
+	for _, can := range nxc.Canned {
+		if can.kind == "input-udp-syslog" {
+			result.WriteString("<Input " + can.name + ">\n")
+			result.WriteString("	Module im_udp\n")
+			result.WriteString("	Host " + nxc.propertyString(can.properties["host"], 0) + "\n")
+			result.WriteString("	Port " + nxc.propertyString(can.properties["port"], 0) + "\n")
+			result.WriteString("	Exec parse_syslog_bsd();\n")
+			result.WriteString("</Input>\n")
+		}
+	}
+	result.WriteString("\n")
+	return result.String()
+}
+
+func (nxc *NxConfig) tcpSyslogInputsToString() string {
+	var result bytes.Buffer
+	for _, can := range nxc.Canned {
+		if can.kind == "input-tcp-syslog" {
+			result.WriteString("<Input " + can.name + ">\n")
+			result.WriteString("	Module im_tcp\n")
+			result.WriteString("	Host " + nxc.propertyString(can.properties["host"], 0) + "\n")
+			result.WriteString("	Port " + nxc.propertyString(can.properties["port"], 0) + "\n")
+			result.WriteString("	Exec parse_syslog_bsd();\n")
+			result.WriteString("</Input>\n")
+		}
+	}
+	result.WriteString("\n")
+	return result.String()
+}
+
 func (nxc *NxConfig) gelfUdpOutputsToString() string {
 	var result bytes.Buffer
 	for _, can := range nxc.Canned {
@@ -198,6 +230,8 @@ func (nxc *NxConfig) Render() bytes.Buffer {
 	// pre-canned types
 	result.WriteString(nxc.fileInputsToString())
 	result.WriteString(nxc.windowsEventLogInputsToString())
+	result.WriteString(nxc.udpSyslogInputsToString())
+	result.WriteString(nxc.tcpSyslogInputsToString())
 	result.WriteString(nxc.gelfUdpOutputsToString())
 	//
 	result.WriteString(nxc.routesToString())

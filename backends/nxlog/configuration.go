@@ -151,7 +151,64 @@ func (nxc *NxConfig) Add(class string, name string, value interface{}) {
 	case "input-windows-event-log":
 		addition := &nxcanned{name: name, kind: class, properties: value.(map[string]interface{})}
 		nxc.Canned = append(nxc.Canned, *addition)
+	case "input-udp-syslog":
+		addition := &nxcanned{name: name, kind: class, properties: value.(map[string]interface{})}
+		nxc.Canned = append(nxc.Canned, *addition)
+		if !nxc.Exists("extension", "syslog") {
+			extension := &nxextension{name: "syslog", properties: map[string]string{"Module": "xm_syslog"}}
+			nxc.Extensions = append(nxc.Extensions, *extension)
+		}
+	case "input-tcp-syslog":
+		addition := &nxcanned{name: name, kind: class, properties: value.(map[string]interface{})}
+		nxc.Canned = append(nxc.Canned, *addition)
+		if !nxc.Exists("extension", "syslog") {
+			extension := &nxextension{name: "syslog", properties: map[string]string{"Module": "xm_syslog"}}
+			nxc.Extensions = append(nxc.Extensions, *extension)
+		}
 	}
+}
+
+func (nxc *NxConfig) Exists(class string, name string) bool {
+	result := false
+	switch class {
+	case "extension":
+		for _, entity := range nxc.Extensions {
+			if entity.name == name {
+				result = true
+			}
+		}
+	case "input":
+		for _, entity := range nxc.Inputs {
+			if entity.name == name {
+				result = true
+			}
+		}
+	case "output":
+		for _, entity := range nxc.Outputs {
+			if entity.name == name {
+				result = true
+			}
+		}
+	case "route":
+		for _, entity := range nxc.Routes {
+			if entity.name == name {
+				result = true
+			}
+		}
+	case "match":
+		for _, entity := range nxc.Matches {
+			if entity.name == name {
+				result = true
+			}
+		}
+	case "snippet":
+		for _, entity := range nxc.Snippets {
+			if entity.name == name {
+				result = true
+			}
+		}
+	}
+	return result
 }
 
 func (nxc *NxConfig) Update(a *NxConfig) {
