@@ -4,7 +4,7 @@
  
   Name "Graylog Collector Sidecar"
   !define MUI_FILE "savefile"
-  !define MUI_BRANDINGTEXT "Graylog Collector Sidecar v0.0.2"
+  !define MUI_BRANDINGTEXT "Graylog Collector Sidecar v0.0.3"
   CRCCheck On
  
   !include "${NSISDIR}\Contrib\Modern UI\System.nsh"

@@ -10,7 +10,3 @@ backends:
       enabled: true
       binary_path: /usr/bin/nxlog
       configuration_path: /etc/graylog/collector-sidecar/generated/nxlog.conf
-    - name: topbeat
-      enabled: true
-      binary_path: /usr/bin/topbeat
-      configuration_path: /etc/graylog/collector-sidecar/generated/topbeat.yml
