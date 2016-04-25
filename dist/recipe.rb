@@ -3,7 +3,7 @@ class GraylogSidecar < FPM::Cookery::Recipe
 
   name     'collector-sidecar'
   version  '0.0.3'
-  revision '1'
+  revision '2'
   homepage 'https://graylog.org'
   arch     'amd64'
 
