@@ -26,7 +26,9 @@ clean: ## Remove binaries
 
 package-linux: ## Create Linux system package
 	@rm -f dist/pkg/graylog-collector-sidecar*
-	@fpm-cook package dist/recipe.rb
+	@fpm-cook clean dist/recipe.rb
+	@fpm-cook -t deb package dist/recipe.rb
+	@fpm-cook -t rpm package dist/recipe.rb
 
 package-windows: ## Create Windows installer
 	@rm -f dist/graylog_collector_sidecar_installer.exe
