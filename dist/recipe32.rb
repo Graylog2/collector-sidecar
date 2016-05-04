@@ -5,9 +5,9 @@ class GraylogSidecar < FPM::Cookery::Recipe
   version  '0.0.3'
   revision '2'
   homepage 'https://graylog.org'
-  arch     'amd64'
+  arch     'i386'
 
-  source   "file:../../build/#{version}/linux/amd64/graylog-collector-sidecar"
+  source   "file:../../build/#{version}/linux/386/graylog-collector-sidecar"
 
   maintainer 'Graylog, Inc. <hello@graylog.org>'
   vendor     'graylog'

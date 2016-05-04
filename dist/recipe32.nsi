@@ -16,7 +16,7 @@
 ;---------------------------------
 ;General
  
-  OutFile "pkg/graylog_collector_sidecar_installer_${VERSION}_x86.exe"
+  OutFile "pkg/graylog_collector_sidecar_installer_${VERSION}_i386.exe"
   ShowInstDetails "nevershow"
   ShowUninstDetails "nevershow"
   ;SetCompressor "bzip2"
@@ -70,7 +70,7 @@ Section "Install"
   SetOutPath "$INSTDIR\generated"  
   SetOutPath "$INSTDIR"
  
-  File "../build/${VERSION}/windows/amd64/graylog-collector-sidecar.exe"
+  File "../build/${VERSION}/windows/386/graylog-collector-sidecar.exe"
   File /oname=collector_sidecar.yml "../collector_sidecar_windows.yml"
   File "../COPYING"
 

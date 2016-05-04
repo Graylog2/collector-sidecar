@@ -30,9 +30,8 @@ _testmain.go
 /.vendor/
 /nxlog/
 /log/
+/build/
 
-graylog-collector-sidecar
-graylog-collector-sidecar.exe
 misc/nxmock/nxlog
 misc/nxmock/nxlog.exe
 
