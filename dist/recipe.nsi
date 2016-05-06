@@ -3,7 +3,7 @@
  
  
   Name "Graylog Collector Sidecar"
-	!define VERSION "0.0.3"
+  !define VERSION "0.0.4"
   !define MUI_FILE "savefile"
   !define MUI_BRANDINGTEXT "Graylog Collector Sidecar v${VERSION}"
   CRCCheck On
@@ -16,7 +16,7 @@
 ;---------------------------------
 ;General
  
-  OutFile "pkg/graylog_collector_sidecar_installer_${VERSION}_x86.exe"
+  OutFile "pkg/graylog_collector_sidecar_installer_${VERSION}_x64.exe"
   ShowInstDetails "nevershow"
   ShowUninstDetails "nevershow"
   ;SetCompressor "bzip2"
