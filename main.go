@@ -26,6 +26,7 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/common"
+	"github.com/Graylog2/collector-sidecar/cfgfile"
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/daemon"
 	"github.com/Graylog2/collector-sidecar/services"
@@ -35,7 +36,6 @@ import (
 	//_ "github.com/Graylog2/collector-sidecar/backends/beats/topbeat"
 	//_ "github.com/Graylog2/collector-sidecar/backends/beats/winlogbeat"
 	_ "github.com/Graylog2/collector-sidecar/backends/nxlog"
-	"github.com/Graylog2/collector-sidecar/cfgfile"
 	_ "github.com/Graylog2/collector-sidecar/daemon"
 )
 
@@ -49,7 +49,11 @@ var (
 func init() {
 	var configurationPath string
 	if runtime.GOOS == "windows" {
-		configurationPath = filepath.Join("C:\\", "Program Files (x86)", "graylog", "collector-sidecar", "collector_sidecar.yml")
+		if runtime.GOARCH == "386" {
+			configurationPath = filepath.Join("C:\\", "Program Files", "graylog", "collector-sidecar", "collector_sidecar.yml")
+		} else {
+			configurationPath = filepath.Join("C:\\", "Program Files (x86)", "graylog", "collector-sidecar", "collector_sidecar.yml")
+		}
 	} else {
 		configurationPath = filepath.Join("/etc", "graylog", "collector-sidecar", "collector_sidecar.yml")
 	}
