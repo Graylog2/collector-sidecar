@@ -115,7 +115,7 @@ func (wlbc *WinLogBeatConfig) ValidateConfigurationFile() bool {
 	cmd := exec.Command(wlbc.ExecPath(), "-configtest", "-c", wlbc.Beats.UserConfig.ConfigurationPath)
 	err := cmd.Run()
 	if err != nil {
-		log.Errorf("[%s] Error during configuration validation: ", wlbc.Name(), err)
+		log.Errorf("[%s] Error during configuration validation: %s", wlbc.Name(), err)
 		return false
 	}
 

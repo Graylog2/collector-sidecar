@@ -101,7 +101,7 @@ func (tbc *TopBeatConfig) ValidateConfigurationFile() bool {
 	cmd := exec.Command(tbc.ExecPath(), "-configtest", "-c", tbc.Beats.UserConfig.ConfigurationPath)
 	err := cmd.Run()
 	if err != nil {
-		log.Errorf("[%s] Error during configuration validation: ", tbc.Name(), err)
+		log.Errorf("[%s] Error during configuration validation: %s", tbc.Name(), err)
 		return false
 	}
 

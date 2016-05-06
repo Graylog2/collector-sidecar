@@ -121,6 +121,9 @@ func (nxc *NxConfig) Add(class string, name string, value interface{}) {
 	case "output-gelf-udp":
 		addition := &nxcanned{name: name, kind: class, properties: value.(map[string]interface{})}
 		nxc.Canned = append(nxc.Canned, *addition)
+	case "output-gelf-tcp":
+		addition := &nxcanned{name: name, kind: class, properties: value.(map[string]interface{})}
+		nxc.Canned = append(nxc.Canned, *addition)
 	case "input-file":
 		input_properties := value.(map[string]interface{})
 		addition := &nxcanned{name: name, kind: class, properties: input_properties}

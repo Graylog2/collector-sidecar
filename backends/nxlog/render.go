@@ -220,6 +220,24 @@ func (nxc *NxConfig) gelfUdpOutputsToString() string {
 	return result.String()
 }
 
+func (nxc *NxConfig) gelfTcpOutputsToString() string {
+	var result bytes.Buffer
+	for _, can := range nxc.Canned {
+		if can.kind == "output-gelf-tcp" {
+			result.WriteString("<Output " + can.name + ">\n")
+			result.WriteString("	Module om_tcp\n")
+			result.WriteString("	Host " + nxc.propertyString(can.properties["server"], 0) + "\n")
+			result.WriteString("	Port " + nxc.propertyString(can.properties["port"], 0) + "\n")
+			result.WriteString("	OutputType  GELF_TCP\n")
+			result.WriteString("	Exec $short_message = $raw_event; # Avoids truncation of the short_message field.\n")
+			result.WriteString("	Exec $gl2_source_collector = '" + nxc.Context.CollectorId + "';\n")
+			result.WriteString("</Output>\n")
+		}
+	}
+	result.WriteString("\n")
+	return result.String()
+}
+
 func (nxc *NxConfig) Render() bytes.Buffer {
 	var result bytes.Buffer
 	result.WriteString(nxc.definitionsToString())
@@ -234,6 +252,7 @@ func (nxc *NxConfig) Render() bytes.Buffer {
 	result.WriteString(nxc.udpSyslogInputsToString())
 	result.WriteString(nxc.tcpSyslogInputsToString())
 	result.WriteString(nxc.gelfUdpOutputsToString())
+	result.WriteString(nxc.gelfTcpOutputsToString())
 	//
 	result.WriteString(nxc.routesToString())
 	result.WriteString(nxc.matchesToString())
@@ -293,7 +312,7 @@ func (nxc *NxConfig) ValidateConfigurationFile() bool {
 	cmd := exec.Command(nxc.ExecPath(), "-v", "-c", nxc.UserConfig.ConfigurationPath)
 	err := cmd.Run()
 	if err != nil {
-		log.Errorf("[%s] Error during configuration validation: ", nxc.Name(), err)
+		log.Errorf("[%s] Error during configuration validation: %s", nxc.Name(), err)
 		return false
 	}
 

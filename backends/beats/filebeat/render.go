@@ -116,7 +116,7 @@ func (fbc *FileBeatConfig) ValidateConfigurationFile() bool {
 	cmd := exec.Command(fbc.ExecPath(), "-configtest", "-c", fbc.Beats.UserConfig.ConfigurationPath)
 	err := cmd.Run()
 	if err != nil {
-		log.Errorf("[%s] Error during configuration validation: ", fbc.Name(), err)
+		log.Errorf("[%s] Error during configuration validation: %s", fbc.Name(), err)
 		return false
 	}
 
