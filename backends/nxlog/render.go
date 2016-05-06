@@ -137,6 +137,7 @@ func (nxc *NxConfig) fileInputsToString() string {
 			result.WriteString("	ReadFromLast " + nxc.propertyString(can.properties["read_last"], 0) + "\n")
 			result.WriteString("	Recursive " + nxc.propertyString(can.properties["recursive"], 0) + "\n")
 			result.WriteString("	RenameCheck " + nxc.propertyString(can.properties["rename_check"], 0) + "\n")
+			result.WriteString("	Exec $FileName = file_name(); # Send file name with each message\n")
 			if nxc.isEnabled(can.properties["multiline"]) {
 				result.WriteString("	InputType " + can.name + "-multiline\n")
 			}
