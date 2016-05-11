@@ -138,6 +138,11 @@ func (nxc *NxConfig) fileInputsToString() string {
 			result.WriteString("	Recursive " + nxc.propertyString(can.properties["recursive"], 0) + "\n")
 			result.WriteString("	RenameCheck " + nxc.propertyString(can.properties["rename_check"], 0) + "\n")
 			result.WriteString("	Exec $FileName = file_name(); # Send file name with each message\n")
+			if len(nxc.propertyStringMap(can.properties["fields"])) > 0 {
+				for key, value := range nxc.propertyStringMap(can.properties["fields"]) {
+					result.WriteString("	Exec $" + key + " = \"" + value.(string) + "\";\n")
+				}
+			}
 			if nxc.isEnabled(can.properties["multiline"]) {
 				result.WriteString("	InputType " + can.name + "-multiline\n")
 			}
@@ -163,6 +168,11 @@ func (nxc *NxConfig) windowsEventLogInputsToString() string {
 			if nxc.isEnabled(can.properties["query"]) {
 				result.WriteString("	Query " + nxc.propertyString(can.properties["query"], 0) + "\n")
 			}
+			if len(nxc.propertyStringMap(can.properties["fields"])) > 0 {
+				for key, value := range nxc.propertyStringMap(can.properties["fields"]) {
+					result.WriteString("	Exec $" + key + " = \"" + value.(string) + "\";\n")
+				}
+			}
 			result.WriteString("</Input>\n")
 		}
 	}
@@ -178,6 +188,11 @@ func (nxc *NxConfig) udpSyslogInputsToString() string {
 			result.WriteString("	Module im_udp\n")
 			result.WriteString("	Host " + nxc.propertyString(can.properties["host"], 0) + "\n")
 			result.WriteString("	Port " + nxc.propertyString(can.properties["port"], 0) + "\n")
+			if len(nxc.propertyStringMap(can.properties["fields"])) > 0 {
+				for key, value := range nxc.propertyStringMap(can.properties["fields"]) {
+					result.WriteString("	Exec $" + key + " = \"" + value.(string) + "\";\n")
+				}
+			}
 			result.WriteString("	Exec parse_syslog_bsd();\n")
 			result.WriteString("</Input>\n")
 		}
@@ -194,6 +209,11 @@ func (nxc *NxConfig) tcpSyslogInputsToString() string {
 			result.WriteString("	Module im_tcp\n")
 			result.WriteString("	Host " + nxc.propertyString(can.properties["host"], 0) + "\n")
 			result.WriteString("	Port " + nxc.propertyString(can.properties["port"], 0) + "\n")
+			if len(nxc.propertyStringMap(can.properties["fields"])) > 0 {
+				for key, value := range nxc.propertyStringMap(can.properties["fields"]) {
+					result.WriteString("	Exec $" + key + " = \"" + value.(string) + "\";\n")
+				}
+			}
 			result.WriteString("	Exec parse_syslog_bsd();\n")
 			result.WriteString("</Input>\n")
 		}

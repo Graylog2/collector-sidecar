@@ -250,6 +250,10 @@ func (nxc *NxConfig) propertyString(p interface{}, precision int) string {
 
 }
 
+func (nxc *NxConfig) propertyStringMap(p interface{}) map[string]interface{} {
+	return p.(map[string]interface{})
+}
+
 func (nxc *NxConfig) isEnabled(p interface{}) bool {
 	if p == nil {
 		return false
