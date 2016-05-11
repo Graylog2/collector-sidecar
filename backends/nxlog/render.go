@@ -233,6 +233,7 @@ func (nxc *NxConfig) gelfUdpOutputsToString() string {
 			result.WriteString("	OutputType  GELF\n")
 			result.WriteString("	Exec $short_message = $raw_event; # Avoids truncation of the short_message field.\n")
 			result.WriteString("	Exec $gl2_source_collector = '" + nxc.Context.CollectorId + "';\n")
+			result.WriteString("	Exec $Hostname = hostname_fqdn();\n")
 			result.WriteString("</Output>\n")
 		}
 	}
@@ -251,6 +252,7 @@ func (nxc *NxConfig) gelfTcpOutputsToString() string {
 			result.WriteString("	OutputType  GELF_TCP\n")
 			result.WriteString("	Exec $short_message = $raw_event; # Avoids truncation of the short_message field.\n")
 			result.WriteString("	Exec $gl2_source_collector = '" + nxc.Context.CollectorId + "';\n")
+			result.WriteString("	Exec $Hostname = hostname_fqdn();\n")
 			result.WriteString("</Output>\n")
 		}
 	}
