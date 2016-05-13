@@ -3,7 +3,7 @@
  
  
   Name "Graylog Collector Sidecar"
-  !define VERSION "0.0.6"
+  !define VERSION "0.0.7"
   !define MUI_FILE "savefile"
   !define MUI_BRANDINGTEXT "Graylog Collector Sidecar v${VERSION}"
   CRCCheck On
