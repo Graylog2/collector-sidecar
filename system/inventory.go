@@ -15,13 +15,20 @@
 
 package system
 
-import "runtime"
+import (
+	"runtime"
+	"github.com/Graylog2/collector-sidecar/common"
+)
 
 type Inventory struct {
 }
 
 func NewInventory() *Inventory {
 	return &Inventory{}
+}
+
+func (inv *Inventory) Version() string {
+	return common.CollectorVersion
 }
 
 func (inv *Inventory) Linux() bool {
