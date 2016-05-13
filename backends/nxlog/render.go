@@ -110,13 +110,13 @@ func (nxc *NxConfig) matchesToString() string {
 }
 
 func (nxc *NxConfig) snippetsToString() string {
-	var buffer bytes.Buffer
 	var result bytes.Buffer
 	for _, snippet := range nxc.Snippets {
 		snippetTemplate, err := template.New("snippet").Parse(snippet.value)
 		if err != nil {
 			result.WriteString(snippet.value)
 		} else {
+			var buffer bytes.Buffer
 			snippetTemplate.Execute(&buffer, nxc.Context.Inventory)
 			result.WriteString(buffer.String())
 		}
