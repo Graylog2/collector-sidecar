@@ -3,6 +3,7 @@ node_id: graylog-collector-sidecar
 collector_id: file:C:\Program Files (x86)\graylog\collector-sidecar\collector-id
 tags:
     - windows
+    - ies
 log_path: C:\Program Files (x86)\graylog\collector-sidecar
 update_interval: 10
 backends:

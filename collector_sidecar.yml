@@ -3,6 +3,7 @@ node_id: graylog-collector-sidecar
 collector_id: file:/etc/graylog/collector-sidecar/collector-id
 tags:
     - linux
+    - apache
 log_path: /var/log/graylog/collector-sidecar
 update_interval: 10
 backends:
