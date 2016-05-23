@@ -7,7 +7,8 @@ $(error COLLECTOR_VERSION is not set)
 endif
 
 TEST_SUITE = \
-	github.com/Graylog2/collector-sidecar/backends/nxlog
+	github.com/Graylog2/collector-sidecar/backends/nxlog \
+	github.com/Graylog2/collector-sidecar/common
 
 all: clean misc build
 
