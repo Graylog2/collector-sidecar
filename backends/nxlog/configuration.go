@@ -129,12 +129,9 @@ func (nxc *NxConfig) Add(class string, name string, value interface{}) {
 		addition := &nxcanned{name: name, kind: class, properties: input_properties}
 		nxc.Canned = append(nxc.Canned, *addition)
 
-		multiline := false
+		multiline := nxc.isEnabled(input_properties["multiline"])
 		var multilineStart string
 		var multilineStop string
-		if input_properties["multiline"] != nil {
-			multiline = input_properties["multiline"].(bool)
-		}
 		if input_properties["multiline_start"] != nil {
 			multilineStart = input_properties["multiline_start"].(string)
 		}
