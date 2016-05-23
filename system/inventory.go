@@ -16,8 +16,8 @@
 package system
 
 import (
-	"runtime"
 	"github.com/Graylog2/collector-sidecar/common"
+	"runtime"
 )
 
 type Inventory struct {

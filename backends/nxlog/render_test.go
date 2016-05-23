@@ -1,10 +1,25 @@
+// This file is part of Graylog.
+//
+// Graylog is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Graylog is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Graylog.  If not, see <http://www.gnu.org/licenses/>.
+
 package nxlog
 
 import (
-	"testing"
-	"strings"
-	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/common"
+	"github.com/Graylog2/collector-sidecar/context"
+	"strings"
+	"testing"
 )
 
 func TestRenderSingleExtension(t *testing.T) {
@@ -125,7 +140,7 @@ func TestRenderMultipleRoutes(t *testing.T) {
 
 func TestRenderSingleSnippet(t *testing.T) {
 	engine := &NxConfig{
-		Context: context.NewContext(),
+		Context:  context.NewContext(),
 		Snippets: []nxsnippet{{name: "test-snippet", value: "snippet-data"}},
 	}
 
@@ -139,7 +154,7 @@ func TestRenderSingleSnippet(t *testing.T) {
 
 func TestRenderMultipleSnippets(t *testing.T) {
 	engine := &NxConfig{
-		Context: context.NewContext(),
+		Context:  context.NewContext(),
 		Snippets: []nxsnippet{{name: "test-snippet1", value: "snippet-data"}},
 	}
 	addition := &nxsnippet{name: "test-snippet2", value: "data-snippet"}
@@ -156,13 +171,13 @@ func TestRenderMultipleSnippets(t *testing.T) {
 
 func TestRenderSnippetTemplate(t *testing.T) {
 	engine := &NxConfig{
-		Context: context.NewContext(),
+		Context:  context.NewContext(),
 		Snippets: []nxsnippet{{name: "test-snippet", value: "{{.Version}}"}},
 	}
 
 	result := engine.Render()
 
-	expect :=  common.CollectorVersion + "\n"
+	expect := common.CollectorVersion + "\n"
 	if !strings.Contains(result.String(), expect) {
 		t.Fail()
 	}
@@ -170,13 +185,13 @@ func TestRenderSnippetTemplate(t *testing.T) {
 
 func TestRenderSnippetFailedTemplate(t *testing.T) {
 	engine := &NxConfig{
-		Context: context.NewContext(),
+		Context:  context.NewContext(),
 		Snippets: []nxsnippet{{name: "test-snippet", value: "{{non valid template}}"}},
 	}
 
 	result := engine.Render()
 
-	expect :=  "{{non valid template}}\n"
+	expect := "{{non valid template}}\n"
 	if !strings.Contains(result.String(), expect) {
 		t.Fail()
 	}
@@ -184,23 +199,22 @@ func TestRenderSnippetFailedTemplate(t *testing.T) {
 
 func TestRenderMultipleFileInputs(t *testing.T) {
 	engine := &NxConfig{
-		Canned: []nxcanned{{name: "test-file-input1", kind:"input-file", properties: map[string]interface{}{
-			"path": "/foo",
+		Canned: []nxcanned{{name: "test-file-input1", kind: "input-file", properties: map[string]interface{}{
+			"path":          "/foo",
 			"poll_interval": 1,
 			"save_position": true,
-			"read_last": false,
-			"recursive": true,
-			"rename_check": false,
-
+			"read_last":     false,
+			"recursive":     true,
+			"rename_check":  false,
 		}}},
 	}
-	addition := &nxcanned{name: "test-file-input2", kind:"input-file", properties: map[string]interface{}{
-		"path": "/bar",
+	addition := &nxcanned{name: "test-file-input2", kind: "input-file", properties: map[string]interface{}{
+		"path":          "/bar",
 		"poll_interval": 1,
 		"save_position": true,
-		"read_last": false,
-		"recursive": true,
-		"rename_check": false,
+		"read_last":     false,
+		"recursive":     true,
+		"rename_check":  false,
 	}}
 	engine.Canned = append(engine.Canned, *addition)
 
@@ -215,14 +229,14 @@ func TestRenderMultipleFileInputs(t *testing.T) {
 
 func TestRenderSingleFileInputWithFields(t *testing.T) {
 	engine := &NxConfig{
-		Canned: []nxcanned{{name: "test-file-input1", kind:"input-file", properties: map[string]interface{}{
-			"path": "/foo",
+		Canned: []nxcanned{{name: "test-file-input1", kind: "input-file", properties: map[string]interface{}{
+			"path":          "/foo",
 			"poll_interval": 1,
 			"save_position": true,
-			"read_last": false,
-			"recursive": true,
-			"rename_check": false,
-			"fields": map[string]interface{}{"field1": "data", "field2": "data"},
+			"read_last":     false,
+			"recursive":     true,
+			"rename_check":  false,
+			"fields":        map[string]interface{}{"field1": "data", "field2": "data"},
 		}}},
 	}
 
@@ -237,14 +251,14 @@ func TestRenderSingleFileInputWithFields(t *testing.T) {
 
 func TestRenderSingleFileInputWithMultilineSupport(t *testing.T) {
 	engine := &NxConfig{
-		Canned: []nxcanned{{name: "test-file-input1", kind:"input-file", properties: map[string]interface{}{
-			"path": "/foo",
+		Canned: []nxcanned{{name: "test-file-input1", kind: "input-file", properties: map[string]interface{}{
+			"path":          "/foo",
 			"poll_interval": 1,
 			"save_position": true,
-			"read_last": false,
-			"recursive": true,
-			"rename_check": false,
-			"multiline": true,
+			"read_last":     false,
+			"recursive":     true,
+			"rename_check":  false,
+			"multiline":     true,
 		}}},
 	}
 
@@ -258,16 +272,16 @@ func TestRenderSingleFileInputWithMultilineSupport(t *testing.T) {
 
 func TestRenderMultipleWindowsEventInputs(t *testing.T) {
 	engine := &NxConfig{
-		Canned: []nxcanned{{name: "test-winodws-event-input1", kind:"input-windows-event-log", properties: map[string]interface{}{
+		Canned: []nxcanned{{name: "test-winodws-event-input1", kind: "input-windows-event-log", properties: map[string]interface{}{
 			"poll_interval": 1,
 			"save_position": true,
-			"read_last": false,
+			"read_last":     false,
 		}}},
 	}
-	addition := &nxcanned{name: "test-winodws-event-input2", kind:"input-windows-event-log", properties: map[string]interface{}{
+	addition := &nxcanned{name: "test-winodws-event-input2", kind: "input-windows-event-log", properties: map[string]interface{}{
 		"poll_interval": 1,
 		"save_position": true,
-		"read_last": false,
+		"read_last":     false,
 	}}
 	engine.Canned = append(engine.Canned, *addition)
 
@@ -282,11 +296,11 @@ func TestRenderMultipleWindowsEventInputs(t *testing.T) {
 
 func TestRenderSingleWindowsEventInputWithChannel(t *testing.T) {
 	engine := &NxConfig{
-		Canned: []nxcanned{{name: "test-winodws-event-input1", kind:"input-windows-event-log", properties: map[string]interface{}{
+		Canned: []nxcanned{{name: "test-winodws-event-input1", kind: "input-windows-event-log", properties: map[string]interface{}{
 			"poll_interval": 1,
 			"save_position": true,
-			"read_last": false,
-			"channel": "System",
+			"read_last":     false,
+			"channel":       "System",
 		}}},
 	}
 
@@ -300,11 +314,11 @@ func TestRenderSingleWindowsEventInputWithChannel(t *testing.T) {
 
 func TestRenderSingleWindowsEventInputWithQuery(t *testing.T) {
 	engine := &NxConfig{
-		Canned: []nxcanned{{name: "test-winodws-event-input1", kind:"input-windows-event-log", properties: map[string]interface{}{
+		Canned: []nxcanned{{name: "test-winodws-event-input1", kind: "input-windows-event-log", properties: map[string]interface{}{
 			"poll_interval": 1,
 			"save_position": true,
-			"read_last": false,
-			"query": "<QueryList> <Query Id=\"0\"> <Select Path=\"Microsoft-Windows-Sysmon/Operational\">*</Select> </Query></QueryList>",
+			"read_last":     false,
+			"query":         "<QueryList> <Query Id=\"0\"> <Select Path=\"Microsoft-Windows-Sysmon/Operational\">*</Select> </Query></QueryList>",
 		}}},
 	}
 
@@ -318,11 +332,11 @@ func TestRenderSingleWindowsEventInputWithQuery(t *testing.T) {
 
 func TestRenderSingleWindowsEventInputWithFields(t *testing.T) {
 	engine := &NxConfig{
-		Canned: []nxcanned{{name: "test-winodws-event-input1", kind:"input-windows-event-log", properties: map[string]interface{}{
+		Canned: []nxcanned{{name: "test-winodws-event-input1", kind: "input-windows-event-log", properties: map[string]interface{}{
 			"poll_interval": 1,
 			"save_position": true,
-			"read_last": false,
-			"fields": map[string]interface{}{"field1": "data", "field2": "data"},
+			"read_last":     false,
+			"fields":        map[string]interface{}{"field1": "data", "field2": "data"},
 		}}},
 	}
 
@@ -337,12 +351,12 @@ func TestRenderSingleWindowsEventInputWithFields(t *testing.T) {
 
 func TestRenderMultipleUdpSyslogInputs(t *testing.T) {
 	engine := &NxConfig{
-		Canned: []nxcanned{{name: "test-udp-syslog-input1", kind:"input-udp-syslog", properties: map[string]interface{}{
+		Canned: []nxcanned{{name: "test-udp-syslog-input1", kind: "input-udp-syslog", properties: map[string]interface{}{
 			"host": "127.0.0.1",
 			"port": "514",
 		}}},
 	}
-	addition := &nxcanned{name: "test-udp-syslog-input2", kind:"input-udp-syslog", properties: map[string]interface{}{
+	addition := &nxcanned{name: "test-udp-syslog-input2", kind: "input-udp-syslog", properties: map[string]interface{}{
 		"host": "127.0.0.1",
 		"port": "514",
 	}}
@@ -359,9 +373,9 @@ func TestRenderMultipleUdpSyslogInputs(t *testing.T) {
 
 func TestRenderSingleUdpSyslogInputWithFields(t *testing.T) {
 	engine := &NxConfig{
-		Canned: []nxcanned{{name: "test-udp-syslog-input1", kind:"input-udp-syslog", properties: map[string]interface{}{
-			"host": "127.0.0.1",
-			"port": "514",
+		Canned: []nxcanned{{name: "test-udp-syslog-input1", kind: "input-udp-syslog", properties: map[string]interface{}{
+			"host":   "127.0.0.1",
+			"port":   "514",
 			"fields": map[string]interface{}{"field1": "data", "field2": "data"},
 		}}},
 	}
@@ -377,12 +391,12 @@ func TestRenderSingleUdpSyslogInputWithFields(t *testing.T) {
 
 func TestRenderMultipleTcpSyslogInputs(t *testing.T) {
 	engine := &NxConfig{
-		Canned: []nxcanned{{name: "test-tcp-syslog-input1", kind:"input-tcp-syslog", properties: map[string]interface{}{
+		Canned: []nxcanned{{name: "test-tcp-syslog-input1", kind: "input-tcp-syslog", properties: map[string]interface{}{
 			"host": "127.0.0.1",
 			"port": "514",
 		}}},
 	}
-	addition := &nxcanned{name: "test-tcp-syslog-input2", kind:"input-tcp-syslog", properties: map[string]interface{}{
+	addition := &nxcanned{name: "test-tcp-syslog-input2", kind: "input-tcp-syslog", properties: map[string]interface{}{
 		"host": "127.0.0.1",
 		"port": "514",
 	}}
@@ -399,9 +413,9 @@ func TestRenderMultipleTcpSyslogInputs(t *testing.T) {
 
 func TestRenderSingleTcpSyslogInputWithFields(t *testing.T) {
 	engine := &NxConfig{
-		Canned: []nxcanned{{name: "test-tcp-syslog-input1", kind:"input-tcp-syslog", properties: map[string]interface{}{
-			"host": "127.0.0.1",
-			"port": "514",
+		Canned: []nxcanned{{name: "test-tcp-syslog-input1", kind: "input-tcp-syslog", properties: map[string]interface{}{
+			"host":   "127.0.0.1",
+			"port":   "514",
 			"fields": map[string]interface{}{"field1": "data", "field2": "data"},
 		}}},
 	}
@@ -418,14 +432,14 @@ func TestRenderSingleTcpSyslogInputWithFields(t *testing.T) {
 func TestRenderMultipleUdpGelfOutputs(t *testing.T) {
 	engine := &NxConfig{
 		Context: context.NewContext(),
-		Canned: []nxcanned{{name: "test-udp-gelf-output1", kind:"output-gelf-udp", properties: map[string]interface{}{
+		Canned: []nxcanned{{name: "test-udp-gelf-output1", kind: "output-gelf-udp", properties: map[string]interface{}{
 			"server": "127.0.0.1",
-			"port": "12201",
+			"port":   "12201",
 		}}},
 	}
-	addition := &nxcanned{name: "test-udp-gelf-output2", kind:"output-gelf-udp", properties: map[string]interface{}{
+	addition := &nxcanned{name: "test-udp-gelf-output2", kind: "output-gelf-udp", properties: map[string]interface{}{
 		"server": "127.0.0.1",
-		"port": "12201",
+		"port":   "12201",
 	}}
 	engine.Canned = append(engine.Canned, *addition)
 
@@ -441,14 +455,14 @@ func TestRenderMultipleUdpGelfOutputs(t *testing.T) {
 func TestRenderMultipleTcpGelfOutputs(t *testing.T) {
 	engine := &NxConfig{
 		Context: context.NewContext(),
-		Canned: []nxcanned{{name: "test-tcp-gelf-output1", kind:"output-gelf-tcp", properties: map[string]interface{}{
+		Canned: []nxcanned{{name: "test-tcp-gelf-output1", kind: "output-gelf-tcp", properties: map[string]interface{}{
 			"server": "127.0.0.1",
-			"port": "12201",
+			"port":   "12201",
 		}}},
 	}
-	addition := &nxcanned{name: "test-tcp-gelf-output2", kind:"output-gelf-tcp", properties: map[string]interface{}{
+	addition := &nxcanned{name: "test-tcp-gelf-output2", kind: "output-gelf-tcp", properties: map[string]interface{}{
 		"server": "127.0.0.1",
-		"port": "12201",
+		"port":   "12201",
 	}}
 	engine.Canned = append(engine.Canned, *addition)
 

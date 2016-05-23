@@ -27,19 +27,19 @@ type ResponseCollectorConfiguration struct {
 }
 
 type ResponseCollectorInput struct {
-	Id         string            `json:"input_id"`
-	Backend    string            `json:"backend"`
-	Type       string            `json:"type"`
-	Name       string            `json:"name"`
+	Id         string                 `json:"input_id"`
+	Backend    string                 `json:"backend"`
+	Type       string                 `json:"type"`
+	Name       string                 `json:"name"`
 	Properties map[string]interface{} `json:"properties"`
-	ForwardTo  string            `json:"forward_to"`
+	ForwardTo  string                 `json:"forward_to"`
 }
 
 type ResponseCollectorOutput struct {
-	Id         string            `json:"output_id"`
-	Backend    string            `json:"backend"`
-	Type       string            `json:"type"`
-	Name       string            `json:"name"`
+	Id         string                 `json:"output_id"`
+	Backend    string                 `json:"backend"`
+	Type       string                 `json:"type"`
+	Name       string                 `json:"name"`
 	Properties map[string]interface{} `json:"properties"`
 }
 

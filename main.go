@@ -25,8 +25,8 @@ import (
 	"github.com/kardianos/service"
 
 	"github.com/Graylog2/collector-sidecar/backends"
-	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/cfgfile"
+	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/daemon"
 	"github.com/Graylog2/collector-sidecar/services"
