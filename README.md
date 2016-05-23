@@ -24,7 +24,7 @@ Install the NXLog package from the offical download [page](https://nxlog.org/pro
   $ update-rc.d -f nxlog remove
   $ gpasswd -a nxlog adm
  
-  $ dpkg -i collector-sidecar_0.0.3-1_amd64.deb
+  $ dpkg -i collector-sidecar_0.0.7-1_amd64.deb
 ```
 
 Edit `/etc/graylog/collector-sidecar/collector_sidecar.yml`, you should set at least the correct URL to your Graylog server and proper tags.
