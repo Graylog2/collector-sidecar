@@ -6,6 +6,9 @@ ifeq ($(strip $(COLLECTOR_VERSION)),)
 $(error COLLECTOR_VERSION is not set)
 endif
 
+TEST_SUITE = \
+	github.com/Graylog2/collector-sidecar/backends/nxlog
+
 all: clean misc build
 
 misc: ## Build NXMock for testing collector-sidecar
@@ -20,6 +23,9 @@ clean: ## Remove binaries
 	@rm -rf dist/tmp-build
 	@rm -rf dist/tmp-dest
 	@rm -rf dist/pkg
+
+test: ## Run tests
+	$(GO) test -v $(TEST_SUITE)
 
 build: ## Build collector-sidecar binary for local target system
 	$(GO) build -v -i -o graylog-collector-sidecar
