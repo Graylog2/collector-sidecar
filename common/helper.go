@@ -53,7 +53,7 @@ func GetCollectorId(collectorId string) string {
 		if err != nil {
 			log.Fatal("Can not read collector-id file: ", err)
 		}
-		id = string(file)
+		id = strings.Trim(string(file), " \n")
 	}
 
 	if id != "" {
