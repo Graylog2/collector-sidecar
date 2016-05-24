@@ -474,3 +474,45 @@ func TestRenderMultipleTcpGelfOutputs(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestRenderMultipleTcpTlsGelfOutputs(t *testing.T) {
+	engine := &NxConfig{
+		Context: context.NewContext(),
+		Canned: []nxcanned{{name: "test-tls-gelf-output1", kind: "output-gelf-tcp-tls", properties: map[string]interface{}{
+			"server": "127.0.0.1",
+			"port":   "12201",
+		}}},
+	}
+	addition := &nxcanned{name: "test-tls-gelf-output2", kind: "output-gelf-tcp-tls", properties: map[string]interface{}{
+		"server": "127.0.0.1",
+		"port":   "12201",
+	}}
+	engine.Canned = append(engine.Canned, *addition)
+
+	result := engine.Render()
+
+	expect1 := "<Output test-tls-gelf-output1>\n"
+	expect2 := "<Output test-tls-gelf-output2>\n"
+	if !(strings.Contains(result.String(), expect1) && strings.Contains(result.String(), expect2)) {
+		t.Fail()
+	}
+}
+
+func TestRenderSingleTcpTlsGelfOutputWithAllowUntrust(t *testing.T) {
+	engine := &NxConfig{
+		Context: context.NewContext(),
+		Canned: []nxcanned{{name: "test-tls-gelf-output1", kind: "output-gelf-tcp-tls", properties: map[string]interface{}{
+			"server": "127.0.0.1",
+			"port":   "12201",
+			"allow_untrusted": true,
+		}}},
+	}
+
+	result := engine.Render()
+
+	expect1 := "<Output test-tls-gelf-output1>\n"
+	expect2 := "AllowUntrusted True\n"
+	if !(strings.Contains(result.String(), expect1) && strings.Contains(result.String(), expect2)) {
+		t.Fail()
+	}
+}

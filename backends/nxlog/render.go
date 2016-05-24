@@ -260,6 +260,31 @@ func (nxc *NxConfig) gelfTcpOutputsToString() string {
 	return result.String()
 }
 
+func (nxc *NxConfig) gelfTcpTlsOutputsToString() string {
+	var result bytes.Buffer
+	for _, can := range nxc.Canned {
+		if can.kind == "output-gelf-tcp-tls" {
+			result.WriteString("<Output " + can.name + ">\n")
+			result.WriteString("	Module om_ssl\n")
+			result.WriteString("	Host " + nxc.propertyString(can.properties["server"], 0) + "\n")
+			result.WriteString("	Port " + nxc.propertyString(can.properties["port"], 0) + "\n")
+			result.WriteString("	OutputType GELF_TCP\n")
+			result.WriteString("	CAFile " + nxc.propertyString(can.properties["ca_file"], 0) + "\n")
+			result.WriteString("	CertFile " + nxc.propertyString(can.properties["cert_file"], 0) + "\n")
+			result.WriteString("	CertKeyFile " + nxc.propertyString(can.properties["cert_key_file"], 0) + "\n")
+			if nxc.isEnabled(can.properties["allow_untrusted"]) {
+				result.WriteString("	AllowUntrusted " + nxc.propertyString(can.properties["allow_untrusted"], 0) + "\n")
+			}
+			result.WriteString("	Exec $short_message = $raw_event; # Avoids truncation of the short_message field.\n")
+			result.WriteString("	Exec $gl2_source_collector = '" + nxc.Context.CollectorId + "';\n")
+			result.WriteString("	Exec $Hostname = hostname_fqdn();\n")
+			result.WriteString("</Output>\n")
+		}
+	}
+	result.WriteString("\n")
+	return result.String()
+}
+
 func (nxc *NxConfig) Render() bytes.Buffer {
 	var result bytes.Buffer
 	result.WriteString(nxc.definitionsToString())
@@ -275,6 +300,7 @@ func (nxc *NxConfig) Render() bytes.Buffer {
 	result.WriteString(nxc.tcpSyslogInputsToString())
 	result.WriteString(nxc.gelfUdpOutputsToString())
 	result.WriteString(nxc.gelfTcpOutputsToString())
+	result.WriteString(nxc.gelfTcpTlsOutputsToString())
 	//
 	result.WriteString(nxc.routesToString())
 	result.WriteString(nxc.matchesToString())
