@@ -21,6 +21,7 @@ import (
 
 type SidecarConfig struct {
 	ServerUrl      string   `config:"server_url"`
+	TlsSkipVerify  bool	`config:"tls_skip_verify"`
 	NodeId         string   `config:"node_id"`
 	CollectorId    string   `config:"collector_id"`
 	Tags           []string `config:"tags"`

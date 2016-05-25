@@ -23,12 +23,13 @@ import (
 	"github.com/Graylog2/collector-sidecar/api/rest"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
+	"crypto/tls"
 )
 
 var log = common.Log()
 
 func RequestConfiguration(context *context.Ctx) (graylog.ResponseCollectorConfiguration, error) {
-	c := rest.NewClient(nil)
+	c := rest.NewClient(nil, getTlsConfig(context))
 	c.BaseURL = context.ServerUrl
 
 	params := make(map[string]string)
@@ -63,7 +64,7 @@ func RequestConfiguration(context *context.Ctx) (graylog.ResponseCollectorConfig
 }
 
 func UpdateRegistration(context *context.Ctx) {
-	c := rest.NewClient(nil)
+	c := rest.NewClient(nil, getTlsConfig(context))
 	c.BaseURL = context.ServerUrl
 
 	registration := graylog.RegistrationRequest{}
@@ -84,4 +85,12 @@ func UpdateRegistration(context *context.Ctx) {
 	} else if err != io.EOF { // we expect an empty answer
 		log.Error("[UpdateRegistration] Failed to report collector status to server: ", err)
 	}
+}
+
+func getTlsConfig(context *context.Ctx) *tls.Config {
+	var tlsConfig *tls.Config
+	if context.UserConfig.TlsSkipVerify {
+		tlsConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+	return tlsConfig
 }
