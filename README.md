@@ -20,19 +20,36 @@ Installation
 Install the NXLog package from the offical download [page](https://nxlog.org/products/nxlog-community-edition/download)
 
 ```
-  $ /etc/init.d/nxlog stop
-  $ update-rc.d -f nxlog remove
-  $ gpasswd -a nxlog adm
+  $ sudo /etc/init.d/nxlog stop
+  $ sudo update-rc.d -f nxlog remove
+  $ sudo gpasswd -a nxlog adm
  
-  $ dpkg -i collector-sidecar_0.0.8-1_amd64.deb
+  $ sudo dpkg -i collector-sidecar_0.0.8-1_amd64.deb
 ```
 
 Edit `/etc/graylog/collector-sidecar/collector_sidecar.yml`, you should set at least the correct URL to your Graylog server and proper tags.
 The tags are used to define which configurations the host should receive.
 
 ```
-  $ graylog-collector-sidecar -service install
-  $ start collector-sidecar
+  $ sudo graylog-collector-sidecar -service install
+  $ sudo start collector-sidecar
+```
+
+**CentOS**
+
+```
+  $ sudo service nxlog stop
+  $ sudo chkconfig --del nxlog
+  $ sudo gpasswd -a nxlog root
+
+  $ sudo rpm -i collector-sidecar-0.0.8-1.x86_64.rpm
+```
+
+Activate the Sidecar as a system service
+
+```
+  $ sudo graylog-collector-sidecar -service install
+  $ sudo systemctl start collector-sidecar
 ```
 
 **Windows**
