@@ -42,3 +42,11 @@ func (inv *Inventory) Darwin() bool {
 func (inv *Inventory) Windows() bool {
 	return runtime.GOOS == "windows"
 }
+
+func (inv *Inventory) LinuxPlatform() string {
+	if runtime.GOOS == "linux" {
+		return common.LinuxPlatformFamily()
+	} else {
+		return runtime.GOOS
+	}
+}
