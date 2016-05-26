@@ -39,6 +39,9 @@ func GetSystemName() string {
 	return string(osRunes)
 }
 
+func GetHostname() (string, error) {
+	return os.Hostname()
+}
 func GetCollectorId(collectorId string) string {
 	id := collectorId
 	if strings.HasPrefix(collectorId, "file:") {

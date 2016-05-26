@@ -63,7 +63,11 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 
 	// node_id
 	if ctx.UserConfig.NodeId == "" {
-		log.Fatal("Please provide a valid node-id.")
+		log.Info("No node-id was configured, falling back to hostname")
+		ctx.UserConfig.NodeId, err = common.GetHostname()
+		if err != nil {
+			log.Fatal("No node-id configured and not able to obtain hostname as alternative.")
+		}
 	}
 
 	// tags
