@@ -16,5 +16,5 @@
 package common
 
 const (
-	CollectorVersion = "0.0.7"
+	CollectorVersion = "0.0.8"
 )
