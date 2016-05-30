@@ -84,7 +84,7 @@ func (wlbc *WinLogBeatConfig) RenderOnChange(response graylog.ResponseCollectorC
 			idx := len(eventlogs) - 1
 			for property, value := range input.Properties {
 				var vt interface{}
-				err := yaml.Unmarshal([]byte(value), &vt)
+				err := yaml.Unmarshal([]byte(value.(string)), &vt)
 				if err != nil {
 					log.Errorf("[%s] Nested YAML is not parsable: '%s'", wlbc.Name(), value)
 				} else {

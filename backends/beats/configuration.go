@@ -23,6 +23,7 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/cfgfile"
 	"github.com/Graylog2/collector-sidecar/context"
+	"strconv"
 )
 
 var (
@@ -105,4 +106,23 @@ func (bc *BeatsConfig) String() string {
 		}
 	}
 	return "---"
+}
+
+func (bc *BeatsConfig) PropertyString(p interface{}, precision int) string {
+	switch t := p.(type) {
+	default:
+		return ""
+	case string:
+		return t
+	case bool:
+		if t {
+			return "true"
+		} else {
+			return "false"
+		}
+	case int:
+		return strconv.Itoa(t)
+	case float64:
+		return strconv.FormatFloat(t, 'f', precision, 64)
+	}
 }

@@ -83,14 +83,61 @@ func (fbc *FileBeatConfig) RenderOnChange(response graylog.ResponseCollectorConf
 			prospector = append(prospector, make(map[string]interface{}))
 			idx := len(prospector) - 1
 			prospector[idx]["input_type"] = "log"
+			multiline := false
 			for property, value := range input.Properties {
+				// ignore include|exclude_lines if they are an empty array (default value)
+				if (property == "include_lines" || property == "exclude_lines") && fbc.Beats.PropertyString(value, 0) == "[]" {
+					continue
+				}
+				// ignore multiline fields but store setting
+				if (property == "multiline") {
+					multiline = fbc.Beats.PropertyString(value, 0) == "true"
+					continue
+
+				}
+				// generate muliline.* structure
+				if (property == "multiline_pattern" || property == "multiline_negate" || property == "multiline_match") {
+					multiline := make(map[string]interface{})
+					if prospector[idx]["multiline"] != nil {
+						multiline = prospector[idx]["multiline"].(map[string]interface{})
+					}
+					switch property {
+					case "multiline_pattern":
+						multiline["pattern"] = fbc.Beats.PropertyString(value, 0)
+					case "multiline_negate":
+						multiline["negate"] = value.(bool)
+					case "multiline_match":
+						match := fbc.Beats.PropertyString(value, 0)
+						if match == "after" || match == "before" {
+							multiline["match"] = match
+						} else {
+							log.Errorf("[%s] Multiline match can either be 'after' or 'before', but not '%s'", fbc.Name(), match)
+						}
+					}
+					prospector[idx]["multiline"] = multiline
+					continue
+				}
+				// ignore additional fields when they are empty otherwise add key/value pairs
+				if property == "fields" {
+					additionalFields := value.(map[string]interface{})
+					if len(additionalFields) != 0 {
+						prospector[idx]["fields"] = additionalFields
+					} else {
+						delete(prospector[idx], "fields")
+					}
+					continue
+				}
+				// everything else get's rendered without transformation
 				var vt interface{}
-				err := yaml.Unmarshal([]byte(value), &vt)
+				err := yaml.Unmarshal([]byte(fbc.Beats.PropertyString(value, 0)), &vt)
 				if err != nil {
 					log.Errorf("[%s] Nested YAML is not parsable: '%s'", fbc.Name(), value)
 				} else {
 					prospector[idx][property] = vt
 				}
+			}
+			if !multiline {
+				delete(prospector[idx], "multiline")
 			}
 		}
 	}
