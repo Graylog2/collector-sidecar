@@ -73,7 +73,8 @@ func (tbc *TopBeatConfig) RenderOnChange(response graylog.ResponseCollectorConfi
 				if property == "tls" ||
 					property == "ca_file" ||
 					property == "cert_file" ||
-					property == "cert_key_file" {
+					property == "cert_key_file" ||
+					property == "tls_insecure" {
 					continue
 				}
 				newConfig.Beats.Set(value, "output", output.Type, property)
@@ -82,6 +83,7 @@ func (tbc *TopBeatConfig) RenderOnChange(response graylog.ResponseCollectorConfi
 				newConfig.Beats.Set([]string{output.Properties["ca_file"].(string)}, "output", "logstash", "tls", "certificate_authorities")
 				newConfig.Beats.Set(output.Properties["cert_file"], "output", "logstash", "tls", "certificate")
 				newConfig.Beats.Set(output.Properties["cert_key_file"], "output", "logstash", "tls", "certificate_key")
+				newConfig.Beats.Set(output.Properties["tls_insecure"].(bool), "output", "logstash", "tls", "insecure")
 			}
 		}
 	}
