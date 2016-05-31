@@ -84,7 +84,7 @@ func main() {
 	supervisor := daemon.Daemon.NewSupervisor()
 	s, err := service.New(supervisor, serviceConfig)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Operating system is not supported: %s", err)
 	}
 	supervisor.BindToService(s)
 

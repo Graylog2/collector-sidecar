@@ -17,12 +17,13 @@ package winlogbeat
 
 import (
 	"bytes"
-	"github.com/Graylog2/collector-sidecar/api/graylog"
-	"github.com/Graylog2/collector-sidecar/common"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os/exec"
 	"text/template"
+
+	"github.com/Graylog2/collector-sidecar/api/graylog"
+	"github.com/Graylog2/collector-sidecar/common"
 )
 
 func (wlbc *WinLogBeatConfig) snippetsToString() string {
@@ -73,7 +74,19 @@ func (wlbc *WinLogBeatConfig) RenderOnChange(response graylog.ResponseCollectorC
 	for _, output := range response.Outputs {
 		if output.Backend == "winlogbeat" {
 			for property, value := range output.Properties {
+				// ignore tls properties
+				if property == "tls" ||
+					property == "ca_file" ||
+					property == "cert_file" ||
+					property == "cert_key_file" {
+					continue
+				}
 				newConfig.Beats.Set(value, "output", output.Type, property)
+			}
+			if output.Properties["tls"].(bool) {
+				newConfig.Beats.Set([]string{output.Properties["ca_file"].(string)}, "output", "logstash", "tls", "certificate_authorities")
+				newConfig.Beats.Set(output.Properties["cert_file"], "output", "logstash", "tls", "certificate")
+				newConfig.Beats.Set(output.Properties["cert_key_file"], "output", "logstash", "tls", "certificate_key")
 			}
 		}
 	}

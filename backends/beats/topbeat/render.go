@@ -70,7 +70,18 @@ func (tbc *TopBeatConfig) RenderOnChange(response graylog.ResponseCollectorConfi
 	for _, output := range response.Outputs {
 		if output.Backend == "topbeat" {
 			for property, value := range output.Properties {
+				if property == "tls" ||
+					property == "ca_file" ||
+					property == "cert_file" ||
+					property == "cert_key_file" {
+					continue
+				}
 				newConfig.Beats.Set(value, "output", output.Type, property)
+			}
+			if output.Properties["tls"].(bool) {
+				newConfig.Beats.Set([]string{output.Properties["ca_file"].(string)}, "output", "logstash", "tls", "certificate_authorities")
+				newConfig.Beats.Set(output.Properties["cert_file"], "output", "logstash", "tls", "certificate")
+				newConfig.Beats.Set(output.Properties["cert_key_file"], "output", "logstash", "tls", "certificate_key")
 			}
 		}
 	}
