@@ -61,6 +61,12 @@ Install the NXLog package from the offical download [page](https://nxlog.org/pro
   $ graylog_collector_sidecar_installer.exe
 ```
 
+It's also possible to run the installer in silent mode with
+
+```
+  $ graylog_collector_sidecar_installer.exe /S
+```
+
 Edit `C:\Program Files (x86)\graylog\collector-sidecar\collector_sidecar.yml`, you should set at least the correct URL to your Graylog server and proper tags.
 
 ```
