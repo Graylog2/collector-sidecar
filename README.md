@@ -17,6 +17,7 @@ Installation
 
 
 **Ubuntu**
+
 Install the NXLog package from the offical download [page](https://nxlog.org/products/nxlog-community-edition/download)
 
 ```
@@ -53,6 +54,7 @@ Activate the Sidecar as a system service
 ```
 
 **Windows**
+
 Install the NXLog package from the offical download [page](https://nxlog.org/products/nxlog-community-edition/download)
 
 ```
@@ -88,6 +90,7 @@ There are a couple of configuration settings for the Sidecar:
 | Parameter       | Description                                                                                                                           |
 |-----------------|---------------------------------------------------------------------------------------------------------------------------------------|
 | server_url      | URL to the Graylog API, e.g. `http://127.0.0.1:12900`                                                                                 |
+| tls_skip_verify | Ignore errors when the REST API was started with a self-signed certificate                                                            |
 | node_id         | Name of the Sidecar instance, will also show up in the web interface                                                                  |
 | collector_id    | Unique ID (UUID) of the instance. This can be an ID string or a path to an ID file                                                    |
 | tags            | List of configuration tags. All configurations on the server side that match the tag list will be fetched and merged by this instance |
