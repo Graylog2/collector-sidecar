@@ -99,10 +99,10 @@ SectionEnd
  
 ;Function that calls a messagebox when installation finished correctly
 Function .onInstSuccess
-  MessageBox MB_OK "You have successfully installed Graylog Collector Sidecar."
+  MessageBox MB_OK "You have successfully installed Graylog Collector Sidecar." /SD IDOK
 FunctionEnd
  
  
 Function un.onUninstSuccess
-  MessageBox MB_OK "You have successfully uninstalled Graylog Collector Sidecar."
+  MessageBox MB_OK "You have successfully uninstalled Graylog Collector Sidecar." /SD IDOK
 FunctionEnd
