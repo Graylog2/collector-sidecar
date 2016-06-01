@@ -105,10 +105,10 @@ func (fbc *FileBeatConfig) RenderOnChange(response graylog.ResponseCollectorConf
 					continue
 				}
 				// ignore multiline fields
-				if (property == "multiline" ||
+				if property == "multiline" ||
 					property == "multiline_pattern" ||
 					property == "multiline_negate" ||
-					property == "multiline_match") {
+					property == "multiline_match" {
 					continue
 
 				}
@@ -130,7 +130,7 @@ func (fbc *FileBeatConfig) RenderOnChange(response graylog.ResponseCollectorConf
 			if input.Properties["multiline"].(bool) {
 				multiline := make(map[string]interface{})
 				multiline["pattern"] = fbc.Beats.PropertyString(input.Properties["multiline_pattern"], 0)
-				multiline["negate"] = input.Properties["multiline_negate"] .(bool)
+				multiline["negate"] = input.Properties["multiline_negate"].(bool)
 				match := fbc.Beats.PropertyString(input.Properties["multiline_match"], 0)
 				if match == "after" || match == "before" {
 					multiline["match"] = match

@@ -19,11 +19,11 @@ import (
 	"encoding/json"
 	"io"
 
+	"crypto/tls"
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/api/rest"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
-	"crypto/tls"
 )
 
 var log = common.Log()

@@ -16,8 +16,8 @@
 package common
 
 import (
-	"time"
 	"log/syslog"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/Sirupsen/logrus/hooks/syslog"
@@ -40,7 +40,7 @@ func Log() *logrus.Logger {
 }
 
 func GetRotatedLog(path string, rotation_time int, max_age int) *rotatelogs.RotateLogs {
-	log.Debugf("Creating rotated log writer for: %s", path + ".%Y%m%d%H%M")
+	log.Debugf("Creating rotated log writer for: %s", path+".%Y%m%d%H%M")
 
 	writer := rotatelogs.NewRotateLogs(
 		path + ".%Y%m%d%H%M",

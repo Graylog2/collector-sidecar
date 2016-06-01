@@ -26,8 +26,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/Graylog2/collector-sidecar/common"
 	"crypto/tls"
+	"github.com/Graylog2/collector-sidecar/common"
 )
 
 var log = common.Log()
@@ -73,7 +73,7 @@ func NewClient(httpClient *http.Client, tlsConfig *tls.Config) *Client {
 				Timeout:   30 * time.Second,
 				KeepAlive: 30 * time.Second,
 			}).Dial,
-			TLSClientConfig: tlsConfig,
+			TLSClientConfig:       tlsConfig,
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
 			DisableCompression:    true,

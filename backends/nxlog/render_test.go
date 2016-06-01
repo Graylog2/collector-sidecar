@@ -502,8 +502,8 @@ func TestRenderSingleTcpTlsGelfOutputWithAllowUntrust(t *testing.T) {
 	engine := &NxConfig{
 		Context: context.NewContext(),
 		Canned: []nxcanned{{name: "test-tls-gelf-output1", kind: "output-gelf-tcp-tls", properties: map[string]interface{}{
-			"server": "127.0.0.1",
-			"port":   "12201",
+			"server":          "127.0.0.1",
+			"port":            "12201",
 			"allow_untrusted": true,
 		}}},
 	}

@@ -57,7 +57,7 @@ func (bc *BeatsConfig) Data() interface{} {
 }
 
 func (bc *BeatsConfig) Set(value interface{}, path ...string) error {
-	if len(path) == 0 || value == nil{
+	if len(path) == 0 || value == nil {
 		return nil
 	}
 	// Initialize configuration container if needed

@@ -20,16 +20,16 @@ import (
 )
 
 type SidecarConfig struct {
-	ServerUrl      string   `config:"server_url"`
-	TlsSkipVerify  bool	`config:"tls_skip_verify"`
-	NodeId         string   `config:"node_id"`
-	CollectorId    string   `config:"collector_id"`
-	Tags           []string `config:"tags"`
-	LogPath        string   `config:"log_path"`
-	LogRotationTime int	`config:"log_rotation_time"`
-	LogMaxAge	int	`config:"log_max_age"`
-	UpdateInterval int      `config:"update_interval"`
-	Backends       []SidecarBackend
+	ServerUrl       string   `config:"server_url"`
+	TlsSkipVerify   bool     `config:"tls_skip_verify"`
+	NodeId          string   `config:"node_id"`
+	CollectorId     string   `config:"collector_id"`
+	Tags            []string `config:"tags"`
+	LogPath         string   `config:"log_path"`
+	LogRotationTime int      `config:"log_rotation_time"`
+	LogMaxAge       int      `config:"log_max_age"`
+	UpdateInterval  int      `config:"update_interval"`
+	Backends        []SidecarBackend
 }
 
 type SidecarBackend struct {
