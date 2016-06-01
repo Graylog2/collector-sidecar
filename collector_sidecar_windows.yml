@@ -1,12 +1,14 @@
 server_url: http://127.0.0.1:12900
+update_interval: 10
 tls_skip_verify: false
 node_id: graylog-collector-sidecar
 collector_id: file:C:\Program Files (x86)\graylog\collector-sidecar\collector-id
+log_path: C:\Program Files (x86)\graylog\collector-sidecar
+log_rotation_time: 86400
+log_max_age: 604800
 tags:
     - windows
     - iis
-log_path: C:\Program Files (x86)\graylog\collector-sidecar
-update_interval: 10
 backends:
     - name: nxlog
       enabled: true

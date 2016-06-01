@@ -26,6 +26,8 @@ type SidecarConfig struct {
 	CollectorId    string   `config:"collector_id"`
 	Tags           []string `config:"tags"`
 	LogPath        string   `config:"log_path"`
+	LogRotationTime int	`config:"log_rotation_time"`
+	LogMaxAge	int	`config:"log_max_age"`
 	UpdateInterval int      `config:"update_interval"`
 	Backends       []SidecarBackend
 }

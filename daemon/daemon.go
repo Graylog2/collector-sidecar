@@ -49,6 +49,7 @@ type Runner struct {
 	Args           []string
 	Stderr, Stdout string
 	Running        bool
+	Context        *context.Ctx
 	Daemon         *DaemonConfig
 	cmd            *exec.Cmd
 	service        service.Service
@@ -77,14 +78,15 @@ func NewConfig() *DaemonConfig {
 	return dc
 }
 
-func (dc *DaemonConfig) NewRunner(backend backends.Backend, logPath string) *Runner {
+func (dc *DaemonConfig) NewRunner(backend backends.Backend, context *context.Ctx) *Runner {
 	r := &Runner{
 		Running: false,
+		Context: context,
 		Name:    backend.Name(),
 		Exec:    backend.ExecPath(),
 		Args:    backend.ExecArgs(),
-		Stderr:  filepath.Join(logPath, backend.Name()+"_stderr.log"),
-		Stdout:  filepath.Join(logPath, backend.Name()+"_stdout.log"),
+		Stderr:  filepath.Join(context.UserConfig.LogPath, backend.Name()+"_stderr.log"),
+		Stdout:  filepath.Join(context.UserConfig.LogPath, backend.Name()+"_stdout.log"),
 		Daemon:  dc,
 		exit:    make(chan struct{}),
 	}
@@ -93,7 +95,7 @@ func (dc *DaemonConfig) NewRunner(backend backends.Backend, logPath string) *Run
 }
 
 func (dc *DaemonConfig) AddBackendAsRunner(backend backends.Backend, context *context.Ctx) {
-	dc.Runner[backend.Name()] = dc.NewRunner(backend, context.UserConfig.LogPath)
+	dc.Runner[backend.Name()] = dc.NewRunner(backend, context)
 }
 
 func (r *Runner) BindToService(s service.Service) {
@@ -142,21 +144,21 @@ func (r *Runner) run() {
 
 	if r.Stderr != "" {
 		err := common.CreatePathToFile(r.Stderr)
-		f, err := os.OpenFile(r.Stderr, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0777)
 		if err != nil {
-			log.Warningf("[%s] Failed to open std err %q: %v", r.Name, r.Stderr, err)
-			return
+			log.Errorf("[%s] Failed to create path to collector log: %s", r.Name, r.Stderr)
 		}
+
+		f := common.GetRotatedLog(r.Stderr, r.Context.UserConfig.LogRotationTime, r.Context.UserConfig.LogMaxAge)
 		defer f.Close()
 		r.cmd.Stderr = f
 	}
 	if r.Stdout != "" {
-		err := common.CreatePathToFile(r.Stderr)
-		f, err := os.OpenFile(r.Stdout, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0777)
+		err := common.CreatePathToFile(r.Stdout)
 		if err != nil {
-			log.Warningf("[%s] Failed to open std out %q: %v", r.Name, r.Stdout, err)
-			return
+			log.Errorf("[%s] Failed to create path to collector log: %s", r.Name, r.Stdout)
 		}
+
+		f := common.GetRotatedLog(r.Stderr, r.Context.UserConfig.LogRotationTime, r.Context.UserConfig.LogMaxAge)
 		defer f.Close()
 		r.cmd.Stdout = f
 	}

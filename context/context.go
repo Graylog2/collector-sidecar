@@ -82,6 +82,16 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 		log.Fatal("No log directory was configured.")
 	}
 
+	// log_rotation_time
+	if !(ctx.UserConfig.LogRotationTime > 0) {
+		log.Fatal("Please set the log rotation time > 0 seconds.")
+	}
+
+	// log_max_age
+	if !(ctx.UserConfig.LogMaxAge > 0) {
+		log.Fatal("Please set the maximum age of log file rotation > 0 seconds.")
+	}
+
 	// update_interval
 	if !(ctx.UserConfig.UpdateInterval > 0) {
 		log.Fatal("Please set update interval > 0 seconds.")

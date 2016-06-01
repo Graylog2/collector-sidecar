@@ -16,10 +16,12 @@
 package common
 
 import (
+	"time"
 	"log/syslog"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/Sirupsen/logrus/hooks/syslog"
+	"github.com/lestrrat/go-file-rotatelogs"
 )
 
 var log = logrus.New()
@@ -35,4 +37,18 @@ func init() {
 
 func Log() *logrus.Logger {
 	return log
+}
+
+func GetRotatedLog(path string, rotation_time int, max_age int) *rotatelogs.RotateLogs {
+	log.Debugf("Creating rotated log writer for: %s", path + ".%Y%m%d%H%M")
+
+	writer := rotatelogs.NewRotateLogs(
+		path + ".%Y%m%d%H%M",
+	)
+	writer.LinkName = path
+	writer.RotationTime = time.Duration(rotation_time) * time.Second
+	writer.MaxAge = time.Duration(max_age) * time.Second
+	writer.Offset = 0
+
+	return writer
 }

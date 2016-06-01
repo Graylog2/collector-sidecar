@@ -1,10 +1,14 @@
-hash: 0c7ed2cb77767784aad107aea371477d1103eb9da7675e0e48c19e6cc465ca41
-updated: 2016-05-23T16:33:15.862618603+02:00
+hash: a8c039f2706357a17ef3bbe4ef6934daa54f010ffb00dd088aa91870b960714c
+updated: 2016-06-01T15:14:12.247660084+02:00
 imports:
+- name: bitbucket.org/tebeka/strftime
+  version: 2194253a23c0
 - name: github.com/kardianos/osext
   version: 10da29423eb9a6269092eebdc2be32209612d9d2
 - name: github.com/kardianos/service
   version: 2954cfdd7b0c8ab45ef2aa22a44b5f086201836f
+- name: github.com/lestrrat/go-file-rotatelogs
+  version: bb1d28fd5ac7ec9873540d5bba975d009f271f67
 - name: github.com/pborman/uuid
   version: c55201b036063326c5b1b89ccfe45a184973d073
 - name: github.com/rakyll/goini
