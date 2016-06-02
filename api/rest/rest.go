@@ -25,8 +25,9 @@ import (
 	"net/http"
 	"net/url"
 	"time"
-
 	"crypto/tls"
+	"path"
+
 	"github.com/Graylog2/collector-sidecar/common"
 )
 
@@ -101,6 +102,7 @@ func (c *Client) NewRequest(method, urlStr string, params map[string]string, bod
 
 	}
 
+	rel.Path = path.Join(c.BaseURL.Path, rel.Path)
 	u := c.BaseURL.ResolveReference(rel)
 
 	buf := new(bytes.Buffer)
