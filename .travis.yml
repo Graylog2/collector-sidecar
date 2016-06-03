@@ -2,4 +2,7 @@ sudo: false
 language: go
 go:
   - 1.6
-script: GO15VENDOREXPERIMENT=1 make test
+
+script: make deps test
+env:
+  - GO15VENDOREXPERIMENT=1
