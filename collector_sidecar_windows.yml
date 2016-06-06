@@ -11,6 +11,14 @@ tags:
     - iis
 backends:
     - name: nxlog
-      enabled: true
+      enabled: false
       binary_path: C:\Program Files (x86)\nxlog\nxlog.exe
       configuration_path: C:\Program Files (x86)\graylog\collector-sidecar\generated\nxlog.conf
+    - name: winlogbeat
+      enabled: true
+      binary_path: C:\Program Files (x86)\graylog\collector-sidecar\winlogbeat.exe
+      configuration_path: C:\Program Files (x86)\graylog\collector-sidecar\generated\winlogbeat.yml
+    - name: filebeat
+      enabled: true
+      binary_path: C:\Program Files (x86)\graylog\collector-sidecar\filebeat.exe
+      configuration_path: C:\Program Files (x86)\graylog\collector-sidecar\generated\filebeat.yml

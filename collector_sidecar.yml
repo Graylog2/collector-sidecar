@@ -11,6 +11,10 @@ tags:
     - apache
 backends:
     - name: nxlog
-      enabled: true
+      enabled: false
       binary_path: /usr/bin/nxlog
       configuration_path: /etc/graylog/collector-sidecar/generated/nxlog.conf
+    - name: filebeat
+      enabled: true
+      binary_path: /usr/bin/filebeat
+      configuration_path: /etc/graylog/collector-sidecar/generated/filebeat.yml
