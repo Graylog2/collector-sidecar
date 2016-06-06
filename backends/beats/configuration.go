@@ -126,3 +126,12 @@ func (bc *BeatsConfig) PropertyString(p interface{}, precision int) string {
 		return strconv.FormatFloat(t, 'f', precision, 64)
 	}
 }
+
+func (bc *BeatsConfig) PropertyBool(p interface{}) bool {
+	switch p.(type) {
+	default :
+		return false
+	case bool:
+		return p.(bool)
+	}
+}

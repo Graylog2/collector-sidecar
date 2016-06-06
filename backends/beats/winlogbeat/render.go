@@ -84,11 +84,11 @@ func (wlbc *WinLogBeatConfig) RenderOnChange(response graylog.ResponseCollectorC
 				}
 				newConfig.Beats.Set(value, "output", output.Type, property)
 			}
-			if output.Properties["tls"].(bool) {
-				newConfig.Beats.Set([]string{output.Properties["ca_file"].(string)}, "output", "logstash", "tls", "certificate_authorities")
+			if wlbc.Beats.PropertyBool(output.Properties["tls"]) {
+				newConfig.Beats.Set([]string{wlbc.Beats.PropertyString(output.Properties["ca_file"], 0)}, "output", "logstash", "tls", "certificate_authorities")
 				newConfig.Beats.Set(output.Properties["cert_file"], "output", "logstash", "tls", "certificate")
 				newConfig.Beats.Set(output.Properties["cert_key_file"], "output", "logstash", "tls", "certificate_key")
-				newConfig.Beats.Set(output.Properties["tls_insecure"].(bool), "output", "logstash", "tls", "insecure")
+				newConfig.Beats.Set(wlbc.Beats.PropertyBool(output.Properties["tls_insecure"]), "output", "logstash", "tls", "insecure")
 			}
 		}
 	}
@@ -99,7 +99,7 @@ func (wlbc *WinLogBeatConfig) RenderOnChange(response graylog.ResponseCollectorC
 			idx := len(eventlogs) - 1
 			for property, value := range input.Properties {
 				var vt interface{}
-				err := yaml.Unmarshal([]byte(value.(string)), &vt)
+				err := yaml.Unmarshal([]byte(wlbc.Beats.PropertyString(value, 0)), &vt)
 				if err != nil {
 					log.Errorf("[%s] Nested YAML is not parsable: '%s'", wlbc.Name(), value)
 				} else {

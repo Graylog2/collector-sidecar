@@ -84,11 +84,11 @@ func (fbc *FileBeatConfig) RenderOnChange(response graylog.ResponseCollectorConf
 				}
 				newConfig.Beats.Set(value, "output", output.Type, property)
 			}
-			if output.Properties["tls"].(bool) {
-				newConfig.Beats.Set([]string{output.Properties["ca_file"].(string)}, "output", "logstash", "tls", "certificate_authorities")
+			if fbc.Beats.PropertyBool(output.Properties["tls"]) {
+				newConfig.Beats.Set([]string{fbc.Beats.PropertyString(output.Properties["ca_file"], 0)}, "output", "logstash", "tls", "certificate_authorities")
 				newConfig.Beats.Set(output.Properties["cert_file"], "output", "logstash", "tls", "certificate")
 				newConfig.Beats.Set(output.Properties["cert_key_file"], "output", "logstash", "tls", "certificate_key")
-				newConfig.Beats.Set(output.Properties["tls_insecure"].(bool), "output", "logstash", "tls", "insecure")
+				newConfig.Beats.Set(fbc.Beats.PropertyBool(output.Properties["tls_insecure"]), "output", "logstash", "tls", "insecure")
 			}
 		}
 	}
@@ -127,10 +127,10 @@ func (fbc *FileBeatConfig) RenderOnChange(response graylog.ResponseCollectorConf
 				}
 			}
 			// generate multiline.* structure if enabled
-			if input.Properties["multiline"].(bool) {
+			if fbc.Beats.PropertyBool(input.Properties["multiline"]) {
 				multiline := make(map[string]interface{})
 				multiline["pattern"] = fbc.Beats.PropertyString(input.Properties["multiline_pattern"], 0)
-				multiline["negate"] = input.Properties["multiline_negate"].(bool)
+				multiline["negate"] = fbc.Beats.PropertyBool(input.Properties["multiline_negate"])
 				match := fbc.Beats.PropertyString(input.Properties["multiline_match"], 0)
 				if match == "after" || match == "before" {
 					multiline["match"] = match
