@@ -71,6 +71,8 @@ Section "Install"
   SetOutPath "$INSTDIR"
  
   File "../build/${VERSION}/windows/amd64/graylog-collector-sidecar.exe"
+  File "collectors/winlogbeat/windows/winlogbeat.exe"
+  File "collectors/filebeat/windows/filebeat.exe"
   File /oname=collector_sidecar.yml "../collector_sidecar_windows.yml"
   File "../COPYING"
 
