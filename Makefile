@@ -75,7 +75,10 @@ build-solaris: ## Build collector-sidecar binary for Solaris
 	@mkdir -p build/$(COLLECTOR_VERSION)/solaris/amd64
 	GOOS=solaris GOARCH=amd64 $(GO) build -v -i -o build/$(COLLECTOR_VERSION)/solaris/amd64/graylog-collector-sidecar
 
-package-all: package-linux package-linux32 package-windows package-windows32
+package-all: prepare-package package-linux package-linux32 package-windows package-windows32
+
+prepare-package:
+	@dist/fetch_collectors.sh
 
 package-linux: ## Create Linux system package
 	@fpm-cook clean dist/recipe.rb

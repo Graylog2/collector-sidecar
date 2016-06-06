@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 ARCHS=( i686 x86_64 windows )
 FILEBEAT_VERSION=1.2.3
