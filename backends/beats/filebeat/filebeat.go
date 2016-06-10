@@ -16,15 +16,20 @@
 package filebeat
 
 import (
+	"path/filepath"
+
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
-	"path/filepath"
+	"github.com/Graylog2/collector-sidecar/system"
 )
 
 const name = "filebeat"
 
-var log = common.Log()
+var (
+	log = common.Log()
+	backendStatus = system.Status{}
+)
 
 func init() {
 	if err := backends.RegisterBackend(name, New); err != nil {
@@ -52,7 +57,10 @@ func (fbc *FileBeatConfig) ExecPath() string {
 func (fbc *FileBeatConfig) ConfigurationPath() string {
 	configurationPath := fbc.Beats.UserConfig.ConfigurationPath
 	if !common.IsDir(filepath.Dir(configurationPath)) {
-		log.Fatal("Configured path to collector configuration does not exist: " + configurationPath)
+		err := common.CreatePathToFile(configurationPath)
+		if err != nil {
+			log.Fatal("Configured path to collector configuration does not exist: " + configurationPath)
+		}
 	}
 
 	return configurationPath
@@ -64,4 +72,12 @@ func (fbc *FileBeatConfig) ExecArgs() []string {
 
 func (fbc *FileBeatConfig) ValidatePreconditions() bool {
 	return true
+}
+
+func (fbc *FileBeatConfig) SetStatus(state int, message string) {
+	backendStatus.Set(state, message)
+}
+
+func (fbc *FileBeatConfig) Status() system.Status {
+	return backendStatus
 }

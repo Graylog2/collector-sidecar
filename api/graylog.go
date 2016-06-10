@@ -18,12 +18,16 @@ package api
 import (
 	"encoding/json"
 	"io"
-
 	"crypto/tls"
+	"strconv"
+
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/api/rest"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
+	"github.com/Graylog2/collector-sidecar/daemon"
+	"github.com/Graylog2/collector-sidecar/backends"
+	"github.com/Graylog2/collector-sidecar/system"
 )
 
 var log = common.Log()
@@ -36,7 +40,9 @@ func RequestConfiguration(context *context.Ctx) (graylog.ResponseCollectorConfig
 	if len(context.UserConfig.Tags) != 0 {
 		tags, err := json.Marshal(context.UserConfig.Tags)
 		if err != nil {
-			log.Error("Provided tags can not be send to the Graylog server!")
+			msg := "Provided tags can not be send to the Graylog server!"
+			system.GlobalStatus.Set(backends.StatusUnknown, msg)
+			log.Errorf("[RequestConfiguration] %s", msg)
 		} else {
 			params["tags"] = string(tags)
 		}
@@ -44,33 +50,45 @@ func RequestConfiguration(context *context.Ctx) (graylog.ResponseCollectorConfig
 
 	r, err := c.NewRequest("GET", "/plugins/org.graylog.plugins.collector/"+context.CollectorId, params, nil)
 	if err != nil {
-		log.Error("[RequestConfiguration] Can not initialize REST request")
+		msg := "Can not initialize REST request"
+		system.GlobalStatus.Set(backends.StatusError, msg)
+		log.Errorf("[RequestConfiguration] %s", msg)
 		return graylog.ResponseCollectorConfiguration{}, err
 	}
 
 	respBody := graylog.ResponseCollectorConfiguration{}
 	resp, err := c.Do(r, &respBody)
 	if resp != nil && resp.StatusCode == 204 {
-		log.Info("[RequestConfiguration] No configuration found for configured tags!")
+		msg := "No configuration found for configured tags!"
+		system.GlobalStatus.Set(backends.StatusError, msg)
+		log.Infof("[RequestConfiguration] %s", msg)
 		return graylog.ResponseCollectorConfiguration{}, nil
 	} else if resp != nil && resp.StatusCode != 200 {
-		log.Error("[RequestConfiguration] Bad response status from Graylog server: ", resp.Status)
+		msg := "Bad response status from Graylog server"
+		system.GlobalStatus.Set(backends.StatusError, msg)
+		log.Error("[RequestConfiguration] %s: ", msg, resp.Status)
 		return graylog.ResponseCollectorConfiguration{}, nil
 	} else if err != nil {
-		log.Error("[RequestConfiguration] Fetching configuration failed: ", err)
+		msg := "Fetching configuration failed"
+		system.GlobalStatus.Set(backends.StatusError, msg)
+		log.Error("[RequestConfiguration] %s: ", msg, err)
 	}
 
+	system.GlobalStatus.Set(backends.StatusRunning, "")
 	return respBody, err
 }
 
-func UpdateRegistration(context *context.Ctx) {
+func UpdateRegistration(context *context.Ctx, status graylog.StatusRequest) {
 	c := rest.NewClient(nil, getTlsConfig(context))
 	c.BaseURL = context.ServerUrl
 
 	registration := graylog.RegistrationRequest{}
 	registration.NodeId = context.UserConfig.NodeId
-	registration.NodeDetails = make(map[string]string)
+	registration.NodeDetails = make(map[string]interface{})
 	registration.NodeDetails["operating_system"] = common.GetSystemName()
+	if context.UserConfig.SendStatus {
+		registration.NodeDetails["status"] = status
+	}
 
 	r, err := c.NewRequest("PUT", "/plugins/org.graylog.plugins.collector/collectors/"+context.CollectorId, nil, registration)
 	if err != nil {
@@ -93,4 +111,32 @@ func getTlsConfig(context *context.Ctx) *tls.Config {
 		tlsConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 	return tlsConfig
+}
+
+
+func NewStatusRequest() graylog.StatusRequest {
+	statusRequest := graylog.StatusRequest{Backends: make(map[string]system.Status)}
+	combined, count := system.GlobalStatus.Status, 0
+	for name := range daemon.Daemon.Runner {
+		backend := backends.Store.GetBackend(name)
+		statusRequest.Backends[name] = backend.Status()
+		if backend.Status().Status > combined {
+			combined = backend.Status().Status
+		}
+		count++
+	}
+
+	if combined != backends.StatusRunning {
+		statusRequest.Status = combined
+		if len(system.GlobalStatus.Message) != 0 {
+			statusRequest.Message = system.GlobalStatus.Message
+		} else {
+			statusRequest.Message = "At least one backend with errors"
+		}
+	} else {
+		statusRequest.Status = system.GlobalStatus.Status
+		statusRequest.Message = strconv.Itoa(count) + " collectors running"
+	}
+
+	return statusRequest
 }

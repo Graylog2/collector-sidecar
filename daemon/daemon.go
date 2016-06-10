@@ -49,6 +49,7 @@ type Runner struct {
 	Args           []string
 	Stderr, Stdout string
 	Running        bool
+	Backend        backends.Backend
 	Context        *context.Ctx
 	Daemon         *DaemonConfig
 	cmd            *exec.Cmd
@@ -82,6 +83,7 @@ func (dc *DaemonConfig) NewRunner(backend backends.Backend, context *context.Ctx
 	r := &Runner{
 		Running: false,
 		Context: context,
+		Backend: backend,
 		Name:    backend.Name(),
 		Exec:    backend.ExecPath(),
 		Args:    backend.ExecArgs(),
@@ -110,7 +112,9 @@ func (r *Runner) Start(s service.Service) error {
 	absPath, _ := filepath.Abs(r.Exec)
 	fullExec, err := exec.LookPath(absPath)
 	if err != nil {
-		return fmt.Errorf("[%s] Failed to find collector executable %q: %v", r.Name, r.Exec, err)
+		msg := "Failed to find collector executable"
+		r.Backend.SetStatus(backends.StatusError, msg)
+		return fmt.Errorf("[%s] %s %q: %v", r.Name, msg, r.Exec, err)
 	}
 
 	r.cmd = exec.Command(fullExec, r.Args...)
@@ -145,7 +149,9 @@ func (r *Runner) run() {
 	if r.Stderr != "" {
 		err := common.CreatePathToFile(r.Stderr)
 		if err != nil {
-			log.Errorf("[%s] Failed to create path to collector log: %s", r.Name, r.Stderr)
+			msg := "Failed to create path to collector's stderr log"
+			r.Backend.SetStatus(backends.StatusError, msg)
+			log.Errorf("[%s] %s: %s", r.Name, msg, r.Stderr)
 		}
 
 		f := common.GetRotatedLog(r.Stderr, r.Context.UserConfig.LogRotationTime, r.Context.UserConfig.LogMaxAge)
@@ -155,7 +161,9 @@ func (r *Runner) run() {
 	if r.Stdout != "" {
 		err := common.CreatePathToFile(r.Stdout)
 		if err != nil {
-			log.Errorf("[%s] Failed to create path to collector log: %s", r.Name, r.Stdout)
+			msg := "Failed to create path to collector's stdout log"
+			r.Backend.SetStatus(backends.StatusError, msg)
+			log.Errorf("[%s] %s: %s", r.Name, msg, r.Stdout)
 		}
 
 		f := common.GetRotatedLog(r.Stderr, r.Context.UserConfig.LogRotationTime, r.Context.UserConfig.LogMaxAge)
@@ -164,11 +172,14 @@ func (r *Runner) run() {
 	}
 
 	r.Running = true
+	r.Backend.SetStatus(backends.StatusRunning, "Running")
 	startTime := time.Now()
 	r.cmd.Run()
 
 	if time.Since(startTime) < 3*time.Second {
-		log.Errorf("[%s] Collector exits immediately, this should not happen! Please check your collector configuration!", r.Name)
+		msg := "Collector exits immediately, this should not happen! Please check your collector configuration!"
+		r.Backend.SetStatus(backends.StatusError, msg)
+		log.Errorf("[%s] %s", r.Name, msg)
 	}
 
 	return

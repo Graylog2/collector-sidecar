@@ -43,7 +43,8 @@ func StartPeriodicals(context *context.Ctx) {
 // report collector status to Graylog server
 func updateCollectorRegistration(context *context.Ctx) {
 	time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
-	api.UpdateRegistration(context)
+	statusRequest := api.NewStatusRequest()
+	api.UpdateRegistration(context, statusRequest)
 }
 
 // fetch configuration periodically
@@ -58,7 +59,9 @@ func checkForUpdateAndRestart(context *context.Ctx) {
 		backend := backends.Store.GetBackend(name)
 		if backend.RenderOnChange(jsonConfig) {
 			if !backend.ValidateConfigurationFile() {
-				log.Infof("[%s] Collector configuration file is not valid, waiting for update...", name)
+				msg := "Collector configuration file is not valid, waiting for the next update."
+				backend.SetStatus(backends.StatusError, msg)
+				log.Infof("[%s] %s", name, msg)
 				continue
 			}
 
@@ -66,7 +69,9 @@ func checkForUpdateAndRestart(context *context.Ctx) {
 				// collector was already started so a Restart will not fail
 				err = runner.Restart(runner.GetService())
 				if err != nil {
-					log.Error("Failed to restart collector %v", err)
+					msg := "Failed to restart collector"
+					backend.SetStatus(backends.StatusError, msg)
+					log.Error("[%s] %s: %v", name, msg, err)
 				}
 			}
 

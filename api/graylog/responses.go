@@ -20,6 +20,9 @@ type ResponseCollectorRegistration struct {
 	Message string `json:"message`
 }
 
+type ResponseCollectorStatus struct {
+}
+
 type ResponseCollectorConfiguration struct {
 	Inputs   []ResponseCollectorInput   `json:"inputs"`
 	Outputs  []ResponseCollectorOutput  `json:"outputs"`

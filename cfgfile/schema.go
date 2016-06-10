@@ -29,6 +29,7 @@ type SidecarConfig struct {
 	LogRotationTime int      `config:"log_rotation_time"`
 	LogMaxAge       int      `config:"log_max_age"`
 	UpdateInterval  int      `config:"update_interval"`
+	SendStatus	bool	 `config:"send_status"`
 	Backends        []SidecarBackend
 }
 

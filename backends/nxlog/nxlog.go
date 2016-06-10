@@ -17,16 +17,20 @@ package nxlog
 
 import (
 	"runtime"
+	"path/filepath"
 
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
-	"path/filepath"
+	"github.com/Graylog2/collector-sidecar/system"
 )
 
 const name = "nxlog"
 
-var log = common.Log()
+var (
+	log = common.Log()
+	backendStatus = system.Status{}
+)
 
 func init() {
 	if err := backends.RegisterBackend(name, New); err != nil {
@@ -54,7 +58,10 @@ func (nxc *NxConfig) ExecPath() string {
 func (nxc *NxConfig) ConfigurationPath() string {
 	configurationPath := nxc.UserConfig.ConfigurationPath
 	if !common.IsDir(filepath.Dir(configurationPath)) {
-		log.Fatalf("[%s] Configured path to collector configuration does not exist: %s", nxc.Name(), configurationPath)
+		err := common.CreatePathToFile(configurationPath)
+		if err != nil {
+			log.Fatalf("[%s] Configured path to collector configuration does not exist: %s", nxc.Name(), configurationPath)
+		}
 	}
 
 	return configurationPath
@@ -74,4 +81,12 @@ func (nxc *NxConfig) ValidatePreconditions() bool {
 		}
 	}
 	return true
+}
+
+func (nxc *NxConfig) SetStatus(state int, message string) {
+	backendStatus.Set(state, message)
+}
+
+func (nxc *NxConfig) Status() system.Status {
+	return backendStatus
 }

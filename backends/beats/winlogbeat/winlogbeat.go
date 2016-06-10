@@ -26,15 +26,20 @@
 package winlogbeat
 
 import (
+	"path/filepath"
+
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
-	"path/filepath"
+	"github.com/Graylog2/collector-sidecar/system"
 )
 
 const name = "winlogbeat"
 
-var log = common.Log()
+var (
+	log = common.Log()
+	backendStatus = system.Status{}
+)
 
 func init() {
 	if err := backends.RegisterBackend(name, New); err != nil {
@@ -62,7 +67,10 @@ func (wlbc *WinLogBeatConfig) ExecPath() string {
 func (wlbc *WinLogBeatConfig) ConfigurationPath() string {
 	configurationPath := wlbc.Beats.UserConfig.ConfigurationPath
 	if !common.IsDir(filepath.Dir(configurationPath)) {
-		log.Fatal("Configured path to collector configuration does not exist: " + configurationPath)
+		err := common.CreatePathToFile(configurationPath)
+		if err != nil {
+			log.Fatal("Configured path to collector configuration does not exist: " + configurationPath)
+		}
 	}
 
 	return configurationPath
@@ -74,4 +82,12 @@ func (wlbc *WinLogBeatConfig) ExecArgs() []string {
 
 func (wlbc *WinLogBeatConfig) ValidatePreconditions() bool {
 	return true
+}
+
+func (wlbc *WinLogBeatConfig) SetStatus(state int, message string) {
+	backendStatus.Set(state, message)
+}
+
+func (wlbc *WinLogBeatConfig) Status() system.Status {
+	return backendStatus
 }
