@@ -37,7 +37,7 @@ import (
 const name = "winlogbeat"
 
 var (
-	log = common.Log()
+	log           = common.Log()
 	backendStatus = system.Status{}
 )
 

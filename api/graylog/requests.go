@@ -20,12 +20,12 @@ import (
 )
 
 type RegistrationRequest struct {
-	NodeId      string            `json:"node_id"`
+	NodeId      string                 `json:"node_id"`
 	NodeDetails map[string]interface{} `json:"node_details"`
 }
 
 type StatusRequest struct {
 	Backends map[string]system.Status `json:"backends"`
-	Status int `json:"status"`
-	Message string `json:"message"`
+	Status   int                      `json:"status"`
+	Message  string                   `json:"message"`
 }

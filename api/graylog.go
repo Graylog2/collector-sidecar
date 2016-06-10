@@ -16,17 +16,17 @@
 package api
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"io"
-	"crypto/tls"
 	"strconv"
 
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/api/rest"
+	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/daemon"
-	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/system"
 )
 
@@ -112,7 +112,6 @@ func getTlsConfig(context *context.Ctx) *tls.Config {
 	}
 	return tlsConfig
 }
-
 
 func NewStatusRequest() graylog.StatusRequest {
 	statusRequest := graylog.StatusRequest{Backends: make(map[string]system.Status)}

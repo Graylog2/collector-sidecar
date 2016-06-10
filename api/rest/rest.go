@@ -17,6 +17,7 @@ package rest
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -24,9 +25,8 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"time"
-	"crypto/tls"
 	"path"
+	"time"
 
 	"github.com/Graylog2/collector-sidecar/common"
 )

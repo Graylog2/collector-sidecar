@@ -16,8 +16,8 @@
 package nxlog
 
 import (
-	"runtime"
 	"path/filepath"
+	"runtime"
 
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/common"
@@ -28,7 +28,7 @@ import (
 const name = "nxlog"
 
 var (
-	log = common.Log()
+	log           = common.Log()
 	backendStatus = system.Status{}
 )
 

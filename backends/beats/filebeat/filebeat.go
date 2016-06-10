@@ -27,7 +27,7 @@ import (
 const name = "filebeat"
 
 var (
-	log = common.Log()
+	log           = common.Log()
 	backendStatus = system.Status{}
 )
 

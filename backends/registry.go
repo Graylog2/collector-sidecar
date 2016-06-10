@@ -16,9 +16,9 @@
 package backends
 
 import (
+	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
-	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/system"
 )
 
@@ -44,7 +44,7 @@ type Backend interface {
 const (
 	StatusRunning int = 0
 	StatusUnknown int = 1
-	StatusError int = 2
+	StatusError   int = 2
 )
 
 type Creator func(*context.Ctx) Backend

@@ -129,7 +129,7 @@ func (bc *BeatsConfig) PropertyString(p interface{}, precision int) string {
 
 func (bc *BeatsConfig) PropertyBool(p interface{}) bool {
 	switch p.(type) {
-	default :
+	default:
 		return false
 	case bool:
 		return p.(bool)
