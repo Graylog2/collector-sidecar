@@ -1,8 +1,10 @@
-hash: a8c039f2706357a17ef3bbe4ef6934daa54f010ffb00dd088aa91870b960714c
-updated: 2016-06-01T15:14:12.247660084+02:00
+hash: c70cca95f85e18a8b9cc7ff6f31ddb03e92c88868a56f2b4b791a1bf6965131a
+updated: 2016-06-16T12:17:30.371819795+02:00
 imports:
 - name: bitbucket.org/tebeka/strftime
   version: 2194253a23c0
+- name: github.com/cloudfoundry/gosigar
+  version: c32d31af94b0e9d3b2877e49c1a581ad5a793343
 - name: github.com/kardianos/osext
   version: 10da29423eb9a6269092eebdc2be32209612d9d2
 - name: github.com/kardianos/service

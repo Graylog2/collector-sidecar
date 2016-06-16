@@ -13,21 +13,40 @@
 // You should have received a copy of the GNU General Public License
 // along with Graylog.  If not, see <http://www.gnu.org/licenses/>.
 
-package graylog
+package common
 
 import (
-	"github.com/Graylog2/collector-sidecar/system"
+	"fmt"
+	sigar "github.com/cloudfoundry/gosigar"
 )
 
-type RegistrationRequest struct {
-	NodeId      string                 `json:"node_id"`
-	NodeDetails map[string]interface{} `json:"node_details"`
+func GetFileSystemList75() []string {
+	fslist := sigar.FileSystemList{}
+	fslist.Get()
+
+	result := []string{}
+	for _, fs := range fslist.List {
+		dir_name := fs.DirName
+		usage := sigar.FileSystemUsage{}
+		usage.Get(dir_name)
+
+		if usage.UsePercent() >= 75 {
+			result = append(result, fmt.Sprintf("%s (%s)",
+				dir_name,
+				sigar.FormatPercent(usage.UsePercent())))
+		}
+	}
+	return result
 }
 
-type StatusRequest struct {
-	Backends map[string]system.Status `json:"backends"`
-	Status   int                      `json:"status"`
-	Message  string                   `json:"message"`
-	Disks75  []string                 `json:"disks75"`
-	Load1    float64                  `json:"load1"`
+func GetLoad1() float64 {
+	concreteSigar := sigar.ConcreteSigar{}
+
+	avg, err := concreteSigar.GetLoadAverage()
+	if err != nil {
+		log.Error("Failed to get load average")
+		return 0
+	}
+
+	return avg.One
 }

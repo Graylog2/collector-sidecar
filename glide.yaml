@@ -13,3 +13,4 @@ import:
 - package: github.com/urso/ucfg
 - package: github.com/lestrrat/go-file-rotatelogs
 - package: bitbucket.org/tebeka/strftime
+- package: github.com/cloudfoundry/gosigar

@@ -137,5 +137,8 @@ func NewStatusRequest() graylog.StatusRequest {
 		statusRequest.Message = strconv.Itoa(count) + " collectors running"
 	}
 
+	statusRequest.Disks75 = common.GetFileSystemList75()
+	statusRequest.Load1 = common.GetLoad1()
+
 	return statusRequest
 }
