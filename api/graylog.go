@@ -113,7 +113,7 @@ func getTlsConfig(context *context.Ctx) *tls.Config {
 	return tlsConfig
 }
 
-func NewStatusRequest() graylog.StatusRequest {
+func NewStatusRequest(context *context.Ctx) graylog.StatusRequest {
 	statusRequest := graylog.StatusRequest{Backends: make(map[string]system.Status)}
 	combined, count := system.GlobalStatus.Status, 0
 	for name := range daemon.Daemon.Runner {
@@ -137,6 +137,7 @@ func NewStatusRequest() graylog.StatusRequest {
 		statusRequest.Message = strconv.Itoa(count) + " collectors running"
 	}
 
+	statusRequest.Tags = context.UserConfig.Tags
 	statusRequest.Disks75 = common.GetFileSystemList75()
 	statusRequest.Load1 = common.GetLoad1()
 

@@ -28,6 +28,7 @@ type StatusRequest struct {
 	Backends map[string]system.Status `json:"backends"`
 	Status   int                      `json:"status"`
 	Message  string                   `json:"message"`
+	Tags	 []string		  `json:"tags"`
 	Disks75  []string                 `json:"disks75"`
 	Load1    float64                  `json:"load1"`
 }
