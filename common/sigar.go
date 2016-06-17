@@ -18,21 +18,105 @@ package common
 import (
 	"fmt"
 	sigar "github.com/cloudfoundry/gosigar"
+	"math"
+	"os"
+	"runtime"
 )
 
-func GetFileSystemList75() []string {
-	fslist := sigar.FileSystemList{}
-	fslist.Get()
+var (
+	cpu = &CPU{LastCpuTimes: &CpuTimes{}}
+)
 
+type CPU struct {
+	LastCpuTimes *CpuTimes
+}
+
+type CpuTimes struct {
+	sigar.Cpu
+	UserPercent    float64
+	SystemPercent  float64
+	IdlePercent    float64
+	IOwaitPercent  float64
+	IrqPercent     float64
+	NicePercent    float64
+	SoftIrqPercent float64
+	StealPercent   float64
+}
+
+func GetCpuTimes() (*CpuTimes, error) {
+
+	cpu := sigar.Cpu{}
+	err := cpu.Get()
+	if err != nil {
+		return nil, err
+	}
+
+	return &CpuTimes{Cpu: cpu}, nil
+}
+
+func GetCpuPercentage(last *CpuTimes, current *CpuTimes) *CpuTimes {
+	if last != nil && current != nil {
+		all_delta := current.Cpu.Total() - last.Cpu.Total()
+
+		if all_delta == 0 {
+			// first inquiry
+			return current
+		}
+
+		calculate := func(field2 uint64, field1 uint64) float64 {
+			perc := 0.0
+			delta := int64(field2 - field1)
+			perc = float64(delta) / float64(all_delta)
+			return round(perc, .5, 4)
+		}
+
+		current.UserPercent = calculate(current.Cpu.User, last.Cpu.User)
+		current.SystemPercent = calculate(current.Cpu.Sys, last.Cpu.Sys)
+		current.IdlePercent = calculate(current.Cpu.Idle, last.Cpu.Idle)
+		current.IOwaitPercent = calculate(current.Cpu.Wait, last.Cpu.Wait)
+		current.IrqPercent = calculate(current.Cpu.Irq, last.Cpu.Irq)
+		current.NicePercent = calculate(current.Cpu.Nice, last.Cpu.Nice)
+		current.SoftIrqPercent = calculate(current.Cpu.SoftIrq, last.Cpu.SoftIrq)
+		current.StealPercent = calculate(current.Cpu.Stolen, last.Cpu.Stolen)
+	}
+
+	return current
+}
+
+func (cpu *CPU) AddCpuPercentage(t2 *CpuTimes) {
+	cpu.LastCpuTimes = GetCpuPercentage(cpu.LastCpuTimes, t2)
+}
+
+func GetCpuIdle() float64 {
+	cpuStat, err := GetCpuTimes()
+	if err != nil {
+		return -1
+	}
+
+	cpu.AddCpuPercentage(cpuStat)
+	return cpu.LastCpuTimes.IdlePercent * 100
+}
+
+func GetFileSystemList75() []string {
 	result := []string{}
-	for _, fs := range fslist.List {
-		dir_name := fs.DirName
+	volumes := []sigar.FileSystem{}
+
+	if runtime.GOOS == "windows" {
+		volumes = getWindowsDrives()
+	} else {
+		fslist := sigar.FileSystemList{}
+		fslist.Get()
+		volumes = fslist.List
+	}
+
+	for _, volume := range volumes {
+		dirName := volume.DirName
 		usage := sigar.FileSystemUsage{}
-		usage.Get(dir_name)
+		usage.Get(dirName)
 
 		if usage.UsePercent() >= 75 {
 			result = append(result, fmt.Sprintf("%s (%s)",
-				dir_name,
+				dirName,
 				sigar.FormatPercent(usage.UsePercent())))
 		}
 	}
@@ -44,9 +128,35 @@ func GetLoad1() float64 {
 
 	avg, err := concreteSigar.GetLoadAverage()
 	if err != nil {
-		log.Error("Failed to get load average")
-		return 0
+		log.Debug("Failed to get load average")
+		return -1
 	}
 
 	return avg.One
+}
+
+func getWindowsDrives() (drives []sigar.FileSystem) {
+	for _, drive := range "ABCDEFGHIJKLMNOPQRSTUVWXYZ" {
+		dirName := string(drive) + ":\\"
+		_, err := os.Open(dirName)
+		if err == nil {
+			fs := sigar.FileSystem{DirName: dirName}
+			drives = append(drives, fs)
+		}
+	}
+	return
+}
+
+func round(val float64, roundOn float64, places int) (newVal float64) {
+	var round float64
+	pow := math.Pow(10, float64(places))
+	digit := pow * val
+	_, div := math.Modf(digit)
+	if div >= roundOn {
+		round = math.Ceil(digit)
+	} else {
+		round = math.Floor(digit)
+	}
+	newVal = round / pow
+	return
 }
