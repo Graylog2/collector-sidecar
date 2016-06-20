@@ -22,6 +22,7 @@ import (
 	"github.com/Graylog2/collector-sidecar/cfgfile"
 	"github.com/Graylog2/collector-sidecar/context"
 	"strconv"
+	"github.com/Graylog2/collector-sidecar/common"
 )
 
 type NxConfig struct {
@@ -136,10 +137,10 @@ func (nxc *NxConfig) Add(class string, name string, value interface{}) {
 		var multilineStart string
 		var multilineStop string
 		if input_properties["multiline_start"] != nil {
-			multilineStart = input_properties["multiline_start"].(string)
+			multilineStart = common.EncloseWith(input_properties["multiline_start"].(string), "/")
 		}
 		if input_properties["multiline_stop"] != nil {
-			multilineStop = input_properties["multiline_stop"].(string)
+			multilineStop = common.EncloseWith(input_properties["multiline_stop"].(string), "/")
 		}
 		if multiline {
 			extension := &nxextension{name: name + "-multiline", properties: map[string]string{"Module": "xm_multiline"}}

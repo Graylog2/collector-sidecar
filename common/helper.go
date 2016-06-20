@@ -27,6 +27,7 @@ import (
 
 	"github.com/pborman/uuid"
 	"bytes"
+	"fmt"
 )
 
 func GetRootPath() (string, error) {
@@ -113,6 +114,21 @@ func ConvertLineBreak(data []byte) []byte {
 		return data
 	}
 
+}
+
+func EncloseWith(data string, sep string) string {
+	if len(data) == 0 {
+		return ""
+	}
+
+	format := []string{"%s"}
+	if !strings.HasPrefix(data, sep) {
+		format = append([]string{sep}, format...)
+	}
+	if !strings.HasSuffix(data, sep) {
+		format = append(format, sep)
+	}
+	return fmt.Sprintf(strings.Join(format, ""), data)
 }
 
 func Inspect(object interface{}) string {
