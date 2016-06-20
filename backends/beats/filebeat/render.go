@@ -24,6 +24,8 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/common"
+	"fmt"
+	"github.com/Graylog2/collector-sidecar/backends"
 )
 
 func (fbc *FileBeatConfig) snippetsToString() string {
@@ -121,7 +123,10 @@ func (fbc *FileBeatConfig) RenderOnChange(response graylog.ResponseCollectorConf
 				var vt interface{}
 				err := yaml.Unmarshal([]byte(fbc.Beats.PropertyString(value, 0)), &vt)
 				if err != nil {
-					log.Errorf("[%s] Nested YAML is not parsable: '%s'", fbc.Name(), value)
+					msg := fmt.Sprintf("Nested YAML is not parsable: '%s'", value)
+					fbc.SetStatus(backends.StatusError, msg)
+					log.Errorf("[%s] %s", fbc.Name(), msg)
+					return false
 				} else {
 					prospector[idx][property] = vt
 				}
@@ -135,7 +140,10 @@ func (fbc *FileBeatConfig) RenderOnChange(response graylog.ResponseCollectorConf
 				if match == "after" || match == "before" {
 					multiline["match"] = match
 				} else {
-					log.Errorf("[%s] Multiline match can either be 'after' or 'before', but not '%s'", fbc.Name(), match)
+					msg := fmt.Sprintf("Multiline match can either be 'after' or 'before', but not '%s'", match)
+					fbc.SetStatus(backends.StatusError, msg)
+					log.Errorf("[%s] %s", fbc.Name(), msg)
+					return false
 				}
 				prospector[idx]["multiline"] = multiline
 			}

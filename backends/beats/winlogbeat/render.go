@@ -104,6 +104,7 @@ func (wlbc *WinLogBeatConfig) RenderOnChange(response graylog.ResponseCollectorC
 					msg := fmt.Sprintf("Nested YAML is not parsable: '%s'", value)
 					wlbc.SetStatus(backends.StatusError, msg)
 					log.Errorf("[%s] %s", wlbc.Name(), msg)
+					return false
 				} else {
 					for _, name := range vt {
 						eventlogs = append(eventlogs, name)

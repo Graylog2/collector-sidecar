@@ -75,7 +75,14 @@ func (fbc *FileBeatConfig) ValidatePreconditions() bool {
 }
 
 func (fbc *FileBeatConfig) SetStatus(state int, message string) {
-	backendStatus.Set(state, message)
+	// if error state is already set don't overwrite the message to get the root cause
+	if state > backends.StatusRunning &&
+	backendStatus.Status > backends.StatusRunning &&
+	len(backendStatus.Message) != 0 {
+		backendStatus.Set(state, backendStatus.Message)
+	} else {
+		backendStatus.Set(state, message)
+	}
 }
 
 func (fbc *FileBeatConfig) Status() system.Status {
