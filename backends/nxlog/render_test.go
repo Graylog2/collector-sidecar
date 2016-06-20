@@ -30,7 +30,7 @@ func TestRenderSingleExtension(t *testing.T) {
 	result := engine.Render()
 
 	expect := "<Extension test-extension>\n  a b\n</Extension>"
-	if !strings.Contains(result.String(), expect) {
+	if !strings.Contains(string(result), expect) {
 		t.Fail()
 	}
 }
@@ -46,7 +46,7 @@ func TestRenderMultipleExtensions(t *testing.T) {
 
 	expect1 := "<Extension test-extension1>\n  a b\n"
 	expect2 := "<Extension test-extension2>\n  c d\n"
-	if !(strings.Contains(result.String(), expect1) && strings.Contains(result.String(), expect2)) {
+	if !(strings.Contains(string(result), expect1) && strings.Contains(string(result), expect2)) {
 		t.Fail()
 	}
 }
@@ -59,7 +59,7 @@ func TestRenderSingleInput(t *testing.T) {
 	result := engine.Render()
 
 	expect := "<Input test-input>\n  a b\n</Input>"
-	if !strings.Contains(result.String(), expect) {
+	if !strings.Contains(string(result), expect) {
 		t.Fail()
 	}
 }
@@ -75,7 +75,7 @@ func TestRenderMultipleInputs(t *testing.T) {
 
 	expect1 := "<Input test-input1>\n  a b\n"
 	expect2 := "<Input test-input2>\n  c d\n"
-	if !(strings.Contains(result.String(), expect1) && strings.Contains(result.String(), expect2)) {
+	if !(strings.Contains(string(result), expect1) && strings.Contains(string(result), expect2)) {
 		t.Fail()
 	}
 }
@@ -88,7 +88,7 @@ func TestRenderSingleOutput(t *testing.T) {
 	result := engine.Render()
 
 	expect := "<Output test-output>\n  a b\n</Output>"
-	if !strings.Contains(result.String(), expect) {
+	if !strings.Contains(string(result), expect) {
 		t.Fail()
 	}
 }
@@ -104,7 +104,7 @@ func TestRenderMultipleOutputs(t *testing.T) {
 
 	expect1 := "<Output test-output1>\n  a b\n"
 	expect2 := "<Output test-output2>\n  c d\n"
-	if !(strings.Contains(result.String(), expect1) && strings.Contains(result.String(), expect2)) {
+	if !(strings.Contains(string(result), expect1) && strings.Contains(string(result), expect2)) {
 		t.Fail()
 	}
 }
@@ -117,7 +117,7 @@ func TestRenderSingleRoute(t *testing.T) {
 	result := engine.Render()
 
 	expect := "<Route test-route>\n  a b\n</Route>"
-	if !strings.Contains(result.String(), expect) {
+	if !strings.Contains(string(result), expect) {
 		t.Fail()
 	}
 }
@@ -133,7 +133,7 @@ func TestRenderMultipleRoutes(t *testing.T) {
 
 	expect1 := "<Route test-route1>\n  a b\n"
 	expect2 := "<Route test-route2>\n  c d\n"
-	if !(strings.Contains(result.String(), expect1) && strings.Contains(result.String(), expect2)) {
+	if !(strings.Contains(string(result), expect1) && strings.Contains(string(result), expect2)) {
 		t.Fail()
 	}
 }
@@ -147,7 +147,7 @@ func TestRenderSingleSnippet(t *testing.T) {
 	result := engine.Render()
 
 	expect := "snippet-data\n"
-	if !strings.Contains(result.String(), expect) {
+	if !strings.Contains(string(result), expect) {
 		t.Fail()
 	}
 }
@@ -164,7 +164,7 @@ func TestRenderMultipleSnippets(t *testing.T) {
 
 	expect1 := "snippet-data\n"
 	expect2 := "data-snippet\n"
-	if !(strings.Contains(result.String(), expect1) && strings.Contains(result.String(), expect2)) {
+	if !(strings.Contains(string(result), expect1) && strings.Contains(string(result), expect2)) {
 		t.Fail()
 	}
 }
@@ -178,7 +178,7 @@ func TestRenderSnippetTemplate(t *testing.T) {
 	result := engine.Render()
 
 	expect := common.CollectorVersion + "\n"
-	if !strings.Contains(result.String(), expect) {
+	if !strings.Contains(string(result), expect) {
 		t.Fail()
 	}
 }
@@ -192,7 +192,7 @@ func TestRenderSnippetFailedTemplate(t *testing.T) {
 	result := engine.Render()
 
 	expect := "{{non valid template}}\n"
-	if !strings.Contains(result.String(), expect) {
+	if !strings.Contains(string(result), expect) {
 		t.Fail()
 	}
 }
@@ -222,7 +222,7 @@ func TestRenderMultipleFileInputs(t *testing.T) {
 
 	expect1 := "<Input test-file-input1>\n"
 	expect2 := "<Input test-file-input2>\n"
-	if !(strings.Contains(result.String(), expect1) && strings.Contains(result.String(), expect2)) {
+	if !(strings.Contains(string(result), expect1) && strings.Contains(string(result), expect2)) {
 		t.Fail()
 	}
 }
@@ -244,7 +244,7 @@ func TestRenderSingleFileInputWithFields(t *testing.T) {
 
 	expect1 := "Exec $field1 = \"data\";\n"
 	expect2 := "Exec $field2 = \"data\";\n"
-	if !(strings.Contains(result.String(), expect1) && strings.Contains(result.String(), expect2)) {
+	if !(strings.Contains(string(result), expect1) && strings.Contains(string(result), expect2)) {
 		t.Fail()
 	}
 }
@@ -265,7 +265,7 @@ func TestRenderSingleFileInputWithMultilineSupport(t *testing.T) {
 	result := engine.Render()
 
 	expect1 := "InputType test-file-input1-multiline\n"
-	if !strings.Contains(result.String(), expect1) {
+	if !strings.Contains(string(result), expect1) {
 		t.Fail()
 	}
 }
@@ -289,7 +289,7 @@ func TestRenderMultipleWindowsEventInputs(t *testing.T) {
 
 	expect1 := "<Input test-winodws-event-input1>\n"
 	expect2 := "<Input test-winodws-event-input2>\n"
-	if !(strings.Contains(result.String(), expect1) && strings.Contains(result.String(), expect2)) {
+	if !(strings.Contains(string(result), expect1) && strings.Contains(string(result), expect2)) {
 		t.Fail()
 	}
 }
@@ -307,7 +307,7 @@ func TestRenderSingleWindowsEventInputWithChannel(t *testing.T) {
 	result := engine.Render()
 
 	expect1 := "Channel System\n"
-	if !strings.Contains(result.String(), expect1) {
+	if !strings.Contains(string(result), expect1) {
 		t.Fail()
 	}
 }
@@ -325,7 +325,7 @@ func TestRenderSingleWindowsEventInputWithQuery(t *testing.T) {
 	result := engine.Render()
 
 	expect1 := "Query <QueryList> <Query Id=\"0\"> <Select Path=\"Microsoft-Windows-Sysmon/Operational\">*</Select> </Query></QueryList>\n"
-	if !strings.Contains(result.String(), expect1) {
+	if !strings.Contains(string(result), expect1) {
 		t.Fail()
 	}
 }
@@ -344,7 +344,7 @@ func TestRenderSingleWindowsEventInputWithFields(t *testing.T) {
 
 	expect1 := "Exec $field1 = \"data\";\n"
 	expect2 := "Exec $field2 = \"data\";\n"
-	if !(strings.Contains(result.String(), expect1) && strings.Contains(result.String(), expect2)) {
+	if !(strings.Contains(string(result), expect1) && strings.Contains(string(result), expect2)) {
 		t.Fail()
 	}
 }
@@ -366,7 +366,7 @@ func TestRenderMultipleUdpSyslogInputs(t *testing.T) {
 
 	expect1 := "<Input test-udp-syslog-input1>\n"
 	expect2 := "<Input test-udp-syslog-input2>\n"
-	if !(strings.Contains(result.String(), expect1) && strings.Contains(result.String(), expect2)) {
+	if !(strings.Contains(string(result), expect1) && strings.Contains(string(result), expect2)) {
 		t.Fail()
 	}
 }
@@ -384,7 +384,7 @@ func TestRenderSingleUdpSyslogInputWithFields(t *testing.T) {
 
 	expect1 := "Exec $field1 = \"data\";\n"
 	expect2 := "Exec $field2 = \"data\";\n"
-	if !(strings.Contains(result.String(), expect1) && strings.Contains(result.String(), expect2)) {
+	if !(strings.Contains(string(result), expect1) && strings.Contains(string(result), expect2)) {
 		t.Fail()
 	}
 }
@@ -406,7 +406,7 @@ func TestRenderMultipleTcpSyslogInputs(t *testing.T) {
 
 	expect1 := "<Input test-tcp-syslog-input1>\n"
 	expect2 := "<Input test-tcp-syslog-input2>\n"
-	if !(strings.Contains(result.String(), expect1) && strings.Contains(result.String(), expect2)) {
+	if !(strings.Contains(string(result), expect1) && strings.Contains(string(result), expect2)) {
 		t.Fail()
 	}
 }
@@ -424,7 +424,7 @@ func TestRenderSingleTcpSyslogInputWithFields(t *testing.T) {
 
 	expect1 := "Exec $field1 = \"data\";\n"
 	expect2 := "Exec $field2 = \"data\";\n"
-	if !(strings.Contains(result.String(), expect1) && strings.Contains(result.String(), expect2)) {
+	if !(strings.Contains(string(result), expect1) && strings.Contains(string(result), expect2)) {
 		t.Fail()
 	}
 }
@@ -447,7 +447,7 @@ func TestRenderMultipleUdpGelfOutputs(t *testing.T) {
 
 	expect1 := "<Output test-udp-gelf-output1>\n"
 	expect2 := "<Output test-udp-gelf-output2>\n"
-	if !(strings.Contains(result.String(), expect1) && strings.Contains(result.String(), expect2)) {
+	if !(strings.Contains(string(result), expect1) && strings.Contains(string(result), expect2)) {
 		t.Fail()
 	}
 }
@@ -470,7 +470,7 @@ func TestRenderMultipleTcpGelfOutputs(t *testing.T) {
 
 	expect1 := "<Output test-tcp-gelf-output1>\n"
 	expect2 := "<Output test-tcp-gelf-output2>\n"
-	if !(strings.Contains(result.String(), expect1) && strings.Contains(result.String(), expect2)) {
+	if !(strings.Contains(string(result), expect1) && strings.Contains(string(result), expect2)) {
 		t.Fail()
 	}
 }
@@ -493,7 +493,7 @@ func TestRenderMultipleTcpTlsGelfOutputs(t *testing.T) {
 
 	expect1 := "<Output test-tls-gelf-output1>\n"
 	expect2 := "<Output test-tls-gelf-output2>\n"
-	if !(strings.Contains(result.String(), expect1) && strings.Contains(result.String(), expect2)) {
+	if !(strings.Contains(string(result), expect1) && strings.Contains(string(result), expect2)) {
 		t.Fail()
 	}
 }
@@ -512,7 +512,7 @@ func TestRenderSingleTcpTlsGelfOutputWithAllowUntrust(t *testing.T) {
 
 	expect1 := "<Output test-tls-gelf-output1>\n"
 	expect2 := "AllowUntrusted True\n"
-	if !(strings.Contains(result.String(), expect1) && strings.Contains(result.String(), expect2)) {
+	if !(strings.Contains(string(result), expect1) && strings.Contains(string(result), expect2)) {
 		t.Fail()
 	}
 }
