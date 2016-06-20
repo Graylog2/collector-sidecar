@@ -285,7 +285,7 @@ func (nxc *NxConfig) gelfTcpTlsOutputsToString() string {
 	return result.String()
 }
 
-func (nxc *NxConfig) Render() bytes.Buffer {
+func (nxc *NxConfig) Render() []byte {
 	var result bytes.Buffer
 	result.WriteString(nxc.definitionsToString())
 	result.WriteString(nxc.pathsToString())
@@ -305,7 +305,7 @@ func (nxc *NxConfig) Render() bytes.Buffer {
 	result.WriteString(nxc.routesToString())
 	result.WriteString(nxc.matchesToString())
 
-	return result
+	return common.ConvertLineBreak(result.Bytes())
 }
 
 func (nxc *NxConfig) RenderToFile() error {
@@ -314,7 +314,7 @@ func (nxc *NxConfig) RenderToFile() error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(nxc.UserConfig.ConfigurationPath, stringConfig.Bytes(), 0644)
+	err = ioutil.WriteFile(nxc.UserConfig.ConfigurationPath, stringConfig, 0644)
 	return err
 }
 

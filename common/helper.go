@@ -26,6 +26,7 @@ import (
 	"unicode"
 
 	"github.com/pborman/uuid"
+	"bytes"
 )
 
 func GetRootPath() (string, error) {
@@ -103,6 +104,15 @@ func CreatePathToFile(filepath string) error {
 		}
 	}
 	return nil
+}
+
+func ConvertLineBreak(data []byte) []byte {
+	if runtime.GOOS == "windows" {
+		return bytes.Replace(data, []byte("\n"), []byte("\r\n"), -1)
+	} else {
+		return data
+	}
+
 }
 
 func Inspect(object interface{}) string {

@@ -18,12 +18,13 @@ package beats
 import (
 	"errors"
 	"reflect"
+	"strconv"
 
 	"gopkg.in/yaml.v2"
 
 	"github.com/Graylog2/collector-sidecar/cfgfile"
 	"github.com/Graylog2/collector-sidecar/context"
-	"strconv"
+	"github.com/Graylog2/collector-sidecar/common"
 )
 
 var (
@@ -102,7 +103,7 @@ func (bc *BeatsConfig) Equals(a *BeatsConfig) bool {
 func (bc *BeatsConfig) String() string {
 	if bc.Container != nil {
 		if bytes, err := yaml.Marshal(bc.Container); err == nil {
-			return string(bytes)
+			return string(common.ConvertLineBreak(bytes))
 		}
 	}
 	return "---"
