@@ -24,6 +24,8 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/common"
+	"github.com/Graylog2/collector-sidecar/backends"
+	"fmt"
 )
 
 func (wlbc *WinLogBeatConfig) snippetsToString() string {
@@ -69,7 +71,7 @@ func (wlbc *WinLogBeatConfig) RenderOnChange(response graylog.ResponseCollectorC
 	newConfig := NewCollectorConfig(wlbc.Beats.Context)
 
 	// create prospector slice
-	var eventlogs []map[string]interface{}
+	var eventlogs []interface{}
 
 	for _, output := range response.Outputs {
 		if output.Backend == "winlogbeat" {
@@ -95,15 +97,17 @@ func (wlbc *WinLogBeatConfig) RenderOnChange(response graylog.ResponseCollectorC
 
 	for _, input := range response.Inputs {
 		if input.Backend == "winlogbeat" {
-			eventlogs = append(eventlogs, make(map[string]interface{}))
-			idx := len(eventlogs) - 1
-			for property, value := range input.Properties {
-				var vt interface{}
+			for _, value := range input.Properties {
+				var vt []interface{}
 				err := yaml.Unmarshal([]byte(wlbc.Beats.PropertyString(value, 0)), &vt)
 				if err != nil {
-					log.Errorf("[%s] Nested YAML is not parsable: '%s'", wlbc.Name(), value)
+					msg := fmt.Sprintf("Nested YAML is not parsable: '%s'", value)
+					wlbc.SetStatus(backends.StatusError, msg)
+					log.Errorf("[%s] %s", wlbc.Name(), msg)
 				} else {
-					eventlogs[idx][property] = vt
+					for _, name := range vt {
+						eventlogs = append(eventlogs, name)
+					}
 				}
 			}
 		}
