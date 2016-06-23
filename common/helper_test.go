@@ -76,7 +76,7 @@ func TestEncloseWithPrepend(t *testing.T) {
 	content := "some regex/"
 	result := EncloseWith(content, "/")
 
-	if result != "/" + content {
+	if result != "/"+content {
 		t.Fail()
 	}
 }
@@ -85,7 +85,7 @@ func TestEncloseWithAppend(t *testing.T) {
 	content := "/some regex"
 	result := EncloseWith(content, "/")
 
-	if result != content + "/" {
+	if result != content+"/" {
 		t.Fail()
 	}
 }

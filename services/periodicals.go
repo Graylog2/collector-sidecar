@@ -68,11 +68,14 @@ func checkForUpdateAndRestart(context *context.Ctx) {
 			if runner.Running {
 				// collector was already started so a Restart will not fail
 				err = runner.Restart(runner.GetService())
-				if err != nil {
-					msg := "Failed to restart collector"
-					backend.SetStatus(backends.StatusError, msg)
-					log.Error("[%s] %s: %v", name, msg, err)
-				}
+			} else {
+				// collector is not running, we do a fresh start
+				err = runner.Start(runner.GetService())
+			}
+			if err != nil {
+				msg := "Failed to restart collector"
+				backend.SetStatus(backends.StatusError, msg)
+				log.Error("[%s] %s: %v", name, msg, err)
 			}
 
 		}

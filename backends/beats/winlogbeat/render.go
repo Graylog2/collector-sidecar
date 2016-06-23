@@ -22,10 +22,10 @@ import (
 	"os/exec"
 	"text/template"
 
-	"github.com/Graylog2/collector-sidecar/api/graylog"
-	"github.com/Graylog2/collector-sidecar/common"
-	"github.com/Graylog2/collector-sidecar/backends"
 	"fmt"
+	"github.com/Graylog2/collector-sidecar/api/graylog"
+	"github.com/Graylog2/collector-sidecar/backends"
+	"github.com/Graylog2/collector-sidecar/common"
 )
 
 func (wlbc *WinLogBeatConfig) snippetsToString() string {

@@ -49,6 +49,8 @@ type Runner struct {
 	Args           []string
 	Stderr, Stdout string
 	Running        bool
+	RestartCount   int
+	StartTime      time.Time
 	Backend        backends.Backend
 	Context        *context.Ctx
 	Daemon         *DaemonConfig
@@ -81,16 +83,17 @@ func NewConfig() *DaemonConfig {
 
 func (dc *DaemonConfig) NewRunner(backend backends.Backend, context *context.Ctx) *Runner {
 	r := &Runner{
-		Running: false,
-		Context: context,
-		Backend: backend,
-		Name:    backend.Name(),
-		Exec:    backend.ExecPath(),
-		Args:    backend.ExecArgs(),
-		Stderr:  filepath.Join(context.UserConfig.LogPath, backend.Name()+"_stderr.log"),
-		Stdout:  filepath.Join(context.UserConfig.LogPath, backend.Name()+"_stdout.log"),
-		Daemon:  dc,
-		exit:    make(chan struct{}),
+		Running:      false,
+		Context:      context,
+		Backend:      backend,
+		Name:         backend.Name(),
+		Exec:         backend.ExecPath(),
+		Args:         backend.ExecArgs(),
+		RestartCount: 0,
+		Stderr:       filepath.Join(context.UserConfig.LogPath, backend.Name()+"_stderr.log"),
+		Stdout:       filepath.Join(context.UserConfig.LogPath, backend.Name()+"_stdout.log"),
+		Daemon:       dc,
+		exit:         make(chan struct{}),
 	}
 
 	return r
@@ -117,16 +120,48 @@ func (r *Runner) Start(s service.Service) error {
 		return fmt.Errorf("[%s] %s %q: %v", r.Name, msg, r.Exec, err)
 	}
 
-	r.cmd = exec.Command(fullExec, r.Args...)
-	r.cmd.Dir = r.Daemon.Dir
-	r.cmd.Env = append(os.Environ(), r.Daemon.Env...)
+	r.RestartCount = 1
+	go func() {
+		for {
+			r.cmd = exec.Command(fullExec, r.Args...)
+			r.cmd.Dir = r.Daemon.Dir
+			r.cmd.Env = append(os.Environ(), r.Daemon.Env...)
+			r.StartTime = time.Now()
+			r.run()
 
-	go r.run()
+			// A backend should stay alive longer than 3 seconds
+			if time.Since(r.StartTime) < 3*time.Second {
+				msg := "Collector exits immediately, this should not happen! Please check your collector configuration!"
+				r.Backend.SetStatus(backends.StatusError, msg)
+				log.Errorf("[%s] %s", r.Name, msg)
+			}
+			// After 60 seconds we can reset the restart counter
+			if time.Since(r.StartTime) > 60*time.Second {
+				r.RestartCount = 0
+			}
+			if r.RestartCount <= 3 && r.Running {
+				log.Errorf("[%s] Backend crashed, trying to restart %d/3", r.Name, r.RestartCount)
+				time.Sleep(5 * time.Second)
+				r.RestartCount += 1
+				continue
+				// giving up
+			} else if r.RestartCount > 3 {
+				msg := "Collector failed to start after 3 tries!"
+				r.Backend.SetStatus(backends.StatusError, msg)
+				log.Errorf("[%s] %s", r.Name, msg)
+			}
+
+			r.Running = false
+			break
+		}
+	}()
 	return nil
 }
 
 func (r *Runner) Stop(s service.Service) error {
 	log.Infof("[%s] Stopping", r.Name)
+
+	r.Running = false
 	close(r.exit)
 	if r.cmd.Process != nil {
 		r.cmd.Process.Kill()
@@ -173,14 +208,7 @@ func (r *Runner) run() {
 
 	r.Running = true
 	r.Backend.SetStatus(backends.StatusRunning, "Running")
-	startTime := time.Now()
 	r.cmd.Run()
-
-	if time.Since(startTime) < 3*time.Second {
-		msg := "Collector exits immediately, this should not happen! Please check your collector configuration!"
-		r.Backend.SetStatus(backends.StatusError, msg)
-		log.Errorf("[%s] %s", r.Name, msg)
-	}
 
 	return
 }

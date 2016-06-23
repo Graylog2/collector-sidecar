@@ -20,9 +20,9 @@ import (
 	"reflect"
 
 	"github.com/Graylog2/collector-sidecar/cfgfile"
+	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
 	"strconv"
-	"github.com/Graylog2/collector-sidecar/common"
 )
 
 type NxConfig struct {

@@ -23,8 +23,8 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/Graylog2/collector-sidecar/cfgfile"
-	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/common"
+	"github.com/Graylog2/collector-sidecar/context"
 )
 
 var (

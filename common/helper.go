@@ -25,9 +25,9 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/pborman/uuid"
 	"bytes"
 	"fmt"
+	"github.com/pborman/uuid"
 )
 
 func GetRootPath() (string, error) {
