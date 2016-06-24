@@ -452,6 +452,25 @@ func TestRenderMultipleUdpGelfOutputs(t *testing.T) {
 	}
 }
 
+func TestRenderUdpGelfOutputWithFields(t *testing.T) {
+	engine := &NxConfig{
+		Context: context.NewContext(),
+		Canned: []nxcanned{{name: "test-udp-gelf-output1", kind: "output-gelf-udp", properties: map[string]interface{}{
+			"server": "127.0.0.1",
+			"port":   "12201",
+			"fields": map[string]interface{}{"field1": "data", "field2": "data"},
+		}}},
+	}
+
+	result := engine.Render()
+
+	expect1 := "Exec $field1 = \"data\";\n"
+	expect2 := "Exec $field2 = \"data\";\n"
+	if !(strings.Contains(string(result), expect1) && strings.Contains(string(result), expect2)) {
+		t.Fail()
+	}
+}
+
 func TestRenderMultipleTcpGelfOutputs(t *testing.T) {
 	engine := &NxConfig{
 		Context: context.NewContext(),
@@ -475,6 +494,25 @@ func TestRenderMultipleTcpGelfOutputs(t *testing.T) {
 	}
 }
 
+func TestRenderTcpGelfOutputWithFields(t *testing.T) {
+	engine := &NxConfig{
+		Context: context.NewContext(),
+		Canned: []nxcanned{{name: "test-tcp-gelf-output1", kind: "output-gelf-tcp", properties: map[string]interface{}{
+			"server": "127.0.0.1",
+			"port":   "12201",
+			"fields": map[string]interface{}{"field1": "data", "field2": "data"},
+		}}},
+	}
+
+	result := engine.Render()
+
+	expect1 := "Exec $field1 = \"data\";\n"
+	expect2 := "Exec $field2 = \"data\";\n"
+	if !(strings.Contains(string(result), expect1) && strings.Contains(string(result), expect2)) {
+		t.Fail()
+	}
+}
+
 func TestRenderMultipleTcpTlsGelfOutputs(t *testing.T) {
 	engine := &NxConfig{
 		Context: context.NewContext(),
@@ -493,6 +531,25 @@ func TestRenderMultipleTcpTlsGelfOutputs(t *testing.T) {
 
 	expect1 := "<Output test-tls-gelf-output1>\n"
 	expect2 := "<Output test-tls-gelf-output2>\n"
+	if !(strings.Contains(string(result), expect1) && strings.Contains(string(result), expect2)) {
+		t.Fail()
+	}
+}
+
+func TestRenderTcpTlsGelfOutputWithFields(t *testing.T) {
+	engine := &NxConfig{
+		Context: context.NewContext(),
+		Canned: []nxcanned{{name: "test-tls-gelf-output1", kind: "output-gelf-tcp-tls", properties: map[string]interface{}{
+			"server": "127.0.0.1",
+			"port":   "12201",
+			"fields": map[string]interface{}{"field1": "data", "field2": "data"},
+		}}},
+	}
+
+	result := engine.Render()
+
+	expect1 := "Exec $field1 = \"data\";\n"
+	expect2 := "Exec $field2 = \"data\";\n"
 	if !(strings.Contains(string(result), expect1) && strings.Contains(string(result), expect2)) {
 		t.Fail()
 	}
