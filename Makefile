@@ -71,10 +71,6 @@ build-windows32: ## Build collector-sidecar binary for Windows 32bit
 	@mkdir -p build/$(COLLECTOR_VERSION)/windows/386
 	GOOS=windows GOARCH=386 $(GO) build -v -i -o build/$(COLLECTOR_VERSION)/windows/386/graylog-collector-sidecar.exe
 
-build-solaris: ## Build collector-sidecar binary for Solaris
-	@mkdir -p build/$(COLLECTOR_VERSION)/solaris/amd64
-	GOOS=solaris GOARCH=amd64 $(GO) build -v -i -o build/$(COLLECTOR_VERSION)/solaris/amd64/graylog-collector-sidecar
-
 package-all: prepare-package package-linux package-linux32 package-windows package-windows32
 
 prepare-package:
