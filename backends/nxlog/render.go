@@ -146,6 +146,9 @@ func (nxc *NxConfig) fileInputsToString() string {
 			if nxc.isEnabled(can.properties["multiline"]) {
 				result.WriteString("	InputType " + can.name + "-multiline\n")
 			}
+			if nxc.isEnabled(can.properties["verbatim"]) {
+				result.WriteString(nxc.propertyStringIndented(can.properties["verbatim"], 0))
+			}
 			result.WriteString("</Input>\n")
 		}
 	}
@@ -173,6 +176,9 @@ func (nxc *NxConfig) windowsEventLogInputsToString() string {
 					result.WriteString("	Exec $" + key + " = \"" + value.(string) + "\";\n")
 				}
 			}
+			if nxc.isEnabled(can.properties["verbatim"]) {
+				result.WriteString(nxc.propertyString(can.properties["verbatim"], 0))
+			}
 			result.WriteString("</Input>\n")
 		}
 	}
@@ -194,6 +200,9 @@ func (nxc *NxConfig) udpSyslogInputsToString() string {
 				}
 			}
 			result.WriteString("	Exec parse_syslog_bsd();\n")
+			if nxc.isEnabled(can.properties["verbatim"]) {
+				result.WriteString(nxc.propertyString(can.properties["verbatim"], 0))
+			}
 			result.WriteString("</Input>\n")
 		}
 	}
@@ -215,6 +224,9 @@ func (nxc *NxConfig) tcpSyslogInputsToString() string {
 				}
 			}
 			result.WriteString("	Exec parse_syslog_bsd();\n")
+			if nxc.isEnabled(can.properties["verbatim"]) {
+				result.WriteString(nxc.propertyString(can.properties["verbatim"], 0))
+			}
 			result.WriteString("</Input>\n")
 		}
 	}
@@ -239,6 +251,9 @@ func (nxc *NxConfig) gelfUdpOutputsToString() string {
 					result.WriteString("	Exec $" + key + " = \"" + value.(string) + "\";\n")
 				}
 			}
+			if nxc.isEnabled(can.properties["verbatim"]) {
+				result.WriteString(nxc.propertyString(can.properties["verbatim"], 0))
+			}
 			result.WriteString("</Output>\n")
 		}
 	}
@@ -262,6 +277,9 @@ func (nxc *NxConfig) gelfTcpOutputsToString() string {
 				for key, value := range nxc.propertyStringMap(can.properties["fields"]) {
 					result.WriteString("	Exec $" + key + " = \"" + value.(string) + "\";\n")
 				}
+			}
+			if nxc.isEnabled(can.properties["verbatim"]) {
+				result.WriteString(nxc.propertyString(can.properties["verbatim"], 0))
 			}
 			result.WriteString("</Output>\n")
 		}
@@ -292,6 +310,9 @@ func (nxc *NxConfig) gelfTcpTlsOutputsToString() string {
 				for key, value := range nxc.propertyStringMap(can.properties["fields"]) {
 					result.WriteString("	Exec $" + key + " = \"" + value.(string) + "\";\n")
 				}
+			}
+			if nxc.isEnabled(can.properties["verbatim"]) {
+				result.WriteString(nxc.propertyString(can.properties["verbatim"], 0))
 			}
 			result.WriteString("</Output>\n")
 		}

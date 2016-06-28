@@ -23,6 +23,7 @@ import (
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
 	"strconv"
+	"strings"
 )
 
 type NxConfig struct {
@@ -249,6 +250,15 @@ func (nxc *NxConfig) propertyString(p interface{}, precision int) string {
 		return strconv.FormatFloat(t, 'f', precision, 64)
 	}
 
+}
+
+func (nxc *NxConfig) propertyStringIndented(p interface{}, precision int) string {
+	var result string
+	lines := strings.Split(nxc.propertyString(p, precision), "\n")
+	for _, line := range lines {
+		result = result + "	" + line + "\n"
+	}
+	return result
 }
 
 func (nxc *NxConfig) propertyStringMap(p interface{}) map[string]interface{} {
