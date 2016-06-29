@@ -141,6 +141,7 @@ func NewStatusRequest(context *context.Ctx) graylog.StatusRequest {
 	statusRequest.Disks75 = common.GetFileSystemList75()
 	statusRequest.CpuIdle = common.GetCpuIdle()
 	statusRequest.Load1 = common.GetLoad1()
+	statusRequest.LogFileList = common.ListFiles("/var/log")
 
 	return statusRequest
 }

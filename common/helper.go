@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -69,42 +68,6 @@ func GetCollectorId(collectorId string) string {
 
 func RandomUuid() string {
 	return uuid.NewRandom().String()
-}
-
-func FileExists(filePath string) error {
-	_, err := os.Stat(filePath)
-	if os.IsNotExist(err) {
-		return err
-	}
-	return nil
-
-}
-
-func IsDir(filePath string) bool {
-	fi, err := os.Stat(filePath)
-	if err != nil {
-		log.Error(err)
-		return false
-	}
-	if fi.Mode().IsDir() {
-		return true
-	}
-	return false
-
-}
-
-func CreatePathToFile(filepath string) error {
-	dir := path.Dir(filepath)
-	_, err := os.Open(dir)
-	if err != nil {
-		log.Info("Trying to create directory for: ", filepath)
-		err = os.MkdirAll(dir, 0750)
-		if err != nil {
-			log.Error("Not able to create directory path: ", dir)
-			return err
-		}
-	}
-	return nil
 }
 
 func ConvertLineBreak(data []byte) []byte {

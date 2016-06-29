@@ -17,6 +17,7 @@ package graylog
 
 import (
 	"github.com/Graylog2/collector-sidecar/system"
+	"github.com/Graylog2/collector-sidecar/common"
 )
 
 type RegistrationRequest struct {
@@ -25,11 +26,12 @@ type RegistrationRequest struct {
 }
 
 type StatusRequest struct {
-	Backends map[string]system.Status `json:"backends"`
-	Status   int                      `json:"status"`
-	Message  string                   `json:"message"`
-	Tags     []string                 `json:"tags"`
-	Disks75  []string                 `json:"disks75"`
-	CpuIdle  float64                  `json:"cpu_idle"`
-	Load1    float64                  `json:"load1"`
+	Backends    map[string]system.Status `json:"backends"`
+	Status      int                      `json:"status"`
+	Message     string                   `json:"message"`
+	Tags        []string                 `json:"tags"`
+	Disks75     []string                 `json:"disks_75"`
+	CpuIdle     float64                  `json:"cpu_idle"`
+	Load1       float64                  `json:"load_1"`
+	LogFileList []common.File            `json:"log_file_list"`
 }
