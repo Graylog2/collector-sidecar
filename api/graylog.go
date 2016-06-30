@@ -78,16 +78,27 @@ func RequestConfiguration(context *context.Ctx) (graylog.ResponseCollectorConfig
 	return respBody, err
 }
 
-func UpdateRegistration(context *context.Ctx, status graylog.StatusRequest) {
+func UpdateRegistration(context *context.Ctx, status *graylog.StatusRequest) {
 	c := rest.NewClient(nil, getTlsConfig(context))
 	c.BaseURL = context.ServerUrl
 
+	metrics := &graylog.MetricsRequest{
+		Disks75: common.GetFileSystemList75(),
+		CpuIdle: common.GetCpuIdle(),
+		Load1:   common.GetLoad1(),
+	}
+
 	registration := graylog.RegistrationRequest{}
+
 	registration.NodeId = context.UserConfig.NodeId
-	registration.NodeDetails = make(map[string]interface{})
-	registration.NodeDetails["operating_system"] = common.GetSystemName()
+	registration.NodeDetails.OperatingSystem = common.GetSystemName()
 	if context.UserConfig.SendStatus {
-		registration.NodeDetails["status"] = status
+		registration.NodeDetails.Tags = context.UserConfig.Tags
+		registration.NodeDetails.Status = status
+		registration.NodeDetails.Metrics = metrics
+		if len(context.UserConfig.ListLogFiles) > 0 {
+			registration.NodeDetails.LogFileList = common.ListFiles(context.UserConfig.ListLogFiles)
+		}
 	}
 
 	r, err := c.NewRequest("PUT", "/plugins/org.graylog.plugins.collector/collectors/"+context.CollectorId, nil, registration)
@@ -113,7 +124,7 @@ func getTlsConfig(context *context.Ctx) *tls.Config {
 	return tlsConfig
 }
 
-func NewStatusRequest(context *context.Ctx) graylog.StatusRequest {
+func NewStatusRequest() graylog.StatusRequest {
 	statusRequest := graylog.StatusRequest{Backends: make(map[string]system.Status)}
 	combined, count := system.GlobalStatus.Status, 0
 	for name := range daemon.Daemon.Runner {
@@ -136,12 +147,6 @@ func NewStatusRequest(context *context.Ctx) graylog.StatusRequest {
 		statusRequest.Status = system.GlobalStatus.Status
 		statusRequest.Message = strconv.Itoa(count) + " collectors running"
 	}
-
-	statusRequest.Tags = context.UserConfig.Tags
-	statusRequest.Disks75 = common.GetFileSystemList75()
-	statusRequest.CpuIdle = common.GetCpuIdle()
-	statusRequest.Load1 = common.GetLoad1()
-	statusRequest.LogFileList = common.ListFiles("/var/log")
 
 	return statusRequest
 }

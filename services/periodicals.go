@@ -43,8 +43,8 @@ func StartPeriodicals(context *context.Ctx) {
 // report collector status to Graylog server
 func updateCollectorRegistration(context *context.Ctx) {
 	time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
-	statusRequest := api.NewStatusRequest(context)
-	api.UpdateRegistration(context, statusRequest)
+	statusRequest := api.NewStatusRequest()
+	api.UpdateRegistration(context, &statusRequest)
 }
 
 // fetch configuration periodically

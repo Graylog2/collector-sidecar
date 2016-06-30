@@ -16,22 +16,31 @@
 package graylog
 
 import (
-	"github.com/Graylog2/collector-sidecar/system"
 	"github.com/Graylog2/collector-sidecar/common"
+	"github.com/Graylog2/collector-sidecar/system"
 )
 
 type RegistrationRequest struct {
-	NodeId      string                 `json:"node_id"`
-	NodeDetails map[string]interface{} `json:"node_details"`
+	NodeId      string             `json:"node_id"`
+	NodeDetails NodeDetailsRequest `json:"node_details"`
+}
+
+type NodeDetailsRequest struct {
+	OperatingSystem string          `json:"operating_system"`
+	Tags            []string        `json:"tags"`
+	LogFileList     []common.File   `json:"log_file_list"`
+	Metrics         *MetricsRequest `json:"metrics"`
+	Status          *StatusRequest  `json:"status"`
 }
 
 type StatusRequest struct {
-	Backends    map[string]system.Status `json:"backends"`
-	Status      int                      `json:"status"`
-	Message     string                   `json:"message"`
-	Tags        []string                 `json:"tags"`
-	Disks75     []string                 `json:"disks_75"`
-	CpuIdle     float64                  `json:"cpu_idle"`
-	Load1       float64                  `json:"load_1"`
-	LogFileList []common.File            `json:"log_file_list"`
+	Backends map[string]system.Status `json:"backends"`
+	Status   int                      `json:"status"`
+	Message  string                   `json:"message"`
+}
+
+type MetricsRequest struct {
+	Disks75 []string `json:"disks_75"`
+	CpuIdle float64  `json:"cpu_idle"`
+	Load1   float64  `json:"load_1"`
 }

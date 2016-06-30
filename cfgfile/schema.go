@@ -30,6 +30,7 @@ type SidecarConfig struct {
 	LogMaxAge       int      `config:"log_max_age"`
 	UpdateInterval  int      `config:"update_interval"`
 	SendStatus      bool     `config:"send_status"`
+	ListLogFiles	[]string `config:"list_log_files"`
 	Backends        []SidecarBackend
 }
 

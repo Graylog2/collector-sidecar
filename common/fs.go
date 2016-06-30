@@ -1,7 +1,6 @@
 package common
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -43,22 +42,29 @@ func CreatePathToFile(filepath string) error {
 	return nil
 }
 
-func ListFiles(path string) []File {
+func ListFiles(paths []string) []File {
 	list := []File{}
-	if !IsDir(path) {
-		return list
+
+	filter := func(path string, file os.FileInfo, err error) error {
+		if err == nil {
+			list = append(list,
+				File{Path: path,
+					ModTime: file.ModTime(),
+					Size:    file.Size(),
+					IsDir:   file.IsDir()})
+		}
+		return err
 	}
 
-	files, err := ioutil.ReadDir(path)
-	if err != nil {
-		log.Errorf("Can not get file list for %s", path)
-	}
-	for _, file := range files {
-		list = append(list,
-			File{Path: filepath.Join(path, file.Name()),
-			ModTime: file.ModTime(),
-			Size:    file.Size(),
-			IsDir:   file.IsDir()})
+	for _, path := range paths {
+		if !IsDir(path) {
+			continue
+		}
+
+		err := filepath.Walk(path, filter)
+		if err != nil {
+			log.Errorf("Can not get file list for %s", path)
+		}
 	}
 
 	return list
