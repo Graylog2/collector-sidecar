@@ -18,12 +18,14 @@ package nxlog
 import (
 	"path/filepath"
 	"reflect"
+	"strconv"
+	"strings"
+	"fmt"
 
 	"github.com/Graylog2/collector-sidecar/cfgfile"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
-	"strconv"
-	"strings"
+	"github.com/Graylog2/collector-sidecar/backends"
 )
 
 type NxConfig struct {
@@ -117,8 +119,14 @@ func (nxc *NxConfig) Add(class string, name string, value interface{}) {
 		addition := &nxmatch{name: name, properties: value.(map[string]string)}
 		nxc.Matches = append(nxc.Matches, *addition)
 	case "snippet":
-		addition := &nxsnippet{name: name, value: value.(string)}
-		nxc.Snippets = append(nxc.Snippets, *addition)
+		snippet := &nxsnippet{name: name, value: value.(string)}
+		if !nxc.Exists("snippet", snippet) {
+			nxc.Snippets = append(nxc.Snippets, *snippet)
+		} else {
+			msg := fmt.Sprintf("Skipping snippet %s till it already exist in configuration.", name)
+			nxc.SetStatus(backends.StatusUnknown, msg)
+			log.Warnf("[%s] %s", nxc.Name(), msg)
+		}
 	//pre-canned configuration types
 	case "output-gelf-udp":
 		addition := &nxcanned{name: name, kind: class, properties: value.(map[string]interface{})}
@@ -159,56 +167,63 @@ func (nxc *NxConfig) Add(class string, name string, value interface{}) {
 	case "input-udp-syslog":
 		addition := &nxcanned{name: name, kind: class, properties: value.(map[string]interface{})}
 		nxc.Canned = append(nxc.Canned, *addition)
-		if !nxc.Exists("extension", "syslog") {
-			extension := &nxextension{name: "syslog", properties: map[string]string{"Module": "xm_syslog"}}
+		extension := &nxextension{name: "syslog", properties: map[string]string{"Module": "xm_syslog"}}
+		if !nxc.Exists("extension", extension) {
 			nxc.Extensions = append(nxc.Extensions, *extension)
 		}
 	case "input-tcp-syslog":
 		addition := &nxcanned{name: name, kind: class, properties: value.(map[string]interface{})}
 		nxc.Canned = append(nxc.Canned, *addition)
-		if !nxc.Exists("extension", "syslog") {
-			extension := &nxextension{name: "syslog", properties: map[string]string{"Module": "xm_syslog"}}
+		extension := &nxextension{name: "syslog", properties: map[string]string{"Module": "xm_syslog"}}
+		if !nxc.Exists("extension", extension) {
 			nxc.Extensions = append(nxc.Extensions, *extension)
 		}
 	}
 }
 
-func (nxc *NxConfig) Exists(class string, name string) bool {
+func (nxc *NxConfig) Exists(class string, c interface{}) bool {
 	result := false
 	switch class {
 	case "extension":
+		comparator := c.(*nxextension)
 		for _, entity := range nxc.Extensions {
-			if entity.name == name {
+			if entity.name == comparator.name && reflect.DeepEqual(entity.properties, comparator.properties) {
 				result = true
 			}
 		}
 	case "input":
+		comparator := c.(*nxinput)
 		for _, entity := range nxc.Inputs {
-			if entity.name == name {
+			log.Info(entity.properties)
+			if entity.name == comparator.name && reflect.DeepEqual(entity.properties, comparator.properties) {
 				result = true
 			}
 		}
 	case "output":
+		comparator := c.(*nxoutput)
 		for _, entity := range nxc.Outputs {
-			if entity.name == name {
+			if entity.name == comparator.name && reflect.DeepEqual(entity.properties, comparator.properties) {
 				result = true
 			}
 		}
 	case "route":
+		comparator := c.(*nxroute)
 		for _, entity := range nxc.Routes {
-			if entity.name == name {
+			if entity.name == comparator.name && reflect.DeepEqual(entity.properties, comparator.properties) {
 				result = true
 			}
 		}
 	case "match":
+		comparator := c.(*nxmatch)
 		for _, entity := range nxc.Matches {
-			if entity.name == name {
+			if entity.name == comparator.name && reflect.DeepEqual(entity.properties, comparator.properties) {
 				result = true
 			}
 		}
 	case "snippet":
+		comparator := c.(*nxsnippet)
 		for _, entity := range nxc.Snippets {
-			if entity.name == name {
+			if entity.value == comparator.value {
 				result = true
 			}
 		}
