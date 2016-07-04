@@ -89,7 +89,7 @@ func (dc *DaemonConfig) NewRunner(backend backends.Backend, context *context.Ctx
 		Name:         backend.Name(),
 		Exec:         backend.ExecPath(),
 		Args:         backend.ExecArgs(),
-		RestartCount: 0,
+		RestartCount: 1,
 		Stderr:       filepath.Join(context.UserConfig.LogPath, backend.Name()+"_stderr.log"),
 		Stdout:       filepath.Join(context.UserConfig.LogPath, backend.Name()+"_stdout.log"),
 		Daemon:       dc,
