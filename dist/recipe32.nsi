@@ -16,7 +16,7 @@
 ;---------------------------------
 ;General
  
-  OutFile "pkg/graylog_collector_sidecar_installer_${VERSION}_i386.exe"
+  OutFile "pkg/collector_sidecar_installer_${VERSION}_i386.exe"
   ShowInstDetails "nevershow"
   ShowUninstDetails "nevershow"
   ;SetCompressor "bzip2"
