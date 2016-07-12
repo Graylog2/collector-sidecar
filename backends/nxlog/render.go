@@ -109,6 +109,19 @@ func (nxc *NxConfig) matchesToString() string {
 	return result.String()
 }
 
+func (nxc *NxConfig) processorsToString() string {
+	var result bytes.Buffer
+	for _, processor := range nxc.Processors {
+		result.WriteString("<Processor " + processor.name + ">\n")
+		for propertyName, propertyValue := range processor.properties {
+			result.WriteString("  " + propertyName + " " + nxc.propertyString(propertyValue, 0) + "\n")
+		}
+		result.WriteString("</Processor>\n")
+	}
+	result.WriteString("\n")
+	return result.String()
+}
+
 func (nxc *NxConfig) snippetsToString() string {
 	var result bytes.Buffer
 	for _, snippet := range nxc.Snippets {
@@ -321,11 +334,20 @@ func (nxc *NxConfig) gelfTcpTlsOutputsToString() string {
 	return result.String()
 }
 
+func (nxc *NxConfig) memBufferProperties() map[string]string {
+	return map[string]string{
+		"Module":  "pm_buffer",
+		"MaxSize": "16384",
+		"Type":    "Mem",
+	}
+}
+
 func (nxc *NxConfig) Render() []byte {
 	var result bytes.Buffer
 	result.WriteString(nxc.definitionsToString())
 	result.WriteString(nxc.pathsToString())
 	result.WriteString(nxc.extensionsToString())
+	result.WriteString(nxc.processorsToString())
 	result.WriteString(nxc.snippetsToString())
 	result.WriteString(nxc.inputsToString())
 	result.WriteString(nxc.outputsToString())
@@ -368,12 +390,30 @@ func (nxc *NxConfig) RenderOnChange(json graylog.ResponseCollectorConfiguration)
 	}
 	for i, input := range json.Inputs {
 		if input.Backend == "nxlog" {
+			// input has a special type like udp-syslog
 			if len(input.Type) > 0 {
 				jsonConfig.Add("input-"+input.Type, input.Id, input.Properties)
+				output, err := jsonConfig.findCannedOutputByName(input.ForwardTo)
+				if err != nil {
+					log.Errorf("[%s] Could not find output for %s: %s", nxc.Name(), input.Name, err)
+					continue
+				}
+				// add buffer processor if corresponding output is marked as buffered
+				if nxc.isEnabled(output.properties["buffered"]) {
+					jsonConfig.Add("processor", input.Id+"-buffer", nxc.memBufferProperties())
+					// add buffered route
+					jsonConfig.Add("route",
+						"route-"+strconv.Itoa(i),
+						map[string]string{"Path": input.Id + " => " + input.Id + "-buffer" + " => " + output.name})
+				} else {
+					// add un-buffered route
+					jsonConfig.Add("route", "route-"+strconv.Itoa(i), map[string]string{"Path": input.Id + " => " + input.ForwardTo})
+				}
+				// input is generic
 			} else {
-				jsonConfig.Add("input", input.ForwardTo, input.Properties)
+				jsonConfig.Add("input", input.Id, input.Properties)
+				jsonConfig.Add("route", "route-"+strconv.Itoa(i), map[string]string{"Path": input.Id + " => " + input.ForwardTo})
 			}
-			jsonConfig.Add("route", "route-"+strconv.Itoa(i), map[string]string{"Path": input.Id + " => " + input.ForwardTo})
 		}
 	}
 	for _, snippet := range json.Snippets {

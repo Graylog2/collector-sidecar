@@ -16,16 +16,17 @@
 package nxlog
 
 import (
+	"fmt"
 	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
-	"fmt"
 
+	"errors"
+	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/cfgfile"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
-	"github.com/Graylog2/collector-sidecar/backends"
 )
 
 type NxConfig struct {
@@ -38,6 +39,7 @@ type NxConfig struct {
 	Outputs     []nxoutput
 	Routes      []nxroute
 	Matches     []nxmatch
+	Processors  []nxprocessor
 	Snippets    []nxsnippet
 	Canned      []nxcanned
 }
@@ -77,6 +79,11 @@ type nxmatch struct {
 	properties map[string]string
 }
 
+type nxprocessor struct {
+	name       string
+	properties map[string]string
+}
+
 type nxsnippet struct {
 	name  string
 	value string
@@ -101,6 +108,15 @@ func NewCollectorConfig(context *context.Ctx) *NxConfig {
 	return nxc
 }
 
+func (nxc *NxConfig) findCannedOutputByName(name string) (nxcanned, error) {
+	for _, can := range nxc.Canned {
+		if can.name == name && strings.HasPrefix(can.kind, "output") {
+			return can, nil
+		}
+	}
+	return nxcanned{}, errors.New("Output " + name + " not found.")
+}
+
 func (nxc *NxConfig) Add(class string, name string, value interface{}) {
 	switch class {
 	case "extension":
@@ -118,6 +134,9 @@ func (nxc *NxConfig) Add(class string, name string, value interface{}) {
 	case "match":
 		addition := &nxmatch{name: name, properties: value.(map[string]string)}
 		nxc.Matches = append(nxc.Matches, *addition)
+	case "processor":
+		addition := &nxprocessor{name: name, properties: value.(map[string]string)}
+		nxc.Processors = append(nxc.Processors, *addition)
 	case "snippet":
 		snippet := &nxsnippet{name: name, value: value.(string)}
 		if !nxc.Exists("snippet", snippet) {
@@ -239,6 +258,7 @@ func (nxc *NxConfig) Update(a *NxConfig) {
 	nxc.Outputs = a.Outputs
 	nxc.Routes = a.Routes
 	nxc.Matches = a.Matches
+	nxc.Processors = a.Processors
 	nxc.Snippets = a.Snippets
 	nxc.Canned = a.Canned
 }
