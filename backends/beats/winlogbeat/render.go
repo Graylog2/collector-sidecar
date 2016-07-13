@@ -73,6 +73,8 @@ func (wlbc *WinLogBeatConfig) RenderOnChange(response graylog.ResponseCollectorC
 	// create prospector slice
 	var eventlogs []interface{}
 
+	newConfig.Beats.Set(wlbc.Beats.Context.UserConfig.Tags, "shipper", "tags")
+
 	for _, output := range response.Outputs {
 		if output.Backend == "winlogbeat" {
 			for property, value := range output.Properties {
