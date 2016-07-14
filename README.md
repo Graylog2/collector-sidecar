@@ -7,18 +7,16 @@
 The Graylog Collector Sidecar is a supervisor process for 3rd party log collectors like NXLog. The Sidecar program is able to fetch configurations from a Graylog server and render
 them as a valid configuration file for various log collectors. You can think of it like a centralized configuration management system for your log collectors.
 
-Documentation
--------------
+## Documentation
 
 Please check our official [documentation](http://docs.graylog.org/en/latest/pages/collector_sidecar.html) for more information.
 
-Installation
-------------
+## Installation
 
 [Download a package](https://github.com/Graylog2/collector-sidecar/releases) and install it on the target system.
 
 
-## Beats backend
+### Beats backend
 **Ubuntu**
 
 The Beats binaries (Filebeat and Winlogeventbeat) are included in the Sidecar package. So installation is just one command.
@@ -69,7 +67,7 @@ Edit `C:\Program Files (x86)\graylog\collector-sidecar\collector_sidecar.yml`.
   $ C:\Program Files (x86)\graylog\collector-sidecar\graylog-collector-sidecar.exe -service start
 ```
 
-## NXLog backend
+### NXLog backend
 
 **Ubuntu**
 
@@ -125,8 +123,7 @@ Edit `C:\Program Files (x86)\graylog\collector-sidecar\collector_sidecar.yml`, y
   $ C:\Program Files (x86)\graylog\collector-sidecar\graylog-collector-sidecar.exe -service start
 ```
 
-Debugging
----------
+## Debugging
 
 Run the Sidecar in foreground mode for debugging purposes. Simply call it like this and look out for error messages:
 
@@ -134,8 +131,7 @@ Run the Sidecar in foreground mode for debugging purposes. Simply call it like t
   $ graylog-collector-sidecar -c /etc/graylog/collector-sidecar/collector_sidecar.yml
 ```
 
-Configuration
--------------
+## Configuration
 
 There are a couple of configuration settings for the Sidecar:
 
@@ -163,8 +159,7 @@ Each backend can be enabled/disabled and should point to a binary of the actual 
 | binary_path        | Path to the actual collector binary                               |
 | configuration_path | A path for this collector configuration file Sidecar can write to |
     
-Compile
--------
+## Compile
 
   * Clone the repository into your `$GOPATH` under `src/github.com/Graylog2/collector-sidecar`
   * Install the [glide package manager](https://glide.sh)
@@ -172,8 +167,7 @@ Compile
   * (for Go <1.6 `export GO15VENDOREXPERIMENT=1`)
   * run `make build`
 
-Development
------------
+## Development
 
 There is a collector mock programm in order to use the collector-sidecar without actually running a collector like NXLog. Simply build it with
 `make misc` und use the option `binary_path: misc/nxmock/nxlog`.
