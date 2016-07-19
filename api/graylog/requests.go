@@ -27,10 +27,10 @@ type RegistrationRequest struct {
 
 type NodeDetailsRequest struct {
 	OperatingSystem string          `json:"operating_system"`
-	Tags            []string        `json:"tags"`
-	LogFileList     []common.File   `json:"log_file_list"`
-	Metrics         *MetricsRequest `json:"metrics"`
-	Status          *StatusRequest  `json:"status"`
+	Tags            []string        `json:"tags,omitempty"`
+	LogFileList     []common.File   `json:"log_file_list,omitempty"`
+	Metrics         *MetricsRequest `json:"metrics,omitempty"`
+	Status          *StatusRequest  `json:"status,omitempty"`
 }
 
 type StatusRequest struct {
