@@ -87,10 +87,18 @@ func (fbc *FileBeatConfig) RenderOnChange(response graylog.ResponseCollectorConf
 				newConfig.Beats.Set(value, "output", output.Type, property)
 			}
 			if fbc.Beats.PropertyBool(output.Properties["tls"]) {
-				newConfig.Beats.Set([]string{fbc.Beats.PropertyString(output.Properties["ca_file"], 0)}, "output", "logstash", "tls", "certificate_authorities")
-				newConfig.Beats.Set(output.Properties["cert_file"], "output", "logstash", "tls", "certificate")
-				newConfig.Beats.Set(output.Properties["cert_key_file"], "output", "logstash", "tls", "certificate_key")
-				newConfig.Beats.Set(fbc.Beats.PropertyBool(output.Properties["tls_insecure"]), "output", "logstash", "tls", "insecure")
+				if fbc.Beats.PropertyBool(output.Properties["ca_file"]) {
+					newConfig.Beats.Set([]string{fbc.Beats.PropertyString(output.Properties["ca_file"], 0)}, "output", "logstash", "tls", "certificate_authorities")
+				}
+				if fbc.Beats.PropertyBool(output.Properties["cert_file"]) {
+					newConfig.Beats.Set(output.Properties["cert_file"], "output", "logstash", "tls", "certificate")
+				}
+				if fbc.Beats.PropertyBool(output.Properties["cert_key_file"]) {
+					newConfig.Beats.Set(output.Properties["cert_key_file"], "output", "logstash", "tls", "certificate_key")
+				}
+				if fbc.Beats.PropertyBool(output.Properties["tls_insecure"]) {
+					newConfig.Beats.Set(fbc.Beats.PropertyBool(output.Properties["tls_insecure"]), "output", "logstash", "tls", "insecure")
+				}
 			}
 		}
 	}
