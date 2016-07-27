@@ -10,6 +10,7 @@ them as a valid configuration file for various log collectors. You can think of 
 ## Documentation
 
 Please check our official [documentation](http://docs.graylog.org/en/latest/pages/collector_sidecar.html) for more information.
+Especially the [Step-by-Step](http://docs.graylog.org/en/2.1/pages/collector_sidecar.html#step-by-step-guide) guide to get the first setup running.
 
 ## Installation
 
