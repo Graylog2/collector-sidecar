@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/kardianos/service"
@@ -161,7 +162,13 @@ func (r *Runner) Start(s service.Service) error {
 func (r *Runner) Stop(s service.Service) error {
 	log.Infof("[%s] Stopping", r.Name)
 
+	// deactivate supervisor
 	r.Running = false
+
+	// give the chance to cleanup resources
+	r.cmd.Process.Signal(syscall.SIGHUP)
+	time.Sleep(2 * time.Second)
+
 	close(r.exit)
 	if r.cmd.Process != nil {
 		r.cmd.Process.Kill()
@@ -171,7 +178,7 @@ func (r *Runner) Stop(s service.Service) error {
 
 func (r *Runner) Restart(s service.Service) error {
 	r.Stop(s)
-	time.Sleep(3 * time.Second)
+	time.Sleep(2 * time.Second)
 	r.exit = make(chan struct{})
 	r.Start(s)
 
