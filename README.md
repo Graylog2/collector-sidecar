@@ -61,11 +61,11 @@ It's also possible to run the installer in silent mode with
   $ collector_sidecar_installer.exe /S
 ```
 
-Edit `C:\Program Files (x86)\graylog\collector-sidecar\collector_sidecar.yml`.
+Edit `C:\Program Files\graylog\collector-sidecar\collector_sidecar.yml`.
 
 ```
-  $ C:\Program Files (x86)\graylog\collector-sidecar\graylog-collector-sidecar.exe -service install
-  $ C:\Program Files (x86)\graylog\collector-sidecar\graylog-collector-sidecar.exe -service start
+  $ C:\Program Files\graylog\collector-sidecar\graylog-collector-sidecar.exe -service install
+  $ C:\Program Files\graylog\collector-sidecar\graylog-collector-sidecar.exe -service start
 ```
 
 ### NXLog backend
@@ -117,11 +117,11 @@ system service. We just need the binaries installed on that host.
   $ collector_sidecar_installer.exe
 ```
 
-Edit `C:\Program Files (x86)\graylog\collector-sidecar\collector_sidecar.yml`, you should set at least the correct URL to your Graylog server and proper tags.
+Edit `C:\Program Files\graylog\collector-sidecar\collector_sidecar.yml`, you should set at least the correct URL to your Graylog server and proper tags.
 
 ```
-  $ C:\Program Files (x86)\graylog\collector-sidecar\graylog-collector-sidecar.exe -service install
-  $ C:\Program Files (x86)\graylog\collector-sidecar\graylog-collector-sidecar.exe -service start
+  $ C:\Program Files\graylog\collector-sidecar\graylog-collector-sidecar.exe -service install
+  $ C:\Program Files\graylog\collector-sidecar\graylog-collector-sidecar.exe -service start
 ```
 
 ## Debugging
