@@ -48,11 +48,7 @@ var (
 func init() {
 	var configurationPath string
 	if runtime.GOOS == "windows" {
-		if runtime.GOARCH == "386" {
-			configurationPath = filepath.Join("C:\\", "Program Files", "graylog", "collector-sidecar", "collector_sidecar.yml")
-		} else {
-			configurationPath = filepath.Join("C:\\", "Program Files (x86)", "graylog", "collector-sidecar", "collector_sidecar.yml")
-		}
+		configurationPath = filepath.Join(os.Getenv("SystemDrive") + "\\", "Program Files", "graylog", "collector-sidecar", "collector_sidecar.yml")
 	} else {
 		configurationPath = filepath.Join("/etc", "graylog", "collector-sidecar", "collector_sidecar.yml")
 	}

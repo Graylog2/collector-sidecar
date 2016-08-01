@@ -29,7 +29,7 @@
 ;--------------------------------
 ;Folder selection page
  
-  InstallDir "$PROGRAMFILES\graylog\collector-sidecar"
+  InstallDir "$PROGRAMFILES32\graylog\collector-sidecar"
  
  
 ;--------------------------------
@@ -90,7 +90,7 @@ Section "Uninstall"
  
 ;Remove the installation directory
   RMDir "$INSTDIR"
-  RMDir "$PROGRAMFILES\graylog"
+  RMDir "$PROGRAMFILES32\graylog"
  
 SectionEnd
  
