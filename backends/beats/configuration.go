@@ -135,8 +135,8 @@ func (bc *BeatsConfig) PropertyBool(p interface{}) bool {
 	case bool:
 		return p.(bool)
 	case string:
-		if s, err := strconv.ParseBool(p.(string)); len(p.(string)) > 0  && (s || err != nil) {
-			 return true
+		if s, err := strconv.ParseBool(p.(string)); len(p.(string)) > 0 && (s || err != nil) {
+			return true
 		}
 		return false
 	}
