@@ -17,7 +17,7 @@ package graylog
 
 type ResponseCollectorRegistration struct {
 	Type    string `json:"type"`
-	Message string `json:"message`
+	Message string `json:"message"`
 }
 
 type ResponseCollectorStatus struct {

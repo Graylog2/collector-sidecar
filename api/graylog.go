@@ -66,12 +66,12 @@ func RequestConfiguration(context *context.Ctx) (graylog.ResponseCollectorConfig
 	} else if resp != nil && resp.StatusCode != 200 {
 		msg := "Bad response status from Graylog server"
 		system.GlobalStatus.Set(backends.StatusError, msg)
-		log.Error("[RequestConfiguration] %s: ", msg, resp.Status)
+		log.Errorf("[RequestConfiguration] %s: ", msg, resp.Status)
 		return graylog.ResponseCollectorConfiguration{}, nil
 	} else if err != nil {
 		msg := "Fetching configuration failed"
 		system.GlobalStatus.Set(backends.StatusError, msg)
-		log.Error("[RequestConfiguration] %s: ", msg, err)
+		log.Errorf("[RequestConfiguration] %s: ", msg, err)
 	}
 
 	system.GlobalStatus.Set(backends.StatusRunning, "")

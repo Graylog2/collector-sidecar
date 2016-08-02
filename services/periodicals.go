@@ -75,7 +75,7 @@ func checkForUpdateAndRestart(context *context.Ctx) {
 			if err != nil {
 				msg := "Failed to restart collector"
 				backend.SetStatus(backends.StatusError, msg)
-				log.Error("[%s] %s: %v", name, msg, err)
+				log.Errorf("[%s] %s: %v", name, msg, err)
 			}
 
 		}
