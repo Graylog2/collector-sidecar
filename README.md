@@ -51,6 +51,8 @@ Activate the Sidecar as a system service
 
 **Windows**
 
+_**The Windows installation path changed to `C:\Program Files` with version 0.0.9, please stop and uninstall former installations before doing the update**_
+
 ```
   $ collector_sidecar_installer.exe
 ```
@@ -108,6 +110,8 @@ Activate the Sidecar as a system service
 
 **Windows**
 
+_**The Windows installation path changed to `C:\Program Files` with version 0.0.9, please stop and uninstall former installations before doing the update**_
+
 Install the NXLog package from the offical download [page](https://nxlog.org/products/nxlog-community-edition/download) and deactive the
 system service. We just need the binaries installed on that host.
 
@@ -122,6 +126,13 @@ Edit `C:\Program Files\graylog\collector-sidecar\collector_sidecar.yml`, you sho
 ```
   $ C:\Program Files\graylog\collector-sidecar\graylog-collector-sidecar.exe -service install
   $ C:\Program Files\graylog\collector-sidecar\graylog-collector-sidecar.exe -service start
+```
+
+## Uninstall on Windows
+
+```
+  $ C:\Program Files\graylog\collector-sidecar\graylog-collector-sidecar.exe -service stop
+  $ C:\Program Files\graylog\collector-sidecar\graylog-collector-sidecar.exe -service uninstall
 ```
 
 ## Debugging
