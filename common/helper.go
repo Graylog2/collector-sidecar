@@ -79,6 +79,12 @@ func ConvertLineBreak(data []byte) []byte {
 
 }
 
+func EnsureLineBreak(data string) string {
+	var result = strings.TrimSuffix(data, "\r\n")
+	result = strings.TrimSuffix(data, "\n")
+	return result + "\n"
+}
+
 func EncloseWith(data string, sep string) string {
 	if len(data) == 0 {
 		return ""

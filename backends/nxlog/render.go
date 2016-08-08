@@ -160,7 +160,8 @@ func (nxc *NxConfig) fileInputsToString() string {
 				result.WriteString("	InputType " + can.name + "-multiline\n")
 			}
 			if nxc.isEnabled(can.properties["verbatim"]) {
-				result.WriteString(nxc.propertyStringIndented(can.properties["verbatim"], 0))
+				var verbatim = nxc.propertyStringIndented(can.properties["verbatim"], 0)
+				result.WriteString(common.EnsureLineBreak(verbatim))
 			}
 			result.WriteString("</Input>\n")
 		}
@@ -190,7 +191,8 @@ func (nxc *NxConfig) windowsEventLogInputsToString() string {
 				}
 			}
 			if nxc.isEnabled(can.properties["verbatim"]) {
-				result.WriteString(nxc.propertyString(can.properties["verbatim"], 0))
+				var verbatim = nxc.propertyStringIndented(can.properties["verbatim"], 0)
+				result.WriteString(common.EnsureLineBreak(verbatim))
 			}
 			result.WriteString("</Input>\n")
 		}
@@ -214,7 +216,8 @@ func (nxc *NxConfig) udpSyslogInputsToString() string {
 			}
 			result.WriteString("	Exec parse_syslog_bsd();\n")
 			if nxc.isEnabled(can.properties["verbatim"]) {
-				result.WriteString(nxc.propertyString(can.properties["verbatim"], 0))
+				var verbatim = nxc.propertyStringIndented(can.properties["verbatim"], 0)
+				result.WriteString(common.EnsureLineBreak(verbatim))
 			}
 			result.WriteString("</Input>\n")
 		}
@@ -238,7 +241,8 @@ func (nxc *NxConfig) tcpSyslogInputsToString() string {
 			}
 			result.WriteString("	Exec parse_syslog_bsd();\n")
 			if nxc.isEnabled(can.properties["verbatim"]) {
-				result.WriteString(nxc.propertyString(can.properties["verbatim"], 0))
+				var verbatim = nxc.propertyStringIndented(can.properties["verbatim"], 0)
+				result.WriteString(common.EnsureLineBreak(verbatim))
 			}
 			result.WriteString("</Input>\n")
 		}
@@ -265,7 +269,8 @@ func (nxc *NxConfig) gelfUdpOutputsToString() string {
 				}
 			}
 			if nxc.isEnabled(can.properties["verbatim"]) {
-				result.WriteString(nxc.propertyString(can.properties["verbatim"], 0))
+				var verbatim = nxc.propertyStringIndented(can.properties["verbatim"], 0)
+				result.WriteString(common.EnsureLineBreak(verbatim))
 			}
 			result.WriteString("</Output>\n")
 		}
@@ -292,7 +297,8 @@ func (nxc *NxConfig) gelfTcpOutputsToString() string {
 				}
 			}
 			if nxc.isEnabled(can.properties["verbatim"]) {
-				result.WriteString(nxc.propertyString(can.properties["verbatim"], 0))
+				var verbatim = nxc.propertyStringIndented(can.properties["verbatim"], 0)
+				result.WriteString(common.EnsureLineBreak(verbatim))
 			}
 			result.WriteString("</Output>\n")
 		}
@@ -325,7 +331,8 @@ func (nxc *NxConfig) gelfTcpTlsOutputsToString() string {
 				}
 			}
 			if nxc.isEnabled(can.properties["verbatim"]) {
-				result.WriteString(nxc.propertyString(can.properties["verbatim"], 0))
+				var verbatim = nxc.propertyStringIndented(can.properties["verbatim"], 0)
+				result.WriteString(common.EnsureLineBreak(verbatim))
 			}
 			result.WriteString("</Output>\n")
 		}
