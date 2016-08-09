@@ -9,15 +9,28 @@ WINLOGBEAT_VERSION=1.2.3
 # $3: beat arch
 download_beat()
 {
-  mkdir -p dist/collectors/${1}/${3}
-  if [ "${3}" == "windows" ]
+  local name="$1"
+  local version="$2"
+  local arch="$3"
+
+  mkdir -p dist/collectors/${name}/${arch}
+  if [ "${arch}" == "windows" ]
     then
-      curl -o /tmp/${1}.zip https://download.elastic.co/beats/${1}/${1}-${2}-${3}.zip
-      unzip -o -d dist/collectors/${1}/${3} /tmp/${1}.zip
-      mv dist/collectors/${1}/${3}/${1}-${2}-windows/* dist/collectors/${1}/${3}/
-      rm -r /tmp/${1}.zip dist/collectors/${1}/${3}/${1}-${2}-windows
+      archive="/tmp/${name}-${version}.zip"
+      if [ ! -f $archive ]; then
+        echo "==> Downloading ${name}-${version}-${arch}"
+        curl -o $archive https://download.elastic.co/beats/${name}/${name}-${version}-${arch}.zip
+      fi
+      unzip -o -d dist/collectors/${name}/${arch} $archive
+      mv dist/collectors/${name}/${arch}/${name}-${version}-windows/* dist/collectors/${name}/${arch}/
+      rm -r dist/collectors/${name}/${arch}/${name}-${version}-windows
     else
-      curl https://download.elastic.co/beats/${1}/${1}-${2}-${3}.tar.gz | tar -xz --strip-components=1 -C dist/collectors/${1}/${3}
+      archive="/tmp/${name}-${version}.tar.gz"
+      if [ ! -f $archive ]; then
+        echo "==> Downloading ${name}-${version}-${arch}"
+        curl -o $archive https://download.elastic.co/beats/${name}/${name}-${version}-${arch}.tar.gz
+      fi
+      tar -xzf $archive --strip-components=1 -C dist/collectors/${name}/${arch}
   fi
 }
 
