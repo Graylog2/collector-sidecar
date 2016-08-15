@@ -316,9 +316,15 @@ func (nxc *NxConfig) gelfTcpTlsOutputsToString() string {
 			result.WriteString("	Host " + nxc.propertyString(can.properties["server"], 0) + "\n")
 			result.WriteString("	Port " + nxc.propertyString(can.properties["port"], 0) + "\n")
 			result.WriteString("	OutputType GELF_TCP\n")
-			result.WriteString("	CAFile " + nxc.propertyString(can.properties["ca_file"], 0) + "\n")
-			result.WriteString("	CertFile " + nxc.propertyString(can.properties["cert_file"], 0) + "\n")
-			result.WriteString("	CertKeyFile " + nxc.propertyString(can.properties["cert_key_file"], 0) + "\n")
+			if nxc.isEnabled(can.properties["ca_file"]) {
+				result.WriteString("	CAFile " + nxc.propertyString(can.properties["ca_file"], 0) + "\n")
+			}
+			if nxc.isEnabled(can.properties["cert_file"]) {
+				result.WriteString("	CertFile " + nxc.propertyString(can.properties["cert_file"], 0) + "\n")
+			}
+			if nxc.isEnabled(can.properties["cert_key_file"]) {
+				result.WriteString("	CertKeyFile " + nxc.propertyString(can.properties["cert_key_file"], 0) + "\n")
+			}
 			if nxc.isEnabled(can.properties["allow_untrusted"]) {
 				result.WriteString("	AllowUntrusted " + nxc.propertyString(can.properties["allow_untrusted"], 0) + "\n")
 			}
