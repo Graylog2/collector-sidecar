@@ -94,6 +94,7 @@ func UpdateRegistration(context *context.Ctx, status *graylog.StatusRequest) {
 	registration.NodeDetails.OperatingSystem = common.GetSystemName()
 	if context.UserConfig.SendStatus {
 		registration.NodeDetails.Tags = context.UserConfig.Tags
+		registration.NodeDetails.IP = common.GetHostIP()
 		registration.NodeDetails.Status = status
 		registration.NodeDetails.Metrics = metrics
 		if len(context.UserConfig.ListLogFiles) > 0 {

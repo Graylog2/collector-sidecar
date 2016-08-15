@@ -27,6 +27,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/pborman/uuid"
+	"net"
 )
 
 func GetRootPath() (string, error) {
@@ -43,6 +44,37 @@ func GetSystemName() string {
 func GetHostname() (string, error) {
 	return os.Hostname()
 }
+
+func GetHostIP() string {
+	defaultIp := "0.0.0.0"
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return defaultIp
+	}
+
+	// try to find IPv4 address first
+	for _, address := range addrs {
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
+			//if ipnet.IP.To16() != nil {
+			//	return ipnet.IP.String()
+			//}
+		}
+	}
+	// if nothing found try IPv6 address
+	for _, address := range addrs {
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To16() != nil {
+				return ipnet.IP.String()
+			}
+		}
+	}
+	// in doubt return default address
+	return defaultIp
+}
+
 func GetCollectorId(collectorId string) string {
 	id := collectorId
 	if strings.HasPrefix(collectorId, "file:") {
