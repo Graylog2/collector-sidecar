@@ -16,7 +16,7 @@ download_beat()
   mkdir -p dist/collectors/${name}/${arch}
   if [ "${arch}" == "windows" ]
     then
-      archive="/tmp/${name}-${version}.zip"
+      archive="/tmp/${name}-${version}-${arch}.zip"
       if [ ! -f $archive ]; then
         echo "==> Downloading ${name}-${version}-${arch}"
         curl -o $archive https://download.elastic.co/beats/${name}/${name}-${version}-${arch}.zip
@@ -25,7 +25,7 @@ download_beat()
       mv dist/collectors/${name}/${arch}/${name}-${version}-windows/* dist/collectors/${name}/${arch}/
       rm -r dist/collectors/${name}/${arch}/${name}-${version}-windows
     else
-      archive="/tmp/${name}-${version}.tar.gz"
+      archive="/tmp/${name}-${version}-${arch}.tar.gz"
       if [ ! -f $archive ]; then
         echo "==> Downloading ${name}-${version}-${arch}"
         curl -o $archive https://download.elastic.co/beats/${name}/${name}-${version}-${arch}.tar.gz
