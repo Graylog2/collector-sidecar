@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"io"
 	"strconv"
+	"strings"
 
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/api/rest"
@@ -112,6 +113,9 @@ func UpdateRegistration(context *context.Ctx, status *graylog.StatusRequest) {
 	resp, err := c.Do(r, &respBody)
 	if err == nil && resp.StatusCode != 202 {
 		log.Error("[UpdateRegistration] Bad response from Graylog server: ", resp.Status)
+	} else if resp.StatusCode == 400 && strings.Contains(err.Error(), "Unable to map property") {
+		log.Error("[UpdateRegistration] Sending collector status failed. Disabling `send_status` as fallback! ", err)
+		context.UserConfig.SendStatus = false
 	} else if err != io.EOF { // we expect an empty answer
 		log.Error("[UpdateRegistration] Failed to report collector status to server: ", err)
 	}
