@@ -166,7 +166,9 @@ func (r *Runner) Stop(s service.Service) error {
 	r.Running = false
 
 	// give the chance to cleanup resources
-	r.cmd.Process.Signal(syscall.SIGHUP)
+	if r.cmd.Process != nil {
+		r.cmd.Process.Signal(syscall.SIGHUP)
+	}
 	time.Sleep(2 * time.Second)
 
 	close(r.exit)
