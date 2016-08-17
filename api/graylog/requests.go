@@ -28,7 +28,7 @@ type RegistrationRequest struct {
 type NodeDetailsRequest struct {
 	OperatingSystem string          `json:"operating_system"`
 	Tags            []string        `json:"tags,omitempty"`
-	IP            	string        	`json:"ip,omitempty"`
+	IP              string          `json:"ip,omitempty"`
 	LogFileList     []common.File   `json:"log_file_list,omitempty"`
 	Metrics         *MetricsRequest `json:"metrics,omitempty"`
 	Status          *StatusRequest  `json:"status,omitempty"`

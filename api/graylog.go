@@ -18,9 +18,9 @@ package api
 import (
 	"crypto/tls"
 	"encoding/json"
+	"io"
 	"strconv"
 	"strings"
-	"io"
 
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/api/rest"
