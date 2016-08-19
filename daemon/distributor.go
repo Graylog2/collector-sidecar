@@ -19,14 +19,14 @@ import (
 	"github.com/kardianos/service"
 )
 
-type Supervisor struct {
+type Distributor struct {
 	Running bool
 	service service.Service
 	exit    chan struct{}
 }
 
-func (dc *DaemonConfig) NewSupervisor() *Supervisor {
-	sv := &Supervisor{
+func (dc *DaemonConfig) NewDistributor() *Distributor {
+	sv := &Distributor{
 		Running: false,
 		exit:    make(chan struct{}),
 	}
@@ -34,36 +34,36 @@ func (dc *DaemonConfig) NewSupervisor() *Supervisor {
 	return sv
 }
 
-func (sv *Supervisor) BindToService(s service.Service) {
-	sv.service = s
+func (dist *Distributor) BindToService(s service.Service) {
+	dist.service = s
 }
 
-func (sv *Supervisor) Start(s service.Service) error {
-	log.Info("Starting collector supervisor")
-	go sv.run()
+func (dist *Distributor) Start(s service.Service) error {
+	log.Info("Starting signal distributor")
+	go dist.run()
 	return nil
 }
 
-func (sv *Supervisor) Stop(s service.Service) error {
+func (dist *Distributor) Stop(s service.Service) error {
 	for _, runner := range Daemon.Runner {
-		runner.Stop(sv.service)
+		runner.Stop(dist.service)
 	}
-	close(sv.exit)
-	sv.Running = false
+	close(dist.exit)
+	dist.Running = false
 	return nil
 }
 
-func (sv *Supervisor) Restart(s service.Service) error {
-	sv.Stop(s)
-	sv.exit = make(chan struct{})
-	sv.Start(s)
+func (dist *Distributor) Restart(s service.Service) error {
+	dist.Stop(s)
+	dist.exit = make(chan struct{})
+	dist.Start(s)
 	return nil
 }
 
-func (sv *Supervisor) run() {
-	sv.Running = true
+func (dist *Distributor) run() {
+	dist.Running = true
 	for _, runner := range Daemon.Runner {
-		runner.Start(sv.service)
+		runner.Start(dist.service)
 	}
 	return
 }
