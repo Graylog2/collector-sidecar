@@ -26,12 +26,12 @@ type Distributor struct {
 }
 
 func (dc *DaemonConfig) NewDistributor() *Distributor {
-	sv := &Distributor{
+	dist := &Distributor{
 		Running: false,
 		exit:    make(chan struct{}),
 	}
 
-	return sv
+	return dist
 }
 
 func (dist *Distributor) BindToService(s service.Service) {
