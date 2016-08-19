@@ -144,7 +144,7 @@ func (nxc *NxConfig) fileInputsToString() string {
 		if can.kind == "input-file" {
 			result.WriteString("<Input " + can.name + ">\n")
 			result.WriteString("	Module im_file\n")
-			result.WriteString("	File \"" + nxc.propertyString(can.properties["path"], 0) + "\"\n")
+			result.WriteString("	File '" + nxc.propertyString(can.properties["path"], 0) + "'\n")
 			result.WriteString("	PollInterval " + nxc.propertyString(can.properties["poll_interval"], 0) + "\n")
 			result.WriteString("	SavePos	" + nxc.propertyString(can.properties["save_position"], 0) + "\n")
 			result.WriteString("	ReadFromLast " + nxc.propertyString(can.properties["read_last"], 0) + "\n")
