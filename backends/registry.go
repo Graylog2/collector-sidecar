@@ -31,6 +31,7 @@ var (
 
 type Backend interface {
 	Name() string
+	Driver() string
 	ExecPath() string
 	ConfigurationPath() string
 	ExecArgs() []string

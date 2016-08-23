@@ -139,7 +139,7 @@ func backendSetup(context *context.Ctx) {
 		backends.Store.AddBackend(backend)
 		if *collector.Enabled == true && backend.ValidatePreconditions() {
 			log.Debug("Add collector backend: " + backend.Name())
-			daemon.Daemon.AddBackendAsRunner(backend, context)
+			daemon.Daemon.AddBackend(backend, context)
 		}
 	}
 

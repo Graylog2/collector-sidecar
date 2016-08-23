@@ -65,7 +65,7 @@ func checkForUpdateAndRestart(context *context.Ctx) {
 				continue
 			}
 
-			if runner.Running {
+			if runner.Running() {
 				// collector was already started so a Restart will not fail
 				err = runner.Restart(runner.GetService())
 			} else {

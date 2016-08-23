@@ -46,6 +46,13 @@ func (nxc *NxConfig) Name() string {
 	return name
 }
 
+func (nxc *NxConfig) Driver() string {
+	if runtime.GOOS == "windows" {
+		return "service"
+	}
+	return "exec"
+}
+
 func (nxc *NxConfig) ExecPath() string {
 	execPath := nxc.UserConfig.BinaryPath
 	if common.FileExists(execPath) != nil {

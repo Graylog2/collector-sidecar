@@ -24,7 +24,10 @@ import (
 	"github.com/Graylog2/collector-sidecar/system"
 )
 
-const name = "filebeat"
+const(
+	name = "filebeat"
+	driver = "exec"
+)
 
 var (
 	log           = common.Log()
@@ -43,6 +46,10 @@ func New(context *context.Ctx) backends.Backend {
 
 func (fbc *FileBeatConfig) Name() string {
 	return name
+}
+
+func (fbc *FileBeatConfig) Driver() string {
+	return driver
 }
 
 func (fbc *FileBeatConfig) ExecPath() string {
