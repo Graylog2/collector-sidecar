@@ -1,8 +1,8 @@
-hash: c70cca95f85e18a8b9cc7ff6f31ddb03e92c88868a56f2b4b791a1bf6965131a
-updated: 2016-06-16T12:17:30.371819795+02:00
+hash: e4f4318b91f0fff956beec80bceffcec3d0be03bdbc4856d16e9d2aacf949300
+updated: 2016-08-24T16:12:38.976735438+02:00
 imports:
 - name: bitbucket.org/tebeka/strftime
-  version: 2194253a23c0
+  version: 2194253a23c090a4d5953b152a3c63fb5da4f5a4
 - name: github.com/cloudfoundry/gosigar
   version: c32d31af94b0e9d3b2877e49c1a581ad5a793343
 - name: github.com/kardianos/osext
@@ -28,10 +28,10 @@ imports:
   subpackages:
   - windows
   - windows/registry
-  - windows/svc
-  - windows/svc/eventlog
   - windows/svc/mgr
+  - windows/svc/eventlog
+  - windows/svc
   - unix
 - name: gopkg.in/yaml.v2
   version: a83829b6f1293c91addabc89d0571c246397bbf4
-devImports: []
+testImports: []

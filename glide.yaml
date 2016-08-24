@@ -6,6 +6,8 @@ import:
   subpackages:
   - windows
   - windows/registry
+  - windows/svc/mgr
+  - windows/svc/eventlog
 - package: github.com/kardianos/osext
 - package: github.com/rakyll/goini
 - package: github.com/pborman/uuid
