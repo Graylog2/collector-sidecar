@@ -77,6 +77,11 @@ func (r *ExecRunner) ValidateBeforeStart() error {
 }
 
 func (r *ExecRunner) Start(s service.Service) error {
+	if err := r.ValidateBeforeStart(); err != nil {
+		log.Error(err.Error())
+		return err
+	}
+
 	r.restartCount = 1
 	go func() {
 		for {
