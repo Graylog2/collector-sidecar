@@ -29,7 +29,6 @@ func NewSvcRunner(backend backends.Backend, context *context.Ctx) Runner {
 	r := &SvcRunner{
 		RunnerCommon: RunnerCommon{
 			name: backend.Name(),
-			isRunning: false,
 			context: context,
 			backend:      backend,
 		},
@@ -46,7 +45,24 @@ func (r *SvcRunner) Name() string {
 }
 
 func (r *SvcRunner) Running() bool {
-	return r.isRunning
+	m, err := mgr.Connect()
+	if err != nil {
+		log.Errorf("[%s] Failed to connect to service manager: %v", r.name, err)
+	}
+	defer m.Disconnect()
+
+	s, err := m.OpenService(r.serviceName)
+	// service exist so we only update the properties
+	if err != nil {
+		log.Errorf("[%s] Can't get status of service %s cause it doesn't exist: %v", r.name, r.serviceName, err)
+	}
+
+	status, err := s.Query()
+	if err != nil {
+		log.Errorf("[%s] Can't query status of service %s: %v", r.name, r.serviceName, err)
+	}
+
+	return status.State == svc.Running
 }
 
 func (r *SvcRunner) SetDaemon(d *DaemonConfig) {
@@ -139,7 +155,6 @@ func (r *SvcRunner) Start(s service.Service) error {
 		return fmt.Errorf("[%s] Could not start service: %v", r.name, err)
 	}
 
-	r.isRunning = true
 	r.backend.SetStatus(backends.StatusRunning, "Running")
 
 	return err
@@ -147,8 +162,6 @@ func (r *SvcRunner) Start(s service.Service) error {
 
 func (r *SvcRunner) Stop(s service.Service) error {
 	log.Infof("[%s] Stopping", r.name)
-
-	r.isRunning = false
 
 	m, err := mgr.Connect()
 	if err != nil {

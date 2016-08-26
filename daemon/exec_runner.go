@@ -20,6 +20,7 @@ type ExecRunner struct {
 	exec           string
 	args           []string
 	stderr, stdout string
+	isRunning      bool
 	restartCount   int
 	startTime      time.Time
 	cmd            *exec.Cmd
@@ -31,12 +32,12 @@ func NewExecRunner(backend backends.Backend, context *context.Ctx) Runner {
 	r := &ExecRunner{
 		RunnerCommon: RunnerCommon{
 			name: backend.Name(),
-	 		isRunning: false,
 		 	context: context,
 		 	backend:      backend,
 		},
 		exec:         backend.ExecPath(),
 		args:         backend.ExecArgs(),
+		isRunning:    false,
 		restartCount: 1,
 		stderr:       filepath.Join(context.UserConfig.LogPath, backend.Name()+"_stderr.log"),
 		stdout:       filepath.Join(context.UserConfig.LogPath, backend.Name()+"_stdout.log"),

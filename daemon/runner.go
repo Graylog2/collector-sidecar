@@ -23,5 +23,4 @@ type RunnerCommon struct {
 	context        *context.Ctx
 	backend        backends.Backend
 	daemon         *DaemonConfig
-	isRunning      bool
 }
