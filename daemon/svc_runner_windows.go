@@ -1,18 +1,19 @@
 package daemon
 
 import (
-	"time"
 	"fmt"
+	"time"
 	"os/exec"
+	"strings"
 
+	"golang.org/x/sys/windows/svc"
+	"golang.org/x/sys/windows/svc/eventlog"
 	"golang.org/x/sys/windows/svc/mgr"
+
 	"github.com/kardianos/service"
 
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/context"
-	"golang.org/x/sys/windows/svc"
-	"strings"
-	"golang.org/x/sys/windows/svc/eventlog"
 )
 
 type SvcRunner struct {
@@ -83,7 +84,13 @@ func (r *SvcRunner) ValidateBeforeStart() error {
 	// service exist so we only update the properties
 	if err == nil {
 		log.Debugf("[%s] service %s already exists, updating properties", r.name)
-		err = s.UpdateConfig(serviceConfig)
+		currentConfig, err := s.Config()
+		if err == nil {
+			currentConfig.DisplayName = serviceConfig.DisplayName
+			currentConfig.Description = serviceConfig.Description
+			currentConfig.BinaryPathName = serviceConfig.BinaryPathName
+		}
+		err = s.UpdateConfig(currentConfig)
 		if err != nil {
 			log.Errorf("[%s] Failed to update service: %v", r.name, err)
 		}
@@ -113,7 +120,7 @@ func (r *SvcRunner) Start(s service.Service) error {
 	}
 
 	r.startTime = time.Now()
-	log.Infof("[%s] Starting", r.name)
+	log.Infof("[%s] Starting with %s driver", r.name, r.backend.Driver())
 
 	m, err := mgr.Connect()
 	if err != nil {
