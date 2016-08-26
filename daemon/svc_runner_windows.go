@@ -12,6 +12,7 @@ import (
 	"github.com/Graylog2/collector-sidecar/context"
 	"golang.org/x/sys/windows/svc"
 	"strings"
+	"golang.org/x/sys/windows/svc/eventlog"
 )
 
 type SvcRunner struct {
@@ -20,6 +21,7 @@ type SvcRunner struct {
 	args           []string
 	startTime      time.Time
 	service        service.Service
+	serviceName    string
 }
 
 func NewSvcRunner(backend backends.Backend, context *context.Ctx) Runner {
@@ -32,6 +34,7 @@ func NewSvcRunner(backend backends.Backend, context *context.Ctx) Runner {
 		},
 		exec:         backend.ExecPath(),
 		args:         backend.ExecArgs(),
+		serviceName:  "graylog-collector-" + backend.Name(),
 	}
 
 	return r
@@ -65,47 +68,42 @@ func (r *SvcRunner) ValidateBeforeStart() error {
 		return fmt.Errorf("[%s] %s %q: %v", r.name, msg, r.exec, err)
 	}
 
-	// check if service is installed
 	m, err := mgr.Connect()
 	if err != nil {
 		return fmt.Errorf("[%s] Failed to connect to service manager: %v", r.name, err)
 	}
 	defer m.Disconnect()
 
-	// if yes delete it
-	s, err := m.OpenService("graylog-collector-" + r.name)
+	serviceConfig := mgr.Config{
+		DisplayName: "Graylog collector sidecar - " + r.name + " backend",
+		Description: "Wrapper service for the NXLog backend",
+		BinaryPathName: r.exec + " " + strings.Join(r.args, " ")}
+
+	s, err := m.OpenService(r.serviceName)
+	// service exist so we only update the properties
 	if err == nil {
-		log.Debugf("[%s] service %s already exists", r.name)
-		err = s.Delete()
+		log.Debugf("[%s] service %s already exists, updating properties", r.name)
+		err = s.UpdateConfig(serviceConfig)
 		if err != nil {
-			return fmt.Errorf("[%s] Failed to delete service: %v", r.name, err)
+			log.Errorf("[%s] Failed to update service: %v", r.name, err)
 		}
-//		err = eventlog.Remove("graylog-collector-" + r.name)
-//		if err != nil {
-//			return fmt.Errorf("[%s] RemoveEventLogSource() failed: %v", r.name, err)
-//		}
+	// service needs to be created
+	} else {
+		s, err = m.CreateService(r.serviceName,
+			execPath,
+			serviceConfig)
+		if err != nil {
+			log.Errorf("[%s] Failed to install service: %v", r.name, err)
+		}
+		defer s.Close()
+		err = eventlog.InstallAsEventCreate(r.serviceName, eventlog.Error|eventlog.Warning|eventlog.Info)
+		if err != nil {
+			s.Delete()
+			log.Errorf("[%s] SetupEventLogSource() failed: %v", r.name, err)
+		}
 	}
 
-	// and create a new service
-	s, err = m.CreateService("graylog-collector-" + r.name,
-		execPath,
-		mgr.Config{
-			DisplayName: "Graylog collector sidecar - " + r.name + " backend",
-			BinaryPathName: r.exec + " " + strings.Join(r.args, " ")},
-		"is",
-		"auto-started")
-	if err != nil {
-		return fmt.Errorf("[%s] Failed to install service: %v", r.name, err)
-	}
-	defer s.Close()
-
-//	err = eventlog.InstallAsEventCreate(r.name, eventlog.Error|eventlog.Warning|eventlog.Info)
-//	if err != nil {
-//		s.Delete()
-//		return fmt.Errorf("[%s] SetupEventLogSource() failed: %v", r.name, err)
-//	}
-
-	return err
+	return nil
 }
 
 func (r *SvcRunner) Start(s service.Service) error {
@@ -123,7 +121,7 @@ func (r *SvcRunner) Start(s service.Service) error {
 	}
 	defer m.Disconnect()
 
-	ws, err := m.OpenService("graylog-collector-" + r.name)
+	ws, err := m.OpenService(r.serviceName)
 	if err != nil {
 		return fmt.Errorf("[%s] Could not access service: %v", r.name, err)
 	}
@@ -151,7 +149,7 @@ func (r *SvcRunner) Stop(s service.Service) error {
 	}
 	defer m.Disconnect()
 
-	ws, err := m.OpenService("graylog-collector-" + r.name)
+	ws, err := m.OpenService(r.serviceName)
 	if err != nil {
 		return fmt.Errorf("[%s] Could not access service: %v", r.name, err)
 	}
