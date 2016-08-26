@@ -149,7 +149,7 @@ func (r *ExecRunner) Restart(s service.Service) error {
 }
 
 func (r *ExecRunner) run() {
-	log.Infof("[%s] Starting", r.name)
+	log.Infof("[%s] Starting with %s driver", r.name, r.backend.Driver())
 
 	if r.stderr != "" {
 		err := common.CreatePathToFile(r.stderr)

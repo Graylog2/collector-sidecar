@@ -59,7 +59,13 @@ func NewConfig() *DaemonConfig {
 }
 
 func (dc *DaemonConfig) AddBackend(backend backends.Backend, context *context.Ctx) {
-	runner := NewSvcRunner(backend, context)
+	var runner Runner
+	switch backend.Driver() {
+	case "exec":
+		runner = NewExecRunner(backend, context)
+	case "svc":
+		runner = NewSvcRunner(backend, context)
+	}
 	runner.SetDaemon(dc)
 	dc.Runner[backend.Name()] = runner
 }
