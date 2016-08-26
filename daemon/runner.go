@@ -24,3 +24,5 @@ type RunnerCommon struct {
 	backend        backends.Backend
 	daemon         *DaemonConfig
 }
+
+type RunnerCreator func(backends.Backend, *context.Ctx) Runner

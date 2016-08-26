@@ -25,6 +25,12 @@ type SvcRunner struct {
 	serviceName    string
 }
 
+func init() {
+	if err := RegisterBackendRunner("svc", NewSvcRunner); err != nil {
+		log.Fatal(err)
+	}
+}
+
 func NewSvcRunner(backend backends.Backend, context *context.Ctx) Runner {
 	r := &SvcRunner{
 		RunnerCommon: RunnerCommon{

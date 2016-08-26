@@ -21,8 +21,11 @@ import (
 	"github.com/Graylog2/collector-sidecar/context"
 )
 
-var Daemon *DaemonConfig
-var log = common.Log()
+var (
+	Daemon *DaemonConfig
+	runnerRegistry = make(map[string]RunnerCreator)
+	log = common.Log()
+)
 
 type DaemonConfig struct {
 	Name        string
@@ -58,13 +61,24 @@ func NewConfig() *DaemonConfig {
 	return dc
 }
 
+func RegisterBackendRunner(name string, c RunnerCreator) error {
+	if _, ok := runnerRegistry[name]; ok {
+		log.Error("Execution driver named " + name + " is already registered")
+		return nil
+	}
+	runnerRegistry[name] = c
+	return nil
+}
+
 func (dc *DaemonConfig) AddBackend(backend backends.Backend, context *context.Ctx) {
 	var runner Runner
 	switch backend.Driver() {
 	case "exec":
-		runner = NewExecRunner(backend, context)
+		runner = runnerRegistry["exec"](backend, context)
 	case "svc":
-		runner = NewSvcRunner(backend, context)
+		runner = runnerRegistry["svc"](backend, context)
+	default:
+		log.Fatalf("Execution driver %s is not supported on this platform", backend.Driver())
 	}
 	runner.SetDaemon(dc)
 	dc.Runner[backend.Name()] = runner

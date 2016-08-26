@@ -28,6 +28,12 @@ type ExecRunner struct {
 	exit           chan struct{}
 }
 
+func init() {
+	if err := RegisterBackendRunner("exec", NewExecRunner); err != nil {
+		log.Fatal(err)
+	}
+}
+
 func NewExecRunner(backend backends.Backend, context *context.Ctx) Runner {
 	r := &ExecRunner{
 		RunnerCommon: RunnerCommon{
