@@ -22,6 +22,7 @@ type SvcRunner struct {
 	startTime      time.Time
 	service        service.Service
 	serviceName    string
+	isRunning      bool
 }
 
 func init() {
@@ -40,6 +41,7 @@ func NewSvcRunner(backend backends.Backend, context *context.Ctx) Runner {
 		exec:         backend.ExecPath(),
 		args:         backend.ExecArgs(),
 		serviceName:  "graylog-collector-" + backend.Name(),
+		isRunning:    false,
 	}
 
 	return r
@@ -158,6 +160,22 @@ func (r *SvcRunner) Start(s service.Service) error {
 		return backends.SetStatusLogErrorf(r.name, "Could not start service: %v", err)
 	}
 
+	r.isRunning = true
+	go func() {
+		for {
+			time.Sleep(10 * time.Second)
+			if r.isRunning && !r.Running() {
+				backends.SetStatusLogErrorf(r.name, "Backend crashed, sending restart signal")
+				r.Start(s)
+				break
+			}
+
+			if !r.isRunning {
+				break
+			}
+		}
+	}()
+
 	r.backend.SetStatus(backends.StatusRunning, "Running")
 
 	return err
@@ -165,6 +183,9 @@ func (r *SvcRunner) Start(s service.Service) error {
 
 func (r *SvcRunner) Stop(s service.Service) error {
 	log.Infof("[%s] Stopping", r.name)
+
+	// deactivate supervisor
+	r.isRunning = false
 
 	m, err := mgr.Connect()
 	if err != nil {
