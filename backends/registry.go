@@ -20,6 +20,7 @@ import (
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/system"
+	"fmt"
 )
 
 var (
@@ -82,6 +83,11 @@ func RegisterBackend(name string, c Creator) error {
 
 func GetCreator(name string) (Creator, error) {
 	return factory.get(name)
+}
+
+func SetStatusLogErrorf(name string, format string, args ...interface{}) {
+	Store.backends[name].SetStatus(StatusError, fmt.Sprintf(format, args...))
+	log.Errorf(fmt.Sprintf("[%s] ", name) + format, args...)
 }
 
 func (bs *backendStore) AddBackend(backend Backend) {

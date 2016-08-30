@@ -59,9 +59,7 @@ func checkForUpdateAndRestart(context *context.Ctx) {
 		backend := backends.Store.GetBackend(name)
 		if backend.RenderOnChange(jsonConfig) {
 			if !backend.ValidateConfigurationFile() {
-				msg := "Collector configuration file is not valid, waiting for the next update."
-				backend.SetStatus(backends.StatusError, msg)
-				log.Infof("[%s] %s", name, msg)
+				backends.SetStatusLogErrorf(name, "Collector configuration file is not valid, waiting for the next update.")
 				continue
 			}
 
