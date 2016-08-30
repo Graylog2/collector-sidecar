@@ -1,7 +1,6 @@
 package daemon
 
 import (
-	"fmt"
 	"time"
 	"os/exec"
 	"strings"
@@ -53,19 +52,19 @@ func (r *SvcRunner) Name() string {
 func (r *SvcRunner) Running() bool {
 	m, err := mgr.Connect()
 	if err != nil {
-		log.Errorf("[%s] Failed to connect to service manager: %v", r.name, err)
+		backends.SetStatusLogErrorf(r.name, "Failed to connect to service manager: %v", err)
 	}
 	defer m.Disconnect()
 
 	s, err := m.OpenService(r.serviceName)
 	// service exist so we only update the properties
 	if err != nil {
-		log.Errorf("[%s] Can't get status of service %s cause it doesn't exist: %v", r.name, r.serviceName, err)
+		backends.SetStatusLogErrorf(r.name, "Can't get status of service %s cause it doesn't exist: %v", r.serviceName, err)
 	}
 
 	status, err := s.Query()
 	if err != nil {
-		log.Errorf("[%s] Can't query status of service %s: %v", r.name, r.serviceName, err)
+		backends.SetStatusLogErrorf(r.name, "Can't query status of service %s: %v", r.serviceName, err)
 	}
 
 	return status.State == svc.Running
@@ -86,14 +85,12 @@ func (r *SvcRunner) GetService() service.Service {
 func (r *SvcRunner) ValidateBeforeStart() error {
 	execPath, err := exec.LookPath(r.exec)
 	if err != nil {
-		msg := "Failed to find collector executable"
-		r.backend.SetStatus(backends.StatusError, msg)
-		return fmt.Errorf("[%s] %s %q: %v", r.name, msg, r.exec, err)
+		return backends.SetStatusLogErrorf(r.name, "Failed to find collector executable %s", r.exec)
 	}
 
 	m, err := mgr.Connect()
 	if err != nil {
-		return fmt.Errorf("[%s] Failed to connect to service manager: %v", r.name, err)
+		return backends.SetStatusLogErrorf(r.name, "Failed to connect to service manager: %v", err)
 	}
 	defer m.Disconnect()
 
@@ -114,7 +111,7 @@ func (r *SvcRunner) ValidateBeforeStart() error {
 		}
 		err = s.UpdateConfig(currentConfig)
 		if err != nil {
-			log.Errorf("[%s] Failed to update service: %v", r.name, err)
+			backends.SetStatusLogErrorf(r.name, "Failed to update service: %v", err)
 		}
 	// service needs to be created
 	} else {
@@ -122,13 +119,13 @@ func (r *SvcRunner) ValidateBeforeStart() error {
 			execPath,
 			serviceConfig)
 		if err != nil {
-			log.Errorf("[%s] Failed to install service: %v", r.name, err)
+			backends.SetStatusLogErrorf(r.name, "Failed to install service: %v", err)
 		}
 		defer s.Close()
 		err = eventlog.InstallAsEventCreate(r.serviceName, eventlog.Error|eventlog.Warning|eventlog.Info)
 		if err != nil {
 			s.Delete()
-			log.Errorf("[%s] SetupEventLogSource() failed: %v", r.name, err)
+			backends.SetStatusLogErrorf(r.name, "SetupEventLogSource() failed: %v", err)
 		}
 	}
 
@@ -142,23 +139,23 @@ func (r *SvcRunner) Start(s service.Service) error {
 	}
 
 	r.startTime = time.Now()
-	log.Infof("[%s] Starting with %s driver", r.name, r.backend.Driver())
+	log.Infof("[%s] Starting (%s driver)", r.name, r.backend.Driver())
 
 	m, err := mgr.Connect()
 	if err != nil {
-		return fmt.Errorf("[%s] Failed to connect to service manager: %v", r.name, err)
+		return backends.SetStatusLogErrorf(r.name, "Failed to connect to service manager: %v", err)
 	}
 	defer m.Disconnect()
 
 	ws, err := m.OpenService(r.serviceName)
 	if err != nil {
-		return fmt.Errorf("[%s] Could not access service: %v", r.name, err)
+		return backends.SetStatusLogErrorf(r.name, "Could not access service: %v", err)
 	}
 	defer ws.Close()
 
 	err = ws.Start("is", "manual-started")
 	if err != nil {
-		return fmt.Errorf("[%s] Could not start service: %v", r.name, err)
+		return backends.SetStatusLogErrorf(r.name, "Could not start service: %v", err)
 	}
 
 	r.backend.SetStatus(backends.StatusRunning, "Running")
@@ -171,30 +168,30 @@ func (r *SvcRunner) Stop(s service.Service) error {
 
 	m, err := mgr.Connect()
 	if err != nil {
-		return fmt.Errorf("[%s] Failed to connect to service manager: %v", r.name, err)
+		return backends.SetStatusLogErrorf(r.name, "Failed to connect to service manager: %v", err)
 	}
 	defer m.Disconnect()
 
 	ws, err := m.OpenService(r.serviceName)
 	if err != nil {
-		return fmt.Errorf("[%s] Could not access service: %v", r.name, err)
+		return backends.SetStatusLogErrorf(r.name, "Could not access service: %v", err)
 	}
 	defer ws.Close()
 
 	status, err := ws.Control(svc.Stop)
 	if err != nil {
-		return fmt.Errorf("[%s] Could not send stop control: %v", r.name, err)
+		return backends.SetStatusLogErrorf(r.name, "Could not send stop control: %v", err)
 	}
 
 	timeout := time.Now().Add(10 * time.Second)
 	for status.State != svc.Stopped {
 		if timeout.Before(time.Now()) {
-			return fmt.Errorf("[%s] Timeout waiting for service to go to stopped state: %v", r.name, err)
+			return backends.SetStatusLogErrorf(r.name, "Timeout waiting for service to go to stopped state: %v", err)
 		}
 		time.Sleep(300 * time.Millisecond)
 		status, err = ws.Query()
 		if err != nil {
-			return fmt.Errorf("[%s] Could not retrieve service status: %v", r.name, err)
+			return backends.SetStatusLogErrorf(r.name, "Could not retrieve service status: %v", err)
 		}
 	}
 
