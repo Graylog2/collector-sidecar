@@ -49,7 +49,7 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 	// server_url
 	ctx.ServerUrl, err = url.Parse(ctx.UserConfig.ServerUrl)
 	if err != nil || ctx.ServerUrl.Scheme == "" || ctx.ServerUrl.Host == "" {
-		log.Fatal("Server-url is not valid. Should be like http://127.0.0.1:12900 ", err)
+		log.Fatal("Server-url is not valid. Should be like http://127.0.0.1:9000/api/ ", err)
 	}
 	if ctx.UserConfig.ServerUrl == "" {
 		log.Fatalf("Server-url is empty.")

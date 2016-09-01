@@ -34,7 +34,7 @@ import (
 var log = common.Log()
 
 const (
-	defaultBaseURL = "http://127.0.0.1:12900/"
+	defaultBaseURL = "http://127.0.0.1:9000/api/"
 	userAgent      = "Graylog Collector v" + common.CollectorVersion
 	mediaType      = "application/json"
 )
