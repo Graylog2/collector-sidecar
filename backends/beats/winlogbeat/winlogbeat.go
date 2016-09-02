@@ -34,8 +34,8 @@ import (
 	"github.com/Graylog2/collector-sidecar/system"
 )
 
-const(
-	name = "winlogbeat"
+const (
+	name   = "winlogbeat"
 	driver = "exec"
 )
 

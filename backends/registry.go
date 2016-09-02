@@ -88,7 +88,7 @@ func GetCreator(name string) (Creator, error) {
 
 func SetStatusLogErrorf(name string, format string, args ...interface{}) error {
 	Store.backends[name].SetStatus(StatusError, fmt.Sprintf(format, args...))
-	log.Errorf(fmt.Sprintf("[%s] ", name) + format, args...)
+	log.Errorf(fmt.Sprintf("[%s] ", name)+format, args...)
 	return fmt.Errorf(format, args)
 }
 

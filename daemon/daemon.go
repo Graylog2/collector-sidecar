@@ -22,9 +22,9 @@ import (
 )
 
 var (
-	Daemon *DaemonConfig
+	Daemon         *DaemonConfig
 	runnerRegistry = make(map[string]RunnerCreator)
-	log = common.Log()
+	log            = common.Log()
 )
 
 type DaemonConfig struct {
@@ -37,7 +37,6 @@ type DaemonConfig struct {
 
 	Runner map[string]Runner
 }
-
 
 func init() {
 	Daemon = NewConfig()

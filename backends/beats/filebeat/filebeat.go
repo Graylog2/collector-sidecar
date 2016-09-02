@@ -24,8 +24,8 @@ import (
 	"github.com/Graylog2/collector-sidecar/system"
 )
 
-const(
-	name = "filebeat"
+const (
+	name   = "filebeat"
 	driver = "exec"
 )
 

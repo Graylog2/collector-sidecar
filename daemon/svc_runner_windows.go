@@ -1,9 +1,24 @@
+// This file is part of Graylog.
+//
+// Graylog is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Graylog is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Graylog.  If not, see <http://www.gnu.org/licenses/>.
+
 package daemon
 
 import (
-	"time"
 	"os/exec"
 	"strings"
+	"time"
 
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/eventlog"
@@ -17,12 +32,12 @@ import (
 
 type SvcRunner struct {
 	RunnerCommon
-	exec           string
-	args           []string
-	startTime      time.Time
-	service        service.Service
-	serviceName    string
-	isRunning      bool
+	exec        string
+	args        []string
+	startTime   time.Time
+	service     service.Service
+	serviceName string
+	isRunning   bool
 }
 
 func init() {
@@ -34,14 +49,14 @@ func init() {
 func NewSvcRunner(backend backends.Backend, context *context.Ctx) Runner {
 	r := &SvcRunner{
 		RunnerCommon: RunnerCommon{
-			name: backend.Name(),
+			name:    backend.Name(),
 			context: context,
-			backend:      backend,
+			backend: backend,
 		},
-		exec:         backend.ExecPath(),
-		args:         backend.ExecArgs(),
-		serviceName:  "graylog-collector-" + backend.Name(),
-		isRunning:    false,
+		exec:        backend.ExecPath(),
+		args:        backend.ExecArgs(),
+		serviceName: "graylog-collector-" + backend.Name(),
+		isRunning:   false,
 	}
 
 	return r
@@ -97,8 +112,8 @@ func (r *SvcRunner) ValidateBeforeStart() error {
 	defer m.Disconnect()
 
 	serviceConfig := mgr.Config{
-		DisplayName: "Graylog collector sidecar - " + r.name + " backend",
-		Description: "Wrapper service for the NXLog backend",
+		DisplayName:    "Graylog collector sidecar - " + r.name + " backend",
+		Description:    "Wrapper service for the NXLog backend",
 		BinaryPathName: r.exec + " " + strings.Join(r.args, " ")}
 
 	s, err := m.OpenService(r.serviceName)
@@ -115,7 +130,7 @@ func (r *SvcRunner) ValidateBeforeStart() error {
 		if err != nil {
 			backends.SetStatusLogErrorf(r.name, "Failed to update service: %v", err)
 		}
-	// service needs to be created
+		// service needs to be created
 	} else {
 		s, err = m.CreateService(r.serviceName,
 			execPath,
