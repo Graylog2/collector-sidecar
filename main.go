@@ -76,12 +76,12 @@ func main() {
 		Description: daemon.Daemon.Description,
 	}
 
-	supervisor := daemon.Daemon.NewSupervisor()
-	s, err := service.New(supervisor, serviceConfig)
+	distributor := daemon.Daemon.NewDistributor()
+	s, err := service.New(distributor, serviceConfig)
 	if err != nil {
 		log.Fatalf("Operating system is not supported: %s", err)
 	}
-	supervisor.BindToService(s)
+	distributor.BindToService(s)
 
 	if len(*serviceParam) != 0 {
 		err := service.Control(s, *serviceParam)
@@ -139,7 +139,7 @@ func backendSetup(context *context.Ctx) {
 		backends.Store.AddBackend(backend)
 		if *collector.Enabled == true && backend.ValidatePreconditions() {
 			log.Debug("Add collector backend: " + backend.Name())
-			daemon.Daemon.AddBackendAsRunner(backend, context)
+			daemon.Daemon.AddBackend(backend, context)
 		}
 	}
 

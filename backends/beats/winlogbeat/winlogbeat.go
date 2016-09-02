@@ -34,7 +34,10 @@ import (
 	"github.com/Graylog2/collector-sidecar/system"
 )
 
-const name = "winlogbeat"
+const(
+	name = "winlogbeat"
+	driver = "exec"
+)
 
 var (
 	log           = common.Log()
@@ -53,6 +56,10 @@ func New(context *context.Ctx) backends.Backend {
 
 func (wlbc *WinLogBeatConfig) Name() string {
 	return name
+}
+
+func (wlbc *WinLogBeatConfig) Driver() string {
+	return driver
 }
 
 func (wlbc *WinLogBeatConfig) ExecPath() string {

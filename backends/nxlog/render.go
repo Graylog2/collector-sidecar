@@ -24,6 +24,7 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/common"
+	"strings"
 )
 
 func (nxc *NxConfig) definitionsToString() string {
@@ -446,10 +447,10 @@ func (nxc *NxConfig) RenderOnChange(json graylog.ResponseCollectorConfiguration)
 }
 
 func (nxc *NxConfig) ValidateConfigurationFile() bool {
-	cmd := exec.Command(nxc.ExecPath(), "-v", "-c", nxc.UserConfig.ConfigurationPath)
-	err := cmd.Run()
-	if err != nil {
-		log.Errorf("[%s] Error during configuration validation: %s", nxc.Name(), err)
+	output, err := exec.Command(nxc.ExecPath(), "-v", "-c", nxc.UserConfig.ConfigurationPath).CombinedOutput()
+	soutput := string(output)
+	if err != nil || !strings.Contains(soutput, "configuration OK") {
+		log.Errorf("[%s] Error during configuration validation: %s", nxc.Name(), soutput)
 		return false
 	}
 

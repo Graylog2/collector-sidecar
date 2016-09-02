@@ -1,0 +1,228 @@
+package daemon
+
+import (
+	"time"
+	"os/exec"
+	"strings"
+
+	"golang.org/x/sys/windows/svc"
+	"golang.org/x/sys/windows/svc/eventlog"
+	"golang.org/x/sys/windows/svc/mgr"
+
+	"github.com/kardianos/service"
+
+	"github.com/Graylog2/collector-sidecar/backends"
+	"github.com/Graylog2/collector-sidecar/context"
+)
+
+type SvcRunner struct {
+	RunnerCommon
+	exec           string
+	args           []string
+	startTime      time.Time
+	service        service.Service
+	serviceName    string
+	isRunning      bool
+}
+
+func init() {
+	if err := RegisterBackendRunner("svc", NewSvcRunner); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func NewSvcRunner(backend backends.Backend, context *context.Ctx) Runner {
+	r := &SvcRunner{
+		RunnerCommon: RunnerCommon{
+			name: backend.Name(),
+			context: context,
+			backend:      backend,
+		},
+		exec:         backend.ExecPath(),
+		args:         backend.ExecArgs(),
+		serviceName:  "graylog-collector-" + backend.Name(),
+		isRunning:    false,
+	}
+
+	return r
+}
+
+func (r *SvcRunner) Name() string {
+	return r.name
+}
+
+func (r *SvcRunner) Running() bool {
+	m, err := mgr.Connect()
+	if err != nil {
+		backends.SetStatusLogErrorf(r.name, "Failed to connect to service manager: %v", err)
+	}
+	defer m.Disconnect()
+
+	s, err := m.OpenService(r.serviceName)
+	// service exist so we only update the properties
+	if err != nil {
+		backends.SetStatusLogErrorf(r.name, "Can't get status of service %s cause it doesn't exist: %v", r.serviceName, err)
+	}
+
+	status, err := s.Query()
+	if err != nil {
+		backends.SetStatusLogErrorf(r.name, "Can't query status of service %s: %v", r.serviceName, err)
+	}
+
+	return status.State == svc.Running
+}
+
+func (r *SvcRunner) SetDaemon(d *DaemonConfig) {
+	r.daemon = d
+}
+
+func (r *SvcRunner) BindToService(s service.Service) {
+	r.service = s
+}
+
+func (r *SvcRunner) GetService() service.Service {
+	return r.service
+}
+
+func (r *SvcRunner) ValidateBeforeStart() error {
+	execPath, err := exec.LookPath(r.exec)
+	if err != nil {
+		return backends.SetStatusLogErrorf(r.name, "Failed to find collector executable %s", r.exec)
+	}
+
+	m, err := mgr.Connect()
+	if err != nil {
+		return backends.SetStatusLogErrorf(r.name, "Failed to connect to service manager: %v", err)
+	}
+	defer m.Disconnect()
+
+	serviceConfig := mgr.Config{
+		DisplayName: "Graylog collector sidecar - " + r.name + " backend",
+		Description: "Wrapper service for the NXLog backend",
+		BinaryPathName: r.exec + " " + strings.Join(r.args, " ")}
+
+	s, err := m.OpenService(r.serviceName)
+	// service exist so we only update the properties
+	if err == nil {
+		log.Debugf("[%s] service %s already exists, updating properties", r.name)
+		currentConfig, err := s.Config()
+		if err == nil {
+			currentConfig.DisplayName = serviceConfig.DisplayName
+			currentConfig.Description = serviceConfig.Description
+			currentConfig.BinaryPathName = serviceConfig.BinaryPathName
+		}
+		err = s.UpdateConfig(currentConfig)
+		if err != nil {
+			backends.SetStatusLogErrorf(r.name, "Failed to update service: %v", err)
+		}
+	// service needs to be created
+	} else {
+		s, err = m.CreateService(r.serviceName,
+			execPath,
+			serviceConfig)
+		if err != nil {
+			backends.SetStatusLogErrorf(r.name, "Failed to install service: %v", err)
+		}
+		defer s.Close()
+		err = eventlog.InstallAsEventCreate(r.serviceName, eventlog.Error|eventlog.Warning|eventlog.Info)
+		if err != nil {
+			s.Delete()
+			backends.SetStatusLogErrorf(r.name, "SetupEventLogSource() failed: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func (r *SvcRunner) Start(s service.Service) error {
+	if err := r.ValidateBeforeStart(); err != nil {
+		log.Error(err.Error())
+		return err
+	}
+
+	r.startTime = time.Now()
+	log.Infof("[%s] Starting (%s driver)", r.name, r.backend.Driver())
+
+	m, err := mgr.Connect()
+	if err != nil {
+		return backends.SetStatusLogErrorf(r.name, "Failed to connect to service manager: %v", err)
+	}
+	defer m.Disconnect()
+
+	ws, err := m.OpenService(r.serviceName)
+	if err != nil {
+		return backends.SetStatusLogErrorf(r.name, "Could not access service: %v", err)
+	}
+	defer ws.Close()
+
+	err = ws.Start("is", "manual-started")
+	if err != nil {
+		return backends.SetStatusLogErrorf(r.name, "Could not start service: %v", err)
+	}
+
+	r.isRunning = true
+	go func() {
+		for {
+			time.Sleep(10 * time.Second)
+			if r.isRunning && !r.Running() {
+				backends.SetStatusLogErrorf(r.name, "Backend crashed, sending restart signal")
+				r.Start(s)
+				break
+			}
+
+			if !r.isRunning {
+				break
+			}
+		}
+	}()
+
+	r.backend.SetStatus(backends.StatusRunning, "Running")
+
+	return err
+}
+
+func (r *SvcRunner) Stop(s service.Service) error {
+	log.Infof("[%s] Stopping", r.name)
+
+	// deactivate supervisor
+	r.isRunning = false
+
+	m, err := mgr.Connect()
+	if err != nil {
+		return backends.SetStatusLogErrorf(r.name, "Failed to connect to service manager: %v", err)
+	}
+	defer m.Disconnect()
+
+	ws, err := m.OpenService(r.serviceName)
+	if err != nil {
+		return backends.SetStatusLogErrorf(r.name, "Could not access service: %v", err)
+	}
+	defer ws.Close()
+
+	status, err := ws.Control(svc.Stop)
+	if err != nil {
+		return backends.SetStatusLogErrorf(r.name, "Could not send stop control: %v", err)
+	}
+
+	timeout := time.Now().Add(10 * time.Second)
+	for status.State != svc.Stopped {
+		if timeout.Before(time.Now()) {
+			return backends.SetStatusLogErrorf(r.name, "Timeout waiting for service to go to stopped state: %v", err)
+		}
+		time.Sleep(300 * time.Millisecond)
+		status, err = ws.Query()
+		if err != nil {
+			return backends.SetStatusLogErrorf(r.name, "Could not retrieve service status: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func (r *SvcRunner) Restart(s service.Service) error {
+	r.Stop(s)
+	time.Sleep(2 * time.Second)
+	r.Start(s)
+
+	return nil
+}

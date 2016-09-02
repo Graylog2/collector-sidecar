@@ -46,6 +46,13 @@ func (nxc *NxConfig) Name() string {
 	return name
 }
 
+func (nxc *NxConfig) Driver() string {
+	if runtime.GOOS == "windows" {
+		return "svc"
+	}
+	return "exec"
+}
+
 func (nxc *NxConfig) ExecPath() string {
 	execPath := nxc.UserConfig.BinaryPath
 	if common.FileExists(execPath) != nil {
@@ -68,7 +75,10 @@ func (nxc *NxConfig) ConfigurationPath() string {
 }
 
 func (nxc *NxConfig) ExecArgs() []string {
-	return []string{"-f", "-c", nxc.ConfigurationPath()}
+	if runtime.GOOS == "windows" {
+		return []string{"-c", "\"" + nxc.ConfigurationPath() + "\""}
+	}
+	return []string{"-f", "-c", "\"" + nxc.ConfigurationPath() + "\""}
 }
 
 func (nxc *NxConfig) ValidatePreconditions() bool {
