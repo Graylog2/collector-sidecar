@@ -23,7 +23,7 @@ Especially the [Step-by-Step](http://docs.graylog.org/en/2.1/pages/collector_sid
 The Beats binaries (Filebeat and Winlogeventbeat) are included in the Sidecar package. So installation is just one command.
 
 ```
-  $ sudo dpkg -i collector-sidecar_0.0.9-1_amd64.deb
+  $ sudo dpkg -i collector-sidecar_0.1.0-1_amd64.deb
 ```
 
 Edit `/etc/graylog/collector-sidecar/collector_sidecar.yml`, you should set at least the correct URL to your Graylog server and proper tags.
@@ -39,7 +39,7 @@ Create a system service and start it
 **CentOS**
 
 ```
-  $ sudo rpm -i collector-sidecar-0.0.9-1.x86_64.rpm
+  $ sudo rpm -i collector-sidecar-0.1.0-1.x86_64.rpm
 ```
 
 Activate the Sidecar as a system service
@@ -82,7 +82,7 @@ Install the NXLog package from the offical download [page](https://nxlog.org/pro
   $ sudo gpasswd -a nxlog adm
   $ sudo chown -R nxlog.nxlog /var/spool/collector-sidecar/nxlog
  
-  $ sudo dpkg -i collector-sidecar_0.0.9-1_amd64.deb
+  $ sudo dpkg -i collector-sidecar_0.1.0-1_amd64.deb
 ```
 
 Edit `/etc/graylog/collector-sidecar/collector_sidecar.yml`accordingly.
@@ -100,7 +100,7 @@ Edit `/etc/graylog/collector-sidecar/collector_sidecar.yml`accordingly.
   $ sudo gpasswd -a nxlog root
   $ sudo chown -R nxlog.nxlog /var/spool/collector-sidecar/nxlog
 
-  $ sudo rpm -i collector-sidecar-0.0.9-1.x86_64.rpm
+  $ sudo rpm -i collector-sidecar-0.1.0-1.x86_64.rpm
 ```
 
 Activate the Sidecar as a system service
