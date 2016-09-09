@@ -17,12 +17,13 @@ package winlogbeat
 
 import (
 	"bytes"
-	"gopkg.in/yaml.v2"
+	"fmt"
 	"io/ioutil"
 	"os/exec"
 	"text/template"
 
-	"fmt"
+	"gopkg.in/yaml.v2"
+
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/common"
@@ -89,10 +90,18 @@ func (wlbc *WinLogBeatConfig) RenderOnChange(response graylog.ResponseCollectorC
 				newConfig.Beats.Set(value, "output", output.Type, property)
 			}
 			if wlbc.Beats.PropertyBool(output.Properties["tls"]) {
-				newConfig.Beats.Set([]string{wlbc.Beats.PropertyString(output.Properties["ca_file"], 0)}, "output", "logstash", "tls", "certificate_authorities")
-				newConfig.Beats.Set(output.Properties["cert_file"], "output", "logstash", "tls", "certificate")
-				newConfig.Beats.Set(output.Properties["cert_key_file"], "output", "logstash", "tls", "certificate_key")
-				newConfig.Beats.Set(wlbc.Beats.PropertyBool(output.Properties["tls_insecure"]), "output", "logstash", "tls", "insecure")
+				if wlbc.Beats.PropertyBool(output.Properties["ca_file"]) {
+					newConfig.Beats.Set([]string{wlbc.Beats.PropertyString(output.Properties["ca_file"], 0)}, "output", "logstash", "tls", "certificate_authorities")
+				}
+				if wlbc.Beats.PropertyBool(output.Properties["cert_file"]) {
+					newConfig.Beats.Set(output.Properties["cert_file"], "output", "logstash", "tls", "certificate")
+				}
+				if wlbc.Beats.PropertyBool(output.Properties["cert_key_file"]) {
+					newConfig.Beats.Set(output.Properties["cert_key_file"], "output", "logstash", "tls", "certificate_key")
+				}
+				if wlbc.Beats.PropertyBool(output.Properties["tls_insecure"]) {
+					newConfig.Beats.Set(wlbc.Beats.PropertyBool(output.Properties["tls_insecure"]), "output", "logstash", "tls", "insecure")
+				}
 			}
 		}
 	}

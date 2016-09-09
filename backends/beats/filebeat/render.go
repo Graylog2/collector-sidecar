@@ -17,12 +17,13 @@ package filebeat
 
 import (
 	"bytes"
-	"gopkg.in/yaml.v2"
+	"fmt"
 	"io/ioutil"
 	"os/exec"
 	"text/template"
 
-	"fmt"
+	"gopkg.in/yaml.v2"
+
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/common"
