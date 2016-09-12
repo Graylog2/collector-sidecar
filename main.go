@@ -58,7 +58,7 @@ func init() {
 	printVersion = flag.Bool("version", false, "Print version and exit")
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: graylog-collector-sidecar -c [CONFIGURATION FILE]\n")
+		fmt.Fprint(os.Stderr, "Usage: graylog-collector-sidecar -c [CONFIGURATION FILE]\n")
 		flag.PrintDefaults()
 	}
 
@@ -93,8 +93,8 @@ func main() {
 	}
 
 	// initialize application context
-	context := context.NewContext()
-	err = context.LoadConfig(configurationFile)
+	ctx := context.NewContext()
+	err = ctx.LoadConfig(configurationFile)
 	if err != nil {
 		log.Fatal("Loading configuration file failed.")
 	}
@@ -103,10 +103,10 @@ func main() {
 		return
 	}
 
-	backendSetup(context)
+	backendSetup(ctx)
 
 	// start main loop
-	services.StartPeriodicals(context)
+	services.StartPeriodicals(ctx)
 	err = s.Run()
 	if err != nil {
 		log.Fatal(err)
@@ -117,7 +117,7 @@ func commandLineSetup() bool {
 	flag.Parse()
 
 	if *printVersion {
-		fmt.Printf("Graylog Collector Sidecar version %s (%s)\n", common.CollectorVersion, runtime.GOARCH)
+		fmt.Printf("Graylog Collector Sidecar version %s (%s) [%s/%s]\n", common.CollectorVersion, common.GitRevision, runtime.Version(), runtime.GOARCH)
 		return true
 	}
 

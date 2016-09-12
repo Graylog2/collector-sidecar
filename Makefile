@@ -6,6 +6,9 @@ ifeq ($(strip $(COLLECTOR_VERSION)),)
 $(error COLLECTOR_VERSION is not set)
 endif
 
+GIT_REV=$(shell git rev-parse --short HEAD)
+BUILD_OPTS = -ldflags "-s -X github.com/Graylog2/collector-sidecar/common.GitRevision=$(GIT_REV)"
+
 TEST_SUITE = \
 	github.com/Graylog2/collector-sidecar/backends/nxlog \
 	github.com/Graylog2/collector-sidecar/common
@@ -47,29 +50,29 @@ test: ## Run tests
 	$(GO) test -v $(TEST_SUITE)
 
 build: ## Build collector-sidecar binary for local target system
-	$(GO) build -v -i -o graylog-collector-sidecar
+	$(GO) build $(BUILD_OPTS) -v -i -o graylog-collector-sidecar
 
 build-all: build-linux build-linux32 build-darwin build-windows build-windows32
 
 build-linux: ## Build collector-sidecar binary for Linux
 	@mkdir -p build/$(COLLECTOR_VERSION)/linux/amd64
-	GOOS=linux GOARCH=amd64 $(GO) build -v -i -o build/$(COLLECTOR_VERSION)/linux/amd64/graylog-collector-sidecar
+	GOOS=linux GOARCH=amd64 $(GO) build $(BUILD_OPTS) -v -i -o build/$(COLLECTOR_VERSION)/linux/amd64/graylog-collector-sidecar
 
 build-linux32: ## Build collector-sidecar binary for Linux 32bit
 	@mkdir -p build/$(COLLECTOR_VERSION)/linux/386
-	GOOS=linux GOARCH=386 $(GO) build -v -i -o build/$(COLLECTOR_VERSION)/linux/386/graylog-collector-sidecar
+	GOOS=linux GOARCH=386 $(GO) build $(BUILD_OPTS) -v -i -o build/$(COLLECTOR_VERSION)/linux/386/graylog-collector-sidecar
 
 build-darwin: ## Build collector-sidecar binary for OSX
 	@mkdir -p build/$(COLLECTOR_VERSION)/darwin/amd64
-	GOOS=darwin GOARCH=amd64 $(GO) build -v -i -o build/$(COLLECTOR_VERSION)/darwin/amd64/graylog-collector-sidecar
+	GOOS=darwin GOARCH=amd64 $(GO) build $(BUILD_OPTS) -v -i -o build/$(COLLECTOR_VERSION)/darwin/amd64/graylog-collector-sidecar
 
 build-windows: ## Build collector-sidecar binary for Windows
 	@mkdir -p build/$(COLLECTOR_VERSION)/windows/amd64
-	GOOS=windows GOARCH=amd64 $(GO) build -pkgdir $(HOME)/.go_win -v -i -o build/$(COLLECTOR_VERSION)/windows/amd64/graylog-collector-sidecar.exe
+	GOOS=windows GOARCH=amd64 $(GO) build $(BUILD_OPTS) -pkgdir $(HOME)/.go_win -v -i -o build/$(COLLECTOR_VERSION)/windows/amd64/graylog-collector-sidecar.exe
 
 build-windows32: ## Build collector-sidecar binary for Windows 32bit
 	@mkdir -p build/$(COLLECTOR_VERSION)/windows/386
-	GOOS=windows GOARCH=386 $(GO) build -pkgdir $(HOME)/.go_win32 -v -i -o build/$(COLLECTOR_VERSION)/windows/386/graylog-collector-sidecar.exe
+	GOOS=windows GOARCH=386 $(GO) build $(BUILD_OPTS) -pkgdir $(HOME)/.go_win32 -v -i -o build/$(COLLECTOR_VERSION)/windows/386/graylog-collector-sidecar.exe
 
 package-all: prepare-package package-linux package-linux32 package-windows package-windows32
 

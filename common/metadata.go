@@ -18,3 +18,7 @@ package common
 const (
 	CollectorVersion = "0.1.0"
 )
+
+var (
+	GitRevision string
+)
