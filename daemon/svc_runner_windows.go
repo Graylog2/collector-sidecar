@@ -78,6 +78,7 @@ func (r *SvcRunner) Running() bool {
 	if err != nil {
 		backends.SetStatusLogErrorf(r.name, "Can't get status of service %s cause it doesn't exist: %v", r.serviceName, err)
 	}
+	defer s.Close()
 
 	status, err := s.Query()
 	if err != nil {
@@ -119,6 +120,7 @@ func (r *SvcRunner) ValidateBeforeStart() error {
 	s, err := m.OpenService(r.serviceName)
 	// service exist so we only update the properties
 	if err == nil {
+		defer s.Close()
 		log.Debugf("[%s] service %s already exists, updating properties", r.name)
 		currentConfig, err := s.Config()
 		if err == nil {
