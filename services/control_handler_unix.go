@@ -13,12 +13,21 @@
 // You should have received a copy of the GNU General Public License
 // along with Graylog.  If not, see <http://www.gnu.org/licenses/>.
 
-package common
+// +build darwin linux
 
-const (
-	CollectorVersion = "0.1.0"
-)
+package services
 
-var (
-	GitRevision string
-)
+import "github.com/kardianos/service"
+
+func ControlHandler(action string) {
+	switch action {
+	case "install":
+	case "uninstall":
+	case "start":
+	case "stop":
+	case "restart":
+	case "status":
+	default:
+		log.Fatalf("Valid service actions: %s", service.ControlAction)
+	}
+}

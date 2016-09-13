@@ -79,15 +79,15 @@ func main() {
 	distributor := daemon.Daemon.NewDistributor()
 	s, err := service.New(distributor, serviceConfig)
 	if err != nil {
-		log.Fatalf("Operating system is not supported: %s", err)
+		log.Fatalf("Operating system is not supported: %v", err)
 	}
 	distributor.BindToService(s)
 
 	if len(*serviceParam) != 0 {
+		services.ControlHandler(*serviceParam)
 		err := service.Control(s, *serviceParam)
 		if err != nil {
-			log.Info("Valid service actions:\n", service.ControlAction)
-			log.Fatal(err)
+			log.Errorf("Failed service action: %v", err)
 		}
 		return
 	}

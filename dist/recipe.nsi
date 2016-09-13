@@ -84,6 +84,10 @@ SectionEnd
 ;--------------------------------    
 ;Uninstaller Section  
 Section "Uninstall"
+
+;Uninstall system service
+  ExecWait '"$INSTDIR\graylog-collector-sidecar.exe" -service stop'
+  ExecWait '"$INSTDIR\graylog-collector-sidecar.exe" -service uninstall'
  
 ;Delete Files 
   RMDir /r "$INSTDIR\*.*"    
