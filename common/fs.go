@@ -67,8 +67,13 @@ func ListFiles(paths []string) []File {
 					ModTime: file.ModTime(),
 					Size:    file.Size(),
 					IsDir:   file.IsDir()})
+			return nil
+		} else {
+			log.Errorf("Can not get file list for %s: %v", path, err)
+			// Make sure to return SkipDir here so the walk will
+			// continue!
+			return filepath.SkipDir
 		}
-		return err
 	}
 
 	for _, path := range paths {
@@ -78,7 +83,7 @@ func ListFiles(paths []string) []File {
 
 		err := filepath.Walk(path, filter)
 		if err != nil {
-			log.Errorf("Can not get file list for %s", path)
+			log.Errorf("Error listing files for %s: %v", path, err)
 		}
 	}
 
