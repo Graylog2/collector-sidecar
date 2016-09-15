@@ -8,9 +8,7 @@ collector_id: file:C:\Program Files\graylog\collector-sidecar\collector-id
 log_path: C:\Program Files\graylog\collector-sidecar
 log_rotation_time: 86400
 log_max_age: 604800
-tags:
-    - windows
-    - iis
+tags: <TAGS>
 backends:
     - name: nxlog
       enabled: false

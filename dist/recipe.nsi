@@ -13,9 +13,10 @@
   !include StrRep.nsh
   !include ReplaceInFile.nsh
   !include FileFunc.nsh
- 
-	VIProductVersion "0.${VERSION}"
-	VIAddVersionKey "FileVersion" "${VERSION}"
+  !include WordFunc.nsh
+
+  VIProductVersion "0.${VERSION}"
+  VIAddVersionKey "FileVersion" "${VERSION}"
   VIAddVersionKey "FileDescription" "Graylog Collector Sidecar"
   VIAddVersionKey "LegalCopyright" "Graylog, Inc."
  
@@ -32,6 +33,9 @@
   Var ParamServerUrl
   Var InputServerUrl
   Var ServerUrl
+  Var ParamTags
+  Var InputTags
+  Var Tags
   Var Dialog
   Var Label
 
@@ -57,10 +61,12 @@
   !define MUI_FINISHPAGE  
  
 ;--------------------------------
-;Language
+;Macros
  
   !insertmacro MUI_LANGUAGE "English"
- 
+  !insertmacro WordFind
+  !insertmacro WordFind2X
+
 ;--------------------------------
 ;Data
  
@@ -88,15 +94,38 @@ Section "Post"
 
   ; Update configuration
   ${GetParameters} $Params
-  ${GetOptions} $Params "-SERVERURL="  $ParamServerUrl
+  ${GetOptions} $Params "-SERVERURL=" $ParamServerUrl
+  ${GetOptions} $Params "-TAGS=" $ParamTags
+
   ${If} $ParamServerUrl != ""
     StrCpy $ServerUrl $ParamServerUrl
   ${EndIf}
+  ${If} $ParamTags != ""
+    StrCpy $0 $ParamTags
+    Loop_Tags:
+      ${WordFind} $0 " " "+1" $1
+      ${If} $Tags == ""
+        StrCpy $Tags $1
+      ${Else}
+        StrCpy $Tags `$Tags, $1`
+      ${EndIf}
+
+      ${WordFind2X} $0 $1 " " "-1}}" $0
+      StrCmp $0 $1 Loop_End Loop_Tags
+
+    Loop_End:
+  ${EndIf}
+
+  ; default for silent install
   ${If} $ServerUrl == ""
-    ; default for silent install
     StrCpy $ServerUrl "http://127.0.0.1:9000/api"
   ${EndIf}
+  ${If} $Tags == ""
+    StrCpy $Tags "windows, iis"
+  ${EndIf}
+
   !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<SERVERURL>" $ServerUrl
+  !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<TAGS>" `[$Tags]`
 
 SectionEnd
  
@@ -138,17 +167,27 @@ Function nsDialogsPage
 
   ${NSD_CreateLabel} 0 0 100% 12u "Please enter the URL to your Graylog API:"
   Pop $Label
-  ${NSD_CreateText} 50 40 75% 12u "http://127.0.0.1:9000/api"
+  ${NSD_CreateText} 50 20 75% 12u "http://127.0.0.1:9000/api"
   Pop $InputServerUrl
+
+  ${NSD_CreateLabel} 0 50 100% 12u "Please enter the configuration tags this host should receive:"
+  Pop $Label
+  ${NSD_CreateText} 50 70 75% 12u "windows, iis"
+  Pop $InputTags
 
   nsDialogs::Show
 FunctionEnd
 
 Function nsDialogsPageLeave
   ${NSD_GetText} $InputServerUrl $ServerUrl
+  ${NSD_GetText} $InputTags $Tags
 
   ${If} $ServerUrl == ""
       MessageBox MB_OK "Please enter a valid address to your Graylog server!"
+      Abort
+  ${EndIf}
+  ${If} $Tags == ""
+      MessageBox MB_OK "Please enter one or more tags!"
       Abort
   ${EndIf}
 FunctionEnd
