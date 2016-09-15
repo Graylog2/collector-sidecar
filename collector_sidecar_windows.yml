@@ -1,4 +1,4 @@
-server_url: http://127.0.0.1:9000/api/
+server_url: <SERVERURL> 
 update_interval: 10
 tls_skip_verify: false
 send_status: true
