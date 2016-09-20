@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"time"
 
@@ -39,7 +40,7 @@ type ExecRunner struct {
 	startTime      time.Time
 	cmd            *exec.Cmd
 	service        service.Service
-	exit           chan struct{}
+	wg             sync.WaitGroup
 }
 
 func init() {
@@ -61,7 +62,6 @@ func NewExecRunner(backend backends.Backend, context *context.Ctx) Runner {
 		restartCount: 1,
 		stderr:       filepath.Join(context.UserConfig.LogPath, backend.Name()+"_stderr.log"),
 		stdout:       filepath.Join(context.UserConfig.LogPath, backend.Name()+"_stdout.log"),
-		exit:         make(chan struct{}),
 	}
 
 	return r
@@ -102,7 +102,9 @@ func (r *ExecRunner) Start(s service.Service) error {
 	}
 
 	r.restartCount = 1
+	r.wg.Add(1)
 	go func() {
+		defer r.wg.Done()
 		for {
 			r.cmd = exec.Command(r.exec, r.args...)
 			r.cmd.Dir = r.daemon.Dir
@@ -147,17 +149,20 @@ func (r *ExecRunner) Stop(s service.Service) error {
 	}
 	time.Sleep(2 * time.Second)
 
-	close(r.exit)
+	// in doubt kill the process
 	if r.cmd.Process != nil {
 		r.cmd.Process.Kill()
 	}
+
+	// wait for background routine to finish
+	r.wg.Wait()
+
 	return nil
 }
 
 func (r *ExecRunner) Restart(s service.Service) error {
 	r.Stop(s)
 	time.Sleep(2 * time.Second)
-	r.exit = make(chan struct{})
 	r.Start(s)
 
 	return nil
