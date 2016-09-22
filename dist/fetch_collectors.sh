@@ -1,8 +1,8 @@
 #!/bin/bash
 
 ARCHS=( i686 x86_64 windows )
-FILEBEAT_VERSION=1.2.3
-WINLOGBEAT_VERSION=1.2.3
+FILEBEAT_VERSION=1.3.1
+WINLOGBEAT_VERSION=1.3.1
 
 # $1: beat name
 # $2: beat version
