@@ -19,38 +19,45 @@ import (
 	"time"
 
 	"github.com/Graylog2/collector-sidecar/api"
+	"github.com/Graylog2/collector-sidecar/api/rest"
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/daemon"
+	"net/http"
 )
 
 var log = common.Log()
+var httpClient *http.Client
 
 func StartPeriodicals(context *context.Ctx) {
+	if httpClient == nil {
+		httpClient = rest.NewHTTPClient(api.GetTlsConfig(context))
+	}
+
 	go func() {
 		for {
-			updateCollectorRegistration(context)
+			updateCollectorRegistration(httpClient, context)
 		}
 	}()
 	go func() {
 		for {
-			checkForUpdateAndRestart(context)
+			checkForUpdateAndRestart(httpClient, context)
 		}
 	}()
 }
 
 // report collector status to Graylog server
-func updateCollectorRegistration(context *context.Ctx) {
+func updateCollectorRegistration(httpClient *http.Client, context *context.Ctx) {
 	time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
 	statusRequest := api.NewStatusRequest()
-	api.UpdateRegistration(context, &statusRequest)
+	api.UpdateRegistration(httpClient, context, &statusRequest)
 }
 
 // fetch configuration periodically
-func checkForUpdateAndRestart(context *context.Ctx) {
+func checkForUpdateAndRestart(httpClient *http.Client, context *context.Ctx) {
 	time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
-	jsonConfig, err := api.RequestConfiguration(context)
+	jsonConfig, err := api.RequestConfiguration(httpClient, context)
 	if err != nil {
 		log.Error("Can't fetch configuration from Graylog API: ", err)
 		return
