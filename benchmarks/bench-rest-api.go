@@ -4,9 +4,11 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"github.com/Graylog2/collector-sidecar/api"
+	"github.com/Graylog2/collector-sidecar/api/rest"
 	"github.com/Graylog2/collector-sidecar/cfgfile"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
@@ -31,6 +33,8 @@ func init() {
 	flag.Parse()
 }
 
+var httpClient = rest.NewHTTPClient(&tls.Config{})
+
 func startHeartbeat(ctx *context.Ctx, done chan bool, wg *sync.WaitGroup) {
 	fmt.Printf("[%s] starting heartbeat\n", ctx.UserConfig.NodeId)
 	for {
@@ -42,7 +46,7 @@ func startHeartbeat(ctx *context.Ctx, done chan bool, wg *sync.WaitGroup) {
 		default:
 			time.Sleep(time.Duration(ctx.UserConfig.UpdateInterval) * time.Second)
 			statusRequest := api.NewStatusRequest()
-			api.UpdateRegistration(ctx, &statusRequest)
+			api.UpdateRegistration(httpClient, ctx, &statusRequest)
 		}
 	}
 }
@@ -57,7 +61,7 @@ func startConfigUpdater(ctx *context.Ctx, done chan bool, wg *sync.WaitGroup) {
 			return
 		default:
 			time.Sleep(time.Duration(ctx.UserConfig.UpdateInterval) * time.Second)
-			_, err := api.RequestConfiguration(ctx)
+			_, err := api.RequestConfiguration(httpClient, ctx)
 			if err != nil {
 				fmt.Printf("[%s] can't fetch config from Graylog API: %v\n", ctx.UserConfig.NodeId, err)
 				return

@@ -29,12 +29,13 @@ import (
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/daemon"
 	"github.com/Graylog2/collector-sidecar/system"
+	"net/http"
 )
 
 var log = common.Log()
 
-func RequestConfiguration(context *context.Ctx) (graylog.ResponseCollectorConfiguration, error) {
-	c := rest.NewClient(nil, getTlsConfig(context))
+func RequestConfiguration(httpClient *http.Client, context *context.Ctx) (graylog.ResponseCollectorConfiguration, error) {
+	c := rest.NewClient(httpClient)
 	c.BaseURL = context.ServerUrl
 
 	params := make(map[string]string)
@@ -79,8 +80,8 @@ func RequestConfiguration(context *context.Ctx) (graylog.ResponseCollectorConfig
 	return respBody, err
 }
 
-func UpdateRegistration(context *context.Ctx, status *graylog.StatusRequest) {
-	c := rest.NewClient(nil, getTlsConfig(context))
+func UpdateRegistration(httpClient *http.Client, context *context.Ctx, status *graylog.StatusRequest) {
+	c := rest.NewClient(httpClient)
 	c.BaseURL = context.ServerUrl
 
 	metrics := &graylog.MetricsRequest{
@@ -121,7 +122,7 @@ func UpdateRegistration(context *context.Ctx, status *graylog.StatusRequest) {
 	}
 }
 
-func getTlsConfig(context *context.Ctx) *tls.Config {
+func GetTlsConfig(context *context.Ctx) *tls.Config {
 	var tlsConfig *tls.Config
 	if context.UserConfig.TlsSkipVerify {
 		tlsConfig = &tls.Config{InsecureSkipVerify: true}
