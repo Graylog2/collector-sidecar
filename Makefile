@@ -1,7 +1,8 @@
 GO ?= go
 GOFMT ?= gofmt
+AWK ?= awk
 
-COLLECTOR_VERSION = $(shell grep CollectorVersion common/metadata.go | awk '{gsub(/"/, "", $$3); print $$3}')
+COLLECTOR_VERSION = $(shell grep CollectorVersion common/metadata.go | $(AWK) '{gsub(/"/, "", $$3); print $$3}')
 ifeq ($(strip $(COLLECTOR_VERSION)),)
 $(error COLLECTOR_VERSION is not set)
 endif
@@ -58,6 +59,16 @@ build-linux: ## Build collector-sidecar binary for Linux
 	@mkdir -p build/$(COLLECTOR_VERSION)/linux/amd64
 	GOOS=linux GOARCH=amd64 $(GO) build $(BUILD_OPTS) -v -i -o build/$(COLLECTOR_VERSION)/linux/amd64/graylog-collector-sidecar
 
+solaris-sigar-patch:
+	# https://github.com/cloudfoundry/gosigar/pull/28
+	@if [ ! -e vendor/github.com/cloudfoundry/gosigar/sigar_solaris.go ]; then \
+		wget -O vendor/github.com/cloudfoundry/gosigar/sigar_solaris.go https://raw.githubusercontent.com/amitkris/gosigar/9fc0903125acd1a0dc7635f8670088339865bcd5/sigar_solaris.go; \
+	fi
+
+build-solaris: solaris-sigar-patch ## Build collector-sidecar binary for Solaris/OmniOS/Illumos
+	@mkdir -p build/$(COLLECTOR_VERSION)/solaris/amd64
+	GOOS=solaris GOARCH=amd64 $(GO) build $(BUILD_OPTS) -v -i -o build/$(COLLECTOR_VERSION)/solaris/amd64/graylog-collector-sidecar
+
 build-linux32: ## Build collector-sidecar binary for Linux 32bit
 	@mkdir -p build/$(COLLECTOR_VERSION)/linux/386
 	GOOS=linux GOARCH=386 $(GO) build $(BUILD_OPTS) -v -i -o build/$(COLLECTOR_VERSION)/linux/386/graylog-collector-sidecar
@@ -98,7 +109,7 @@ package-windows32: ## Create Windows installer for 32bit s hosts
 	@makensis dist/recipe32.nsi
 
 help:
-	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | $(AWK) 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 .DEFAULT_GOAL := help
 
