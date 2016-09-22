@@ -17,10 +17,11 @@ package common
 
 import (
 	"fmt"
-	sigar "github.com/cloudfoundry/gosigar"
 	"math"
 	"os"
 	"runtime"
+
+	sigar "github.com/elastic/gosigar"
 )
 
 var (

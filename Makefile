@@ -79,11 +79,11 @@ build-darwin: ## Build collector-sidecar binary for OSX
 
 build-windows: ## Build collector-sidecar binary for Windows
 	@mkdir -p build/$(COLLECTOR_VERSION)/windows/amd64
-	GOOS=windows GOARCH=amd64 $(GO) build $(BUILD_OPTS) -pkgdir $(HOME)/.go_win -v -i -o build/$(COLLECTOR_VERSION)/windows/amd64/graylog-collector-sidecar.exe
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(HOME)/.go_win -v -i -o build/$(COLLECTOR_VERSION)/windows/amd64/graylog-collector-sidecar.exe
 
 build-windows32: ## Build collector-sidecar binary for Windows 32bit
 	@mkdir -p build/$(COLLECTOR_VERSION)/windows/386
-	GOOS=windows GOARCH=386 $(GO) build $(BUILD_OPTS) -pkgdir $(HOME)/.go_win32 -v -i -o build/$(COLLECTOR_VERSION)/windows/386/graylog-collector-sidecar.exe
+	GOOS=windows GOARCH=386 CGO_ENABLED=1 CC=i686-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(HOME)/.go_win32 -v -i -o build/$(COLLECTOR_VERSION)/windows/386/graylog-collector-sidecar.exe
 
 package-all: prepare-package package-linux package-linux32 package-windows package-windows32
 

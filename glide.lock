@@ -1,10 +1,14 @@
-hash: 7728fc897eac0cc76f74e5d10c7491beac75b80b1c2e62b932159d57460dedd7
-updated: 2016-08-26T15:12:31.694887733+02:00
+hash: cfb44fc1b8574f1bd844cbd539e00109972d1b41ada10f781b0f26f9f0d4bb42
+updated: 2016-09-22T14:30:53.288687642+02:00
 imports:
 - name: bitbucket.org/tebeka/strftime
-  version: 2194253a23c0
-- name: github.com/cloudfoundry/gosigar
-  version: c32d31af94b0e9d3b2877e49c1a581ad5a793343
+  version: 2194253a23c090a4d5953b152a3c63fb5da4f5a4
+- name: github.com/elastic/gosigar
+  version: 2716c1fe855ee5c88eae707195e0688374458c92
+- name: github.com/go-ole/go-ole
+  version: 7dfdcf409020452e29b4babcbb22f984d2aa308a
+  subpackages:
+  - oleutil
 - name: github.com/kardianos/osext
   version: 10da29423eb9a6269092eebdc2be32209612d9d2
 - name: github.com/kardianos/service
@@ -19,6 +23,8 @@ imports:
   version: 446d1c146faa8ed3f4218f056fcd165f6bcfda81
   subpackages:
   - hooks/syslog
+- name: github.com/StackExchange/wmi
+  version: e54cbda6595d7293a7a468ccf9525f6bc8887f99
 - name: github.com/urso/ucfg
   version: 30b040c279a4e6c83ded5cb44403a5c6fcd64e8d
   subpackages:
@@ -26,12 +32,12 @@ imports:
 - name: golang.org/x/sys
   version: 833a04a10549a95dc34458c195cbad61bbb6cb4d
   subpackages:
+  - unix
   - windows
   - windows/registry
-  - windows/svc/mgr
-  - windows/svc/eventlog
   - windows/svc
-  - unix
+  - windows/svc/eventlog
+  - windows/svc/mgr
 - name: gopkg.in/yaml.v2
   version: a83829b6f1293c91addabc89d0571c246397bbf4
-devImports: []
+testImports: []
