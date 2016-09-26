@@ -34,7 +34,7 @@ import (
 
 var log = common.Log()
 
-func RequestConfiguration(httpClient *http.Client, context *context.Ctx) (graylog.ResponseCollectorConfiguration, error) {
+func RequestConfiguration(httpClient *http.Client, checksum string, context *context.Ctx) (graylog.ResponseCollectorConfiguration, error) {
 	c := rest.NewClient(httpClient)
 	c.BaseURL = context.ServerUrl
 
@@ -58,26 +58,39 @@ func RequestConfiguration(httpClient *http.Client, context *context.Ctx) (graylo
 		return graylog.ResponseCollectorConfiguration{}, err
 	}
 
-	respBody := graylog.ResponseCollectorConfiguration{}
-	resp, err := c.Do(r, &respBody)
-	if resp != nil && resp.StatusCode == 204 {
-		msg := "No configuration found for configured tags!"
-		system.GlobalStatus.Set(backends.StatusError, msg)
-		log.Infof("[RequestConfiguration] %s", msg)
-		return graylog.ResponseCollectorConfiguration{}, nil
-	} else if resp != nil && resp.StatusCode != 200 {
-		msg := "Bad response status from Graylog server"
-		system.GlobalStatus.Set(backends.StatusError, msg)
-		log.Errorf("[RequestConfiguration] %s: %s", msg, resp.Status)
-		return graylog.ResponseCollectorConfiguration{}, nil
-	} else if err != nil {
+	if checksum != "" {
+		r.Header.Add("If-None-Match", "\"" + checksum + "\"")
+	}
+
+	configurationResponse := graylog.ResponseCollectorConfiguration{}
+	resp, err := c.Do(r, &configurationResponse)
+	if err != nil && resp == nil {
 		msg := "Fetching configuration failed"
 		system.GlobalStatus.Set(backends.StatusError, msg)
 		log.Errorf("[RequestConfiguration] %s: %v", msg, err)
 	}
 
+	if resp != nil {
+		// preserver Etag as checksum for the next request. Empty string if header is not available
+		configurationResponse.Checksum = resp.Header.Get("Etag")
+		switch {
+		case resp.StatusCode == 204:
+			msg := "No configuration found for configured tags!"
+			system.GlobalStatus.Set(backends.StatusError, msg)
+			log.Infof("[RequestConfiguration] %s", msg)
+			return graylog.ResponseCollectorConfiguration{}, nil
+		case resp.StatusCode == 304:
+			log.Debug("[RequestConfiguration] No configuration update available, skipping update.")
+		case resp.StatusCode != 200:
+			msg := "Bad response status from Graylog server"
+			system.GlobalStatus.Set(backends.StatusError, msg)
+			log.Errorf("[RequestConfiguration] %s: %s", msg, resp.Status)
+			return graylog.ResponseCollectorConfiguration{}, err
+		}
+	}
+
 	system.GlobalStatus.Set(backends.StatusRunning, "")
-	return respBody, err
+	return configurationResponse, nil
 }
 
 func UpdateRegistration(httpClient *http.Client, context *context.Ctx, status *graylog.StatusRequest) {

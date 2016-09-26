@@ -17,6 +17,7 @@ package services
 
 import (
 	"time"
+	"net/http"
 
 	"github.com/Graylog2/collector-sidecar/api"
 	"github.com/Graylog2/collector-sidecar/api/rest"
@@ -24,7 +25,6 @@ import (
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/daemon"
-	"net/http"
 )
 
 var log = common.Log()
@@ -41,8 +41,9 @@ func StartPeriodicals(context *context.Ctx) {
 		}
 	}()
 	go func() {
+		checksum := ""
 		for {
-			checkForUpdateAndRestart(httpClient, context)
+			checksum = checkForUpdateAndRestart(httpClient, checksum, context)
 		}
 	}()
 }
@@ -55,13 +56,18 @@ func updateCollectorRegistration(httpClient *http.Client, context *context.Ctx) 
 }
 
 // fetch configuration periodically
-func checkForUpdateAndRestart(httpClient *http.Client, context *context.Ctx) {
+func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context *context.Ctx) string {
 	time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
-	jsonConfig, err := api.RequestConfiguration(httpClient, context)
+	jsonConfig, err := api.RequestConfiguration(httpClient, checksum, context)
 	if err != nil {
 		log.Error("Can't fetch configuration from Graylog API: ", err)
-		return
+		return ""
 	}
+	if jsonConfig.IsEmpty() {
+		// etag match, skipping all other actions
+		return jsonConfig.Checksum
+	}
+
 	for name, runner := range daemon.Daemon.Runner {
 		backend := backends.Store.GetBackend(name)
 		if backend.RenderOnChange(jsonConfig) {
@@ -85,4 +91,6 @@ func checkForUpdateAndRestart(httpClient *http.Client, context *context.Ctx) {
 
 		}
 	}
+
+	return jsonConfig.Checksum
 }
