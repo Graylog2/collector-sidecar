@@ -103,10 +103,16 @@ package-linux32: ## Create Linux system package for 32bit hosts
 	@fpm-cook -t rpm package dist/recipe32.rb
 
 package-windows: ## Create Windows installer
+	@mkdir -p dist/pkg
 	@makensis dist/recipe.nsi
 
-package-windows32: ## Create Windows installer for 32bit s hosts
+package-windows32: ## Create Windows installer for 32bit hosts
+	@mkdir -p dist/pkg
 	@makensis dist/recipe32.nsi
+
+package-tar: ## Create tar archive for all platforms
+	@mkdir -p dist/pkg
+	@tar --transform="s|/build|/collector-sidecar|" -Pczf dist/pkg/collector-sidecar-$(COLLECTOR_VERSION).tar.gz ./build
 
 help:
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | $(AWK) 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
