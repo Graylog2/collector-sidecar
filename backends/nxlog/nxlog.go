@@ -75,10 +75,11 @@ func (nxc *NxConfig) ConfigurationPath() string {
 }
 
 func (nxc *NxConfig) ExecArgs() []string {
+	// nxlog runs as system service on Windows, no foreground mode
 	if runtime.GOOS == "windows" {
 		return []string{"-c", "\"" + nxc.ConfigurationPath() + "\""}
 	}
-	return []string{"-f", "-c", "\"" + nxc.ConfigurationPath() + "\""}
+	return []string{"-f", "-c", nxc.ConfigurationPath()}
 }
 
 func (nxc *NxConfig) ValidatePreconditions() bool {

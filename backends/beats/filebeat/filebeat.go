@@ -17,6 +17,7 @@ package filebeat
 
 import (
 	"path/filepath"
+	"runtime"
 
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/common"
@@ -74,6 +75,9 @@ func (fbc *FileBeatConfig) ConfigurationPath() string {
 }
 
 func (fbc *FileBeatConfig) ExecArgs() []string {
+	if runtime.GOOS == "windows" {
+		return []string{"-c", "\"" + fbc.ConfigurationPath() + "\""}
+	}
 	return []string{"-c", fbc.ConfigurationPath()}
 }
 

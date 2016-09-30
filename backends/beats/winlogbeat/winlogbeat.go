@@ -27,6 +27,7 @@ package winlogbeat
 
 import (
 	"path/filepath"
+	"runtime"
 
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/common"
@@ -84,6 +85,9 @@ func (wlbc *WinLogBeatConfig) ConfigurationPath() string {
 }
 
 func (wlbc *WinLogBeatConfig) ExecArgs() []string {
+	if runtime.GOOS == "windows" {
+		return []string{"-c", "\"" + wlbc.ConfigurationPath() + "\""}
+	}
 	return []string{"-c", wlbc.ConfigurationPath()}
 }
 
