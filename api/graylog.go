@@ -136,15 +136,15 @@ func UpdateRegistration(httpClient *http.Client, context *context.Ctx, status *g
 	// Update configuration based on server response
 	if respBody != nil {
 		// API query interval
-		if context.UserConfig.UpdateInterval != respBody.UpdateInterval &&
-			respBody.UpdateInterval > 0 {
-			log.Infof("[ConfigurationUpdate] update_interval: %ds", respBody.UpdateInterval)
-			context.UserConfig.UpdateInterval = respBody.UpdateInterval
+		if context.UserConfig.UpdateInterval != respBody.Configuration.UpdateInterval &&
+			respBody.Configuration.UpdateInterval > 0 {
+			log.Infof("[ConfigurationUpdate] update_interval: %ds", respBody.Configuration.UpdateInterval)
+			context.UserConfig.UpdateInterval = respBody.Configuration.UpdateInterval
 		}
 		// Send host status
-		if context.UserConfig.SendStatus != respBody.SendStatus {
-			log.Infof("[ConfigurationUpdate] send_status: %v", respBody.SendStatus)
-			context.UserConfig.SendStatus = respBody.SendStatus
+		if context.UserConfig.SendStatus != respBody.Configuration.SendStatus {
+			log.Infof("[ConfigurationUpdate] send_status: %v", respBody.Configuration.SendStatus)
+			context.UserConfig.SendStatus = respBody.Configuration.SendStatus
 		}
 	}
 }

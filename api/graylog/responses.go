@@ -16,6 +16,10 @@
 package graylog
 
 type ResponseCollectorRegistration struct {
+	Configuration ResponseCollectorRegistrationConfiguration  `json:"configuration"`
+}
+
+type ResponseCollectorRegistrationConfiguration struct {
 	UpdateInterval int  `json:"update_interval"`
 	SendStatus     bool `json:"send_status"`
 }
