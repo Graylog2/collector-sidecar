@@ -18,7 +18,6 @@ package api
 import (
 	"crypto/tls"
 	"encoding/json"
-	"io"
 	"strconv"
 	"strings"
 
@@ -59,7 +58,7 @@ func RequestConfiguration(httpClient *http.Client, checksum string, context *con
 	}
 
 	if checksum != "" {
-		r.Header.Add("If-None-Match", "\"" + checksum + "\"")
+		r.Header.Add("If-None-Match", "\""+checksum+"\"")
 	}
 
 	configurationResponse := graylog.ResponseCollectorConfiguration{}
@@ -130,8 +129,23 @@ func UpdateRegistration(httpClient *http.Client, context *context.Ctx, status *g
 		context.UserConfig.SendStatus = false
 	} else if resp != nil && resp.StatusCode != 202 {
 		log.Error("[UpdateRegistration] Bad response from Graylog server: ", resp.Status)
-	} else if err != io.EOF { // we except EOF
+	} else if err != nil {
 		log.Error("[UpdateRegistration] Failed to report collector status to server: ", err)
+	}
+
+	// Update configuration based on server response
+	if respBody != nil {
+		// API query interval
+		if context.UserConfig.UpdateInterval != respBody.Configuration.UpdateInterval &&
+			respBody.Configuration.UpdateInterval > 0 {
+			log.Infof("[ConfigurationUpdate] update_interval: %ds", respBody.Configuration.UpdateInterval)
+			context.UserConfig.UpdateInterval = respBody.Configuration.UpdateInterval
+		}
+		// Send host status
+		if context.UserConfig.SendStatus != respBody.Configuration.SendStatus {
+			log.Infof("[ConfigurationUpdate] send_status: %v", respBody.Configuration.SendStatus)
+			context.UserConfig.SendStatus = respBody.Configuration.SendStatus
+		}
 	}
 }
 
