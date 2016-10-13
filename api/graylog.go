@@ -18,6 +18,7 @@ package api
 import (
 	"crypto/tls"
 	"encoding/json"
+	"io"
 	"strconv"
 	"strings"
 
@@ -129,12 +130,12 @@ func UpdateRegistration(httpClient *http.Client, context *context.Ctx, status *g
 		context.UserConfig.SendStatus = false
 	} else if resp != nil && resp.StatusCode != 202 {
 		log.Error("[UpdateRegistration] Bad response from Graylog server: ", resp.Status)
-	} else if err != nil {
+	} else if err != nil && err != io.EOF { // err is nil for GL 2.2 and EOF for 2.1 and earlier
 		log.Error("[UpdateRegistration] Failed to report collector status to server: ", err)
 	}
 
 	// Update configuration based on server response
-	if respBody != nil {
+	if (graylog.ResponseCollectorRegistration{}) != *respBody {
 		// API query interval
 		if context.UserConfig.UpdateInterval != respBody.Configuration.UpdateInterval &&
 			respBody.Configuration.UpdateInterval > 0 {
