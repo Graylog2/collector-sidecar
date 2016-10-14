@@ -84,8 +84,12 @@ func (nxc *NxConfig) ExecArgs() []string {
 
 func (nxc *NxConfig) ValidatePreconditions() bool {
 	if runtime.GOOS == "linux" {
-		if !common.IsDir("/var/run/graylog/collector-sidecar") {
-			err := common.CreatePathToFile("/var/run/graylog/collector-sidecar/nxlog.run")
+		runDir := "/var/run/graylog/collector-sidecar" // set in default-snippet
+		if nxc.UserConfig.RunPath != "" {
+			runDir = nxc.UserConfig.RunPath
+		}
+		if !common.IsDir(runDir) {
+			err := common.CreatePathToFile(filepath.Join(runDir, "nxlog.run"))
 			if err != nil {
 				return false
 			}
