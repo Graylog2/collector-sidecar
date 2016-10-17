@@ -89,9 +89,10 @@ func (nxc *NxConfig) ValidatePreconditions() bool {
 			runDir = nxc.UserConfig.RunPath
 		}
 		if !common.IsDir(runDir) {
-			log.Errorf("[%s] Path to PidFile doesn't exist. Trying to create it before starting NXLog.")
+			log.Errorf("[%s] Path to PidFile doesn't exist. Trying to create it before starting NXLog.", nxc.Name())
 			err := common.CreatePathToFile(filepath.Join(runDir, "nxlog.run"))
 			if err != nil {
+				log.Errorf("[%s] Unable to create directory %s: %v", nxc.Name(), runDir, err)
 				return false
 			}
 		}
