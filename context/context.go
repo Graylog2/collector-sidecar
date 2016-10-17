@@ -92,6 +92,15 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 		log.Fatal("Please set the maximum age of log file rotation > 0 seconds.")
 	}
 
+	// list log files
+	if len(ctx.UserConfig.ListLogFiles) > 0 {
+		for _, dir := range ctx.UserConfig.ListLogFiles {
+			if !common.IsDir(dir) {
+				log.Fatal("Please provide a list of directories for list_log_files.")
+			}
+		}
+	}
+
 	// update_interval
 	if !(ctx.UserConfig.UpdateInterval > 0) {
 		log.Fatal("Please set update interval > 0 seconds.")

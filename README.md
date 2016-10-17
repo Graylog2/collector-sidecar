@@ -168,12 +168,13 @@ There are a couple of configuration settings for the Sidecar:
 
 Each backend can be enabled/disabled and should point to a binary of the actual collector and a path to a configuration file the Sidecar can write to:
 
-| Parameter          | Description                                                       |
-|--------------------|-------------------------------------------------------------------|
-| name               | The type name of the collector                                    |
-| enabled            | Weather this backend should be started by the Sidecar or not      |
-| binary_path        | Path to the actual collector binary                               |
-| configuration_path | A path for this collector configuration file Sidecar can write to |
+| Parameter          | Description                                                                      |
+|--------------------|----------------------------------------------------------------------------------|
+| name               | The type name of the collector                                                   |
+| enabled            | Weather this backend should be started by the Sidecar or not                     |
+| binary_path        | Path to the actual collector binary                                              |
+| configuration_path | A path for this collector configuration file Sidecar can write to                |
+| run_path           | (NXLog only) If PidFile is changed in the default-snippet, tell Sidecar about it |
     
 ## Compile
 
