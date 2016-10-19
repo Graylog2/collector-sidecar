@@ -30,9 +30,13 @@ import (
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/daemon"
 	"github.com/Graylog2/collector-sidecar/system"
+	"github.com/Graylog2/collector-sidecar/cfgfile"
 )
 
-var log = common.Log()
+var (
+	log = common.Log()
+	configurationOverride = false
+)
 
 func RequestConfiguration(httpClient *http.Client, checksum string, ctx *context.Ctx) (graylog.ResponseCollectorConfiguration, error) {
 	c := rest.NewClient(httpClient)
@@ -136,20 +140,42 @@ func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *grayl
 
 	// Update configuration based on server response
 	if (graylog.ResponseCollectorRegistration{}) != *respBody {
-		// API query interval
-		if ctx.UserConfig.UpdateInterval != respBody.Configuration.UpdateInterval &&
-			respBody.Configuration.UpdateInterval > 0 &&
-			respBody.ConfigurationOverride == true {
-			log.Infof("[ConfigurationUpdate] update_interval: %ds", respBody.Configuration.UpdateInterval)
-			ctx.UserConfig.UpdateInterval = respBody.Configuration.UpdateInterval
-		}
-		// Send host status
-		if ctx.UserConfig.SendStatus != respBody.Configuration.SendStatus &&
-			respBody.ConfigurationOverride == true {
-			log.Infof("[ConfigurationUpdate] send_status: %v", respBody.Configuration.SendStatus)
-			ctx.UserConfig.SendStatus = respBody.Configuration.SendStatus
+		updateRuntimeConfiguration(respBody, ctx)
+	}
+}
+
+func updateRuntimeConfiguration(respBody *graylog.ResponseCollectorRegistration, ctx *context.Ctx) error {
+	// API query interval
+	if ctx.UserConfig.UpdateInterval != respBody.Configuration.UpdateInterval &&
+		respBody.Configuration.UpdateInterval > 0 &&
+		respBody.ConfigurationOverride == true {
+		log.Infof("[ConfigurationUpdate] update_interval: %ds", respBody.Configuration.UpdateInterval)
+		ctx.UserConfig.UpdateInterval = respBody.Configuration.UpdateInterval
+		configurationOverride = true
+	}
+	// Send host status
+	if ctx.UserConfig.SendStatus != respBody.Configuration.SendStatus &&
+		respBody.ConfigurationOverride == true {
+		log.Infof("[ConfigurationUpdate] send_status: %v", respBody.Configuration.SendStatus)
+		ctx.UserConfig.SendStatus = respBody.Configuration.SendStatus
+		configurationOverride = true
+	}
+	// Reset server overrides
+	if respBody.ConfigurationOverride == false && configurationOverride == true {
+		configFile := cfgfile.SidecarConfig{}
+		err := cfgfile.Read(&configFile, "")
+		if err != nil {
+			log.Errorf("[ConfigurationUpdate] Failed to load default values from configuration file. Continuing with current values. %v", err)
+			return err
+		} else {
+			log.Infof("[ConfigurationUpdate] Resetting update_interval: %ds", configFile.UpdateInterval)
+			ctx.UserConfig.UpdateInterval = configFile.UpdateInterval
+			log.Infof("[ConfigurationUpdate] Resetting send_status: %v", configFile.SendStatus)
+			ctx.UserConfig.SendStatus = configFile.SendStatus
+			configurationOverride = false
 		}
 	}
+	return nil
 }
 
 func GetTlsConfig(ctx *context.Ctx) *tls.Config {

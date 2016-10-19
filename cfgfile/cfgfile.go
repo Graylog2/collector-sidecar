@@ -29,9 +29,9 @@ import (
 )
 
 var log = common.Log()
+var configurationFile string
 
 // Command line flags
-var configurationFile *string
 var validateConfiguration *bool
 
 func init() {
@@ -42,24 +42,24 @@ func init() {
 // In case path is not set this method reads from the default configuration file.
 func Read(out interface{}, path string) error {
 
-	if path == "" {
-		path = *configurationFile
+	if path == "" && configurationFile != "" {
+		path = configurationFile
 	}
 
 	filecontent, err := ioutil.ReadFile(path)
 	if err != nil {
-		return fmt.Errorf("Failed to read %s: %v. Exiting.", path, err)
+		return fmt.Errorf("[ConfigFile] Failed to read %s: %v. Exiting.", path, err)
 	}
 	filecontent = expandEnv(filecontent)
 
 	config, err := yaml.NewConfig(filecontent, ucfg.PathSep("."))
 	if err != nil {
-		return fmt.Errorf("YAML config parsing failed on %s: %v. Exiting.", path, err)
+		return fmt.Errorf("[ConfigFile] YAML config parsing failed on %s: %v. Exiting.", path, err)
 	}
 
 	err = config.Unpack(out, ucfg.PathSep("."))
 	if err != nil {
-		return fmt.Errorf("Failed to apply config %s: %v. Exiting. ", path, err)
+		return fmt.Errorf("[ConfigFile] Failed to apply config %s: %v. Exiting. ", path, err)
 	}
 	return nil
 }
@@ -67,6 +67,11 @@ func Read(out interface{}, path string) error {
 // ValidateConfig returns whether or not this is configuration used for testing
 func ValidateConfig() bool {
 	return *validateConfiguration
+}
+
+// Preserve path to configuration file for reloading the same file during lifetime
+func SetConfigPath(path string) {
+	configurationFile = path
 }
 
 // expandEnv replaces ${var} or $var in config according to the values of the
@@ -82,10 +87,10 @@ func expandEnv(config []byte) []byte {
 		if v == "" && len(keyAndDefault) == 2 {
 			// Set value to the default.
 			v = keyAndDefault[1]
-			log.Info("Replacing config environment variable '${%s}' with "+
+			log.Info("[ConfigFile] Replacing config environment variable '${%s}' with "+
 				"default '%s'", key, keyAndDefault[1])
 		} else {
-			log.Info("Replacing config environment variable '${%s}' with '%s'",
+			log.Info("[ConfigFile] Replacing config environment variable '${%s}' with '%s'",
 				key, v)
 		}
 

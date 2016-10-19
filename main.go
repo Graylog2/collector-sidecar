@@ -97,6 +97,9 @@ func main() {
 	err = ctx.LoadConfig(configurationFile)
 	if err != nil {
 		log.Fatal("Loading configuration file failed.")
+	} else {
+		// Persist path for later reloads
+		cfgfile.SetConfigPath(*configurationFile)
 	}
 	if cfgfile.ValidateConfig() {
 		log.Info("Config OK")
