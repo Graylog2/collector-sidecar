@@ -78,6 +78,7 @@
 Section "Install"
  
   ;Add files
+  SetOutPath "$INSTDIR\generated" 	
   SetOutPath "$INSTDIR"
  
   File "../build/${VERSION}/windows/amd64/graylog-collector-sidecar.exe"
