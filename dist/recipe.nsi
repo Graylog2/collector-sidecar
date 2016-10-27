@@ -173,6 +173,7 @@ Section "Uninstall"
   RMDir "$INSTDIR"
   RMDir "$PROGRAMFILES64\graylog"
  
+  ;Remove uninstall entries in the registry 
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogCollectorSidecar"	
  
 SectionEnd
