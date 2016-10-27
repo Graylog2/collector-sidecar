@@ -125,6 +125,7 @@ Section "Post"
   ${GetParameters} $Params
   ${GetOptions} $Params "-SERVERURL=" $ParamServerUrl
   ${GetOptions} $Params "-TAGS=" $ParamTags
+
   ${If} $ParamServerUrl != ""
     StrCpy $ServerUrl $ParamServerUrl
   ${EndIf}
