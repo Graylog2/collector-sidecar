@@ -86,7 +86,10 @@ Section "Install"
   File /oname=collector_sidecar.yml "../collector_sidecar_windows.yml"
   File "../COPYING"
   File "graylog.ico"
- 
+
+  WriteUninstaller "$INSTDIR\uninstall.exe"
+	
+	
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogCollectorSidecar" \
                  "DisplayName" "Graylog Collector Sidecar"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogCollectorSidecar" \
@@ -113,7 +116,6 @@ Section "Install"
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogCollectorSidecar" \
                  "EstimatedSize" "25000"
 
-  WriteUninstaller "$INSTDIR\uninstall.exe"
 
 SectionEnd
  
@@ -182,6 +184,7 @@ Function .onInstSuccess
   MessageBox MB_OK "You have successfully installed Graylog Collector Sidecar." /SD IDOK
 FunctionEnd
  
+	  
 Function un.onUninstSuccess
   MessageBox MB_OK "You have successfully uninstalled Graylog Collector Sidecar." /SD IDOK
 FunctionEnd
