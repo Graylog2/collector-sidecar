@@ -189,10 +189,10 @@ func (fbc *FileBeatConfig) RenderOnChange(response graylog.ResponseCollectorConf
 }
 
 func (fbc *FileBeatConfig) ValidateConfigurationFile() bool {
-	cmd := exec.Command(fbc.ExecPath(), "-configtest", "-c", fbc.Beats.UserConfig.ConfigurationPath)
-	err := cmd.Run()
+	output, err := exec.Command(fbc.ExecPath(), "-configtest", "-c", fbc.ConfigurationPath()).CombinedOutput()
+	soutput := string(output)
 	if err != nil {
-		log.Errorf("[%s] Error during configuration validation: %s", fbc.Name(), err)
+		log.Errorf("[%s] Error during configuration validation: %s", fbc.Name(), soutput)
 		return false
 	}
 

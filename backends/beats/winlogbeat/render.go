@@ -143,10 +143,10 @@ func (wlbc *WinLogBeatConfig) RenderOnChange(response graylog.ResponseCollectorC
 }
 
 func (wlbc *WinLogBeatConfig) ValidateConfigurationFile() bool {
-	cmd := exec.Command(wlbc.ExecPath(), "-configtest", "-c", wlbc.Beats.UserConfig.ConfigurationPath)
-	err := cmd.Run()
+	output, err := exec.Command(wlbc.ExecPath(), "-configtest", "-c", wlbc.ConfigurationPath()).CombinedOutput()
+	soutput := string(output)
 	if err != nil {
-		log.Errorf("[%s] Error during configuration validation: %s", wlbc.Name(), err)
+		log.Errorf("[%s] Error during configuration validation: %s", wlbc.Name(), soutput)
 		return false
 	}
 

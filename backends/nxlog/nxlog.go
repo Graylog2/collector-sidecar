@@ -75,7 +75,7 @@ func (nxc *NxConfig) ConfigurationPath() string {
 }
 
 func (nxc *NxConfig) ExecArgs() []string {
-	// nxlog runs as system service on Windows, no foreground mode
+	// nxlog runs as system service on Windows, no foreground mode. Configuration path needs to be double quoted for service configuration
 	if runtime.GOOS == "windows" {
 		return []string{"-c", "\"" + nxc.ConfigurationPath() + "\""}
 	}
