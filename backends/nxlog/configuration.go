@@ -320,3 +320,7 @@ func (nxc *NxConfig) isEnabled(p interface{}) bool {
 	}
 	return false
 }
+
+func (nxc *NxConfig) isDisabled(p interface{}) bool {
+	return !nxc.isEnabled(p)
+}
