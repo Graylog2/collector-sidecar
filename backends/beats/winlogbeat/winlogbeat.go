@@ -26,7 +26,12 @@
 package winlogbeat
 
 import (
+	"errors"
+	"fmt"
+	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strconv"
 
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/common"
@@ -87,7 +92,32 @@ func (wlbc *WinLogBeatConfig) ExecArgs() []string {
 	return []string{"-c", wlbc.ConfigurationPath()}
 }
 
+func (wlbc *WinLogBeatConfig) readVersion() ([]int, error) {
+	var version = []int{}
+	output, err := exec.Command(wlbc.ExecPath(), "-version").CombinedOutput()
+	versionString := string(output)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("[%s] Error while fetching Beats collector version: %s", wlbc.Name(), versionString))
+	}
+	re := regexp.MustCompile(`(\d+)\.(\d+)\.(\d+)`)
+	versions := re.FindStringSubmatch(versionString)[1:4] // ["1.2.3", "1", "2", "3"]
+
+	for _, value := range versions {
+		digit, err := strconv.Atoi(value)
+		if err != nil {
+			return nil, errors.New(fmt.Sprintf("[%s] Error converting Beats collector version: %s", wlbc.Name(), versionString))
+		}
+		version = append(version, digit)
+	}
+	return version, nil
+}
+
 func (wlbc *WinLogBeatConfig) ValidatePreconditions() bool {
+	version, err := wlbc.readVersion()
+	if err != nil {
+		log.Errorf("[%s] Validation failed, skipping backend: %s", err)
+	}
+	wlbc.Beats.Version = version
 	return true
 }
 
