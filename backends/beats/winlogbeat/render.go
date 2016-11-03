@@ -27,6 +27,7 @@ import (
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/common"
+	"github.com/Graylog2/collector-sidecar/backends/beats"
 )
 
 func (wlbc *WinLogBeatConfig) snippetsToString() string {
@@ -52,7 +53,9 @@ func (wlbc *WinLogBeatConfig) Render() bytes.Buffer {
 		return result
 	}
 
-	result.WriteString(wlbc.Beats.String())
+	beatsConfig := wlbc.Beats
+	wlbc.runMigrations(beatsConfig)
+	result.WriteString(beatsConfig.String())
 	result.WriteString(wlbc.snippetsToString())
 
 	return result
@@ -132,6 +135,12 @@ func (wlbc *WinLogBeatConfig) RenderOnChange(response graylog.ResponseCollectorC
 		}
 	}
 
+	// gl2_source_collector can't be set with Winlogbeat so we use the shipper name
+	if wlbc.Beats.Version[0] >= 5 {
+		newConfig.Beats.Set(wlbc.Beats.Context.CollectorId, "name")
+	}
+
+
 	if !wlbc.Beats.Equals(newConfig.Beats) {
 		log.Infof("[%s] Configuration change detected, rewriting configuration file.", wlbc.Name())
 		wlbc.Beats.Update(newConfig.Beats)
@@ -151,4 +160,65 @@ func (wlbc *WinLogBeatConfig) ValidateConfigurationFile() bool {
 	}
 
 	return true
+}
+
+func (wlbc *WinLogBeatConfig) runMigrations(bc *beats.BeatsConfig) {
+	if (wlbc.Beats.Version[0] == 5 && wlbc.Beats.Version[1] == 0) {
+		// rename ssl properties
+		cp := bc.Container
+		path := []string{"output", "logstash", "tls", "certificate_key"}
+		for target := 0; target < len(path); target++ {
+			if mmap, ok := cp.(map[string]interface{}); ok {
+				if target == len(path) - 1 {
+					if mmap["certificate_key"] != nil {
+						mmap["key"] = mmap["certificate_key"]
+						delete(mmap, "certificate_key")
+					}
+					if mmap["insecure"] == true {
+						mmap["verification_mode"] = "none"
+						delete(mmap, "insecure")
+					}
+				}
+				cp = mmap[path[target]]
+			}
+		}
+
+		// rename tls -> ssl
+		cp = bc.Container
+		path = []string{"output", "logstash", "tls"}
+		for target := 0; target < len(path); target++ {
+			if mmap, ok := cp.(map[string]interface{}); ok {
+				if target == len(path) - 1 {
+					if mmap["tls"] != nil {
+						mmap["ssl"] = mmap["tls"]
+						delete(mmap, "tls")
+					}
+				}
+				cp = mmap[path[target]]
+			}
+		}
+
+		// remove shipper
+		cp = bc.Container
+		path = []string{"shipper", "tags"}
+		for target := 0; target < len(path); target++ {
+			if mmap, ok := cp.(map[string]interface{}); ok {
+				if target == len(path) - 1 {
+					bc.Container.(map[string]interface{})["tags"] = mmap["tags"]
+					delete(bc.Container.(map[string]interface{}), "shipper")
+				}
+				cp = mmap[path[target]]
+			}
+		}
+
+		// set cache data path
+		dataPath := wlbc.Beats.UserConfig.RunPath
+		if dataPath == "" {
+			dataPath = wlbc.Beats.Context.UserConfig.LogPath
+		}
+		bc.Set(dataPath, "path", "data")
+
+		// configure log path
+		bc.Set(wlbc.Beats.Context.UserConfig.LogPath, "path", "logs")
+	}
 }
