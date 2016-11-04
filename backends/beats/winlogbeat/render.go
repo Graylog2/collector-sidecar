@@ -74,7 +74,7 @@ func (wlbc *WinLogBeatConfig) RenderToFile() error {
 func (wlbc *WinLogBeatConfig) RenderOnChange(response graylog.ResponseCollectorConfiguration) bool {
 	newConfig := NewCollectorConfig(wlbc.Beats.Context)
 
-	// create prospector slice
+	// holds event inputs
 	var eventlogs []interface{}
 
 	newConfig.Beats.Set(wlbc.Beats.Context.UserConfig.Tags, "shipper", "tags")
