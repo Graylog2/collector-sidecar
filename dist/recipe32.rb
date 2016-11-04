@@ -15,6 +15,8 @@ class GraylogSidecar < FPM::Cookery::Recipe
 
   config_files '/etc/graylog/collector-sidecar/collector_sidecar.yml'
 
+  fpm_attributes rpm_os: 'linux'
+
   def build
   end
 
