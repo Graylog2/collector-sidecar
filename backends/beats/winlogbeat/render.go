@@ -204,7 +204,7 @@ func (wlbc *WinLogBeatConfig) runMigrations(bc *beats.BeatsConfig) {
 		for target := 0; target < len(path); target++ {
 			if mmap, ok := cp.(map[string]interface{}); ok {
 				if target == len(path) - 1 {
-					bc.Container.(map[string]interface{})["tags"] = mmap["tags"]
+					bc.Set(mmap["tags"], "tags")
 					delete(bc.Container.(map[string]interface{}), "shipper")
 				}
 				cp = mmap[path[target]]
