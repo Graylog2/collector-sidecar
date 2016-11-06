@@ -23,7 +23,11 @@
 ;---------------------------------
 ;General
  
-  OutFile "pkg/collector_sidecar_installer_${VERSION}_x64.exe"
+  !ifndef win32
+    OutFile "pkg/collector_sidecar_installer_${VERSION}_x64.exe"
+  !else
+    OutFile "pkg/collector_sidecar_installer_${VERSION}_x32.exe"
+  !endif
   ShowInstDetails "nevershow"
   ShowUninstDetails "nevershow"
   SetCompressor "bzip2"
@@ -47,7 +51,11 @@
 ;--------------------------------
 ;Folder selection page
  
-  InstallDir "$PROGRAMFILES64\graylog\collector-sidecar"
+  !ifndef win32
+    InstallDir "$PROGRAMFILES64\Graylog\collector-sidecar"
+  !else
+    InstallDir "$PROGRAMFILES32\Graylog\collector-sidecar"
+  !endif
  
 ;--------------------------------
 ;Modern UI Configuration
@@ -75,12 +83,22 @@
 ;-------------------------------- 
 ;Installer Sections     
 Section "Install"
- 
+
+  !ifndef win32
+    SetRegView 64
+  !else
+    SetRegView 32
+  !endif
+
   ;Add files
   SetOutPath "$INSTDIR\generated"  
   SetOutPath "$INSTDIR"
  
-  File "../build/${VERSION}/windows/amd64/graylog-collector-sidecar.exe"
+  !ifndef win32
+      File "../build/${VERSION}/windows/amd64/graylog-collector-sidecar.exe"
+  !else
+      File "../build/${VERSION}/windows/386/graylog-collector-sidecar.exe"
+  !endif
   File "collectors/winlogbeat/windows/winlogbeat.exe"
   File "collectors/filebeat/windows/filebeat.exe"
   File /oname=collector_sidecar.yml "../collector_sidecar_windows.yml"
@@ -133,6 +151,12 @@ SectionEnd
 ;Uninstaller Section  
 Section "Uninstall"
 
+  !ifndef win32
+    SetRegView 64
+  !else
+    SetRegView 32
+  !endif
+
   ;Uninstall system service
   ExecWait '"$INSTDIR\graylog-collector-sidecar.exe" -service stop'
   ExecWait '"$INSTDIR\graylog-collector-sidecar.exe" -service uninstall'
@@ -142,7 +166,12 @@ Section "Uninstall"
  
   ;Remove the installation directory
   RMDir "$INSTDIR"
-  RMDir "$PROGRAMFILES64\graylog"
+  !ifndef win32
+      RMDir "$PROGRAMFILES64\graylog"
+  !else
+      RMDir "$PROGRAMFILES32\graylog"
+  !endif
+ 
  
 SectionEnd
  
