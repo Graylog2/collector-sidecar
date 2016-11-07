@@ -26,7 +26,7 @@
   !ifndef win32
     OutFile "pkg/collector_sidecar_installer_${VERSION}_x64.exe"
   !else
-    OutFile "pkg/collector_sidecar_installer_${VERSION}_x32.exe"
+    OutFile "pkg/collector_sidecar_installer_${VERSION}_i386.exe"
   !endif
   ShowInstDetails "nevershow"
   ShowUninstDetails "nevershow"
