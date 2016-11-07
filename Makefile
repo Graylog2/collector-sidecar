@@ -108,7 +108,7 @@ package-windows: ## Create Windows installer
 
 package-windows32: ## Create Windows installer for 32bit hosts
 	@mkdir -p dist/pkg
-	@makensis dist/recipe32.nsi
+	@makensis -Dwin32 dist/recipe.nsi
 
 package-tar: ## Create tar archive for all platforms
 	@mkdir -p dist/pkg
