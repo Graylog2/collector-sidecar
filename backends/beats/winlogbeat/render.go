@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os/exec"
+	"path/filepath"
 	"text/template"
 
 	"gopkg.in/yaml.v2"
@@ -166,10 +167,10 @@ func (wlbc *WinLogBeatConfig) runMigrations(bc *beats.BeatsConfig) {
 	if (wlbc.Beats.Version[0] == 5 && wlbc.Beats.Version[1] == 0) {
 		// rename ssl properties
 		cp := bc.Container
-		path := []string{"output", "logstash", "tls", "certificate_key"}
-		for target := 0; target < len(path); target++ {
+		configurationPath := []string{"output", "logstash", "tls", "certificate_key"}
+		for target := 0; target < len(configurationPath); target++ {
 			if mmap, ok := cp.(map[string]interface{}); ok {
-				if target == len(path) - 1 {
+				if target == len(configurationPath) - 1 {
 					if mmap["certificate_key"] != nil {
 						mmap["key"] = mmap["certificate_key"]
 						delete(mmap, "certificate_key")
@@ -179,42 +180,42 @@ func (wlbc *WinLogBeatConfig) runMigrations(bc *beats.BeatsConfig) {
 						delete(mmap, "insecure")
 					}
 				}
-				cp = mmap[path[target]]
+				cp = mmap[configurationPath[target]]
 			}
 		}
 
 		// rename tls -> ssl
 		cp = bc.Container
-		path = []string{"output", "logstash", "tls"}
-		for target := 0; target < len(path); target++ {
+		configurationPath = []string{"output", "logstash", "tls"}
+		for target := 0; target < len(configurationPath); target++ {
 			if mmap, ok := cp.(map[string]interface{}); ok {
-				if target == len(path) - 1 {
+				if target == len(configurationPath) - 1 {
 					if mmap["tls"] != nil {
 						mmap["ssl"] = mmap["tls"]
 						delete(mmap, "tls")
 					}
 				}
-				cp = mmap[path[target]]
+				cp = mmap[configurationPath[target]]
 			}
 		}
 
 		// remove shipper
 		cp = bc.Container
-		path = []string{"shipper", "tags"}
-		for target := 0; target < len(path); target++ {
+		configurationPath = []string{"shipper", "tags"}
+		for target := 0; target < len(configurationPath); target++ {
 			if mmap, ok := cp.(map[string]interface{}); ok {
-				if target == len(path) - 1 {
+				if target == len(configurationPath) - 1 {
 					bc.Set(mmap["tags"], "tags")
 					delete(bc.Container.(map[string]interface{}), "shipper")
 				}
-				cp = mmap[path[target]]
+				cp = mmap[configurationPath[target]]
 			}
 		}
 
 		// set cache data path
 		dataPath := wlbc.Beats.UserConfig.RunPath
 		if dataPath == "" {
-			dataPath = wlbc.Beats.Context.UserConfig.LogPath
+			dataPath = filepath.Join(filepath.Dir(wlbc.Beats.UserConfig.BinaryPath), "data")
 		}
 		bc.Set(dataPath, "path", "data")
 
