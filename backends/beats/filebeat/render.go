@@ -27,8 +27,8 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/backends"
-	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/backends/beats"
+	"github.com/Graylog2/collector-sidecar/common"
 )
 
 func (fbc *FileBeatConfig) snippetsToString() string {
@@ -206,13 +206,13 @@ func (fbc *FileBeatConfig) ValidateConfigurationFile() bool {
 }
 
 func (fbc *FileBeatConfig) runMigrations(bc *beats.BeatsConfig) {
-	if (fbc.Beats.Version[0] == 5 && fbc.Beats.Version[1] == 0) {
+	if fbc.Beats.Version[0] == 5 && fbc.Beats.Version[1] == 0 {
 		// rename ssl properties
 		cp := bc.Container
 		configurationPath := []string{"output", "logstash", "tls", "certificate_key"}
 		for target := 0; target < len(configurationPath); target++ {
 			if mmap, ok := cp.(map[string]interface{}); ok {
-				if target == len(configurationPath) - 1 {
+				if target == len(configurationPath)-1 {
 					if mmap["certificate_key"] != nil {
 						mmap["key"] = mmap["certificate_key"]
 						delete(mmap, "certificate_key")
@@ -231,7 +231,7 @@ func (fbc *FileBeatConfig) runMigrations(bc *beats.BeatsConfig) {
 		configurationPath = []string{"output", "logstash", "tls"}
 		for target := 0; target < len(configurationPath); target++ {
 			if mmap, ok := cp.(map[string]interface{}); ok {
-				if target == len(configurationPath) - 1 {
+				if target == len(configurationPath)-1 {
 					if mmap["tls"] != nil {
 						mmap["ssl"] = mmap["tls"]
 						delete(mmap, "tls")
@@ -246,7 +246,7 @@ func (fbc *FileBeatConfig) runMigrations(bc *beats.BeatsConfig) {
 		configurationPath = []string{"shipper", "tags"}
 		for target := 0; target < len(configurationPath); target++ {
 			if mmap, ok := cp.(map[string]interface{}); ok {
-				if target == len(configurationPath) - 1 {
+				if target == len(configurationPath)-1 {
 					bc.Set(mmap["tags"], "tags")
 					delete(bc.Container.(map[string]interface{}), "shipper")
 				}

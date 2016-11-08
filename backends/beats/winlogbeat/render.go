@@ -27,8 +27,8 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/backends"
-	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/backends/beats"
+	"github.com/Graylog2/collector-sidecar/common"
 )
 
 func (wlbc *WinLogBeatConfig) snippetsToString() string {
@@ -141,7 +141,6 @@ func (wlbc *WinLogBeatConfig) RenderOnChange(response graylog.ResponseCollectorC
 		newConfig.Beats.Set(wlbc.Beats.Context.CollectorId, "name")
 	}
 
-
 	if !wlbc.Beats.Equals(newConfig.Beats) {
 		log.Infof("[%s] Configuration change detected, rewriting configuration file.", wlbc.Name())
 		wlbc.Beats.Update(newConfig.Beats)
@@ -164,13 +163,13 @@ func (wlbc *WinLogBeatConfig) ValidateConfigurationFile() bool {
 }
 
 func (wlbc *WinLogBeatConfig) runMigrations(bc *beats.BeatsConfig) {
-	if (wlbc.Beats.Version[0] == 5 && wlbc.Beats.Version[1] == 0) {
+	if wlbc.Beats.Version[0] == 5 && wlbc.Beats.Version[1] == 0 {
 		// rename ssl properties
 		cp := bc.Container
 		configurationPath := []string{"output", "logstash", "tls", "certificate_key"}
 		for target := 0; target < len(configurationPath); target++ {
 			if mmap, ok := cp.(map[string]interface{}); ok {
-				if target == len(configurationPath) - 1 {
+				if target == len(configurationPath)-1 {
 					if mmap["certificate_key"] != nil {
 						mmap["key"] = mmap["certificate_key"]
 						delete(mmap, "certificate_key")
@@ -189,7 +188,7 @@ func (wlbc *WinLogBeatConfig) runMigrations(bc *beats.BeatsConfig) {
 		configurationPath = []string{"output", "logstash", "tls"}
 		for target := 0; target < len(configurationPath); target++ {
 			if mmap, ok := cp.(map[string]interface{}); ok {
-				if target == len(configurationPath) - 1 {
+				if target == len(configurationPath)-1 {
 					if mmap["tls"] != nil {
 						mmap["ssl"] = mmap["tls"]
 						delete(mmap, "tls")
@@ -204,7 +203,7 @@ func (wlbc *WinLogBeatConfig) runMigrations(bc *beats.BeatsConfig) {
 		configurationPath = []string{"shipper", "tags"}
 		for target := 0; target < len(configurationPath); target++ {
 			if mmap, ok := cp.(map[string]interface{}); ok {
-				if target == len(configurationPath) - 1 {
+				if target == len(configurationPath)-1 {
 					bc.Set(mmap["tags"], "tags")
 					delete(bc.Container.(map[string]interface{}), "shipper")
 				}

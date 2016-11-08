@@ -38,7 +38,7 @@ type BeatsConfig struct {
 	Container           interface{}       // holds the configuration object for un/marshalling
 	ContainerKeyMapping map[string]string // keys can be renamed before the configuration is rendered
 	Snippets            []beatSnippet
-	Version		    []int	      // Beats collector version
+	Version             []int // Beats collector version
 }
 
 type beatSnippet struct {

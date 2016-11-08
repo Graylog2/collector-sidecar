@@ -16,12 +16,12 @@
 package filebeat
 
 import (
-	"os/exec"
 	"errors"
 	"fmt"
+	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
-	"path/filepath"
 
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/common"

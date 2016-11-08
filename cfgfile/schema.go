@@ -39,7 +39,7 @@ type SidecarBackend struct {
 	Enabled           *bool  `config:"enabled"`
 	BinaryPath        string `config:"binary_path"`
 	ConfigurationPath string `config:"configuration_path"`
-	RunPath		  string `config:"run_path"`
+	RunPath           string `config:"run_path"`
 }
 
 func (sc *SidecarConfig) GetIndexByName(name string) (int, error) {
