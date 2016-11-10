@@ -134,9 +134,10 @@ func (wlbc *WinLogBeatConfig) RenderOnChange(response graylog.ResponseCollectorC
 		}
 	}
 
-	// gl2_source_collector can't be set with Winlogbeat so we use the shipper name
+	// global fileds are available since Beats 5.0.0
 	if wlbc.Beats.Version[0] >= 5 {
-		newConfig.Beats.Set(wlbc.Beats.Context.CollectorId, "name")
+		newConfig.Beats.Set(true, "fields_under_root")
+		newConfig.Beats.Set(map[string]string{"gl2_source_collector": wlbc.Beats.Context.CollectorId}, "fields")
 	}
 
 	if !wlbc.Beats.Equals(newConfig.Beats) {
