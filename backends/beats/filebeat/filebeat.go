@@ -105,10 +105,10 @@ func (fbc *FileBeatConfig) readVersion() ([]int, error) {
 func (fbc *FileBeatConfig) ValidatePreconditions() bool {
 	version, err := fbc.readVersion()
 	if err != nil {
-		log.Errorf("[%s] Validation failed, skipping backend: %s", err)
+		log.Errorf("[%s] Validation failed, skipping backend: %s", fbc.Name(), err)
 	}
 	if version[0] < 1 || version[0] > 5 {
-		log.Errorf("[%s] Unsupported Filebeats version, please install 5.x")
+		log.Errorf("[%s] Unsupported Filebeats version, please install 5.x", fbc.Name())
 	}
 	fbc.Beats.Version = version
 	return true

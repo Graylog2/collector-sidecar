@@ -115,10 +115,10 @@ func (wlbc *WinLogBeatConfig) readVersion() ([]int, error) {
 func (wlbc *WinLogBeatConfig) ValidatePreconditions() bool {
 	version, err := wlbc.readVersion()
 	if err != nil {
-		log.Errorf("[%s] Validation failed, skipping backend: %s", err)
+		log.Errorf("[%s] Validation failed, skipping backend: %s", wlbc.Name(), err)
 	}
 	if version[0] < 1 || version[0] > 5 {
-		log.Errorf("[%s] Unsupported Winlogbeats version, please install 5.x")
+		log.Errorf("[%s] Unsupported Winlogbeats version, please install 5.x", wlbc.Name())
 	}
 	wlbc.Beats.Version = version
 	return true
