@@ -20,14 +20,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os/exec"
-	"path/filepath"
 	"text/template"
 
 	"gopkg.in/yaml.v2"
 
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/backends"
-	"github.com/Graylog2/collector-sidecar/backends/beats"
 	"github.com/Graylog2/collector-sidecar/common"
 )
 
@@ -54,8 +52,8 @@ func (fbc *FileBeatConfig) Render() bytes.Buffer {
 		return result
 	}
 
-	beatsConfig := fbc.Beats
-	fbc.runMigrations(beatsConfig)
+	beatsConfig := *fbc.Beats
+	beatsConfig.RunMigrations()
 	result.WriteString(beatsConfig.String())
 	result.WriteString(fbc.snippetsToString())
 
@@ -203,65 +201,4 @@ func (fbc *FileBeatConfig) ValidateConfigurationFile() bool {
 	}
 
 	return true
-}
-
-func (fbc *FileBeatConfig) runMigrations(bc *beats.BeatsConfig) {
-	if fbc.Beats.Version[0] == 5 && fbc.Beats.Version[1] == 0 {
-		// rename ssl properties
-		cp := bc.Container
-		configurationPath := []string{"output", "logstash", "tls", "certificate_key"}
-		for target := 0; target < len(configurationPath); target++ {
-			if mmap, ok := cp.(map[string]interface{}); ok {
-				if target == len(configurationPath)-1 {
-					if mmap["certificate_key"] != nil {
-						mmap["key"] = mmap["certificate_key"]
-						delete(mmap, "certificate_key")
-					}
-					if mmap["insecure"] == true {
-						mmap["verification_mode"] = "none"
-						delete(mmap, "insecure")
-					}
-				}
-				cp = mmap[configurationPath[target]]
-			}
-		}
-
-		// rename tls -> ssl
-		cp = bc.Container
-		configurationPath = []string{"output", "logstash", "tls"}
-		for target := 0; target < len(configurationPath); target++ {
-			if mmap, ok := cp.(map[string]interface{}); ok {
-				if target == len(configurationPath)-1 {
-					if mmap["tls"] != nil {
-						mmap["ssl"] = mmap["tls"]
-						delete(mmap, "tls")
-					}
-				}
-				cp = mmap[configurationPath[target]]
-			}
-		}
-
-		// remove shipper
-		cp = bc.Container
-		configurationPath = []string{"shipper", "tags"}
-		for target := 0; target < len(configurationPath); target++ {
-			if mmap, ok := cp.(map[string]interface{}); ok {
-				if target == len(configurationPath)-1 {
-					bc.Set(mmap["tags"], "tags")
-					delete(bc.Container.(map[string]interface{}), "shipper")
-				}
-				cp = mmap[configurationPath[target]]
-			}
-		}
-
-		// set cache data path
-		dataPath := fbc.Beats.UserConfig.RunPath
-		if dataPath == "" {
-			dataPath = filepath.Join(filepath.Dir(fbc.Beats.UserConfig.BinaryPath), "data")
-		}
-		bc.Set(dataPath, "path", "data")
-
-		// configure log path
-		bc.Set(fbc.Beats.Context.UserConfig.LogPath, "path", "logs")
-	}
 }

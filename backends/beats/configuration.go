@@ -17,6 +17,7 @@ package beats
 
 import (
 	"errors"
+	"path/filepath"
 	"reflect"
 	"strconv"
 
@@ -87,6 +88,18 @@ func (bc *BeatsConfig) Set(value interface{}, path ...string) error {
 	return nil
 }
 
+func (bc *BeatsConfig) Get(path ...string) interface{} {
+	var object interface{}
+
+	object = bc.Container
+	for target := 0; target < len(path); target++ {
+		if mmap, ok := object.(map[string]interface{}); ok {
+			object = mmap[path[target]]
+		}
+	}
+	return object
+}
+
 func (bc *BeatsConfig) AppendString(name string, value string) {
 	addition := &beatSnippet{Name: name, Value: value}
 	bc.Snippets = append(bc.Snippets, *addition)
@@ -140,5 +153,66 @@ func (bc *BeatsConfig) PropertyBool(p interface{}) bool {
 			return true
 		}
 		return false
+	}
+}
+
+func (bc *BeatsConfig) RunMigrations() {
+	if bc.Version[0] == 5 && bc.Version[1] == 0 {
+		// rename ssl properties
+		cp := bc.Container
+		configurationPath := []string{"output", "logstash", "tls", "certificate_key"}
+		for target := 0; target < len(configurationPath); target++ {
+			if mmap, ok := cp.(map[string]interface{}); ok {
+				if target == len(configurationPath)-1 {
+					if mmap["certificate_key"] != nil {
+						mmap["key"] = mmap["certificate_key"]
+						delete(mmap, "certificate_key")
+					}
+					if mmap["insecure"] == true {
+						mmap["verification_mode"] = "none"
+						delete(mmap, "insecure")
+					}
+				}
+				cp = mmap[configurationPath[target]]
+			}
+		}
+
+		// rename tls -> ssl
+		cp = bc.Container
+		configurationPath = []string{"output", "logstash", "tls"}
+		for target := 0; target < len(configurationPath); target++ {
+			if mmap, ok := cp.(map[string]interface{}); ok {
+				if target == len(configurationPath)-1 {
+					if mmap["tls"] != nil {
+						mmap["ssl"] = mmap["tls"]
+						delete(mmap, "tls")
+					}
+				}
+				cp = mmap[configurationPath[target]]
+			}
+		}
+
+		// remove shipper
+		cp = bc.Container
+		configurationPath = []string{"shipper", "tags"}
+		for target := 0; target < len(configurationPath); target++ {
+			if mmap, ok := cp.(map[string]interface{}); ok {
+				if target == len(configurationPath)-1 {
+					bc.Set(mmap["tags"], "tags")
+					delete(bc.Container.(map[string]interface{}), "shipper")
+				}
+				cp = mmap[configurationPath[target]]
+			}
+		}
+
+		// set cache data path
+		dataPath := bc.UserConfig.RunPath
+		if dataPath == "" {
+			dataPath = filepath.Join(filepath.Dir(bc.UserConfig.BinaryPath), "data")
+		}
+		bc.Set(dataPath, "path", "data")
+
+		// configure log path
+		bc.Set(bc.Context.UserConfig.LogPath, "path", "logs")
 	}
 }
