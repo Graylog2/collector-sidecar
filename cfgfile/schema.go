@@ -25,6 +25,7 @@ type SidecarConfig struct {
 	NodeId          string   `config:"node_id"`
 	CollectorId     string   `config:"collector_id"`
 	Tags            []string `config:"tags"`
+	CachePath       string   `config:"cache_path"`
 	LogPath         string   `config:"log_path"`
 	LogRotationTime int      `config:"log_rotation_time"`
 	LogMaxAge       int      `config:"log_max_age"`

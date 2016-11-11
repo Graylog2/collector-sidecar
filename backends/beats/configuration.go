@@ -17,7 +17,6 @@ package beats
 
 import (
 	"errors"
-	"path/filepath"
 	"reflect"
 	"strconv"
 
@@ -156,7 +155,7 @@ func (bc *BeatsConfig) PropertyBool(p interface{}) bool {
 	}
 }
 
-func (bc *BeatsConfig) RunMigrations() {
+func (bc *BeatsConfig) RunMigrations(cachePath string) {
 	if bc.Version[0] == 5 && bc.Version[1] == 0 {
 		// rename ssl properties
 		cp := bc.Container
@@ -206,11 +205,7 @@ func (bc *BeatsConfig) RunMigrations() {
 		}
 
 		// set cache data path
-		dataPath := bc.UserConfig.RunPath
-		if dataPath == "" {
-			dataPath = filepath.Join(filepath.Dir(bc.UserConfig.BinaryPath), "data")
-		}
-		bc.Set(dataPath, "path", "data")
+		bc.Set(cachePath, "path", "data")
 
 		// configure log path
 		bc.Set(bc.Context.UserConfig.LogPath, "path", "logs")

@@ -78,6 +78,18 @@ func (fbc *FileBeatConfig) ConfigurationPath() string {
 	return configurationPath
 }
 
+func (fbc *FileBeatConfig) CachePath() string {
+	cachePath := fbc.Beats.Context.UserConfig.CachePath
+	if !common.IsDir(filepath.Dir(cachePath)) {
+		err := common.CreatePathToFile(cachePath)
+		if err != nil {
+			log.Fatal("Configured path to cache directory does not exist: " + cachePath)
+		}
+	}
+
+	return filepath.Join(cachePath, "filebeat", "data")
+}
+
 func (fbc *FileBeatConfig) ExecArgs() []string {
 	return []string{"-c", fbc.ConfigurationPath()}
 }

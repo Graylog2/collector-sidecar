@@ -88,6 +88,18 @@ func (wlbc *WinLogBeatConfig) ConfigurationPath() string {
 	return configurationPath
 }
 
+func (wlbc *WinLogBeatConfig) CachePath() string {
+	cachePath := wlbc.Beats.Context.UserConfig.CachePath
+	if !common.IsDir(filepath.Dir(cachePath)) {
+		err := common.CreatePathToFile(cachePath)
+		if err != nil {
+			log.Fatal("Configured path to cache directory does not exist: " + cachePath)
+		}
+	}
+
+	return filepath.Join(cachePath, "winlogbeat", "data")
+}
+
 func (wlbc *WinLogBeatConfig) ExecArgs() []string {
 	return []string{"-c", wlbc.ConfigurationPath()}
 }

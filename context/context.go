@@ -77,6 +77,11 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 		log.Info("Fetching configurations tagged by: ", ctx.UserConfig.Tags)
 	}
 
+	// cache_path
+	if ctx.UserConfig.CachePath == "" {
+		log.Fatal("No cache directory was configured.")
+	}
+
 	// log_path
 	if ctx.UserConfig.LogPath == "" {
 		log.Fatal("No log directory was configured.")

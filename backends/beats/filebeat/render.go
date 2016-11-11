@@ -53,7 +53,7 @@ func (fbc *FileBeatConfig) Render() bytes.Buffer {
 	}
 
 	beatsConfig := *fbc.Beats
-	beatsConfig.RunMigrations()
+	beatsConfig.RunMigrations(fbc.CachePath())
 	result.WriteString(beatsConfig.String())
 	result.WriteString(fbc.snippetsToString())
 

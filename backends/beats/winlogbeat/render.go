@@ -53,7 +53,7 @@ func (wlbc *WinLogBeatConfig) Render() bytes.Buffer {
 	}
 
 	beatsConfig := *wlbc.Beats
-	beatsConfig.RunMigrations()
+	beatsConfig.RunMigrations(wlbc.CachePath())
 	result.WriteString(beatsConfig.String())
 	result.WriteString(wlbc.snippetsToString())
 
