@@ -85,7 +85,7 @@ build-windows32: ## Build collector-sidecar binary for Windows 32bit
 	@mkdir -p build/$(COLLECTOR_VERSION)/windows/386
 	GOOS=windows GOARCH=386 CGO_ENABLED=1 CC=i686-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(HOME)/.go_win32 -v -i -o build/$(COLLECTOR_VERSION)/windows/386/graylog-collector-sidecar.exe
 
-package-all: prepare-package package-linux package-linux32 package-windows package-windows32 package-tar
+package-all: prepare-package package-linux package-linux32 package-windows package-tar
 
 prepare-package:
 	@dist/fetch_collectors.sh
@@ -104,11 +104,7 @@ package-linux32: ## Create Linux system package for 32bit hosts
 
 package-windows: ## Create Windows installer
 	@mkdir -p dist/pkg
-	@makensis dist/recipe.nsi
-
-package-windows32: ## Create Windows installer for 32bit hosts
-	@mkdir -p dist/pkg
-	@makensis -Dwin32 dist/recipe.nsi
+	@makensis -DVERSION=$(COLLECTOR_VERSION) dist/recipe.nsi
 
 package-tar: ## Create tar archive for all platforms
 	@mkdir -p dist/pkg
