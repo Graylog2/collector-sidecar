@@ -2,7 +2,6 @@
 ; Start
  
   Name "Graylog Collector Sidecar"
-  !define VERSION "0.1.0"
   !define MUI_FILE "savefile"
   !define MUI_BRANDINGTEXT "Graylog Collector Sidecar v${VERSION}"
   CRCCheck On
@@ -14,6 +13,7 @@
   !include ReplaceInFile.nsh
   !include FileFunc.nsh
   !include WordFunc.nsh
+  !include x64.nsh
 
   VIProductVersion "0.${VERSION}"
   VIAddVersionKey "FileVersion" "${VERSION}"
@@ -23,11 +23,7 @@
 ;---------------------------------
 ;General
  
-  !ifndef win32
-    OutFile "pkg/collector_sidecar_installer_${VERSION}_x64.exe"
-  !else
-    OutFile "pkg/collector_sidecar_installer_${VERSION}_i386.exe"
-  !endif
+  OutFile "pkg/collector_sidecar_installer_${VERSION}_x86.exe"
   ShowInstDetails "nevershow"
   ShowUninstDetails "nevershow"
   SetCompressor "bzip2"
@@ -42,21 +38,13 @@
   Var Tags
   Var Dialog
   Var Label
+  Var Graylog_dir
 
   ;Pages
   ;Page directory
   Page custom nsDialogsPage nsDialogsPageLeave
   Page instfiles
 
-;--------------------------------
-;Folder selection page
- 
-  !ifndef win32
-    InstallDir "$PROGRAMFILES64\Graylog\collector-sidecar"
-  !else
-    InstallDir "$PROGRAMFILES32\Graylog\collector-sidecar"
-  !endif
- 
 ;--------------------------------
 ;Modern UI Configuration
  
@@ -76,6 +64,17 @@
   !insertmacro WordFind
   !insertmacro WordFind2X
 
+  !macro Check_X64
+   ${If} ${RunningX64}
+    SetRegView 64
+    Strcpy $Graylog_dir "$PROGRAMFILES64\Graylog"
+   ${Else}
+    SetRegView 32
+    Strcpy $Graylog_dir "$PROGRAMFILES32\Graylog"
+   ${EndIf}
+   Strcpy $INSTDIR "$Graylog_dir\collector-sidecar"
+  !macroend
+
 ;--------------------------------
 ;Data
  
@@ -85,26 +84,23 @@
 ;Installer Sections     
 Section "Install"
 
-  !ifndef win32
-    SetRegView 64
-  !else
-    SetRegView 32
-  !endif
 
   ;Add files
   SetOutPath "$INSTDIR\generated"  
   SetOutPath "$INSTDIR"
  
-  !ifndef win32
-      File "../build/${VERSION}/windows/amd64/graylog-collector-sidecar.exe"
-  !else
-      File "../build/${VERSION}/windows/386/graylog-collector-sidecar.exe"
-  !endif
   File "collectors/winlogbeat/windows/winlogbeat.exe"
   File "collectors/filebeat/windows/filebeat.exe"
   File /oname=collector_sidecar.yml "../collector_sidecar_windows.yml"
   File "../COPYING"
-  File "graylog.ico"
+  File "graylog.ico"  
+
+
+ ${If} ${RunningX64}
+  File /oname=Graylog-collector-sidecar.exe "../build/${VERSION}/windows/amd64/graylog-collector-sidecar.exe"
+ ${Else}
+  File /oname=Graylog-collector-sidecar.exe "../build/${VERSION}/windows/386/graylog-collector-sidecar.exe"
+ ${EndIf}
 
   WriteUninstaller "$INSTDIR\uninstall.exe"
 
@@ -138,6 +134,7 @@ Section "Install"
 SectionEnd
  
 Section "Post"
+
 
   ; Update configuration
   ${GetParameters} $Params
@@ -180,12 +177,6 @@ SectionEnd
 ;Uninstaller Section  
 Section "Uninstall"
 
-  !ifndef win32
-    SetRegView 64
-  !else
-    SetRegView 32
-  !endif
-
   ;Uninstall system service
   ExecWait '"$INSTDIR\graylog-collector-sidecar.exe" -service stop'
   ExecWait '"$INSTDIR\graylog-collector-sidecar.exe" -service uninstall'
@@ -194,12 +185,9 @@ Section "Uninstall"
   RMDir /r "$INSTDIR\*.*"    
  
   ;Remove the installation directory
+  SetOutPath $TEMP
   RMDir "$INSTDIR"
-  !ifndef win32
-      RMDir "$PROGRAMFILES64\graylog"
-  !else
-      RMDir "$PROGRAMFILES32\graylog"
-  !endif
+  RMDir $Graylog_dir
  
   ;Remove uninstall entries in the registry 
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogCollectorSidecar"
@@ -209,6 +197,16 @@ SectionEnd
  
 ;--------------------------------    
 ;Functions
+
+Function .onInit
+  !insertmacro Check_X64
+FunctionEnd
+
+
+Function un.oninit
+  !insertmacro Check_X64
+FunctionEnd
+
 Function .onInstSuccess
   MessageBox MB_OK "You have successfully installed Graylog Collector Sidecar." /SD IDOK
 FunctionEnd
