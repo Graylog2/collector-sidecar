@@ -38,7 +38,7 @@
   Var Tags
   Var Dialog
   Var Label
-  Var Graylog_dir
+  Var GraylogDir
 
   ;Pages
   ;Page directory
@@ -67,12 +67,12 @@
   !macro Check_X64
    ${If} ${RunningX64}
     SetRegView 64
-    Strcpy $Graylog_dir "$PROGRAMFILES64\Graylog"
+    Strcpy $GraylogDir "$PROGRAMFILES64\Graylog"
    ${Else}
     SetRegView 32
-    Strcpy $Graylog_dir "$PROGRAMFILES32\Graylog"
+    Strcpy $GraylogDir "$PROGRAMFILES32\Graylog"
    ${EndIf}
-   Strcpy $INSTDIR "$Graylog_dir\collector-sidecar"
+   Strcpy $INSTDIR "$GraylogDir\collector-sidecar"
   !macroend
 
 ;--------------------------------
@@ -187,7 +187,7 @@ Section "Uninstall"
   ;Remove the installation directory
   SetOutPath $TEMP
   RMDir "$INSTDIR"
-  RMDir $Graylog_dir
+  RMDir $GraylogDir
  
   ;Remove uninstall entries in the registry 
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogCollectorSidecar"
