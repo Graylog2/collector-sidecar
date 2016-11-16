@@ -68,17 +68,17 @@ func TestBeats5MigrationSSL(t *testing.T) {
 	bc.Set("/ssl/key", "output", "logstash", "tls", "certificate_key")
 	bc.Set(true, "output", "logstash", "tls", "insecure")
 
-	bc.RunMigrations()
+	bc.RunMigrations("/beats/data")
 
 	if bc.Get("output", "logstash", "tls") != nil {
-		t.Fail()
+		t.Error("'tls' key should not exist")
 	}
 	if ssl, ok := bc.Get("output", "logstash", "ssl").(map[string]interface{}); ok {
 		if _, ok := ssl["key"]; !ok {
-			t.Fail()
+			t.Error("ssl key does not exist")
 		}
 		if _, ok := ssl["verification_mode"]; !ok {
-			t.Fail()
+			t.Error("verification_mode does not exist")
 		}
 	} else {
 		t.Fail()
@@ -97,17 +97,17 @@ func TestBeats5MigrationShipper(t *testing.T) {
 
 	bc.Set([]string{"linux"}, "shipper", "tags")
 
-	bc.RunMigrations()
+	bc.RunMigrations("/beats/data")
 
 	if bc.Get("shipper") != nil {
-		t.Fail()
+		t.Error("shipper key does exist")
 	}
 	if tags, ok := bc.Get("tags").([]string); ok {
 		if tags[0] != "linux" {
-			t.Fail()
+			t.Error("linux tag does not exist")
 		}
 	} else {
-		t.Fail()
+		t.Error("tags does not exist")
 	}
 }
 
@@ -121,11 +121,14 @@ func TestBeats5MigrationPathes(t *testing.T) {
 	bc.UserConfig.BinaryPath = "/beats/winlogbeat.exe"
 	bc.Context.UserConfig = &cfgfile.SidecarConfig{LogPath: "/var/logs"}
 
-	bc.RunMigrations()
+	bc.RunMigrations("/beats/data")
 
 	if path, ok := bc.Get("path").(map[string]interface{}); ok {
-		if path["data"] != "/beats/data" || path["logs"] != "/var/logs" {
-			t.Fail()
+		if path["data"] != "/beats/data" {
+			t.Errorf("data key is wrong: %s (should be %s)", path["data"], "/beats/data")
+		}
+		if path["logs"] != "/var/logs" {
+			t.Errorf("logs key is wrong: %s (should be %s)", path["logs"], "/var/logs")
 		}
 	}
 }
