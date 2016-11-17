@@ -38,6 +38,7 @@ type BeatsConfig struct {
 	Container           interface{}       // holds the configuration object for un/marshalling
 	ContainerKeyMapping map[string]string // keys can be renamed before the configuration is rendered
 	Snippets            []beatSnippet
+	Version             []int // Beats collector version
 }
 
 type beatSnippet struct {
@@ -84,6 +85,18 @@ func (bc *BeatsConfig) Set(value interface{}, path ...string) error {
 		}
 	}
 	return nil
+}
+
+func (bc *BeatsConfig) Get(path ...string) interface{} {
+	var object interface{}
+
+	object = bc.Container
+	for target := 0; target < len(path); target++ {
+		if mmap, ok := object.(map[string]interface{}); ok {
+			object = mmap[path[target]]
+		}
+	}
+	return object
 }
 
 func (bc *BeatsConfig) AppendString(name string, value string) {
@@ -139,5 +152,62 @@ func (bc *BeatsConfig) PropertyBool(p interface{}) bool {
 			return true
 		}
 		return false
+	}
+}
+
+func (bc *BeatsConfig) RunMigrations(cachePath string) {
+	if bc.Version[0] == 5 && bc.Version[1] == 0 {
+		// rename ssl properties
+		cp := bc.Container
+		configurationPath := []string{"output", "logstash", "tls", "certificate_key"}
+		for target := 0; target < len(configurationPath); target++ {
+			if mmap, ok := cp.(map[string]interface{}); ok {
+				if target == len(configurationPath)-1 {
+					if mmap["certificate_key"] != nil {
+						mmap["key"] = mmap["certificate_key"]
+						delete(mmap, "certificate_key")
+					}
+					if mmap["insecure"] == true {
+						mmap["verification_mode"] = "none"
+						delete(mmap, "insecure")
+					}
+				}
+				cp = mmap[configurationPath[target]]
+			}
+		}
+
+		// rename tls -> ssl
+		cp = bc.Container
+		configurationPath = []string{"output", "logstash", "tls"}
+		for target := 0; target < len(configurationPath); target++ {
+			if mmap, ok := cp.(map[string]interface{}); ok {
+				if target == len(configurationPath)-1 {
+					if mmap["tls"] != nil {
+						mmap["ssl"] = mmap["tls"]
+						delete(mmap, "tls")
+					}
+				}
+				cp = mmap[configurationPath[target]]
+			}
+		}
+
+		// remove shipper
+		cp = bc.Container
+		configurationPath = []string{"shipper", "tags"}
+		for target := 0; target < len(configurationPath); target++ {
+			if mmap, ok := cp.(map[string]interface{}); ok {
+				if target == len(configurationPath)-1 {
+					bc.Set(mmap["tags"], "tags")
+					delete(bc.Container.(map[string]interface{}), "shipper")
+				}
+				cp = mmap[configurationPath[target]]
+			}
+		}
+
+		// set cache data path
+		bc.Set(cachePath, "path", "data")
+
+		// configure log path
+		bc.Set(bc.Context.UserConfig.LogPath, "path", "logs")
 	}
 }

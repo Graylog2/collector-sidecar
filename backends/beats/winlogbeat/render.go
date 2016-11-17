@@ -52,7 +52,9 @@ func (wlbc *WinLogBeatConfig) Render() bytes.Buffer {
 		return result
 	}
 
-	result.WriteString(wlbc.Beats.String())
+	beatsConfig := *wlbc.Beats
+	beatsConfig.RunMigrations(wlbc.CachePath())
+	result.WriteString(beatsConfig.String())
 	result.WriteString(wlbc.snippetsToString())
 
 	return result
@@ -71,7 +73,7 @@ func (wlbc *WinLogBeatConfig) RenderToFile() error {
 func (wlbc *WinLogBeatConfig) RenderOnChange(response graylog.ResponseCollectorConfiguration) bool {
 	newConfig := NewCollectorConfig(wlbc.Beats.Context)
 
-	// create prospector slice
+	// holds event inputs
 	var eventlogs []interface{}
 
 	newConfig.Beats.Set(wlbc.Beats.Context.UserConfig.Tags, "shipper", "tags")
@@ -130,6 +132,12 @@ func (wlbc *WinLogBeatConfig) RenderOnChange(response graylog.ResponseCollectorC
 		if snippet.Backend == "winlogbeat" {
 			newConfig.Beats.AppendString(snippet.Id, snippet.Value)
 		}
+	}
+
+	// global fileds are available since Beats 5.0.0
+	if wlbc.Beats.Version[0] >= 5 {
+		newConfig.Beats.Set(true, "fields_under_root")
+		newConfig.Beats.Set(map[string]string{"gl2_source_collector": wlbc.Beats.Context.CollectorId}, "fields")
 	}
 
 	if !wlbc.Beats.Equals(newConfig.Beats) {

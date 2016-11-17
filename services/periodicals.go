@@ -16,8 +16,8 @@
 package services
 
 import (
-	"time"
 	"net/http"
+	"time"
 
 	"github.com/Graylog2/collector-sidecar/api"
 	"github.com/Graylog2/collector-sidecar/api/rest"

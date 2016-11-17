@@ -5,7 +5,8 @@ send_status: true
 list_log_files:
 node_id: graylog-collector-sidecar
 collector_id: file:C:\Program Files\graylog\collector-sidecar\collector-id
-log_path: C:\Program Files\graylog\collector-sidecar
+cache_path: C:\Program Files\graylog\collector-sidecar\cache
+log_path: C:\Program Files\graylog\collector-sidecar\logs
 log_rotation_time: 86400
 log_max_age: 604800
 tags: <TAGS>

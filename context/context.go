@@ -18,6 +18,9 @@ package context
 import (
 	"fmt"
 	"net/url"
+	"runtime"
+	"path/filepath"
+	"os"
 
 	"github.com/Graylog2/collector-sidecar/cfgfile"
 	"github.com/Graylog2/collector-sidecar/common"
@@ -75,6 +78,18 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 		log.Fatal("Please define configuration tags.")
 	} else {
 		log.Info("Fetching configurations tagged by: ", ctx.UserConfig.Tags)
+	}
+
+	// cache_path
+	if ctx.UserConfig.CachePath == "" {
+		var cachePath string
+		if runtime.GOOS == "windows" {
+			cachePath = filepath.Join(os.Getenv("SystemDrive")+"\\", "Program Files", "graylog", "collector-sidecar", "cache")
+		} else {
+			cachePath = filepath.Join("/var", "cache", "graylog", "collector-sidecar")
+		}
+		ctx.UserConfig.CachePath = cachePath
+		log.Errorf("No cache directory was configured. Using default: %s", cachePath)
 	}
 
 	// log_path

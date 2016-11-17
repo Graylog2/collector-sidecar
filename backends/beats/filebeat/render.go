@@ -52,7 +52,9 @@ func (fbc *FileBeatConfig) Render() bytes.Buffer {
 		return result
 	}
 
-	result.WriteString(fbc.Beats.String())
+	beatsConfig := *fbc.Beats
+	beatsConfig.RunMigrations(fbc.CachePath())
+	result.WriteString(beatsConfig.String())
 	result.WriteString(fbc.snippetsToString())
 
 	return result
@@ -71,8 +73,10 @@ func (fbc *FileBeatConfig) RenderToFile() error {
 func (fbc *FileBeatConfig) RenderOnChange(response graylog.ResponseCollectorConfiguration) bool {
 	newConfig := NewCollectorConfig(fbc.Beats.Context)
 
-	// create prospector slice
+	// holds file inputs
 	var prospector []map[string]interface{}
+
+	newConfig.Beats.Set(fbc.Beats.Context.UserConfig.Tags, "shipper", "tags")
 
 	for _, output := range response.Outputs {
 		if output.Backend == "filebeat" {
