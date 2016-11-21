@@ -1,42 +1,47 @@
 #!/bin/bash
 
-ARCHS=( i686 x86_64 windows )
-FILEBEAT_VERSION=1.3.1
-WINLOGBEAT_VERSION=1.3.1
+ARCHS=( x86 x86_64 )
+FILEBEAT_VERSION=5.0.1
+WINLOGBEAT_VERSION=5.0.1
 
 # $1: beat name
-# $2: beat version
-# $3: beat arch
+# $2: beat operating system
+# $3: beat version
+# $4: beat architecture
 download_beat()
 {
   local name="$1"
-  local version="$2"
-  local arch="$3"
+  local os="$2"
+  local version="$3"
+  local arch="$4"
 
-  mkdir -p dist/collectors/${name}/${arch}
-  if [ "${arch}" == "windows" ]
-    then
-      archive="/tmp/${name}-${version}-${arch}.zip"
-      if [ ! -f $archive ]; then
-        echo "==> Downloading ${name}-${version}-${arch}"
-        curl -o $archive https://download.elastic.co/beats/${name}/${name}-${version}-${arch}.zip
-      fi
-      unzip -o -d dist/collectors/${name}/${arch} $archive
-      mv dist/collectors/${name}/${arch}/${name}-${version}-windows/* dist/collectors/${name}/${arch}/
-      rm -r dist/collectors/${name}/${arch}/${name}-${version}-windows
-    else
-      archive="/tmp/${name}-${version}-${arch}.tar.gz"
-      if [ ! -f $archive ]; then
-        echo "==> Downloading ${name}-${version}-${arch}"
-        curl -o $archive https://download.elastic.co/beats/${name}/${name}-${version}-${arch}.tar.gz
-      fi
-      tar -xzf $archive --strip-components=1 -C dist/collectors/${name}/${arch}
-  fi
+  mkdir -p dist/collectors/${name}/${os}/${arch}
+  case "${os}" in
+  "windows")
+    archive="/tmp/${name}-${version}-${os}-${arch}.zip"
+    if [ ! -f $archive ]; then
+      echo "==> Downloading ${name}-${version}-${os}-${arch}"
+      curl -o $archive https://artifacts.elastic.co/downloads/beats/${name}/${name}-${version}-${os}-${arch}.zip
+    fi
+    unzip -o -d dist/collectors/${name}/${os}/${arch} $archive
+    mv dist/collectors/${name}/${os}/${arch}/${name}-${version}-${os}-${arch}/* dist/collectors/${name}/${os}/${arch}/
+    rm -r dist/collectors/${name}/${os}/${arch}/${name}-${version}-${os}-${arch}
+    ;;
+  "linux")
+    archive="/tmp/${name}-${version}-${os}-${arch}.tar.gz"
+    if [ ! -f $archive ]; then
+      echo "==> Downloading ${name}-${version}-${os}-${arch}"
+      curl -o $archive https://artifacts.elastic.co/downloads/beats/${name}/${name}-${version}-${os}-${arch}.tar.gz
+    fi
+    tar -xzf $archive --strip-components=1 -C dist/collectors/${name}/${os}/${arch}
+    ;;
+  esac
 }
 
 for ARCH in "${ARCHS[@]}"
 do
-  download_beat "filebeat" ${FILEBEAT_VERSION} ${ARCH}
+  download_beat "filebeat" "linux" ${FILEBEAT_VERSION} ${ARCH}
+  download_beat "filebeat" "windows" ${FILEBEAT_VERSION} ${ARCH}
+  download_beat "winlogbeat" "windows" ${WINLOGBEAT_VERSION} ${ARCH}
 done
 
-download_beat "winlogbeat" ${WINLOGBEAT_VERSION} ${ARCH}

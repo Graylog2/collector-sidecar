@@ -23,7 +23,7 @@
 ;---------------------------------
 ;General
  
-  OutFile "pkg/collector_sidecar_installer_${VERSION}_x86.exe"
+  OutFile "pkg/collector_sidecar_installer_${VERSION}.exe"
   ShowInstDetails "nevershow"
   ShowUninstDetails "nevershow"
   SetCompressor "bzip2"
@@ -65,14 +65,14 @@
   !insertmacro WordFind2X
 
   !macro Check_X64
-   ${If} ${RunningX64}
-    SetRegView 64
-    Strcpy $GraylogDir "$PROGRAMFILES64\Graylog"
-   ${Else}
-    SetRegView 32
-    Strcpy $GraylogDir "$PROGRAMFILES32\Graylog"
-   ${EndIf}
-   Strcpy $INSTDIR "$GraylogDir\collector-sidecar"
+    ${If} ${RunningX64}
+      SetRegView 64
+      Strcpy $GraylogDir "$PROGRAMFILES64\Graylog"
+    ${Else}
+      SetRegView 32
+      Strcpy $GraylogDir "$PROGRAMFILES32\Graylog"
+    ${EndIf}
+    Strcpy $INSTDIR "$GraylogDir\collector-sidecar"
   !macroend
 
 ;--------------------------------
@@ -84,23 +84,28 @@
 ;Installer Sections     
 Section "Install"
 
-
   ;Add files
   SetOutPath "$INSTDIR\generated"  
   SetOutPath "$INSTDIR"
  
-  File "collectors/winlogbeat/windows/winlogbeat.exe"
-  File "collectors/filebeat/windows/filebeat.exe"
+  ${If} ${RunningX64}
+    File "collectors/winlogbeat/windows/x86_64/winlogbeat.exe"
+    File "collectors/filebeat/windows/x86_64/filebeat.exe"
+  ${Else}
+    File "collectors/winlogbeat/windows/x86/winlogbeat.exe"
+    File "collectors/filebeat/windows/x86/filebeat.exe"
+  ${EndIf}
+
   File /oname=collector_sidecar.yml "../collector_sidecar_windows.yml"
   File "../COPYING"
   File "graylog.ico"  
 
 
- ${If} ${RunningX64}
-  File /oname=Graylog-collector-sidecar.exe "../build/${VERSION}/windows/amd64/graylog-collector-sidecar.exe"
- ${Else}
-  File /oname=Graylog-collector-sidecar.exe "../build/${VERSION}/windows/386/graylog-collector-sidecar.exe"
- ${EndIf}
+  ${If} ${RunningX64}
+    File /oname=Graylog-collector-sidecar.exe "../build/${VERSION}/windows/amd64/graylog-collector-sidecar.exe"
+  ${Else}
+    File /oname=Graylog-collector-sidecar.exe "../build/${VERSION}/windows/386/graylog-collector-sidecar.exe"
+  ${EndIf}
 
   WriteUninstaller "$INSTDIR\uninstall.exe"
 
@@ -134,7 +139,6 @@ Section "Install"
 SectionEnd
  
 Section "Post"
-
 
   ; Update configuration
   ${GetParameters} $Params
@@ -202,7 +206,6 @@ Function .onInit
   !insertmacro Check_X64
 FunctionEnd
 
-
 Function un.oninit
   !insertmacro Check_X64
 FunctionEnd
@@ -211,7 +214,6 @@ Function .onInstSuccess
   MessageBox MB_OK "You have successfully installed Graylog Collector Sidecar." /SD IDOK
 FunctionEnd
  
-	  
 Function un.onUninstSuccess
   MessageBox MB_OK "You have successfully uninstalled Graylog Collector Sidecar." /SD IDOK
 FunctionEnd
