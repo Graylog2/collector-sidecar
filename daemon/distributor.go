@@ -16,19 +16,19 @@
 package daemon
 
 import (
+	"time"
+
 	"github.com/kardianos/service"
 )
 
 type Distributor struct {
 	Running bool
 	service service.Service
-	exit    chan struct{}
 }
 
 func (dc *DaemonConfig) NewDistributor() *Distributor {
 	dist := &Distributor{
 		Running: false,
-		exit:    make(chan struct{}),
 	}
 
 	return dist
@@ -38,32 +38,27 @@ func (dist *Distributor) BindToService(s service.Service) {
 	dist.service = s
 }
 
+// start all backend runner, don't block
 func (dist *Distributor) Start(s service.Service) error {
 	log.Info("Starting signal distributor")
-	go dist.run()
-	return nil
-}
-
-func (dist *Distributor) Stop(s service.Service) error {
-	for _, runner := range Daemon.Runner {
-		runner.Stop(dist.service)
-	}
-	close(dist.exit)
-	dist.Running = false
-	return nil
-}
-
-func (dist *Distributor) Restart(s service.Service) error {
-	dist.Stop(s)
-	dist.exit = make(chan struct{})
-	dist.Start(s)
-	return nil
-}
-
-func (dist *Distributor) run() {
 	dist.Running = true
 	for _, runner := range Daemon.Runner {
-		runner.Start(dist.service)
+		runner.Start()
 	}
-	return
+
+	return nil
+}
+
+// stop all backend runner parallel and wait till they are finished
+func (dist *Distributor) Stop(s service.Service) error {
+	log.Info("Stopping signal distributor")
+	for _, runner := range Daemon.Runner {
+		runner.Stop()
+	}
+	for _, runner := range Daemon.Runner {
+		for runner.Running() {time.Sleep(300 * time.Millisecond)}
+	}
+	dist.Running = false
+
+	return nil
 }

@@ -1,12 +1,12 @@
 hash: cfb44fc1b8574f1bd844cbd539e00109972d1b41ada10f781b0f26f9f0d4bb42
-updated: 2016-09-22T14:30:53.288687642+02:00
+updated: 2016-11-22T14:18:41.72317689+01:00
 imports:
 - name: bitbucket.org/tebeka/strftime
   version: 2194253a23c090a4d5953b152a3c63fb5da4f5a4
 - name: github.com/elastic/gosigar
   version: 2716c1fe855ee5c88eae707195e0688374458c92
 - name: github.com/go-ole/go-ole
-  version: 7dfdcf409020452e29b4babcbb22f984d2aa308a
+  version: 5e9c030faf78847db7aa77e3661b9cc449de29b7
   subpackages:
   - oleutil
 - name: github.com/kardianos/osext
