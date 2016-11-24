@@ -18,14 +18,11 @@ package daemon
 import (
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/context"
-	"github.com/kardianos/service"
 )
 
 type Runner interface {
 	Name() string
 	Running() bool
-	BindToService(service.Service)
-	GetService() service.Service
 	ValidateBeforeStart() error
 	Start() error
 	Stop() error

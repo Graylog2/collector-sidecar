@@ -24,8 +24,6 @@ import (
 	"golang.org/x/sys/windows/svc/eventlog"
 	"golang.org/x/sys/windows/svc/mgr"
 
-	"github.com/kardianos/service"
-
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/context"
 )
@@ -35,7 +33,6 @@ type SvcRunner struct {
 	exec        string
 	args        []string
 	startTime   time.Time
-	service     service.Service
 	serviceName string
 	isRunning   bool
 }
@@ -90,14 +87,6 @@ func (r *SvcRunner) Running() bool {
 
 func (r *SvcRunner) SetDaemon(d *DaemonConfig) {
 	r.daemon = d
-}
-
-func (r *SvcRunner) BindToService(s service.Service) {
-	r.service = s
-}
-
-func (r *SvcRunner) GetService() service.Service {
-	return r.service
 }
 
 func (r *SvcRunner) ValidateBeforeStart() error {

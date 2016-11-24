@@ -23,8 +23,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/kardianos/service"
-
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
@@ -40,7 +38,6 @@ type ExecRunner struct {
 	restartCount   int
 	startTime      time.Time
 	cmd            *exec.Cmd
-	service        service.Service
 	signals        chan string
 }
 
@@ -81,14 +78,6 @@ func (r *ExecRunner) Running() bool {
 
 func (r *ExecRunner) SetDaemon(d *DaemonConfig) {
 	r.daemon = d
-}
-
-func (r *ExecRunner) BindToService(s service.Service) {
-	r.service = s
-}
-
-func (r *ExecRunner) GetService() service.Service {
-	return r.service
 }
 
 func (r *ExecRunner) ValidateBeforeStart() error {
