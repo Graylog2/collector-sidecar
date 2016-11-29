@@ -5,12 +5,14 @@
   !define MUI_FILE "savefile"
   !define MUI_BRANDINGTEXT "Graylog Collector Sidecar v${VERSION}"
   CRCCheck On
+  SetCompressor "bzip2"
  
   !include "${NSISDIR}\Contrib\Modern UI\System.nsh"
   !include nsDialogs.nsh
   !include LogicLib.nsh
   !include StrRep.nsh
   !include ReplaceInFile.nsh
+  !include Common.nsh
   !include FileFunc.nsh
   !include WordFunc.nsh
   !include x64.nsh
@@ -27,7 +29,6 @@
   RequestExecutionLevel admin ;Require admin rights
   ShowInstDetails "nevershow"
   ShowUninstDetails "nevershow"
-  SetCompressor "bzip2"
 
   ; Variables
   Var Params
@@ -265,32 +266,3 @@ Function nsDialogsPageLeave
       Abort
   ${EndIf}
 FunctionEnd
-
-;--------------------------------    
-; Shared Functions between install and uninstall
-
-!macro CheckAdmin un
-Function ${un}CheckAdmin
-  UserInfo::GetAccountType
-  pop $0
-  ${If} $0 != "admin" ;Require admin rights on NT4+
-    MessageBox MB_OK|MB_ICONEXCLAMATION "Administrator rights required!"  /SD IDOK
-    Abort
-  ${EndIf}
-FunctionEnd
-!macroend
-!insertmacro CheckAdmin ""
-!insertmacro CheckAdmin "un."
-
-!macro CheckConcurrent un
-Function ${un}CheckConcurrent
-  ;Prevent Multiple Instances of the installer
-  System::Call 'kernel32::CreateMutexA(i 0, i 0, t "${MUI_BRANDINGTEXT}") i .r1 ?e'
-  Pop $R0
-  StrCmp $R0 0 +3
-    MessageBox MB_OK|MB_ICONEXCLAMATION "The un/installer is already running."  /SD IDOK
-    Abort
-FunctionEnd
-!macroend
-!insertmacro CheckConcurrent ""
-!insertmacro CheckConcurrent "un."
