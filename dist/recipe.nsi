@@ -5,12 +5,14 @@
   !define MUI_FILE "savefile"
   !define MUI_BRANDINGTEXT "Graylog Collector Sidecar v${VERSION}"
   CRCCheck On
+  SetCompressor "bzip2"
  
   !include "${NSISDIR}\Contrib\Modern UI\System.nsh"
   !include nsDialogs.nsh
   !include LogicLib.nsh
   !include StrRep.nsh
   !include ReplaceInFile.nsh
+  !include Common.nsh
   !include FileFunc.nsh
   !include WordFunc.nsh
   !include x64.nsh
@@ -24,9 +26,9 @@
 ;General
  
   OutFile "pkg/collector_sidecar_installer_${VERSION}.exe"
+  RequestExecutionLevel admin ;Require admin rights
   ShowInstDetails "nevershow"
   ShowUninstDetails "nevershow"
-  SetCompressor "bzip2"
 
   ; Variables
   Var Params
@@ -85,7 +87,7 @@
 Section "Install"
 
   ;Add files
-  SetOutPath "$INSTDIR\generated"  
+  CreateDirectory "$INSTDIR\generated"  ; this folder is needed at runtime 
   SetOutPath "$INSTDIR"
  
   ${If} ${RunningX64}
@@ -203,10 +205,22 @@ SectionEnd
 ;Functions
 
 Function .onInit
+  ; check admin rights
+  Call CheckAdmin
+  
+  ; check concurrent un/installations
+  Call CheckConcurrent
+    
   !insertmacro Check_X64
 FunctionEnd
 
 Function un.oninit
+  ; check admin rights
+  Call un.CheckAdmin
+  
+  ; check concurrent un/installations
+  Call un.CheckConcurrent
+
   !insertmacro Check_X64
 FunctionEnd
 
