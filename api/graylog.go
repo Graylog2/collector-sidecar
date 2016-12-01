@@ -138,9 +138,14 @@ func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *grayl
 		log.Error("[UpdateRegistration] Failed to report collector status to server: ", err)
 	}
 
-	// Update configuration based on server response
-	if (graylog.ResponseCollectorRegistration{}) != *respBody {
+	// Update configuration if provided
+	if respBody.Configuration != (graylog.ResponseCollectorRegistrationConfiguration{}) {
 		updateRuntimeConfiguration(respBody, ctx)
+	}
+
+	// Run collector actions if provided
+	if len(respBody.CollectorActions) != 0 {
+		daemon.HandleCollectorActions(respBody.CollectorActions)
 	}
 }
 
