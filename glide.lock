@@ -12,7 +12,7 @@ imports:
 - name: github.com/kardianos/osext
   version: 10da29423eb9a6269092eebdc2be32209612d9d2
 - name: github.com/kardianos/service
-  version: 6a55aece86cb1cf31706b300854a30d89af9682f
+  version: 6d3a0ee7d3425d9d835debc51a0ca1ffa28f4893
 - name: github.com/lestrrat/go-file-rotatelogs
   version: bb1d28fd5ac7ec9873540d5bba975d009f271f67
 - name: github.com/pborman/uuid
