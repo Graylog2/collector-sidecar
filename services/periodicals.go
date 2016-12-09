@@ -78,10 +78,10 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context 
 
 			if runner.Running() {
 				// collector was already started so a Restart will not fail
-				err = runner.Restart(runner.GetService())
+				err = runner.Restart()
 			} else {
 				// collector is not running, we do a fresh start
-				err = runner.Start(runner.GetService())
+				err = runner.Start()
 			}
 			if err != nil {
 				msg := "Failed to restart collector"

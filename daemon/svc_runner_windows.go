@@ -24,8 +24,6 @@ import (
 	"golang.org/x/sys/windows/svc/eventlog"
 	"golang.org/x/sys/windows/svc/mgr"
 
-	"github.com/kardianos/service"
-
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/context"
 )
@@ -35,7 +33,6 @@ type SvcRunner struct {
 	exec        string
 	args        []string
 	startTime   time.Time
-	service     service.Service
 	serviceName string
 	isRunning   bool
 }
@@ -92,14 +89,6 @@ func (r *SvcRunner) SetDaemon(d *DaemonConfig) {
 	r.daemon = d
 }
 
-func (r *SvcRunner) BindToService(s service.Service) {
-	r.service = s
-}
-
-func (r *SvcRunner) GetService() service.Service {
-	return r.service
-}
-
 func (r *SvcRunner) ValidateBeforeStart() error {
 	execPath, err := exec.LookPath(r.exec)
 	if err != nil {
@@ -151,7 +140,7 @@ func (r *SvcRunner) ValidateBeforeStart() error {
 	return nil
 }
 
-func (r *SvcRunner) Start(s service.Service) error {
+func (r *SvcRunner) Start() error {
 	if err := r.ValidateBeforeStart(); err != nil {
 		log.Error(err.Error())
 		return err
@@ -183,7 +172,7 @@ func (r *SvcRunner) Start(s service.Service) error {
 			time.Sleep(10 * time.Second)
 			if r.isRunning && !r.Running() {
 				backends.SetStatusLogErrorf(r.name, "Backend crashed, sending restart signal")
-				r.Start(s)
+				r.Start()
 				break
 			}
 
@@ -198,7 +187,7 @@ func (r *SvcRunner) Start(s service.Service) error {
 	return err
 }
 
-func (r *SvcRunner) Stop(s service.Service) error {
+func (r *SvcRunner) Stop() error {
 	log.Infof("[%s] Stopping", r.name)
 
 	// deactivate supervisor
@@ -236,10 +225,10 @@ func (r *SvcRunner) Stop(s service.Service) error {
 	return nil
 }
 
-func (r *SvcRunner) Restart(s service.Service) error {
-	r.Stop(s)
+func (r *SvcRunner) Restart() error {
+	r.Stop()
 	time.Sleep(2 * time.Second)
-	r.Start(s)
+	r.Start()
 
 	return nil
 }
