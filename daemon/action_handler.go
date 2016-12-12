@@ -32,7 +32,7 @@ func restartAction(action graylog.ResponseCollectorAction) {
 	for name, runner := range Daemon.Runner {
 		if name == action.Backend {
 			log.Infof("[%s] Executing requested collector restart", name)
-			runner.Restart(runner.GetService())
+			runner.Restart()
 		}
 	}
 }
