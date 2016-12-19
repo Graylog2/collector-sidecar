@@ -23,11 +23,11 @@ import (
 	"runtime"
 	"strings"
 	"unicode"
-
 	"bytes"
 	"fmt"
 	"github.com/pborman/uuid"
 	"net"
+	"github.com/Graylog2/collector-sidecar/cfgfile"
 )
 
 func GetRootPath() (string, error) {
@@ -92,7 +92,7 @@ func GetCollectorId(collectorId string) string {
 		id = strings.Trim(string(file), " \n")
 	}
 
-	if id != "" {
+	if id != "" && !cfgfile.ValidateConfig() {
 		log.Info("Using collector-id: ", id)
 	}
 	return id

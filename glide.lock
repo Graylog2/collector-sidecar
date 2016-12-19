@@ -1,8 +1,8 @@
-hash: cfb44fc1b8574f1bd844cbd539e00109972d1b41ada10f781b0f26f9f0d4bb42
-updated: 2016-11-22T14:18:41.72317689+01:00
+hash: d2386300b5260a7dbacea3f914bbd064427a14564629c9a2506825af5b4287e9
+updated: 2016-12-13T14:40:25.886508128+01:00
 imports:
 - name: bitbucket.org/tebeka/strftime
-  version: 2194253a23c090a4d5953b152a3c63fb5da4f5a4
+  version: 2194253a23c0
 - name: github.com/elastic/gosigar
   version: 2716c1fe855ee5c88eae707195e0688374458c92
 - name: github.com/go-ole/go-ole
@@ -19,6 +19,8 @@ imports:
   version: c55201b036063326c5b1b89ccfe45a184973d073
 - name: github.com/rakyll/goini
   version: 907cca0f578a5316fb864ec6992dc3d9730ec58c
+- name: github.com/rifflock/lfshook
+  version: 24f7833daaff6c3893606bb79d6722a7e9e089c5
 - name: github.com/Sirupsen/logrus
   version: 446d1c146faa8ed3f4218f056fcd165f6bcfda81
   subpackages:
@@ -32,12 +34,12 @@ imports:
 - name: golang.org/x/sys
   version: 833a04a10549a95dc34458c195cbad61bbb6cb4d
   subpackages:
-  - unix
   - windows
   - windows/registry
-  - windows/svc
-  - windows/svc/eventlog
   - windows/svc/mgr
+  - windows/svc/eventlog
+  - windows/svc
+  - unix
 - name: gopkg.in/yaml.v2
   version: a83829b6f1293c91addabc89d0571c246397bbf4
-testImports: []
+devImports: []

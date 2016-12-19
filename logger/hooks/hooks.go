@@ -13,31 +13,30 @@
 // You should have received a copy of the GNU General Public License
 // along with Graylog.  If not, see <http://www.gnu.org/licenses/>.
 
-package common
+package hooks
 
 import (
-	"time"
+	"path/filepath"
 
+	"github.com/rifflock/lfshook"
 	"github.com/Sirupsen/logrus"
-	"github.com/lestrrat/go-file-rotatelogs"
+
+	"github.com/Graylog2/collector-sidecar/context"
+	"github.com/Graylog2/collector-sidecar/logger"
 )
 
-var log = logrus.New()
-
-func Log() *logrus.Logger {
-	return log
+func AddLogHooks(context *context.Ctx, log *logrus.Logger) {
+	filesystemHook(context, log)
 }
 
-func GetRotatedLog(path string, rotation_time int, max_age int) *rotatelogs.RotateLogs {
-	log.Debugf("Creating rotated log writer for: %s", path+".%Y%m%d%H%M")
-
-	writer := rotatelogs.NewRotateLogs(
-		path + ".%Y%m%d%H%M",
-	)
-	writer.LinkName = path
-	writer.RotationTime = time.Duration(rotation_time) * time.Second
-	writer.MaxAge = time.Duration(max_age) * time.Second
-	writer.Offset = 0
-
-	return writer
+func filesystemHook(context *context.Ctx, log *logrus.Logger) {
+	logfile := filepath.Join(context.UserConfig.LogPath, "collector_sidecar.log")
+	writer := logger.GetRotatedLog(logfile, context.UserConfig.LogRotationTime, context.UserConfig.LogMaxAge)
+	log.Hooks.Add(lfshook.NewHook(lfshook.WriterMap{
+		logrus.FatalLevel: writer,
+		logrus.ErrorLevel: writer,
+		logrus.WarnLevel: writer,
+		logrus.InfoLevel: writer,
+		logrus.DebugLevel: writer,
+	}))
 }

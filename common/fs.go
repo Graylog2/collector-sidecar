@@ -19,7 +19,11 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+
+	"github.com/Graylog2/collector-sidecar/logger"
 )
+
+var log = logger.Log()
 
 func FileExists(filePath string) error {
 	_, err := os.Stat(filePath)

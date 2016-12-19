@@ -26,6 +26,7 @@ import (
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
+	"github.com/Graylog2/collector-sidecar/logger"
 )
 
 type ExecRunner struct {
@@ -201,7 +202,7 @@ func (r *ExecRunner) run() {
 			backends.SetStatusLogErrorf(r.name, "Failed to create path to collector's stderr log: %s", r.stderr)
 		}
 
-		f := common.GetRotatedLog(r.stderr, r.context.UserConfig.LogRotationTime, r.context.UserConfig.LogMaxAge)
+		f := logger.GetRotatedLog(r.stderr, r.context.UserConfig.LogRotationTime, r.context.UserConfig.LogMaxAge)
 		defer f.Close()
 		r.cmd.Stderr = f
 	}
@@ -211,7 +212,7 @@ func (r *ExecRunner) run() {
 			backends.SetStatusLogErrorf(r.name, "Failed to create path to collector's stdout log: %s", r.stdout)
 		}
 
-		f := common.GetRotatedLog(r.stderr, r.context.UserConfig.LogRotationTime, r.context.UserConfig.LogMaxAge)
+		f := logger.GetRotatedLog(r.stderr, r.context.UserConfig.LogRotationTime, r.context.UserConfig.LogMaxAge)
 		defer f.Close()
 		r.cmd.Stdout = f
 	}

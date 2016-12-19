@@ -36,10 +36,13 @@ import (
 	_ "github.com/Graylog2/collector-sidecar/backends/beats/winlogbeat"
 	_ "github.com/Graylog2/collector-sidecar/backends/nxlog"
 	_ "github.com/Graylog2/collector-sidecar/daemon"
+	"errors"
+	"github.com/Graylog2/collector-sidecar/logger"
+	"github.com/Graylog2/collector-sidecar/logger/hooks"
 )
 
 var (
-	log               = common.Log()
+	log               = logger.Log()
 	printVersion      *bool
 	serviceParam      *string
 	configurationFile *string
@@ -65,7 +68,9 @@ func init() {
 }
 
 func main() {
-	if commandLineSetup() {
+	err := commandLineSetup()
+	if err != nil {
+		fmt.Println(err)
 		return
 	}
 
@@ -79,7 +84,8 @@ func main() {
 	distributor := daemon.Daemon.NewDistributor()
 	s, err := service.New(distributor, serviceConfig)
 	if err != nil {
-		log.Fatalf("Operating system is not supported: %v", err)
+		fmt.Printf("Operating system is not supported: %v", err)
+		return
 	}
 	distributor.BindToService(s)
 
@@ -87,7 +93,7 @@ func main() {
 		services.ControlHandler(*serviceParam)
 		err := service.Control(s, *serviceParam)
 		if err != nil {
-			log.Errorf("Failed service action: %v", err)
+			fmt.Printf("Failed service action: %v", err)
 		}
 		return
 	}
@@ -96,15 +102,20 @@ func main() {
 	ctx := context.NewContext()
 	err = ctx.LoadConfig(configurationFile)
 	if err != nil {
-		log.Fatal("Loading configuration file failed.")
+		fmt.Println("Loading configuration file failed.")
+		return
 	} else {
 		// Persist path for later reloads
 		cfgfile.SetConfigPath(*configurationFile)
 	}
 	if cfgfile.ValidateConfig() {
-		log.Info("Config OK")
+		// if ctx.LoadConfig didn't fail already print message and exit
+		fmt.Println("Config OK")
 		return
 	}
+
+	// start file logging
+	hooks.AddLogHooks(ctx, log)
 
 	backendSetup(ctx)
 
@@ -116,19 +127,19 @@ func main() {
 	}
 }
 
-func commandLineSetup() bool {
+func commandLineSetup() error {
 	flag.Parse()
 
 	if *printVersion {
 		fmt.Printf("Graylog Collector Sidecar version %s (%s) [%s/%s]\n", common.CollectorVersion, common.GitRevision, runtime.Version(), runtime.GOARCH)
-		return true
+		os.Exit(0)
 	}
 
 	if _, err := os.Stat(*configurationFile); os.IsNotExist(err) {
-		log.Fatal("Can not open collector-sidecar configuration " + *configurationFile)
+		return errors.New("Can not open collector-sidecar configuration " + *configurationFile)
 	}
 
-	return false
+	return nil
 }
 
 func backendSetup(context *context.Ctx) {

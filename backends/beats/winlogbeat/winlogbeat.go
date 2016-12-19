@@ -37,6 +37,7 @@ import (
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/system"
+	"github.com/Graylog2/collector-sidecar/logger"
 )
 
 const (
@@ -45,7 +46,7 @@ const (
 )
 
 var (
-	log           = common.Log()
+	log           = logger.Log()
 	backendStatus = system.Status{}
 )
 
