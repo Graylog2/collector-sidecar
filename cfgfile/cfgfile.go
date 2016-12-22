@@ -25,10 +25,10 @@ import (
 	"github.com/urso/ucfg"
 	"github.com/urso/ucfg/yaml"
 
-	"github.com/Graylog2/collector-sidecar/common"
+	"github.com/Graylog2/collector-sidecar/logger"
 )
 
-var log = common.Log()
+var log = logger.Log()
 var configurationFile string
 
 // Command line flags
@@ -64,7 +64,7 @@ func Read(out interface{}, path string) error {
 	return nil
 }
 
-// ValidateConfig returns whether or not this is configuration used for testing
+// ValidateConfig returns whether or not this configuration is used for testing
 func ValidateConfig() bool {
 	return *validateConfiguration
 }

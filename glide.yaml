@@ -16,3 +16,4 @@ import:
 - package: github.com/lestrrat/go-file-rotatelogs
 - package: bitbucket.org/tebeka/strftime
 - package: github.com/elastic/gosigar
+- package: github.com/rifflock/lfshook

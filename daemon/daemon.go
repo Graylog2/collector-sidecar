@@ -19,12 +19,13 @@ import (
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
+	"github.com/Graylog2/collector-sidecar/logger"
 )
 
 var (
 	Daemon         *DaemonConfig
 	runnerRegistry = make(map[string]RunnerCreator)
-	log            = common.Log()
+	log            = logger.Log()
 )
 
 type DaemonConfig struct {

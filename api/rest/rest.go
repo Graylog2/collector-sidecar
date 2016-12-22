@@ -29,9 +29,10 @@ import (
 	"time"
 
 	"github.com/Graylog2/collector-sidecar/common"
+	"github.com/Graylog2/collector-sidecar/logger"
 )
 
-var log = common.Log()
+var log = logger.Log()
 
 const (
 	defaultBaseURL = "http://127.0.0.1:9000/api/"

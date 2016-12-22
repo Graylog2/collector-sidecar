@@ -19,13 +19,13 @@ import (
 	"fmt"
 
 	"github.com/Graylog2/collector-sidecar/api/graylog"
-	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/system"
+	"github.com/Graylog2/collector-sidecar/logger"
 )
 
 var (
-	log = common.Log()
+	log = logger.Log()
 	// global registry
 	factory = &backendFactory{registry: make(map[string]Creator)}
 	Store   = &backendStore{backends: make(map[string]Backend)}
