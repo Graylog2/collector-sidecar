@@ -23,6 +23,7 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/logger"
+	"github.com/Graylog2/collector-sidecar/common"
 )
 
 func AddLogHooks(context *context.Ctx, log *logrus.Logger) {
@@ -31,6 +32,10 @@ func AddLogHooks(context *context.Ctx, log *logrus.Logger) {
 
 func filesystemHook(context *context.Ctx, log *logrus.Logger) {
 	logfile := filepath.Join(context.UserConfig.LogPath, "collector_sidecar.log")
+	err := common.CreatePathToFile(logfile)
+	if err != nil {
+		log.Fatalf("Failed to create directory for log file %s: %s", logfile, err)
+	}
 	writer := logger.GetRotatedLog(logfile, context.UserConfig.LogRotationTime, context.UserConfig.LogMaxAge)
 	log.Hooks.Add(lfshook.NewHook(lfshook.WriterMap{
 		logrus.FatalLevel: writer,
