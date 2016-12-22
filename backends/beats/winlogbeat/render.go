@@ -134,12 +134,13 @@ func (wlbc *WinLogBeatConfig) RenderOnChange(response graylog.ResponseCollectorC
 		}
 	}
 
-	// global fileds are available since Beats 5.0.0
+	// global fields are available since Beats 5.0.0
 	if wlbc.Beats.Version[0] >= 5 {
-		newConfig.Beats.Set(true, "fields_under_root")
 		newConfig.Beats.Set(map[string]string{"gl2_source_collector": wlbc.Beats.Context.CollectorId}, "fields")
 	}
 
+	newConfig.Beats.Version = wlbc.Beats.Version // inherit beats version number, it's null at request time and not comparable
+	newConfig.Beats.RunMigrations(newConfig.CachePath())
 	if !wlbc.Beats.Equals(newConfig.Beats) {
 		log.Infof("[%s] Configuration change detected, rewriting configuration file.", wlbc.Name())
 		wlbc.Beats.Update(newConfig.Beats)
