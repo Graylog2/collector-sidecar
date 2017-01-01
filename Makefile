@@ -13,6 +13,8 @@ BUILD_OPTS = -ldflags "-s -X github.com/Graylog2/collector-sidecar/common.GitRev
 TEST_SUITE = \
 	github.com/Graylog2/collector-sidecar/backends/nxlog \
 	github.com/Graylog2/collector-sidecar/backends/beats \
+	github.com/Graylog2/collector-sidecar/backends/beats/filebeat \
+	github.com/Graylog2/collector-sidecar/backends/beats/winlogbeat \
 	github.com/Graylog2/collector-sidecar/common
 
 all: clean misc build
