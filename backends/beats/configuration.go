@@ -156,7 +156,7 @@ func (bc *BeatsConfig) PropertyBool(p interface{}) bool {
 }
 
 func (bc *BeatsConfig) RunMigrations(cachePath string) {
-	if bc.Version[0] == 5 && bc.Version[1] == 0 {
+	if bc.Version[0] == 5 && bc.Version[1] <= 1 {
 		// rename ssl properties
 		cp := bc.Container
 		configurationPath := []string{"output", "logstash", "tls", "certificate_key"}
