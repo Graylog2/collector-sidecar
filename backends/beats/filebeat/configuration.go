@@ -30,7 +30,7 @@ func NewCollectorConfig(context *context.Ctx) *FileBeatConfig {
 		Container:           map[string]interface{}{},
 		ContainerKeyMapping: map[string]string{"indexname": "index"},
 	}
-	backendIndex, err := context.UserConfig.GetIndexByName(name)
+	backendIndex, err := context.UserConfig.GetBackendIndexByName(name)
 	if err == nil {
 		bc.UserConfig = &context.UserConfig.Backends[backendIndex]
 	}

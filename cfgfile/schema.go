@@ -43,7 +43,7 @@ type SidecarBackend struct {
 	RunPath           string `config:"run_path"`
 }
 
-func (sc *SidecarConfig) GetIndexByName(name string) (int, error) {
+func (sc *SidecarConfig) GetBackendIndexByName(name string) (int, error) {
 	index := -1
 	for i, backend := range sc.Backends {
 		if backend.Name == name {
