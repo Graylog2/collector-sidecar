@@ -100,7 +100,7 @@ func NewCollectorConfig(context *context.Ctx) *NxConfig {
 		Context:    context,
 		Extensions: []nxextension{{name: "gelf", properties: map[string]string{"Module": "xm_gelf"}}},
 	}
-	backendIndex, err := context.UserConfig.GetIndexByName(name)
+	backendIndex, err := context.UserConfig.GetBackendIndexByName(name)
 	if err == nil {
 		nxc.UserConfig = &context.UserConfig.Backends[backendIndex]
 		nxc.Definitions = []nxdefinition{{name: "ROOT", value: filepath.Dir(context.UserConfig.Backends[backendIndex].BinaryPath)}}
