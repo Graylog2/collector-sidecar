@@ -20,6 +20,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -34,8 +36,8 @@ type ExecRunner struct {
 	exec           string
 	args           []string
 	stderr, stdout string
-	isRunning      bool
-	isSupervised   bool
+	isRunning      atomic.Value
+	isSupervised   atomic.Value
 	restartCount   int
 	startTime      time.Time
 	cmd            *exec.Cmd
@@ -57,15 +59,19 @@ func NewExecRunner(backend backends.Backend, context *context.Ctx) Runner {
 		},
 		exec:         backend.ExecPath(),
 		args:         backend.ExecArgs(),
-		isRunning:    false,
 		restartCount: 1,
-		isSupervised: false,
 		signals:      make(chan string),
 		stderr:       filepath.Join(context.UserConfig.LogPath, backend.Name()+"_stderr.log"),
 		stdout:       filepath.Join(context.UserConfig.LogPath, backend.Name()+"_stdout.log"),
 	}
 
+	// set default state
+	r.setRunning(false)
+	r.setSupervised(false)
+
 	r.signalProcessor()
+	r.startSupervisor()
+
 	return r
 }
 
@@ -74,7 +80,19 @@ func (r *ExecRunner) Name() string {
 }
 
 func (r *ExecRunner) Running() bool {
-	return r.isRunning
+	return r.isRunning.Load().(bool)
+}
+
+func (r *ExecRunner) setRunning(state bool) {
+	r.isRunning.Store(state)
+}
+
+func (r *ExecRunner) Supervised() bool {
+	return r.isSupervised.Load().(bool)
+}
+
+func (r *ExecRunner) setSupervised(state bool) {
+	r.isSupervised.Store(state)
 }
 
 func (r *ExecRunner) SetDaemon(d *DaemonConfig) {
@@ -86,48 +104,45 @@ func (r *ExecRunner) ValidateBeforeStart() error {
 	if err != nil {
 		return backends.SetStatusLogErrorf(r.name, "Failed to find collector executable %q: %v", r.exec, err)
 	}
-	if r.isRunning {
+	if r.Running() {
 		return errors.New("Failed to start collector, it's already running")
 	}
 	return nil
 }
 
-func (r *ExecRunner) StartSupervisor() {
-	if r.isSupervised == true {
-		log.Debugf("[%s] Won't start second supervisor", r.Name())
-		return
-	}
-
-	r.isSupervised = true
+func (r *ExecRunner) startSupervisor() {
 	r.restartCount = 1
 	go func() {
 		for {
-			// blocks till process exits
-			r.cmd.Wait()
+			// prevent cpu lock
+			time.Sleep(1 * time.Second)
 
 			// ignore regular shutdown
-			if !r.isRunning {
-				time.Sleep(300 * time.Millisecond)
+			if !r.Supervised() {
 				continue
 			}
-			// After 60 seconds we can reset the restart counter
+
+			// check if process exited
+			if r.Running() {
+				continue
+			}
+
+			// after 60 seconds we can reset the restart counter
 			if time.Since(r.startTime) > 60*time.Second {
 				r.restartCount = 1
 			}
-			// don't continue to restart after 3 tries, exit supervisor and wait for a configuration update
+			// don't continue to restart after 3 tries, stop the supervisor and wait for a configuration update
+			// or manual restart
 			if r.restartCount > 3 {
 				backends.SetStatusLogErrorf(r.name, "Unable to start collector after 3 tries, giving up!")
-				r.cmd.Wait()
-				r.isRunning = false
-				break
+				r.setSupervised(false)
+				continue
 			}
 
-			log.Errorf("[%s] Backend crashed, trying to restart %d/3", r.name, r.restartCount)
+			log.Errorf("[%s] Backend finished unexpectedly, trying to restart %d/3.", r.name, r.restartCount)
 			r.restartCount += 1
 			r.Restart()
-
 		}
-		r.isSupervised = false
 	}()
 }
 
@@ -151,10 +166,7 @@ func (r *ExecRunner) start() error {
 	r.startTime = time.Now()
 	r.run()
 
-	// keep the process alive
-	r.StartSupervisor()
-	r.isRunning = true
-
+	r.setSupervised(true)
 	return nil
 }
 
@@ -167,27 +179,31 @@ func (r *ExecRunner) stop() error {
 	log.Infof("[%s] Stopping", r.name)
 
 	// deactivate supervisor
-	r.isRunning = false
-
+	r.setSupervised(false)
 	// give the chance to cleanup resources
-	if r.cmd.Process != nil {
+	if r.cmd.Process != nil && runtime.GOOS != "windows"{
 		r.cmd.Process.Signal(syscall.SIGHUP)
 	}
 	time.Sleep(2 * time.Second)
 
 	// in doubt kill the process
 	if r.cmd.Process != nil {
-		r.cmd.Process.Kill()
+		log.Debugf("[%s] SIGHUP ignored, killing process", r.Name())
+		err := r.cmd.Process.Kill()
+		if err != nil {
+			log.Debugf("[%s] Failed to kill process %s", r.Name(), err)
+		}
 	}
-
-	// in case the process is still running we can only wait and prevent a second process to spawn
-	r.cmd.Wait()
 
 	return nil
 }
 
 func (r *ExecRunner) Restart() error {
 	r.Stop()
+	for timeout := 0; r.Running() || timeout >= 5; timeout++ {
+		log.Debugf("[%s] waiting for process to finish...", r.Name())
+		time.Sleep(1 * time.Second)
+	}
 	r.Start()
 
 	return nil
@@ -222,10 +238,17 @@ func (r *ExecRunner) run() {
 	if err != nil {
 		backends.SetStatusLogErrorf(r.name, "Failed to start collector: %s", err)
 	}
+
+	// wait for process exit in the background. Ensure single cmd.Wait() call
+	go func() {
+		r.setRunning(true)
+		r.cmd.Wait()
+		r.setRunning(false)
+	}()
 }
 
 // process signals sequentially to prevent race conditions with the supervisor
-func (r *ExecRunner) signalProcessor () {
+func (r *ExecRunner) signalProcessor() {
 	go func() {
 		for {
 			switch <- r.signals {
