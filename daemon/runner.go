@@ -24,9 +24,8 @@ type Runner interface {
 	Name() string
 	Running() bool
 	ValidateBeforeStart() error
-	Start() error
-	Stop() error
 	Restart() error
+	Shutdown() error
 	SetDaemon(*DaemonConfig)
 }
 
