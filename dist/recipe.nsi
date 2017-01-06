@@ -42,22 +42,26 @@
   Var Label
   Var GraylogDir
 
-  ;Pages
-  ;Page directory
+
+;--------------------------------
+;Modern UI Configuration  
+  
+  !define MUI_ICON "graylog.ico"  
+  !insertmacro MUI_PAGE_WELCOME
+  !insertmacro MUI_PAGE_LICENSE  "../COPYING"
+  !insertmacro MUI_UNPAGE_WELCOME
+  !insertmacro MUI_UNPAGE_CONFIRM
+  !insertmacro MUI_UNPAGE_INSTFILES
+
+  
+  ; Custom Pages
   Page custom nsDialogsPage nsDialogsPageLeave
   Page instfiles
 
-;--------------------------------
-;Modern UI Configuration
- 
-  !define MUI_WELCOMEPAGE  
-  !define MUI_LICENSEPAGE
+  !insertmacro MUI_PAGE_FINISH
+  !insertmacro MUI_UNPAGE_FINISH
   !define MUI_DIRECTORYPAGE
   !define MUI_ABORTWARNING
-  !define MUI_UNINSTALLER
-  !define MUI_UNCONFIRMPAGE
-  !define MUI_FINISHPAGE
-  !define MUI_ICON "graylog.ico"  
  
 ;--------------------------------
 ;Macros
@@ -224,16 +228,15 @@ Function un.oninit
   !insertmacro Check_X64
 FunctionEnd
 
-Function .onInstSuccess
-  MessageBox MB_OK "You have successfully installed Graylog Collector Sidecar." /SD IDOK
-FunctionEnd
  
-Function un.onUninstSuccess
-  MessageBox MB_OK "You have successfully uninstalled Graylog Collector Sidecar." /SD IDOK
-FunctionEnd
 
 Function nsDialogsPage
   nsDialogs::Create 1018
+
+  
+  !insertmacro MUI_HEADER_TEXT "${MUI_BRANDINGTEXT} Configuration" "Here you can check and modify the configuration of this agent"
+  
+  
   Pop $Dialog
 
   ${If} $Dialog == error
