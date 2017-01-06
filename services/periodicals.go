@@ -76,14 +76,7 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context 
 				continue
 			}
 
-			if runner.Running() {
-				// collector was already started so a Restart will not fail
-				err = runner.Restart()
-			} else {
-				// collector is not running, we do a fresh start
-				err = runner.Start()
-			}
-			if err != nil {
+			if err := runner.Restart(); err != nil {
 				msg := "Failed to restart collector"
 				backend.SetStatus(backends.StatusError, msg)
 				log.Errorf("[%s] %s: %v", name, msg, err)

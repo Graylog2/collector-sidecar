@@ -140,7 +140,7 @@ func (r *SvcRunner) ValidateBeforeStart() error {
 	return nil
 }
 
-func (r *SvcRunner) Start() error {
+func (r *SvcRunner) start() error {
 	if err := r.ValidateBeforeStart(); err != nil {
 		log.Error(err.Error())
 		return err
@@ -172,7 +172,7 @@ func (r *SvcRunner) Start() error {
 			time.Sleep(10 * time.Second)
 			if r.isRunning && !r.Running() {
 				backends.SetStatusLogErrorf(r.name, "Backend crashed, sending restart signal")
-				r.Start()
+				r.start()
 				break
 			}
 
@@ -187,7 +187,7 @@ func (r *SvcRunner) Start() error {
 	return err
 }
 
-func (r *SvcRunner) Stop() error {
+func (r *SvcRunner) Shutdown() error {
 	log.Infof("[%s] Stopping", r.name)
 
 	// deactivate supervisor
@@ -226,9 +226,9 @@ func (r *SvcRunner) Stop() error {
 }
 
 func (r *SvcRunner) Restart() error {
-	r.Stop()
+	r.Shutdown()
 	time.Sleep(2 * time.Second)
-	r.Start()
+	r.start()
 
 	return nil
 }

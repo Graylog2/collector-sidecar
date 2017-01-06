@@ -146,11 +146,6 @@ func (r *ExecRunner) startSupervisor() {
 	}()
 }
 
-func (r *ExecRunner) Start() error {
-	r.signals <- "start"
-	return nil
-}
-
 func (r *ExecRunner) start() error {
 	if err := r.ValidateBeforeStart(); err != nil {
 		log.Errorf("[%s] %s", r.Name(), err)
@@ -170,16 +165,22 @@ func (r *ExecRunner) start() error {
 	return nil
 }
 
-func (r *ExecRunner) Stop() error {
-	r.signals <- "stop"
+func (r *ExecRunner) Shutdown() error {
+	r.signals <- "shutdown"
 	return nil
 }
 
 func (r *ExecRunner) stop() error {
-	log.Infof("[%s] Stopping", r.name)
-
 	// deactivate supervisor
 	r.setSupervised(false)
+
+	// if the command hasn't been started yet or doesn't run anymore, just return
+	if r.cmd == nil || r.cmd.Process == nil {
+		return nil
+	}
+
+	log.Infof("[%s] Stopping", r.name)
+
 	// give the chance to cleanup resources
 	if r.cmd.Process != nil && runtime.GOOS != "windows"{
 		r.cmd.Process.Signal(syscall.SIGHUP)
@@ -199,12 +200,17 @@ func (r *ExecRunner) stop() error {
 }
 
 func (r *ExecRunner) Restart() error {
-	r.Stop()
+	r.signals <- "restart"
+	return nil
+}
+
+func (r *ExecRunner) restart() error {
+	r.stop()
 	for timeout := 0; r.Running() || timeout >= 5; timeout++ {
 		log.Debugf("[%s] waiting for process to finish...", r.Name())
 		time.Sleep(1 * time.Second)
 	}
-	r.Start()
+	r.start()
 
 	return nil
 }
@@ -250,13 +256,18 @@ func (r *ExecRunner) run() {
 // process signals sequentially to prevent race conditions with the supervisor
 func (r *ExecRunner) signalProcessor() {
 	go func() {
+		seq := 0
 		for {
-			switch <- r.signals {
-			case "stop":
+			cmd := <-r.signals
+			seq++
+			log.Debugf("[signal-processor] (seq=%d) handling cmd: %v", seq, cmd)
+			switch cmd {
+			case "restart":
+				r.restart()
+			case "shutdown":
 				r.stop()
-			case "start":
-				r.start()
 			}
+			log.Debugf("[signal-processor] (seq=%d) cmd done: %v", seq, cmd)
 		}
 	}()
 }
