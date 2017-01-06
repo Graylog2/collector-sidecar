@@ -43,7 +43,7 @@ func (dist *Distributor) Start(s service.Service) error {
 	log.Info("Starting signal distributor")
 	dist.Running = true
 	for _, runner := range Daemon.Runner {
-		runner.Start()
+		runner.Restart()
 	}
 
 	return nil
@@ -53,7 +53,7 @@ func (dist *Distributor) Start(s service.Service) error {
 func (dist *Distributor) Stop(s service.Service) error {
 	log.Info("Stopping signal distributor")
 	for _, runner := range Daemon.Runner {
-		runner.Stop()
+		runner.Shutdown()
 	}
 	for _, runner := range Daemon.Runner {
 		for runner.Running() {time.Sleep(300 * time.Millisecond)}
