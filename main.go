@@ -16,6 +16,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -23,12 +24,15 @@ import (
 	"runtime"
 
 	"github.com/kardianos/service"
+	"github.com/Sirupsen/logrus"
 
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/cfgfile"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/daemon"
+	"github.com/Graylog2/collector-sidecar/logger"
+	"github.com/Graylog2/collector-sidecar/logger/hooks"
 	"github.com/Graylog2/collector-sidecar/services"
 
 	// importing backend packages to ensure init() is called
@@ -36,14 +40,12 @@ import (
 	_ "github.com/Graylog2/collector-sidecar/backends/beats/winlogbeat"
 	_ "github.com/Graylog2/collector-sidecar/backends/nxlog"
 	_ "github.com/Graylog2/collector-sidecar/daemon"
-	"errors"
-	"github.com/Graylog2/collector-sidecar/logger"
-	"github.com/Graylog2/collector-sidecar/logger/hooks"
 )
 
 var (
 	log               = logger.Log()
 	printVersion      *bool
+	debug             *bool
 	serviceParam      *string
 	configurationFile *string
 )
@@ -59,6 +61,7 @@ func init() {
 	serviceParam = flag.String("service", "", "Control the system service [start stop restart install uninstall]")
 	configurationFile = flag.String("c", configurationPath, "Configuration file")
 	printVersion = flag.Bool("version", false, "Print version and exit")
+	debug = flag.Bool("debug", false, "Set log level to debug")
 
 	flag.Usage = func() {
 		fmt.Fprint(os.Stderr, "Usage: graylog-collector-sidecar -c [CONFIGURATION FILE]\n")
@@ -114,9 +117,15 @@ func main() {
 		return
 	}
 
-	// start file logging
+	// setup logging
+	if *debug {
+		log.Level = logrus.DebugLevel
+	} else {
+		log.Level = logrus.InfoLevel
+	}
 	hooks.AddLogHooks(ctx, log)
 
+	// initialize backends
 	backendSetup(ctx)
 
 	// start main loop
