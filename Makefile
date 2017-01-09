@@ -31,6 +31,7 @@ clean: ## Remove binaries
 	@rm -rf dist/tmp-build
 	@rm -rf dist/tmp-dest
 	@rm -rf dist/pkg
+	@rm -rf dist/collectors
 
 deps: glide
 	./glide install
