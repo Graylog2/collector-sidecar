@@ -90,8 +90,9 @@
 ;Installer Sections     
 Section "Install"
 
-  ;Add files
-  CreateDirectory "$INSTDIR\generated"  ; this folder is needed at runtime 
+  ;These folders are needed at runtime
+  CreateDirectory "$INSTDIR\generated"
+  CreateDirectory "$INSTDIR\logs"
   SetOutPath "$INSTDIR"
  
   ${If} ${RunningX64}
