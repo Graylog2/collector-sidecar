@@ -22,7 +22,7 @@ imports:
 - name: github.com/rifflock/lfshook
   version: 24f7833daaff6c3893606bb79d6722a7e9e089c5
 - name: github.com/Sirupsen/logrus
-  version: 446d1c146faa8ed3f4218f056fcd165f6bcfda81
+  version: v0.11.0
   subpackages:
   - hooks/syslog
 - name: github.com/StackExchange/wmi

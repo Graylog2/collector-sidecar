@@ -1,6 +1,7 @@
 package: main
 import:
 - package: github.com/Sirupsen/logrus
+  version: v0.11.0
 - package: github.com/kardianos/service
 - package: golang.org/x/sys
   subpackages:
