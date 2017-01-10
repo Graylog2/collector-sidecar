@@ -80,9 +80,9 @@ Install the NXLog package from the offical download [page](https://nxlog.org/pro
   $ sudo /etc/init.d/nxlog stop
   $ sudo update-rc.d -f nxlog remove
   $ sudo gpasswd -a nxlog adm
-  $ sudo chown -R nxlog.nxlog /var/spool/collector-sidecar/nxlog
  
   $ sudo dpkg -i collector-sidecar_0.1.0-1_amd64.deb
+  $ sudo chown -R nxlog.nxlog /var/spool/collector-sidecar/nxlog
 ```
 
 Edit `/etc/graylog/collector-sidecar/collector_sidecar.yml`accordingly.
