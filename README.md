@@ -144,7 +144,7 @@ Edit `C:\Program Files\graylog\collector-sidecar\collector_sidecar.yml`, you sho
 Run the Sidecar in foreground mode for debugging purposes. Simply call it like this and look out for error messages:
 
 ```
-  $ graylog-collector-sidecar -c /etc/graylog/collector-sidecar/collector_sidecar.yml
+  $ graylog-collector-sidecar -debug -c /etc/graylog/collector-sidecar/collector_sidecar.yml
 ```
 
 ## Configuration
