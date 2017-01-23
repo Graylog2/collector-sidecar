@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Graylog.  If not, see <http://www.gnu.org/licenses/>.
 
-// +build darwin linux solaris
+// +build darwin linux solaris freebsd
 
 package services
 
