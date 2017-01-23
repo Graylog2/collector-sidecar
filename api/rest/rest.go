@@ -32,11 +32,13 @@ import (
 	"github.com/Graylog2/collector-sidecar/logger"
 )
 
-var log = logger.Log()
+var (
+	log = logger.Log()
+	userAgent = "Graylog Collector v" + common.CollectorVersion
+)
 
 const (
 	defaultBaseURL = "http://127.0.0.1:9000/api/"
-	userAgent      = "Graylog Collector v" + common.CollectorVersion
 	mediaType      = "application/json"
 )
 

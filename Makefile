@@ -2,13 +2,15 @@ GO ?= go
 GOFMT ?= gofmt
 AWK ?= awk
 
-COLLECTOR_VERSION = $(shell grep CollectorVersion common/metadata.go | $(AWK) '{gsub(/"/, "", $$3); print $$3}')
+COLLECTOR_VERSION = $(shell jq -r ".version" versions.json)
 ifeq ($(strip $(COLLECTOR_VERSION)),)
 $(error COLLECTOR_VERSION is not set)
 endif
 
+COLLECTOR_VERSION_SUFFIX = $(shell jq -r ".suffix" versions.json)
+
 GIT_REV=$(shell git rev-parse --short HEAD)
-BUILD_OPTS = -ldflags "-s -X github.com/Graylog2/collector-sidecar/common.GitRevision=$(GIT_REV)"
+BUILD_OPTS = -ldflags "-s -X github.com/Graylog2/collector-sidecar/common.GitRevision=$(GIT_REV)i -X github.com/Graylog2/collector-sidecar/common.CollectorVersion=$(COLLECTOR_VERSION) -X github.com/Graylog2/collector-sidecar/common.CollectorVersionSuffix=$(COLLECTOR_VERSION_SUFFIX)"
 
 TEST_SUITE = \
 	github.com/Graylog2/collector-sidecar/backends/nxlog \
@@ -108,7 +110,7 @@ package-linux32: ## Create Linux system package for 32bit hosts
 
 package-windows: ## Create Windows installer
 	@mkdir -p dist/pkg
-	@makensis -DVERSION=$(COLLECTOR_VERSION) dist/recipe.nsi
+	@makensis -DVERSION=$(COLLECTOR_VERSION) -DVERSION_SUFFIX=$(COLLECTOR_VERSION_SUFFIX) dist/recipe.nsi
 
 package-tar: ## Create tar archive for all platforms
 	@mkdir -p dist/pkg

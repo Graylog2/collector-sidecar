@@ -140,7 +140,12 @@ func commandLineSetup() error {
 	flag.Parse()
 
 	if *printVersion {
-		fmt.Printf("Graylog Collector Sidecar version %s (%s) [%s/%s]\n", common.CollectorVersion, common.GitRevision, runtime.Version(), runtime.GOARCH)
+		fmt.Printf("Graylog Collector Sidecar version %s%s (%s) [%s/%s]\n",
+			common.CollectorVersion,
+			common.CollectorVersionSuffix,
+			common.GitRevision,
+			runtime.Version(),
+			runtime.GOARCH)
 		os.Exit(0)
 	}
 
