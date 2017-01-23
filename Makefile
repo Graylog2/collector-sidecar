@@ -82,8 +82,8 @@ build-darwin: ## Build collector-sidecar binary for OSX
 	GOOS=darwin GOARCH=amd64 $(GO) build $(BUILD_OPTS) -v -i -o build/$(COLLECTOR_VERSION)/darwin/amd64/graylog-collector-sidecar
 
 build-freebsd:
-       @mkdir -p build/$(COLLECTOR_VERSION)/freebsd/amd64
-       GOOS=freebsd GOARCH=amd64 $(GO) build $(BUILD_OPTS) -v -i -o build/$(COLLECTOR_VERSION)/freebsd/amd64/graylog-collector-sidecar
+	@mkdir -p build/$(COLLECTOR_VERSION)/freebsd/amd64
+	GOOS=freebsd GOARCH=amd64 $(GO) build $(BUILD_OPTS) -v -i -o build/$(COLLECTOR_VERSION)/freebsd/amd64/graylog-collector-sidecar
 
 build-windows: ## Build collector-sidecar binary for Windows
 	@mkdir -p build/$(COLLECTOR_VERSION)/windows/amd64
