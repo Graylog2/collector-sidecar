@@ -5,29 +5,30 @@ module FPM
     class Recipe
       class RecipeData
         def initialize(recipe)
-          @json = JSON.parse(File.read(File.expand_path('../../versions.json', __FILE__)))
+          version_mk = File.read(File.expand_path('../../version.mk', __FILE__))
+          @version = Hash[*version_mk.gsub(/"/,'').split(/\s*[\n=]\s*/)]
           @recipe = recipe
         end
 
         def version
-          data('version')
+          data('COLLECTOR_VERSION')
         end
 
         def suffix
-          data('suffix')
+          data('COLLECTOR_VERSION_SUFFIX')
         end
 
         def revision
-          if data('suffix')
-            data('revision').to_s + data('suffix').gsub(/^-/, '.')
+          if data('COLLECTOR_VERSION_SUFFIX')
+            data('COLLECTOR_REVISION').to_s + data('COLLECTOR_VERSION_SUFFIX').gsub(/^-/, '.')
           else
-            data('revision')
+            data('COLLECTOR_REVISION')
           end
         end
 
         def data(key)
-          raise "Missing value for #{key} in versions.json" if !@json.key?(key)
-          @json[key]
+          raise "Missing value for #{key} in version.mk" if !@version.key?(key)
+          @version[key]
         end
       end
 
