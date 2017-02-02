@@ -3,7 +3,7 @@
  
   Name "Graylog Collector Sidecar"
   !define MUI_FILE "savefile"
-  !define MUI_BRANDINGTEXT "Graylog Collector Sidecar v${VERSION}"
+  !define MUI_BRANDINGTEXT "Graylog Collector Sidecar v${VERSION}${VERSION_SUFFIX}"
   CRCCheck On
   SetCompressor "bzip2"
  
@@ -17,7 +17,7 @@
   !include WordFunc.nsh
   !include x64.nsh
 
-  VIProductVersion "0.${VERSION}"
+  VIProductVersion "0.${VERSION}${VERSION_SUFFIX}"
   VIAddVersionKey "FileVersion" "${VERSION}"
   VIAddVersionKey "FileDescription" "Graylog Collector Sidecar"
   VIAddVersionKey "LegalCopyright" "Graylog, Inc."
@@ -25,7 +25,7 @@
 ;---------------------------------
 ;General
  
-  OutFile "pkg/collector_sidecar_installer_${VERSION}.exe"
+  OutFile "pkg/collector_sidecar_installer_${VERSION}${VERSION_SUFFIX}.exe"
   RequestExecutionLevel admin ;Require admin rights
   ShowInstDetails "nevershow"
   ShowUninstDetails "nevershow"
@@ -125,7 +125,7 @@ Section "Install"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogCollectorSidecar" \
                  "QuietUninstallString" "$\"$INSTDIR\uninstall.exe$\" /S"				 
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogCollectorSidecar" \
-                 "DisplayVersion" "${VERSION}"
+                 "DisplayVersion" "${VERSION}${VERSION_SUFFIX}"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogCollectorSidecar" \
                  "InstallLocation" "$INSTDIR"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogCollectorSidecar" \
