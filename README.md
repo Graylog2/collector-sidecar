@@ -33,7 +33,12 @@ Create a system service and start it
 
 ```
   $ sudo graylog-collector-sidecar -service install
+
+  [Ubuntu 14.04 with Upstart]
   $ sudo start collector-sidecar
+
+  [Ubuntu 16.04 with Systemd]
+  $ sudo systemctl start collector-sidecar
 ```
 
 **CentOS**
@@ -89,7 +94,12 @@ Edit `/etc/graylog/collector-sidecar/collector_sidecar.yml`accordingly.
 
 ```
   $ sudo graylog-collector-sidecar -service install
+
+  [Ubuntu 14.04 with Upstart]
   $ sudo start collector-sidecar
+
+  [Ubuntu 16.04 with Systemd]
+  $ sudo systemctl start collector-sidecar
 ```
 
 **CentOS**
