@@ -24,8 +24,9 @@
  
 ;---------------------------------
 ;General
- 
-  OutFile "pkg/collector_sidecar_installer_${VERSION}${VERSION_SUFFIX}.exe"
+
+  !searchreplace SUFFIX '${VERSION_SUFFIX}' "-" "."
+  OutFile "pkg/collector_sidecar_installer_${VERSION}-${REVISION}${SUFFIX}.exe"
   RequestExecutionLevel admin ;Require admin rights
   ShowInstDetails "nevershow"
   ShowUninstDetails "nevershow"
@@ -103,7 +104,10 @@ Section "Install"
     File "collectors/filebeat/windows/x86/filebeat.exe"
   ${EndIf}
 
+  SetOverwrite off
   File /oname=collector_sidecar.yml "../collector_sidecar_windows.yml"
+  SetOverwrite on
+  File /oname=collector_sidecar.yml.dist "../collector_sidecar_windows.yml"
   File "../COPYING"
   File "graylog.ico"  
 
