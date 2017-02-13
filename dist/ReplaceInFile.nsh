@@ -45,8 +45,6 @@ Function RIF
     FileClose $R1                   ; S'rry, Ma'am - clos'n now
     FileClose $R0                   ; me 2
  
-    Delete "$2.dist"                 ; go away, Sire
-    Rename "$2" "$2.dist"            ; step aside, Ma'am
     Rename "$R2" "$2"               ; hi, baby!
  
     ClearErrors                     ; now i AM a newborn

@@ -112,7 +112,7 @@ package-linux32: ## Create Linux system package for 32bit hosts
 
 package-windows: ## Create Windows installer
 	@mkdir -p dist/pkg
-	@makensis -DVERSION=$(COLLECTOR_VERSION) -DVERSION_SUFFIX=$(COLLECTOR_VERSION_SUFFIX) dist/recipe.nsi
+	@makensis -DVERSION=$(COLLECTOR_VERSION) -DVERSION_SUFFIX=$(COLLECTOR_VERSION_SUFFIX) -DREVISION=$(COLLECTOR_REVISION) dist/recipe.nsi
 
 package-tar: ## Create tar archive for all platforms
 	@mkdir -p dist/pkg
