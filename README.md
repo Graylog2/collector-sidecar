@@ -14,6 +14,11 @@ Especially the [Step-by-Step](http://docs.graylog.org/en/2.1/pages/collector_sid
 
 ## Installation
 
+| Sidecar version  | Graylog server version |
+| ---------------- | ---------------------- |
+| 0.0.9            | 2.1.x                  |
+| 0.1.x            | 2.2.x                  |
+
 [Download a package](https://github.com/Graylog2/collector-sidecar/releases) and install it on the target system.
 
 
