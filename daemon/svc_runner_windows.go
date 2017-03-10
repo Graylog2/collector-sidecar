@@ -18,6 +18,7 @@ package daemon
 import (
 	"os/exec"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/sys/windows/svc"
@@ -30,11 +31,12 @@ import (
 
 type SvcRunner struct {
 	RunnerCommon
-	exec        string
-	args        []string
-	startTime   time.Time
-	serviceName string
-	isRunning   bool
+	exec         string
+	args         []string
+	startTime    time.Time
+	serviceName  string
+	isSupervised atomic.Value
+	signals      chan string
 }
 
 func init() {
@@ -52,9 +54,15 @@ func NewSvcRunner(backend backends.Backend, context *context.Ctx) Runner {
 		},
 		exec:        backend.ExecPath(),
 		args:        backend.ExecArgs(),
+		signals:     make(chan string),
 		serviceName: "graylog-collector-" + backend.Name(),
-		isRunning:   false,
 	}
+
+	// set default state
+	r.setSupervised(false)
+
+	r.startSupervisor()
+	r.signalProcessor()
 
 	return r
 }
@@ -67,6 +75,7 @@ func (r *SvcRunner) Running() bool {
 	m, err := mgr.Connect()
 	if err != nil {
 		backends.SetStatusLogErrorf(r.name, "Failed to connect to service manager: %v", err)
+		return false
 	}
 	defer m.Disconnect()
 
@@ -74,6 +83,7 @@ func (r *SvcRunner) Running() bool {
 	// service exist so we only update the properties
 	if err != nil {
 		backends.SetStatusLogErrorf(r.name, "Can't get status of service %s cause it doesn't exist: %v", r.serviceName, err)
+		return false
 	}
 	defer s.Close()
 
@@ -83,6 +93,14 @@ func (r *SvcRunner) Running() bool {
 	}
 
 	return status.State == svc.Running
+}
+
+func (r *SvcRunner) Supervised() bool {
+	return r.isSupervised.Load().(bool)
+}
+
+func (r *SvcRunner) setSupervised(state bool) {
+	r.isSupervised.Store(state)
 }
 
 func (r *SvcRunner) SetDaemon(d *DaemonConfig) {
@@ -140,9 +158,31 @@ func (r *SvcRunner) ValidateBeforeStart() error {
 	return nil
 }
 
+func (r *SvcRunner) startSupervisor() {
+	go func() {
+		for {
+			// prevent cpu lock
+			time.Sleep(10 * time.Second)
+
+			// ignore regular shutdown
+			if !r.Supervised() {
+				continue
+			}
+
+			// check if process exited
+			if r.Running() {
+				continue
+			}
+
+			backends.SetStatusLogErrorf(r.name, "Backend finished unexpectedly, sending restart signal")
+			r.Restart()
+		}
+	}()
+}
+
 func (r *SvcRunner) start() error {
 	if err := r.ValidateBeforeStart(); err != nil {
-		log.Error(err.Error())
+		log.Errorf("[%s] %s", r.Name(), err)
 		return err
 	}
 
@@ -166,32 +206,22 @@ func (r *SvcRunner) start() error {
 		return backends.SetStatusLogErrorf(r.name, "Could not start service: %v", err)
 	}
 
-	r.isRunning = true
-	go func() {
-		for {
-			time.Sleep(10 * time.Second)
-			if r.isRunning && !r.Running() {
-				backends.SetStatusLogErrorf(r.name, "Backend crashed, sending restart signal")
-				r.start()
-				break
-			}
-
-			if !r.isRunning {
-				break
-			}
-		}
-	}()
-
+	r.setSupervised(true)
 	r.backend.SetStatus(backends.StatusRunning, "Running")
 
 	return err
 }
 
 func (r *SvcRunner) Shutdown() error {
+	r.signals <- "shutdown"
+	return nil
+}
+
+func (r *SvcRunner) stop() error {
 	log.Infof("[%s] Stopping", r.name)
 
 	// deactivate supervisor
-	r.isRunning = false
+	r.setSupervised(false)
 
 	m, err := mgr.Connect()
 	if err != nil {
@@ -226,9 +256,36 @@ func (r *SvcRunner) Shutdown() error {
 }
 
 func (r *SvcRunner) Restart() error {
-	r.Shutdown()
-	time.Sleep(2 * time.Second)
+	r.signals <- "restart"
+	return nil
+}
+
+func (r *SvcRunner) restart() error {
+	r.stop()
+	for timeout := 0; r.Running() || timeout >= 5; timeout++ {
+		log.Debugf("[%s] waiting for process to finish...", r.Name())
+		time.Sleep(1 * time.Second)
+	}
 	r.start()
 
 	return nil
+}
+
+// process signals sequentially to prevent race conditions with the supervisor
+func (r *SvcRunner) signalProcessor() {
+	go func() {
+		seq := 0
+		for {
+			cmd := <-r.signals
+			seq++
+			log.Debugf("[signal-processor] (seq=%d) handling cmd: %v", seq, cmd)
+			switch cmd {
+			case "restart":
+				r.restart()
+			case "shutdown":
+				r.stop()
+			}
+			log.Debugf("[signal-processor] (seq=%d) cmd done: %v", seq, cmd)
+		}
+	}()
 }
