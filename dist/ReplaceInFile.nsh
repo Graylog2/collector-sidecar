@@ -44,7 +44,8 @@ Function RIF
   RIF_leaveloop:                    ; over'n'out, Sir!
     FileClose $R1                   ; S'rry, Ma'am - clos'n now
     FileClose $R0                   ; me 2
- 
+
+    Delete "$2"                     ; go away, Sire
     Rename "$R2" "$2"               ; hi, baby!
  
     ClearErrors                     ; now i AM a newborn
