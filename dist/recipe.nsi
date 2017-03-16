@@ -16,6 +16,7 @@
   !include FileFunc.nsh
   !include WordFunc.nsh
   !include x64.nsh
+  !include IfKeyExists.nsh
 
   VIProductVersion "0.${VERSION}${VERSION_SUFFIX}"
   VIAddVersionKey "FileVersion" "${VERSION}"
@@ -111,11 +112,22 @@ Section "Install"
   File "../COPYING"
   File "graylog.ico"  
 
+  ;Stop service to allow binary upgrade
+  !insertmacro _IfKeyExists HKLM "SYSTEM\CurrentControlSet\Services" "collector-sidecar"
+  Pop $R0
+  ${If} $R0 = 1
+    ExecWait '"$INSTDIR\graylog-collector-sidecar.exe" -service stop'
+  ${EndIf}
 
   ${If} ${RunningX64}
     File /oname=Graylog-collector-sidecar.exe "../build/${VERSION}/windows/amd64/graylog-collector-sidecar.exe"
   ${Else}
     File /oname=Graylog-collector-sidecar.exe "../build/${VERSION}/windows/386/graylog-collector-sidecar.exe"
+  ${EndIf}
+
+  ;When we stop the Sidecar service we also turn it on again
+  ${If} $R0 = 1
+    ExecWait '"$INSTDIR\graylog-collector-sidecar.exe" -service start'
   ${EndIf}
 
   WriteUninstaller "$INSTDIR\uninstall.exe"
