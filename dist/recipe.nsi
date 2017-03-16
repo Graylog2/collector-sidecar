@@ -113,7 +113,7 @@ Section "Install"
   File "graylog.ico"  
 
   ;Stop service to allow binary upgrade
-  !insertmacro _IfKeyExists HKLM Software\Microsoft\Windows\CurrentVersion\Uninstall GraylogCollectorSidecar
+  !insertmacro _IfKeyExists HKLM "SYSTEM\CurrentControlSet\Services" "collector-sidecar"
   Pop $R0
   ${If} $R0 = 1
     ExecWait '"$INSTDIR\graylog-collector-sidecar.exe" -service stop'
