@@ -6,7 +6,7 @@ module FPM
       class RecipeData
         def initialize(recipe)
           version_mk = File.read(File.expand_path('../../version.mk', __FILE__))
-          @version = Hash[*version_mk.gsub(/"/,'').split(/\s*[\n=]\s*/)]
+          @version = Hash[*version_mk.gsub(/"/,'').gsub(/^.*=\s*\n^/, '').split(/\s*[\n=]\s*/)]
           @recipe = recipe
         end
 
@@ -19,7 +19,7 @@ module FPM
         end
 
         def revision
-          if data('COLLECTOR_VERSION_SUFFIX')
+          if @version.key?('COLLECTOR_VERSION_SUFFIX')
             data('COLLECTOR_REVISION').to_s + data('COLLECTOR_VERSION_SUFFIX').gsub(/^-/, '.')
           else
             data('COLLECTOR_REVISION')
