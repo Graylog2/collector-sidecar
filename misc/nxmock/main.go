@@ -27,7 +27,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if os.Args[1] != "-v" {
+	if os.Args[1] == "-v" {
+    fmt.Println("configuration OK")
+    os.Exit(0)
+  }
+	if os.Args[1] == "-f" {
 		for {
 			time.Sleep(60 * time.Second)
 		}
