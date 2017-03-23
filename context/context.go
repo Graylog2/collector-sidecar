@@ -33,6 +33,7 @@ var log = logger.Log()
 type Ctx struct {
 	ServerUrl   *url.URL
 	CollectorId string
+        NodeId      string
 	UserConfig  *cfgfile.SidecarConfig
 	Inventory   *system.Inventory
 }
@@ -73,6 +74,7 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 			log.Fatal("No node-id configured and not able to obtain hostname as alternative.")
 		}
 	}
+        ctx.NodeId = ctx.UserConfig.NodeId
 
 	// tags
 	if len(ctx.UserConfig.Tags) == 0 {
