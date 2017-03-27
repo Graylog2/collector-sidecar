@@ -137,6 +137,7 @@ func (wlbc *WinLogBeatConfig) RenderOnChange(response graylog.ResponseCollectorC
 	// global fields are available since Beats 5.0.0
 	if wlbc.Beats.Version[0] >= 5 {
 		newConfig.Beats.Set(map[string]string{"gl2_source_collector": wlbc.Beats.Context.CollectorId}, "fields")
+		newConfig.Beats.Set(map[string]string{"source_node_id": wlbc.Beats.Context.NodeId}, "fields")
 	}
 
 	newConfig.Beats.Version = wlbc.Beats.Version // inherit beats version number, it's null at request time and not comparable
