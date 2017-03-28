@@ -33,7 +33,7 @@ var log = logger.Log()
 type Ctx struct {
 	ServerUrl   *url.URL
 	CollectorId string
-        NodeId      string
+	NodeId      string
 	UserConfig  *cfgfile.SidecarConfig
 	Inventory   *system.Inventory
 }

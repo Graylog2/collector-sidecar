@@ -113,9 +113,10 @@ func (fbc *FileBeatConfig) RenderOnChange(response graylog.ResponseCollectorConf
 			prospector = append(prospector, make(map[string]interface{}))
 			idx := len(prospector) - 1
 
-			// add gl2_source_collector and source_node_id unconditionally
-			prospector[idx]["fields"] = map[string]interface{}{"gl2_source_collector": fbc.Beats.Context.CollectorId}
-                        prospector[idx]["fields"] = map[string]interface{}{"source_node_id": fbc.Beats.Context.NodeId}
+			// add gl2_source_collector and node_id unconditionally
+			prospector[idx]["fields"] = map[string]interface{}{
+				"gl2_source_collector": fbc.Beats.Context.CollectorId,
+				"collector_node_id": fbc.Beats.Context.NodeId}
 			// we dont support stdin input type
 			prospector[idx]["input_type"] = "log"
 			for property, value := range input.Properties {
