@@ -111,7 +111,7 @@ func TestBeats5MigrationShipper(t *testing.T) {
 	}
 }
 
-func TestBeats5MigrationPathes(t *testing.T) {
+func TestBeats5MigrationPaths(t *testing.T) {
 	bc := &BeatsConfig{
 		Context: context.NewContext(),
 		Container:  map[string]interface{}{},

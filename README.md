@@ -131,7 +131,7 @@ _**The Windows installation path changed to `C:\Program Files` with version 0.0.
 
 Also notice that the NXLog file input is currently not able to do a SavePos for file tailing, this will be fixed in a future version.
 
-Install the NXLog package from the offical download [page](https://nxlog.org/products/nxlog-community-edition/download) and deactive the
+Install the NXLog package from the offical download [page](https://nxlog.org/products/nxlog-community-edition/download) and deactivate the
 system service. We just need the binaries installed on that host.
 
 ```
@@ -201,5 +201,5 @@ Each backend can be enabled/disabled and should point to a binary of the actual 
 
 ## Development
 
-There is a collector mock programm in order to use the collector-sidecar without actually running a collector like NXLog. Simply build it with
+There is a collector mock program in order to use the collector-sidecar without actually running a collector like NXLog. Simply build it with
 `make misc` und use the option `binary_path: misc/nxmock/nxlog`.
