@@ -272,13 +272,13 @@ func TestRenderSingleFileInputWithMultilineSupport(t *testing.T) {
 
 func TestRenderMultipleWindowsEventInputs(t *testing.T) {
 	engine := &NxConfig{
-		Canned: []nxcanned{{name: "test-winodws-event-input1", kind: "input-windows-event-log", properties: map[string]interface{}{
+		Canned: []nxcanned{{name: "test-windows-event-input1", kind: "input-windows-event-log", properties: map[string]interface{}{
 			"poll_interval": 1,
 			"save_position": true,
 			"read_last":     false,
 		}}},
 	}
-	addition := &nxcanned{name: "test-winodws-event-input2", kind: "input-windows-event-log", properties: map[string]interface{}{
+	addition := &nxcanned{name: "test-windows-event-input2", kind: "input-windows-event-log", properties: map[string]interface{}{
 		"poll_interval": 1,
 		"save_position": true,
 		"read_last":     false,
@@ -287,8 +287,8 @@ func TestRenderMultipleWindowsEventInputs(t *testing.T) {
 
 	result := engine.Render()
 
-	expect1 := "<Input test-winodws-event-input1>\n"
-	expect2 := "<Input test-winodws-event-input2>\n"
+	expect1 := "<Input test-windows-event-input1>\n"
+	expect2 := "<Input test-windows-event-input2>\n"
 	if !(strings.Contains(string(result), expect1) && strings.Contains(string(result), expect2)) {
 		t.Fail()
 	}
@@ -296,7 +296,7 @@ func TestRenderMultipleWindowsEventInputs(t *testing.T) {
 
 func TestRenderSingleWindowsEventInputWithChannel(t *testing.T) {
 	engine := &NxConfig{
-		Canned: []nxcanned{{name: "test-winodws-event-input1", kind: "input-windows-event-log", properties: map[string]interface{}{
+		Canned: []nxcanned{{name: "test-windows-event-input1", kind: "input-windows-event-log", properties: map[string]interface{}{
 			"poll_interval": 1,
 			"save_position": true,
 			"read_last":     false,
@@ -314,7 +314,7 @@ func TestRenderSingleWindowsEventInputWithChannel(t *testing.T) {
 
 func TestRenderSingleWindowsEventInputWithQuery(t *testing.T) {
 	engine := &NxConfig{
-		Canned: []nxcanned{{name: "test-winodws-event-input1", kind: "input-windows-event-log", properties: map[string]interface{}{
+		Canned: []nxcanned{{name: "test-windows-event-input1", kind: "input-windows-event-log", properties: map[string]interface{}{
 			"poll_interval": 1,
 			"save_position": true,
 			"read_last":     false,
@@ -332,7 +332,7 @@ func TestRenderSingleWindowsEventInputWithQuery(t *testing.T) {
 
 func TestRenderSingleWindowsEventInputWithFields(t *testing.T) {
 	engine := &NxConfig{
-		Canned: []nxcanned{{name: "test-winodws-event-input1", kind: "input-windows-event-log", properties: map[string]interface{}{
+		Canned: []nxcanned{{name: "test-windows-event-input1", kind: "input-windows-event-log", properties: map[string]interface{}{
 			"poll_interval": 1,
 			"save_position": true,
 			"read_last":     false,
