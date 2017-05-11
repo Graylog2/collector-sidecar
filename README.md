@@ -201,5 +201,5 @@ Each backend can be enabled/disabled and should point to a binary of the actual 
 
 ## Development
 
-There is a collector mock programm in order to use the collector-sidecar without actually running a collector like NXLog. Simply build it with
+There is a collector mock program in order to use the collector-sidecar without actually running a collector like NXLog. Simply build it with
 `make misc` und use the option `binary_path: misc/nxmock/nxlog`.
