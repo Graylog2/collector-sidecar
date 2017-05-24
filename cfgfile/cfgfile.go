@@ -87,10 +87,10 @@ func expandEnv(config []byte) []byte {
 		if v == "" && len(keyAndDefault) == 2 {
 			// Set value to the default.
 			v = keyAndDefault[1]
-			log.Info("[ConfigFile] Replacing config environment variable '${%s}' with "+
-				"default '%s'", key, keyAndDefault[1])
+			log.Infof("[ConfigFile] Replacing config environment variable '${%s}' with default '%s'",
+				key, keyAndDefault[1])
 		} else {
-			log.Info("[ConfigFile] Replacing config environment variable '${%s}' with '%s'",
+			log.Infof("[ConfigFile] Replacing config environment variable '${%s}' with '%s'",
 				key, v)
 		}
 
