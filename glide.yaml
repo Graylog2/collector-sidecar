@@ -1,4 +1,4 @@
-package: main
+package: github.com/Graylog2/collector-sidecar
 import:
 - package: github.com/Sirupsen/logrus
   version: v0.11.0
