@@ -209,5 +209,32 @@ func (bc *BeatsConfig) RunMigrations(cachePath string) {
 
 		// configure log path
 		bc.Set(bc.Context.UserConfig.LogPath, "path", "logs")
+
+		if bc.Version[1] >= 5 {
+			// in all prospectors
+			cp = bc.Container
+			configurationPath = []string{"filebeat", "prospectors"}
+			for target := 0; target < len(configurationPath); target++ {
+				if mmap, ok := cp.(map[string]interface{}); ok {
+					cp = mmap[configurationPath[target]]
+				}
+			}
+			if prospectors, ok := cp.([]map[string]interface{}); ok {
+				for target := 0; target < len(prospectors); target++ {
+					// rename input_type -> type
+					if prospectors[target]["input_type"] != nil {
+						prospectors[target]["type"] = prospectors[target]["input_type"]
+						delete(prospectors[target], "input_type")
+					}
+					// rename document_type -> fields.type
+					if prospectors[target]["document_type"] != nil {
+						prospectors[target]["fields"].(map[string]interface{})["type"] = prospectors[target]["document_type"]
+						delete(prospectors[target], "document_type")
+					}
+
+					cp.([]map[string]interface{})[target] = prospectors[target]
+				}
+			}
+		}
 	}
 }
