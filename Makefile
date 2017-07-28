@@ -75,7 +75,7 @@ build-solaris: solaris-sigar-patch ## Build collector-sidecar binary for Solaris
 
 build-linux32: ## Build collector-sidecar binary for Linux 32bit
 	@mkdir -p build/$(COLLECTOR_VERSION)/linux/386
-	GOOS=linux GOARCH=386 $(GO) build $(BUILD_OPTS) -v -i -o build/$(COLLECTOR_VERSION)/linux/386/graylog-collector-sidecar
+	GOOS=linux GOARCH=386 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_linux32  -v -i -o build/$(COLLECTOR_VERSION)/linux/386/graylog-collector-sidecar
 
 build-darwin: ## Build collector-sidecar binary for OSX
 	@mkdir -p build/$(COLLECTOR_VERSION)/darwin/amd64
@@ -87,11 +87,11 @@ build-freebsd:
 
 build-windows: ## Build collector-sidecar binary for Windows
 	@mkdir -p build/$(COLLECTOR_VERSION)/windows/amd64
-	GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(HOME)/.go_win -v -i -o build/$(COLLECTOR_VERSION)/windows/amd64/graylog-collector-sidecar.exe
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_win -v -i -o build/$(COLLECTOR_VERSION)/windows/amd64/graylog-collector-sidecar.exe
 
 build-windows32: ## Build collector-sidecar binary for Windows 32bit
 	@mkdir -p build/$(COLLECTOR_VERSION)/windows/386
-	GOOS=windows GOARCH=386 CGO_ENABLED=1 CC=i686-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(HOME)/.go_win32 -v -i -o build/$(COLLECTOR_VERSION)/windows/386/graylog-collector-sidecar.exe
+	GOOS=windows GOARCH=386 CGO_ENABLED=1 CC=i686-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_win32 -v -i -o build/$(COLLECTOR_VERSION)/windows/386/graylog-collector-sidecar.exe
 
 package-all: prepare-package package-linux package-linux32 package-windows package-tar
 
