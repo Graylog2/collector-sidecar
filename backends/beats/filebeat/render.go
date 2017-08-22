@@ -186,6 +186,10 @@ func (fbc *FileBeatConfig) RenderOnChange(response graylog.ResponseCollectorConf
 
 	newConfig.Beats.Version = fbc.Beats.Version // inherit beats version number, it's null at request time and not comparable
 	newConfig.Beats.RunMigrations(newConfig.CachePath())
+
+  // Remove prospectors targeting non-allowed paths
+  newConfig.PruneDisallowedProspectors()
+
 	if !fbc.Beats.Equals(newConfig.Beats) {
 		log.Infof("[%s] Configuration change detected, rewriting configuration file.", fbc.Name())
 		fbc.Beats.Update(newConfig.Beats)
@@ -194,6 +198,11 @@ func (fbc *FileBeatConfig) RenderOnChange(response graylog.ResponseCollectorConf
 	}
 
 	return false
+}
+
+func (fbc *FileBeatConfig) PruneDisallowedProspectors() {
+    allowedPaths := fbc.Beats.Context.UserConfig.AllowedPaths;
+    PruneDisallowedProspectors(fbc.Beats.Container.(map[string]interface{}), allowedPaths)
 }
 
 func (fbc *FileBeatConfig) ValidateConfigurationFile() bool {
