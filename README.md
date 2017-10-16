@@ -90,7 +90,7 @@ Install the NXLog package from the offical download [page](https://nxlog.org/pro
   $ sudo /etc/init.d/nxlog stop
   $ sudo update-rc.d -f nxlog remove
   $ sudo gpasswd -a nxlog adm
- 
+
   $ sudo dpkg -i collector-sidecar_0.1.4-1_amd64.deb
   $ sudo chown -R nxlog.nxlog /var/spool/collector-sidecar/nxlog
 ```
@@ -180,6 +180,7 @@ There are a couple of configuration settings for the Sidecar:
 | log_max_age       | Delete rotated log files older than Y seconds                                                                                         |
 | tags              | List of configuration tags. All configurations on the server side that match the tag list will be fetched and merged by this instance |
 | backends          | A list of collector backends the user wants to run on the target host                                                                 |
+| allowed_paths     | List of paths allowed for log collection. The paths are matched against path globs received from Graylog server                       |
 
 Each backend can be enabled/disabled and should point to a binary of the actual collector and a path to a configuration file the Sidecar can write to:
 
@@ -190,7 +191,7 @@ Each backend can be enabled/disabled and should point to a binary of the actual 
 | binary_path        | Path to the actual collector binary                                              |
 | configuration_path | A path for this collector configuration file Sidecar can write to                |
 | run_path           | (NXLog only) If PidFile is changed in the default-snippet, tell Sidecar about it |
-    
+
 ## Compile
 
   * Clone the repository into your `$GOPATH` under `src/github.com/Graylog2/collector-sidecar`
