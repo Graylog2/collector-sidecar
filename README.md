@@ -166,21 +166,21 @@ Run the Sidecar in foreground mode for debugging purposes. Simply call it like t
 
 There are a couple of configuration settings for the Sidecar:
 
-| Parameter         | Description                                                                                                                           |
-|-------------------|---------------------------------------------------------------------------------------------------------------------------------------|
-| server_url        | URL to the Graylog API, e.g. `http://127.0.0.1:9000/api/`                                                                             |
-| update_interval   | The interval in seconds the sidecar will fetch new configurations from the Graylog server                                             |
-| tls_skip_verify   | Ignore errors when the REST API was started with a self-signed certificate                                                            |
-| send_status       | Send the status of each backend back to Graylog and display it on the status page for the host                                        |
-| list_log_files    | Send a directory listing to Graylog and display it on the host status page. This can also be a list of directories                    |
-| node_id           | Name of the Sidecar instance, will also show up in the web interface                                                                  |
-| collector_id      | Unique ID (UUID) of the instance. This can be an ID string or a path to an ID file                                                    |
-| log_path          | A path to a directory where the Sidecar can store the output of each running collector backend                                        |
-| log_rotation_time | Rotate the stdout and stderr logs of each collector after X seconds                                                                   |
-| log_max_age       | Delete rotated log files older than Y seconds                                                                                         |
-| tags              | List of configuration tags. All configurations on the server side that match the tag list will be fetched and merged by this instance |
-| backends          | A list of collector backends the user wants to run on the target host                                                                 |
-| allowed_paths     | List of paths allowed for log collection. The paths are regex's that are matched against path globs received from Graylog server      |
+| Parameter         | Description                                                                                                                               |
+|-------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
+| server_url        | URL to the Graylog API, e.g. `http://127.0.0.1:9000/api/`                                                                                 |
+| update_interval   | The interval in seconds the sidecar will fetch new configurations from the Graylog server                                                 |
+| tls_skip_verify   | Ignore errors when the REST API was started with a self-signed certificate                                                                |
+| send_status       | Send the status of each backend back to Graylog and display it on the status page for the host                                            |
+| list_log_files    | Send a directory listing to Graylog and display it on the host status page. This can also be a list of directories                        |
+| node_id           | Name of the Sidecar instance, will also show up in the web interface                                                                      |
+| collector_id      | Unique ID (UUID) of the instance. This can be an ID string or a path to an ID file                                                        |
+| log_path          | A path to a directory where the Sidecar can store the output of each running collector backend                                            |
+| log_rotation_time | Rotate the stdout and stderr logs of each collector after X seconds                                                                       |
+| log_max_age       | Delete rotated log files older than Y seconds                                                                                             |
+| tags              | List of configuration tags. All configurations on the server side that match the tag list will be fetched and merged by this instance     |
+| backends          | A list of collector backends the user wants to run on the target host                                                                     |
+| allowed_paths     | Optional list of paths allowed for log collection. The paths are regex's that are matched against path globs received from Graylog server |
 
 Each backend can be enabled/disabled and should point to a binary of the actual collector and a path to a configuration file the Sidecar can write to:
 
