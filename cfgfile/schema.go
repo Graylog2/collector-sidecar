@@ -32,6 +32,7 @@ type SidecarConfig struct {
 	UpdateInterval  int      `config:"update_interval"`
 	SendStatus      bool     `config:"send_status"`
 	ListLogFiles    []string `config:"list_log_files"`
+	AllowedPaths		[]string `config:"allowed_paths"`
 	Backends        []SidecarBackend
 }
 
