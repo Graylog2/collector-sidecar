@@ -17,6 +17,7 @@
   !include WordFunc.nsh
   !include x64.nsh
   !include IfKeyExists.nsh
+  !include GetFullComputerName.nsh
 
   VIProductVersion "0.${VERSION}${VERSION_SUFFIX}"
   VIAddVersionKey "FileVersion" "${VERSION}"
@@ -43,6 +44,8 @@
   Var Dialog
   Var Label
   Var GraylogDir
+  Var ParamNodeId
+  Var NodeId
 
 
 ;--------------------------------
@@ -167,6 +170,7 @@ Section "Post"
   ${GetParameters} $Params
   ${GetOptions} $Params "-SERVERURL=" $ParamServerUrl
   ${GetOptions} $Params "-TAGS=" $ParamTags
+  ${GetOptions} $Params "-NODEID=" $ParamNodeId
 
   ${If} $ParamServerUrl != ""
     StrCpy $ServerUrl $ParamServerUrl
@@ -186,6 +190,9 @@ Section "Post"
 
     Loop_End:
   ${EndIf}
+  ${If} $ParamNodeId != ""
+    StrCpy $NodeId $ParamNodeId
+  ${EndIf}
 
   ; default for silent install
   ${If} $ServerUrl == ""
@@ -194,9 +201,15 @@ Section "Post"
   ${If} $Tags == ""
     StrCpy $Tags "windows, iis"
   ${EndIf}
+  ${If} $NodeId == ""
+    !insertmacro _GetFullComputerName
+    Pop $FullComputerName
+    StrCpy $NodeId $FullComputerName
+  ${EndIf}
 
   !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<SERVERURL>" $ServerUrl
   !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<TAGS>" `[$Tags]`
+  !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<NODEID>" $NodeId
 
 SectionEnd
  
