@@ -46,7 +46,7 @@
   Var GraylogDir
   Var ParamNodeId
   Var NodeId
-
+  Var InputNodeId
 
 ;--------------------------------
 ;Modern UI Configuration  
@@ -203,8 +203,8 @@ Section "Post"
   ${EndIf}
   ${If} $NodeId == ""
     !insertmacro _GetFullComputerName
-    Pop $FullComputerName
-    StrCpy $NodeId $FullComputerName
+    Pop $R1
+    StrCpy $NodeId $R1
   ${EndIf}
 
   !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<SERVERURL>" $ServerUrl
@@ -283,6 +283,14 @@ Function nsDialogsPage
   ${NSD_CreateText} 50 70 75% 12u "windows, iis"
   Pop $InputTags
 
+  !insertmacro _GetFullComputerName
+  Pop $R1
+  StrCpy $NodeId $R1
+  ${NSD_CreateLabel} 0 100 100% 12u "Please enter the Node ID (optional):"
+  Pop $Label
+  ${NSD_CreateText} 50 120 75% 12u "$NodeId"
+  Pop $InputNodeId
+
   nsDialogs::Show
 FunctionEnd
 
@@ -296,6 +304,10 @@ Function nsDialogsPageLeave
   ${EndIf}
   ${If} $Tags == ""
       MessageBox MB_OK "Please enter one or more tags!"
+      Abort
+  ${EndIf}
+  ${If} $NodeId == ""
+      MessageBox MB_OK "Please enter the Node ID!"
       Abort
   ${EndIf}
 FunctionEnd
