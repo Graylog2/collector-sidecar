@@ -70,7 +70,15 @@ _**The Windows installation path changed to `C:\Program Files` with version 0.0.
 It's also possible to run the installer in silent mode with
 
 ```
-  $ collector_sidecar_installer.exe /S -SERVERURL=http://10.0.2.2:9000/api -TAGS="windows,iis"
+  $ collector_sidecar_installer.exe /S -SERVERURL=http://10.0.2.2:9000/api -TAGS="windows,iis -NODEID=your_node_name"
+```
+
+Default values
+
+```
+  SERVERURL=http://127.0.0.1:9000/api
+  TAGS="windows,iis"
+  NODEID=<FULL COMPUTER NAME> (DNS name)
 ```
 
 Edit `C:\Program Files\graylog\collector-sidecar\collector_sidecar.yml`.
@@ -197,7 +205,9 @@ Each backend can be enabled/disabled and should point to a binary of the actual 
   * Install the [glide package manager](https://glide.sh)
   * run `glide install` in the collector-sidecar directory
   * (for Go <1.6 `export GO15VENDOREXPERIMENT=1`)
-  * run `make build`
+  * run `make build` for Unix builds
+  * run `make build-windows` for Windows builds
+  * check the Makefile for more build targets
 
 ## Development
 

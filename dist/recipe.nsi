@@ -17,6 +17,7 @@
   !include WordFunc.nsh
   !include x64.nsh
   !include IfKeyExists.nsh
+  !include GetFullComputerName.nsh
 
   VIProductVersion "0.${VERSION}${VERSION_SUFFIX}"
   VIAddVersionKey "FileVersion" "${VERSION}"
@@ -43,7 +44,9 @@
   Var Dialog
   Var Label
   Var GraylogDir
-
+  Var ParamNodeId
+  Var NodeId
+  Var InputNodeId
 
 ;--------------------------------
 ;Modern UI Configuration  
@@ -167,6 +170,7 @@ Section "Post"
   ${GetParameters} $Params
   ${GetOptions} $Params "-SERVERURL=" $ParamServerUrl
   ${GetOptions} $Params "-TAGS=" $ParamTags
+  ${GetOptions} $Params "-NODEID=" $ParamNodeId
 
   ${If} $ParamServerUrl != ""
     StrCpy $ServerUrl $ParamServerUrl
@@ -186,6 +190,9 @@ Section "Post"
 
     Loop_End:
   ${EndIf}
+  ${If} $ParamNodeId != ""
+    StrCpy $NodeId $ParamNodeId
+  ${EndIf}
 
   ; default for silent install
   ${If} $ServerUrl == ""
@@ -194,9 +201,15 @@ Section "Post"
   ${If} $Tags == ""
     StrCpy $Tags "windows, iis"
   ${EndIf}
+  ${If} $NodeId == ""
+    !insertmacro _GetFullComputerName
+    Pop $R1
+    StrCpy $NodeId $R1
+  ${EndIf}
 
   !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<SERVERURL>" $ServerUrl
   !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<TAGS>" `[$Tags]`
+  !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<NODEID>" $NodeId
 
 SectionEnd
  
@@ -270,6 +283,14 @@ Function nsDialogsPage
   ${NSD_CreateText} 50 70 75% 12u "windows, iis"
   Pop $InputTags
 
+  !insertmacro _GetFullComputerName
+  Pop $R1
+  StrCpy $NodeId $R1
+  ${NSD_CreateLabel} 0 100 100% 12u "Please enter the Node ID (optional):"
+  Pop $Label
+  ${NSD_CreateText} 50 120 75% 12u "$NodeId"
+  Pop $InputNodeId
+
   nsDialogs::Show
 FunctionEnd
 
@@ -283,6 +304,10 @@ Function nsDialogsPageLeave
   ${EndIf}
   ${If} $Tags == ""
       MessageBox MB_OK "Please enter one or more tags!"
+      Abort
+  ${EndIf}
+  ${If} $NodeId == ""
+      MessageBox MB_OK "Please enter the Node ID!"
       Abort
   ${EndIf}
 FunctionEnd
