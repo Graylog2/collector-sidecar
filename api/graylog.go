@@ -45,17 +45,17 @@ func RequestConfiguration(httpClient *http.Client, checksum string, ctx *context
 
 	params := make(map[string]string)
 	if len(ctx.UserConfig.Tags) != 0 {
-		tags, err := json.Marshal(ctx.UserConfig.Tags)
+		tags, err := json.Marshal(ctx.UserConfig.Tags[0])
 		if err != nil {
 			msg := "Provided tags can not be send to the Graylog server!"
 			system.GlobalStatus.Set(backends.StatusUnknown, msg)
 			log.Errorf("[RequestConfiguration] %s", msg)
 		} else {
-			params["tags"] = string(tags)
+			params["tags"] = string(tags)[1 : len(tags)-1]
 		}
 	}
 
-	r, err := c.NewRequest("GET", "/plugins/org.graylog.plugins.collector/"+ctx.CollectorId, params, nil)
+	r, err := c.NewRequest("GET", "/plugins/org.graylog.plugins.collector/altconfiguration/render/"+params["tags"], nil, nil)
 	if err != nil {
 		msg := "Can not initialize REST request"
 		system.GlobalStatus.Set(backends.StatusError, msg)
