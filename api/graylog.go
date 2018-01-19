@@ -55,7 +55,7 @@ func RequestConfiguration(httpClient *http.Client, checksum string, ctx *context
 		}
 	}
 
-	r, err := c.NewRequest("GET", "/plugins/org.graylog.plugins.collector/altconfiguration/render/"+params["tags"], nil, nil)
+	r, err := c.NewRequest("GET", "/plugins/org.graylog.plugins.collector/altconfiguration/render/"+ctx.CollectorId+"/"+params["tags"], nil, nil)
 	if err != nil {
 		msg := "Can not initialize REST request"
 		system.GlobalStatus.Set(backends.StatusError, msg)
