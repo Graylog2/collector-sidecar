@@ -52,9 +52,9 @@ func (fbc *FileBeatConfig) Render() bytes.Buffer {
 		return result
 	}
 
-	beatsConfig := *fbc.Beats
-	beatsConfig.RunMigrations(fbc.CachePath())
-	result.WriteString(beatsConfig.String())
+	//beatsConfig := *fbc.Beats
+	//beatsConfig.RunMigrations(fbc.CachePath())
+	//result.WriteString(beatsConfig.String())
 	result.WriteString(fbc.snippetsToString())
 
 	return result
@@ -76,7 +76,7 @@ func (fbc *FileBeatConfig) RenderOnChange(response graylog.ResponseCollectorConf
 	// holds file inputs
 	var prospector []map[string]interface{}
 
-	newConfig.Beats.Set(fbc.Beats.Context.UserConfig.Tags, "shipper", "tags")
+	//newConfig.Beats.Set(fbc.Beats.Context.UserConfig.Tags, "shipper", "tags")
 
 	for _, output := range response.Outputs {
 		if output.Backend == "filebeat" {
@@ -176,7 +176,7 @@ func (fbc *FileBeatConfig) RenderOnChange(response graylog.ResponseCollectorConf
 			}
 		}
 	}
-	newConfig.Beats.Set(prospector, "filebeat", "prospectors")
+	//newConfig.Beats.Set(prospector, "filebeat", "prospectors")
 
 	for _, snippet := range response.Snippets {
 		if snippet.Backend == "filebeat" {
@@ -185,7 +185,7 @@ func (fbc *FileBeatConfig) RenderOnChange(response graylog.ResponseCollectorConf
 	}
 
 	newConfig.Beats.Version = fbc.Beats.Version // inherit beats version number, it's null at request time and not comparable
-	newConfig.Beats.RunMigrations(newConfig.CachePath())
+	//newConfig.Beats.RunMigrations(newConfig.CachePath())
 	if !fbc.Beats.Equals(newConfig.Beats) {
 		log.Infof("[%s] Configuration change detected, rewriting configuration file.", fbc.Name())
 		fbc.Beats.Update(newConfig.Beats)
