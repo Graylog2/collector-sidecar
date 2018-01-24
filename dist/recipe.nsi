@@ -40,6 +40,21 @@
   Var ParamTags
   Var InputTags
   Var Tags
+  Var ParamNodeId
+  Var InputNodeId
+  Var NodeId
+  Var ParamUpdateInterval
+  Var UpdateInterval
+  Var ParamTlsSkipVerify
+  Var TlsSkipVerify
+  Var ParamSendStatus
+  Var SendStatus
+  Var ParamNxlogEnabled
+  Var NxlogEnabled
+  Var ParamFilebeatEnabled
+  Var FilebeatEnabled
+  Var ParamWinlogbeatEnabled
+  Var WinlogbeatEnabled
   Var Dialog
   Var Label
   Var GraylogDir
@@ -163,10 +178,19 @@ SectionEnd
  
 Section "Post"
 
-  ; Update configuration
+  ; Parse command line options
+  ; The first character in the option string is treated as a parameter delimiter, so we prepend a white-space
+  ; to allow options like -NODEID=my-collector (second dash would interrupt option parsing otherwise)
   ${GetParameters} $Params
-  ${GetOptions} $Params "-SERVERURL=" $ParamServerUrl
-  ${GetOptions} $Params "-TAGS=" $ParamTags
+  ${GetOptions} $Params " -SERVERURL=" $ParamServerUrl
+  ${GetOptions} $Params " -TAGS=" $ParamTags
+  ${GetOptions} $Params " -NODEID=" $ParamNodeId
+  ${GetOptions} $Params " -UPDATE_INTERVAL=" $ParamUpdateInterval
+  ${GetOptions} $Params " -TLS_SKIP_VERIFY=" $ParamTlsSkipVerify
+  ${GetOptions} $Params " -SEND_STATUS=" $ParamSendStatus
+  ${GetOptions} $Params " -NXLOG_ENABLED=" $ParamNxlogEnabled
+  ${GetOptions} $Params " -FILEBEAT_ENABLED=" $ParamFilebeatEnabled
+  ${GetOptions} $Params " -WINLOGBEAT_ENABLED=" $ParamWinlogbeatEnabled
 
   ${If} $ParamServerUrl != ""
     StrCpy $ServerUrl $ParamServerUrl
@@ -186,17 +210,66 @@ Section "Post"
 
     Loop_End:
   ${EndIf}
+  ${If} $ParamNodeId != ""
+    StrCpy $NodeId $ParamNodeId
+  ${EndIf}
+  ${If} $ParamUpdateInterval != ""
+    StrCpy $UpdateInterval $ParamUpdateInterval
+  ${EndIf}
+  ${If} $ParamTlsSkipVerify != ""
+    StrCpy $TlsSkipVerify $ParamTlsSkipVerify
+  ${EndIf}
+  ${If} $ParamSendStatus != ""
+    StrCpy $SendStatus $ParamSendStatus
+  ${EndIf}
+  ${If} $ParamNxlogEnabled != ""
+    StrCpy $NxlogEnabled $ParamNxlogEnabled
+  ${EndIf}
+  ${If} $ParamFilebeatEnabled != ""
+    StrCpy $FilebeatEnabled $ParamFilebeatEnabled
+  ${EndIf}
+  ${If} $ParamWinlogbeatEnabled != ""
+    StrCpy $WinlogbeatEnabled $ParamWinlogbeatEnabled
+  ${EndIf}
 
-  ; default for silent install
+  ; set defaults
   ${If} $ServerUrl == ""
     StrCpy $ServerUrl "http://127.0.0.1:9000/api"
   ${EndIf}
   ${If} $Tags == ""
     StrCpy $Tags "windows, iis"
   ${EndIf}
+  ${If} $NodeId == ""
+    StrCpy $NodeId "graylog-collector-sidecar"
+  ${EndIf}
+  ${If} $UpdateInterval == ""
+    StrCpy $UpdateInterval "10"
+  ${EndIf}
+  ${If} $TlsSkipVerify == ""
+    StrCpy $TlsSkipVerify "false"
+  ${EndIf}
+  ${If} $SendStatus == ""
+    StrCpy $SendStatus "true"
+  ${EndIf}
+  ${If} $NxlogEnabled == ""
+    StrCpy $NxlogEnabled "false"
+  ${EndIf}
+  ${If} $FilebeatEnabled == ""
+    StrCpy $FilebeatEnabled "true"
+  ${EndIf}
+  ${If} $WinlogbeatEnabled == ""
+    StrCpy $WinlogbeatEnabled "true"
+  ${EndIf}
 
   !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<SERVERURL>" $ServerUrl
   !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<TAGS>" `[$Tags]`
+  !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<NODEID>" $NodeId
+  !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<UPDATEINTERVAL>" $UpdateInterval
+  !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<TLSSKIPVERIFY>" $TlsSkipVerify
+  !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<SENDSTATUS>" $SendStatus
+  !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<NXLOGENABLED>" $NxlogEnabled
+  !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<FILEBEATENABLED>" $FilebeatEnabled
+  !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<WINLOGBEATENABLED>" $WinlogbeatEnabled
 
 SectionEnd
  
@@ -260,15 +333,20 @@ Function nsDialogsPage
      Abort
   ${EndIf}
 
-  ${NSD_CreateLabel} 0 0 100% 12u "Please enter the URL to your Graylog API:"
+  ${NSD_CreateLabel} 0 0 100% 12u "Enter the URL to your Graylog API:"
   Pop $Label
   ${NSD_CreateText} 50 20 75% 12u "http://127.0.0.1:9000/api"
   Pop $InputServerUrl
 
-  ${NSD_CreateLabel} 0 50 100% 12u "Please enter the configuration tags this host should receive:"
+  ${NSD_CreateLabel} 0 50 100% 12u "Enter the configuration tags this host should receive:"
   Pop $Label
   ${NSD_CreateText} 50 70 75% 12u "windows, iis"
   Pop $InputTags
+
+  ${NSD_CreateLabel} 0 100 100% 12u "Enter the name of this instance:"
+  Pop $Label
+  ${NSD_CreateText} 50 120 75% 12u "graylog-collector-sidecar"
+  Pop $InputNodeId
 
   nsDialogs::Show
 FunctionEnd
@@ -276,6 +354,7 @@ FunctionEnd
 Function nsDialogsPageLeave
   ${NSD_GetText} $InputServerUrl $ServerUrl
   ${NSD_GetText} $InputTags $Tags
+  ${NSD_GetText} $InputNodeId $NodeId
 
   ${If} $ServerUrl == ""
       MessageBox MB_OK "Please enter a valid address to your Graylog server!"
@@ -283,6 +362,10 @@ Function nsDialogsPageLeave
   ${EndIf}
   ${If} $Tags == ""
       MessageBox MB_OK "Please enter one or more tags!"
+      Abort
+  ${EndIf}
+  ${If} $NodeId == ""
+      MessageBox MB_OK "Please enter the instance name!"
       Abort
   ${EndIf}
 FunctionEnd
