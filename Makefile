@@ -9,6 +9,7 @@ endif
 
 GIT_REV=$(shell git rev-parse --short HEAD)
 BUILD_OPTS = -ldflags "-s -X github.com/Graylog2/collector-sidecar/common.GitRevision=$(GIT_REV) -X github.com/Graylog2/collector-sidecar/common.CollectorVersion=$(COLLECTOR_VERSION) -X github.com/Graylog2/collector-sidecar/common.CollectorVersionSuffix=$(COLLECTOR_VERSION_SUFFIX)"
+GLIDE_VERSION = v0.13.1
 
 TEST_SUITE = \
 	github.com/Graylog2/collector-sidecar/backends/nxlog \
@@ -38,17 +39,17 @@ deps: glide
 
 glide:
 ifeq ($(shell uname),Darwin)
-	curl -L https://github.com/Masterminds/glide/releases/download/0.10.2/glide-0.10.2-darwin-amd64.zip -o glide.zip
+	curl -s -L https://github.com/Masterminds/glide/releases/download/$(GLIDE_VERSION)/glide-$(GLIDE_VERSION)-darwin-amd64.zip -o glide.zip
 	unzip glide.zip
 	mv ./darwin-amd64/glide ./glide
 	rm -fr ./darwin-amd64
-	rm ./glide.zip
+	rm -f ./glide.zip
 else
-	curl -L https://github.com/Masterminds/glide/releases/download/0.10.2/glide-0.10.2-linux-amd64.zip -o glide.zip
+	curl -s -L https://github.com/Masterminds/glide/releases/download/$(GLIDE_VERSION)/glide-$(GLIDE_VERSION)-linux-amd64.zip -o glide.zip
 	unzip glide.zip
 	mv ./linux-amd64/glide ./glide
 	rm -fr ./linux-amd64
-	rm ./glide.zip
+	rm -f ./glide.zip
 endif
 
 test: ## Run tests
