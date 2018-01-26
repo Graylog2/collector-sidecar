@@ -73,8 +73,7 @@ func init() {
 func main() {
 	err := commandLineSetup()
 	if err != nil {
-		fmt.Println(err)
-		return
+		log.Fatalln(err)
 	}
 
 	// setup system service
@@ -87,8 +86,7 @@ func main() {
 	distributor := daemon.Daemon.NewDistributor()
 	s, err := service.New(distributor, serviceConfig)
 	if err != nil {
-		fmt.Printf("Operating system is not supported: %v", err)
-		return
+		log.Fatalf("Operating system is not supported: %v", err)
 	}
 	distributor.BindToService(s)
 
@@ -96,7 +94,7 @@ func main() {
 		services.ControlHandler(*serviceParam)
 		err := service.Control(s, *serviceParam)
 		if err != nil {
-			fmt.Printf("Failed service action: %v", err)
+			log.Fatalf("Failed service action: %v", err)
 		}
 		return
 	}
@@ -105,8 +103,7 @@ func main() {
 	ctx := context.NewContext()
 	err = ctx.LoadConfig(configurationFile)
 	if err != nil {
-		fmt.Println("Loading configuration file failed.")
-		return
+		log.Fatalln("Loading configuration file failed.")
 	} else {
 		// Persist path for later reloads
 		cfgfile.SetConfigPath(*configurationFile)
@@ -150,7 +147,7 @@ func commandLineSetup() error {
 	}
 
 	if _, err := os.Stat(*configurationFile); os.IsNotExist(err) {
-		return errors.New("Can not open collector-sidecar configuration " + *configurationFile)
+		return errors.New("Unable to open configuration file " + *configurationFile)
 	}
 
 	return nil
