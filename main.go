@@ -103,7 +103,8 @@ func main() {
 	ctx := context.NewContext()
 	err = ctx.LoadConfig(configurationFile)
 	if err != nil {
-		log.Fatalln("Failed loading configuration file: " + *configurationFile)
+		fmt.Println("Failed loading configuration file: " + *configurationFile)
+		os.Exit(1)
 	} else {
 		// Persist path for later reloads
 		cfgfile.SetConfigPath(*configurationFile)
