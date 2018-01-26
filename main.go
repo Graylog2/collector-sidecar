@@ -103,7 +103,7 @@ func main() {
 	ctx := context.NewContext()
 	err = ctx.LoadConfig(configurationFile)
 	if err != nil {
-		log.Fatalln("Loading configuration file failed.")
+		log.Fatalln("Failed loading configuration file: " + *configurationFile)
 	} else {
 		// Persist path for later reloads
 		cfgfile.SetConfigPath(*configurationFile)
@@ -147,7 +147,7 @@ func commandLineSetup() error {
 	}
 
 	if _, err := os.Stat(*configurationFile); os.IsNotExist(err) {
-		return errors.New("Unable to open configuration file " + *configurationFile)
+		return errors.New("Unable to open configuration file: " + *configurationFile)
 	}
 
 	return nil
