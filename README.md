@@ -10,14 +10,14 @@ them as a valid configuration file for various log collectors. You can think of 
 ## Documentation
 
 Please check our official [documentation](http://docs.graylog.org/en/latest/pages/collector_sidecar.html) for more information.
-Especially the [Step-by-Step](http://docs.graylog.org/en/2.1/pages/collector_sidecar.html#step-by-step-guide) guide to get the first setup running.
+Especially the [Step-by-Step](http://docs.graylog.org/en/2.4/pages/collector_sidecar.html#step-by-step-guide) guide to get the first setup running.
 
 ## Installation
 
 | Sidecar version  | Graylog server version |
 | ---------------- | ---------------------- |
 | 0.0.9            | 2.1.x                  |
-| 0.1.x            | 2.2.x, 2.3.x           |
+| 0.1.x            | 2.2.x, 2.3.x, 2.4.x    |
 
 [Download a package](https://github.com/Graylog2/collector-sidecar/releases) and install it on the target system.
 
@@ -79,6 +79,20 @@ Edit `C:\Program Files\graylog\collector-sidecar\collector_sidecar.yml`.
   $ C:\Program Files\graylog\collector-sidecar\graylog-collector-sidecar.exe -service install
   $ C:\Program Files\graylog\collector-sidecar\graylog-collector-sidecar.exe -service start
 ```
+
+All installer options:
+
+| Parameter             | Description                           | Default                   |
+|-----------------------|-------------------------------------------------------------------|
+| `-SERVERURL`          | URL to the Graylog API                | http://127.0.0.1:9000/api |
+| `-TAGS`               | List of tags                          | "windows, iis"            |
+| `-NODEID`             | Name of the instance                  | graylog-collector-sidecar |
+| `-UPDATE_INTERVAL`    | seconds between configuration updates | 10                        |
+| `-TLS_SKIP_VERIFY`    | ignore self-signed API certificates   | false                     |
+| `-SEND_STATUS`        | send host metrics back to Graylog     | true                      |
+| `-NXLOG_ENABLED`      | enable NXLog backend                  | false                     |
+| `-FILEBEAT_ENABLED`   | enable Filebeat                       | true                      |
+| `-WINLOGBEAT_ENABLED` | enable Winlogbeat                     | true                      |
 
 ### NXLog backend
 
