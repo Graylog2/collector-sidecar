@@ -156,7 +156,7 @@ func (bc *BeatsConfig) PropertyBool(p interface{}) bool {
 }
 
 func (bc *BeatsConfig) RunMigrations(cachePath string) {
-	if bc.Version[0] == 5 {
+	if bc.Version[0] >= 5 {
 		// rename ssl properties
 		cp := bc.Container
 		configurationPath := []string{"output", "logstash", "tls", "certificate_key"}
@@ -210,7 +210,8 @@ func (bc *BeatsConfig) RunMigrations(cachePath string) {
 		// configure log path
 		bc.Set(bc.Context.UserConfig.LogPath, "path", "logs")
 
-		if bc.Version[1] >= 5 {
+		// migrate prospectors since 5.5 or above
+		if bc.Version[0] >= 6 || bc.Version[1] >= 5 {
 			// in all prospectors
 			cp = bc.Container
 			configurationPath = []string{"filebeat", "prospectors"}
