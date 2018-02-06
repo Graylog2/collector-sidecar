@@ -83,7 +83,7 @@ Edit `C:\Program Files\graylog\collector-sidecar\collector_sidecar.yml`.
 All installer options:
 
 | Parameter             | Description                           | Default                   |
-|-----------------------|-------------------------------------------------------------------|
+|-----------------------|---------------------------------------|---------------------------|
 | `-SERVERURL`          | URL to the Graylog API                | http://127.0.0.1:9000/api |
 | `-TAGS`               | List of tags                          | "windows, iis"            |
 | `-NODEID`             | Name of the instance                  | graylog-collector-sidecar |
