@@ -126,7 +126,9 @@ func (wlbc *WinLogBeatConfig) RenderOnChange(response graylog.ResponseCollectorC
 			}
 		}
 	}
-	newConfig.Beats.Set(eventlogs, "winlogbeat", "event_logs")
+	if len(response.Inputs) != 0 {
+		newConfig.Beats.Set(eventlogs, "winlogbeat", "event_logs")
+	}
 
 	for _, snippet := range response.Snippets {
 		if snippet.Backend == "winlogbeat" {

@@ -176,7 +176,9 @@ func (fbc *FileBeatConfig) RenderOnChange(response graylog.ResponseCollectorConf
 			}
 		}
 	}
-	newConfig.Beats.Set(prospector, "filebeat", "prospectors")
+	if len(response.Inputs) != 0 {
+		newConfig.Beats.Set(prospector, "filebeat", "prospectors")
+	}
 
 	for _, snippet := range response.Snippets {
 		if snippet.Backend == "filebeat" {
