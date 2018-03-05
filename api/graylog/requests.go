@@ -21,13 +21,12 @@ import (
 )
 
 type RegistrationRequest struct {
-	NodeId      string             `json:"node_id"`
+	NodeName      string           `json:"node_name"`
 	NodeDetails NodeDetailsRequest `json:"node_details"`
 }
 
 type NodeDetailsRequest struct {
 	OperatingSystem string          `json:"operating_system"`
-	Tags            []string        `json:"tags,omitempty"`
 	IP              string          `json:"ip,omitempty"`
 	LogFileList     []common.File   `json:"log_file_list,omitempty"`
 	Metrics         *MetricsRequest `json:"metrics,omitempty"`

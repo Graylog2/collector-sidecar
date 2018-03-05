@@ -55,7 +55,7 @@ func RequestConfiguration(httpClient *http.Client, checksum string, ctx *context
 		}
 	}
 
-	r, err := c.NewRequest("GET", "/plugins/org.graylog.plugins.collector/altconfiguration/render/"+ctx.CollectorId+"/"+params["tags"], nil, nil)
+	r, err := c.NewRequest("GET", "/plugins/org.graylog.plugins.collector/altconfiguration/render/"+ctx.NodeId+"/"+params["tags"], nil, nil)
 	if err != nil {
 		msg := "Can not initialize REST request"
 		system.GlobalStatus.Set(backends.StatusError, msg)
@@ -110,10 +110,9 @@ func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *grayl
 
 	registration := graylog.RegistrationRequest{}
 
-	registration.NodeId = ctx.UserConfig.NodeId
+	registration.NodeName = ctx.UserConfig.NodeName
 	registration.NodeDetails.OperatingSystem = common.GetSystemName()
 	if ctx.UserConfig.SendStatus {
-		registration.NodeDetails.Tags = ctx.UserConfig.Tags
 		registration.NodeDetails.IP = common.GetHostIP()
 		registration.NodeDetails.Status = status
 		registration.NodeDetails.Metrics = metrics
@@ -122,7 +121,7 @@ func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *grayl
 		}
 	}
 
-	r, err := c.NewRequest("PUT", "/plugins/org.graylog.plugins.collector/collectors/"+ctx.CollectorId, nil, registration)
+	r, err := c.NewRequest("PUT", "/plugins/org.graylog.plugins.collector/altcollectors/"+ctx.NodeId, nil, registration)
 	if err != nil {
 		log.Error("[UpdateRegistration] Can not initialize REST request")
 		return

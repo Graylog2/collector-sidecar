@@ -32,8 +32,8 @@ var log = logger.Log()
 
 type Ctx struct {
 	ServerUrl   *url.URL
-	CollectorId string
-	NodeId      string
+	NodeId 		string
+	NodeName    string
 	UserConfig  *cfgfile.SidecarConfig
 	Inventory   *system.Inventory
 }
@@ -60,21 +60,21 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 		log.Fatalf("Server-url is empty.")
 	}
 
-	// collector_id
-	if ctx.UserConfig.CollectorId == "" {
-		log.Fatal("No collector ID was configured.")
-	}
-	ctx.CollectorId = common.GetCollectorId(ctx.UserConfig.CollectorId)
-
 	// node_id
 	if ctx.UserConfig.NodeId == "" {
-		log.Info("No node-id was configured, falling back to hostname")
-		ctx.UserConfig.NodeId, err = common.GetHostname()
+		log.Fatal("No node ID was configured.")
+	}
+	ctx.NodeId = common.GetCollectorId(ctx.UserConfig.NodeId)
+
+	// node_name
+	if ctx.UserConfig.NodeName == "" {
+		log.Info("No node name was configured, falling back to hostname")
+		ctx.UserConfig.NodeName, err = common.GetHostname()
 		if err != nil {
-			log.Fatal("No node-id configured and not able to obtain hostname as alternative.")
+			log.Fatal("No node name configured and not able to obtain hostname as alternative.")
 		}
 	}
-        ctx.NodeId = ctx.UserConfig.NodeId
+        ctx.NodeName = ctx.UserConfig.NodeName
 
 	// tags
 	if len(ctx.UserConfig.Tags) == 0 {
