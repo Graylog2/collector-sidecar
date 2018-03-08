@@ -136,3 +136,13 @@ func Inspect(object interface{}) string {
 	jsonBytes, _ := json.Marshal(object)
 	return string(jsonBytes)
 }
+
+func NewTrue() *bool {
+	b := true
+	return &b
+}
+
+func NewFalse() *bool {
+	b := false
+	return &b
+}

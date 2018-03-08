@@ -25,6 +25,7 @@ import (
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/daemon"
 	"github.com/Graylog2/collector-sidecar/logger"
+	"github.com/Graylog2/collector-sidecar/common"
 )
 
 var log = logger.Log()
@@ -43,6 +44,12 @@ func StartPeriodicals(context *context.Ctx) {
 	go func() {
 		checksum := ""
 		for {
+			checksum = fetchBackendList(httpClient, checksum, context)
+		}
+	}()
+	go func() {
+		checksum := ""
+		for {
 			checksum = checkForUpdateAndRestart(httpClient, checksum, context)
 		}
 	}()
@@ -53,6 +60,29 @@ func updateCollectorRegistration(httpClient *http.Client, context *context.Ctx) 
 	time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
 	statusRequest := api.NewStatusRequest()
 	api.UpdateRegistration(httpClient, context, &statusRequest)
+}
+
+func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx) string {
+	time.Sleep(time.Duration(ctx.UserConfig.UpdateInterval) * time.Second)
+	backendList, err := api.RequestBackendList(httpClient, checksum, ctx)
+	if err != nil {
+		log.Error("Can't fetch configuration from Graylog API: ", err)
+		return ""
+	}
+	if backendList.IsEmpty() {
+		// etag match, skipping all other actions
+		return backendList.Checksum
+	}
+
+	var newBackends []context.BackendDefinition
+	for _, backend := range backendList.Backends {
+		backendDefinition := context.BackendFromResponse(backend)
+		newBackends = append(newBackends, *backendDefinition)
+	}
+	ctx.Backends = newBackends
+	log.Info(common.Inspect(ctx.Backends))
+
+	return backendList.Checksum
 }
 
 // fetch configuration periodically

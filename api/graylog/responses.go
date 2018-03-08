@@ -37,7 +37,23 @@ type ResponseCollectorRegistrationConfiguration struct {
 	SendStatus     bool `json:"send_status"`
 }
 
-type ResponseCollectorStatus struct {
+type ResponseBackendList struct {
+	Backends []ResponseCollectorBackend `json:"backends"`
+	Checksum string                     //Etag of the response
+}
+
+func (r *ResponseBackendList) IsEmpty() bool {
+	if len(r.Backends) == 0 {
+		return true
+	}
+	return false
+}
+
+type ResponseCollectorBackend struct {
+	Id              string `json:"id"`
+	Name            string `json:"name"`
+	ServiceType     string `json:"service_type"`
+	OperatingSystem string `json:"node_operating_system"`
 }
 
 type ResponseCollectorConfiguration struct {

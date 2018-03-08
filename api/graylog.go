@@ -39,6 +39,45 @@ var (
 	configurationOverride = false
 )
 
+func RequestBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx) (graylog.ResponseBackendList, error) {
+	c := rest.NewClient(httpClient)
+	c.BaseURL = ctx.ServerUrl
+
+	r, err := c.NewRequest("GET", "/plugins/org.graylog.plugins.collector/altconfiguration/backends", nil, nil)
+	if err != nil {
+		msg := "Can not initialize REST request"
+		system.GlobalStatus.Set(backends.StatusError, msg)
+		log.Errorf("[RequestBackendList] %s", msg)
+		return graylog.ResponseBackendList{}, err
+	}
+
+	if checksum != "" {
+		r.Header.Add("If-None-Match", "\""+checksum+"\"")
+	}
+
+	backendResponse := graylog.ResponseBackendList{}
+	resp, err := c.Do(r, &backendResponse)
+	if err != nil && resp == nil {
+		msg := "Fetching backend list"
+		system.GlobalStatus.Set(backends.StatusError, msg)
+		log.Errorf("[RequestBackendList] %s: %v", msg, err)
+	}
+
+	if resp != nil {
+		// preserver Etag as checksum for the next request. Empty string if header is not available
+		backendResponse.Checksum = resp.Header.Get("Etag")
+		if resp.StatusCode != 200 {
+			msg := "Bad response status from Graylog server"
+			system.GlobalStatus.Set(backends.StatusError, msg)
+			log.Errorf("[RequestBackendList] %s: %s", msg, resp.Status)
+			return graylog.ResponseBackendList{}, err
+		}
+	}
+
+	system.GlobalStatus.Set(backends.StatusRunning, "")
+	return backendResponse, nil
+}
+
 func RequestConfiguration(httpClient *http.Client, checksum string, ctx *context.Ctx) (graylog.ResponseCollectorConfiguration, error) {
 	c := rest.NewClient(httpClient)
 	c.BaseURL = ctx.ServerUrl
