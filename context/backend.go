@@ -6,25 +6,27 @@ import (
 )
 
 type BackendDefinition struct {
+	Enabled           *bool
 	Id                string
 	Name              string
 	ServiceType       string
 	OperatingSystem   string
-	Enabled           *bool
-	BinaryPath        string
+	ExecutablePath    string
 	ConfigurationPath string
-	RunPath           string
+	ExecuteParameters []string
+	ValidationCommand string
 }
 
 func BackendFromResponse(response graylog.ResponseCollectorBackend) *BackendDefinition {
 	return &BackendDefinition{
+		Enabled:           common.NewTrue(),
 		Id:                response.Id,
 		Name:              response.Name,
 		ServiceType:       response.ServiceType,
 		OperatingSystem:   response.OperatingSystem,
-		Enabled:           common.NewTrue(),
-		BinaryPath:        "/usr/bin/collector",
-		ConfigurationPath: "/etc/graylog/collector-sidecar/config",
-		RunPath:           "/var/run/collector/run",
+		ExecutablePath:    response.ExecutablePath,
+		ConfigurationPath: response.ConfigurationPath,
+		ExecuteParameters: response.ExecuteParameters,
+		ValidationCommand: response.ValidationCommand,
 	}
 }
