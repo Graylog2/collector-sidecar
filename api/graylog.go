@@ -32,6 +32,7 @@ import (
 	"github.com/Graylog2/collector-sidecar/daemon"
 	"github.com/Graylog2/collector-sidecar/system"
 	"github.com/Graylog2/collector-sidecar/logger"
+	"github.com/Graylog2/collector-sidecar/assignments"
 )
 
 var (
@@ -185,6 +186,13 @@ func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *grayl
 	// Run collector actions if provided
 	if len(respBody.CollectorActions) != 0 {
 		daemon.HandleCollectorActions(respBody.CollectorActions)
+	}
+
+	// Update context with assigned configurations
+	if len(respBody.Assignments) != 0 {
+		for _, assignment := range respBody.Assignments {
+			assignments.Store.SetAssignment(&assignment)
+		}
 	}
 }
 

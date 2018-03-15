@@ -15,21 +15,18 @@
 
 package graylog
 
+import "github.com/Graylog2/collector-sidecar/assignments"
+
 type ResponseCollectorRegistration struct {
 	Configuration         ResponseCollectorRegistrationConfiguration `json:"configuration"`
 	ConfigurationOverride bool                                       `json:"configuration_override"`
 	CollectorActions      []ResponseCollectorAction                  `json:"actions,omitempty"`
-	Assignments           []ResponseConfigurationRelation            `json:"assignments,omitempty"`
+	Assignments           []assignments.ConfigurationAssignment      `json:"assignments,omitempty"`
 }
 
 type ResponseCollectorAction struct {
 	Backend    string                 `json:"backend"`
 	Properties map[string]interface{} `json:"properties"`
-}
-
-type ResponseConfigurationRelation struct {
-	BackendId       string `json:"backend_id"`
-	ConfigurationId string `json:"configuration_id"`
 }
 
 type ResponseCollectorRegistrationConfiguration struct {

@@ -53,16 +53,16 @@ func init() {
 func NewExecRunner(backend backends.Backend, context *context.Ctx) Runner {
 	r := &ExecRunner{
 		RunnerCommon: RunnerCommon{
-			name:    backend.Name(),
+			name:    backend.Name,
 			context: context,
 			backend: backend,
 		},
-		exec:         backend.ExecPath(),
-		args:         backend.ExecArgs(),
+		exec:         backend.ExecutablePath,
+		args:         backend.ExecuteParameters,
 		restartCount: 1,
 		signals:      make(chan string),
-		stderr:       filepath.Join(context.UserConfig.LogPath, backend.Name()+"_stderr.log"),
-		stdout:       filepath.Join(context.UserConfig.LogPath, backend.Name()+"_stdout.log"),
+		stderr:       filepath.Join(context.UserConfig.LogPath, backend.Name+"_stderr.log"),
+		stdout:       filepath.Join(context.UserConfig.LogPath, backend.Name+"_stdout.log"),
 	}
 
 	// set default state
@@ -216,7 +216,7 @@ func (r *ExecRunner) restart() error {
 }
 
 func (r *ExecRunner) run() {
-	log.Infof("[%s] Starting (%s driver)", r.name, r.backend.Driver())
+	log.Infof("[%s] Starting (%s driver)", r.name, r.backend.ServiceType)
 
 	if r.stderr != "" {
 		err := common.CreatePathToFile(r.stderr)

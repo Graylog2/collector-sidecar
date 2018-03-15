@@ -36,7 +36,6 @@ type Ctx struct {
 	NodeName    string
 	UserConfig  *cfgfile.SidecarConfig
 	Inventory   *system.Inventory
-	Backends    []BackendDefinition
 }
 
 func NewContext() *Ctx {

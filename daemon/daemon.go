@@ -72,14 +72,14 @@ func RegisterBackendRunner(name string, c RunnerCreator) error {
 
 func (dc *DaemonConfig) AddBackend(backend backends.Backend, context *context.Ctx) {
 	var runner Runner
-	switch backend.Driver() {
+	switch backend.ServiceType {
 	case "exec":
 		runner = runnerRegistry["exec"](backend, context)
 	case "svc":
 		runner = runnerRegistry["svc"](backend, context)
 	default:
-		log.Fatalf("Execution driver %s is not supported on this platform", backend.Driver())
+		log.Fatalf("Execution driver %s is not supported on this platform", backend.ServiceType)
 	}
 	runner.SetDaemon(dc)
-	dc.Runner[backend.Name()] = runner
+	dc.Runner[backend.Name] = runner
 }

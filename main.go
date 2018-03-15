@@ -26,7 +26,6 @@ import (
 	"github.com/kardianos/service"
 	"github.com/Sirupsen/logrus"
 
-	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/cfgfile"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
@@ -36,10 +35,10 @@ import (
 	"github.com/Graylog2/collector-sidecar/services"
 
 	// importing backend packages to ensure init() is called
-	_ "github.com/Graylog2/collector-sidecar/backends/generic"
-	_ "github.com/Graylog2/collector-sidecar/backends/beats/filebeat"
-	_ "github.com/Graylog2/collector-sidecar/backends/beats/winlogbeat"
-	_ "github.com/Graylog2/collector-sidecar/backends/nxlog"
+	//_ "github.com/Graylog2/collector-sidecar/backends/generic"
+	//_ "github.com/Graylog2/collector-sidecar/backends/beats/filebeat"
+	//_ "github.com/Graylog2/collector-sidecar/backends/beats/winlogbeat"
+	//_ "github.com/Graylog2/collector-sidecar/backends/nxlog"
 	_ "github.com/Graylog2/collector-sidecar/daemon"
 )
 
@@ -127,7 +126,7 @@ func main() {
 	hooks.AddLogHooks(ctx, log)
 
 	// initialize backends
-	backendSetup(ctx)
+	//backendSetup(ctx)
 
 	// start main loop
 	services.StartPeriodicals(ctx)
@@ -157,19 +156,18 @@ func commandLineSetup() error {
 	return nil
 }
 
-func backendSetup(context *context.Ctx) {
-	for _, collector := range context.UserConfig.Backends {
-		backendCreator, err := backends.GetCreator(collector.Name)
-		if err != nil {
-			log.Error("Unsupported collector backend found in configuration: " + collector.Name)
-			continue
-		}
-		backend := backendCreator(context)
-		backends.Store.AddBackend(backend)
-		if *collector.Enabled == true && backend.ValidatePreconditions() {
-			log.Debug("Add collector backend: " + backend.Name())
-			daemon.Daemon.AddBackend(backend, context)
-		}
-	}
-
-}
+//func backendSetup(context *context.Ctx) {
+//	for _, collector := range context.UserConfig.Backends {
+//		backendCreator, err := backends.GetCreator(collector.Name)
+//		if err != nil {
+//			log.Error("Unsupported collector backend found in configuration: " + collector.Name)
+//			continue
+//		}
+//		backend := backendCreator(context)
+//		backends.Store.AddBackend(backend)
+//		if *collector.Enabled == true && backend.ValidatePreconditions() {
+//			log.Debug("Add collector backend: " + backend.Name())
+//			daemon.Daemon.AddBackend(backend, context)
+//		}
+//	}
+//}

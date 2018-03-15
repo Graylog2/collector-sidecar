@@ -23,8 +23,8 @@ import (
 	"github.com/Graylog2/collector-sidecar/api/rest"
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/context"
-	"github.com/Graylog2/collector-sidecar/daemon"
 	"github.com/Graylog2/collector-sidecar/logger"
+	"github.com/Graylog2/collector-sidecar/assignments"
 	"github.com/Graylog2/collector-sidecar/common"
 )
 
@@ -47,12 +47,12 @@ func StartPeriodicals(context *context.Ctx) {
 			checksum = fetchBackendList(httpClient, checksum, context)
 		}
 	}()
-	go func() {
-		checksum := ""
-		for {
-			checksum = checkForUpdateAndRestart(httpClient, checksum, context)
-		}
-	}()
+	//go func() {
+	//	checksum := ""
+	//	for {
+	//		checksum = checkForUpdateAndRestart(httpClient, checksum, context)
+	//	}
+	//}()
 }
 
 // report collector status to Graylog server
@@ -60,6 +60,7 @@ func updateCollectorRegistration(httpClient *http.Client, context *context.Ctx) 
 	time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
 	statusRequest := api.NewStatusRequest()
 	api.UpdateRegistration(httpClient, context, &statusRequest)
+	log.Info(common.Inspect(assignments.Store.GetAll()))
 }
 
 func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx) string {
@@ -74,46 +75,43 @@ func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx
 		return backendList.Checksum
 	}
 
-	var newBackends []context.BackendDefinition
-	for _, backend := range backendList.Backends {
-		backendDefinition := context.BackendFromResponse(backend)
-		newBackends = append(newBackends, *backendDefinition)
+	for _, backendEntry := range backendList.Backends {
+		backend := backends.BackendFromResponse(backendEntry)
+		backends.Store.AddBackend(backend)
 	}
-	ctx.Backends = newBackends
-	log.Info(common.Inspect(ctx.Backends))
 
 	return backendList.Checksum
 }
 
 // fetch configuration periodically
-func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context *context.Ctx) string {
-	time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
-	jsonConfig, err := api.RequestConfiguration(httpClient, checksum, context)
-	if err != nil {
-		log.Error("Can't fetch configuration from Graylog API: ", err)
-		return ""
-	}
-	if jsonConfig.IsEmpty() {
-		// etag match, skipping all other actions
-		return jsonConfig.Checksum
-	}
-
-	for name, runner := range daemon.Daemon.Runner {
-		backend := backends.Store.GetBackend(name)
-		if backend.RenderOnChange(jsonConfig) {
-			if !backend.ValidateConfigurationFile() {
-				backends.SetStatusLogErrorf(name, "Collector configuration file is not valid, waiting for the next update.")
-				continue
-			}
-
-			if err := runner.Restart(); err != nil {
-				msg := "Failed to restart collector"
-				backend.SetStatus(backends.StatusError, msg)
-				log.Errorf("[%s] %s: %v", name, msg, err)
-			}
-
-		}
-	}
-
-	return jsonConfig.Checksum
-}
+//func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context *context.Ctx) string {
+//	time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
+//	jsonConfig, err := api.RequestConfiguration(httpClient, checksum, context)
+//	if err != nil {
+//		log.Error("Can't fetch configuration from Graylog API: ", err)
+//		return ""
+//	}
+//	if jsonConfig.IsEmpty() {
+//		// etag match, skipping all other actions
+//		return jsonConfig.Checksum
+//	}
+//
+//	for name, runner := range daemon.Daemon.Runner {
+//		backend := backends.Store.GetBackend(name)
+//		if backend.RenderOnChange(*backends.BackendFromResponse(jsonConfig)) {
+//			if !backend.ValidateConfigurationFile() {
+//				backends.SetStatusLogErrorf(name, "Collector configuration file is not valid, waiting for the next update.")
+//				continue
+//			}
+//
+//			if err := runner.Restart(); err != nil {
+//				msg := "Failed to restart collector"
+//				backend.SetStatus(backends.StatusError, msg)
+//				log.Errorf("[%s] %s: %v", name, msg, err)
+//			}
+//
+//		}
+//	}
+//
+//	return jsonConfig.Checksum
+//}
