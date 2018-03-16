@@ -36,3 +36,12 @@ func (bs *backendStore) AddBackend(backend *Backend) {
 func (bs *backendStore) GetBackend(name string) *Backend {
 	return bs.backends[name]
 }
+
+func (bs *backendStore) GetBackendById(id string) *Backend {
+	for _, backend := range bs.backends {
+		if backend.Id == id {
+			return backend
+		}
+	}
+	return nil
+}

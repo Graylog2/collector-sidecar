@@ -188,11 +188,14 @@ func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *grayl
 		daemon.HandleCollectorActions(respBody.CollectorActions)
 	}
 
-	// Update context with assigned configurations
+	// Update assignment store with configurations from response
 	if len(respBody.Assignments) != 0 {
+		var activeIds []string
 		for _, assignment := range respBody.Assignments {
 			assignments.Store.SetAssignment(&assignment)
+			activeIds = append(activeIds, assignment.BackendId)
 		}
+		assignments.Store.CleanStore(activeIds)
 	}
 }
 

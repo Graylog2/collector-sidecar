@@ -83,3 +83,14 @@ func (dc *DaemonConfig) AddBackend(backend backends.Backend, context *context.Ct
 	runner.SetDaemon(dc)
 	dc.Runner[backend.Name] = runner
 }
+
+func (dc *DaemonConfig) DeleteBackend(backend backends.Backend) {
+	if dc.Runner[backend.Name] == nil {
+		return
+	}
+
+	if err := dc.Runner[backend.Name].Shutdown(); err != nil {
+		log.Errorf("[%s] Failed to stop backend during deletion: %v", backend.Name, err)
+	}
+	delete(dc.Runner, backend.Name)
+}

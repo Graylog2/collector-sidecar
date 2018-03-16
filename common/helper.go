@@ -146,3 +146,12 @@ func NewFalse() *bool {
 	b := false
 	return &b
 }
+
+func IsInList(id string, list []string) bool {
+	for _, match := range list {
+		if id == match {
+			return true
+		}
+	}
+	return false
+}

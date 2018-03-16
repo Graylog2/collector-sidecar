@@ -26,6 +26,7 @@ import (
 	"github.com/Graylog2/collector-sidecar/logger"
 	"github.com/Graylog2/collector-sidecar/assignments"
 	"github.com/Graylog2/collector-sidecar/common"
+	"github.com/Graylog2/collector-sidecar/daemon"
 )
 
 var log = logger.Log()
@@ -47,18 +48,19 @@ func StartPeriodicals(context *context.Ctx) {
 			checksum = fetchBackendList(httpClient, checksum, context)
 		}
 	}()
-	//go func() {
-	//	checksum := ""
-	//	for {
-	//		checksum = checkForUpdateAndRestart(httpClient, checksum, context)
-	//	}
-	//}()
+	go func() {
+		checksum := ""
+		for {
+			checksum = checkForUpdateAndRestart(httpClient, checksum, context)
+		}
+	}()
 }
 
 // report collector status to Graylog server
 func updateCollectorRegistration(httpClient *http.Client, context *context.Ctx) {
 	time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
 	statusRequest := api.NewStatusRequest()
+	// Assignment store
 	api.UpdateRegistration(httpClient, context, &statusRequest)
 	log.Info(common.Inspect(assignments.Store.GetAll()))
 }
@@ -84,9 +86,30 @@ func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx
 }
 
 // fetch configuration periodically
-//func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context *context.Ctx) string {
-//	time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
-//	jsonConfig, err := api.RequestConfiguration(httpClient, checksum, context)
+func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context *context.Ctx) string {
+	time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
+
+	if assignments.Store.Len() == 0 {
+		log.Info("No configurations assigned to this instance. Skipping configuration request.")
+		return ""
+	}
+
+	for backendId := range assignments.Store.GetAll() {
+		backend := backends.Store.GetBackendById(backendId)
+		if daemon.Daemon.Runner[backend.Name] == nil {
+			log.Info("Adding backend runner: " + backend.Name)
+			daemon.Daemon.AddBackend(*backend, context)
+			backend.RenderOnChange(backends.Backend{})
+			daemon.Daemon.Runner[backend.Name].Restart()
+		}
+	}
+	for name := range daemon.Daemon.Runner {
+		backend := backends.Store.GetBackend(name)
+		if assignments.Store.GetAll()[backend.Id] == "" {
+			daemon.Daemon.DeleteBackend(*backend)
+		}
+	}
+	//	jsonConfig, err := api.RequestConfiguration(httpClient, checksum, context)
 //	if err != nil {
 //		log.Error("Can't fetch configuration from Graylog API: ", err)
 //		return ""
@@ -114,4 +137,5 @@ func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx
 //	}
 //
 //	return jsonConfig.Checksum
-//}
+	return ""
+}
