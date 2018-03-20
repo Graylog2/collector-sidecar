@@ -17,7 +17,6 @@ package api
 
 import (
 	"crypto/tls"
-	"encoding/json"
 	"io"
 	"net/http"
 	"strconv"
@@ -25,14 +24,14 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/api/rest"
+	"github.com/Graylog2/collector-sidecar/assignments"
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/cfgfile"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/daemon"
-	"github.com/Graylog2/collector-sidecar/system"
 	"github.com/Graylog2/collector-sidecar/logger"
-	"github.com/Graylog2/collector-sidecar/assignments"
+	"github.com/Graylog2/collector-sidecar/system"
 )
 
 var (
@@ -79,23 +78,15 @@ func RequestBackendList(httpClient *http.Client, checksum string, ctx *context.C
 	return backendResponse, nil
 }
 
-func RequestConfiguration(httpClient *http.Client, checksum string, ctx *context.Ctx) (graylog.ResponseCollectorConfiguration, error) {
+func RequestConfiguration(
+	httpClient *http.Client,
+	configurationId string,
+	checksum string,
+	ctx *context.Ctx) (graylog.ResponseCollectorConfiguration, error) {
 	c := rest.NewClient(httpClient)
 	c.BaseURL = ctx.ServerUrl
 
-	params := make(map[string]string)
-	if len(ctx.UserConfig.Tags) != 0 {
-		tags, err := json.Marshal(ctx.UserConfig.Tags[0])
-		if err != nil {
-			msg := "Provided tags can not be send to the Graylog server!"
-			system.GlobalStatus.Set(backends.StatusUnknown, msg)
-			log.Errorf("[RequestConfiguration] %s", msg)
-		} else {
-			params["tags"] = string(tags)[1 : len(tags)-1]
-		}
-	}
-
-	r, err := c.NewRequest("GET", "/plugins/org.graylog.plugins.collector/altconfiguration/render/"+ctx.NodeId+"/"+params["tags"], nil, nil)
+	r, err := c.NewRequest("GET", "/plugins/org.graylog.plugins.collector/altconfiguration/render/"+ctx.NodeId+"/"+configurationId, nil, nil)
 	if err != nil {
 		msg := "Can not initialize REST request"
 		system.GlobalStatus.Set(backends.StatusError, msg)
@@ -120,7 +111,7 @@ func RequestConfiguration(httpClient *http.Client, checksum string, ctx *context
 		configurationResponse.Checksum = resp.Header.Get("Etag")
 		switch {
 		case resp.StatusCode == 204:
-			msg := "No configuration found for configured tags!"
+			msg := "No configuration found!"
 			system.GlobalStatus.Set(backends.StatusError, msg)
 			log.Infof("[RequestConfiguration] %s", msg)
 			return graylog.ResponseCollectorConfiguration{}, nil

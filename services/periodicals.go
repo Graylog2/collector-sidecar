@@ -25,7 +25,6 @@ import (
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/logger"
 	"github.com/Graylog2/collector-sidecar/assignments"
-	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/daemon"
 )
 
@@ -62,7 +61,6 @@ func updateCollectorRegistration(httpClient *http.Client, context *context.Ctx) 
 	statusRequest := api.NewStatusRequest()
 	// Assignment store
 	api.UpdateRegistration(httpClient, context, &statusRequest)
-	log.Info(common.Inspect(assignments.Store.GetAll()))
 }
 
 func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx) string {
@@ -97,7 +95,7 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context 
 	for backendId := range assignments.Store.GetAll() {
 		backend := backends.Store.GetBackendById(backendId)
 		if daemon.Daemon.Runner[backend.Name] == nil {
-			log.Info("Adding backend runner: " + backend.Name)
+			log.Debug("Adding backend runner: " + backend.Name)
 			daemon.Daemon.AddBackend(*backend, context)
 			backend.RenderOnChange(backends.Backend{})
 			daemon.Daemon.Runner[backend.Name].Restart()
@@ -109,33 +107,34 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context 
 			daemon.Daemon.DeleteBackend(*backend)
 		}
 	}
-	//	jsonConfig, err := api.RequestConfiguration(httpClient, checksum, context)
-//	if err != nil {
-//		log.Error("Can't fetch configuration from Graylog API: ", err)
-//		return ""
-//	}
-//	if jsonConfig.IsEmpty() {
-//		// etag match, skipping all other actions
-//		return jsonConfig.Checksum
-//	}
-//
-//	for name, runner := range daemon.Daemon.Runner {
-//		backend := backends.Store.GetBackend(name)
-//		if backend.RenderOnChange(*backends.BackendFromResponse(jsonConfig)) {
-//			if !backend.ValidateConfigurationFile() {
-//				backends.SetStatusLogErrorf(name, "Collector configuration file is not valid, waiting for the next update.")
-//				continue
-//			}
-//
-//			if err := runner.Restart(); err != nil {
-//				msg := "Failed to restart collector"
-//				backend.SetStatus(backends.StatusError, msg)
-//				log.Errorf("[%s] %s: %v", name, msg, err)
-//			}
-//
-//		}
-//	}
-//
-//	return jsonConfig.Checksum
+
+	for backendId, configurationId := range assignments.Store.GetAll() {
+		response, err := api.RequestConfiguration(httpClient, configurationId, checksum, context)
+		if err != nil {
+			log.Error("Can't fetch configuration from Graylog API: ", err)
+			return ""
+		}
+
+		if response.IsEmpty() {
+			// etag match, skip file render
+			continue
+		}
+
+		backend := backends.Store.GetBackendById(backendId)
+		if backend.RenderOnChange(backends.Backend{Template: response.Template}) {
+			if !backend.ValidateConfigurationFile() {
+				backends.SetStatusLogErrorf(backend.Name, "Collector configuration file is not valid, waiting for the next update.")
+				continue
+			}
+
+			if err := daemon.Daemon.Runner[backend.Name].Restart(); err != nil {
+				msg := "Failed to restart collector"
+				backend.SetStatus(backends.StatusError, msg)
+				log.Errorf("[%s] %s: %v", backend.Name, msg, err)
+			}
+
+		}
+	}
+
 	return ""
 }
