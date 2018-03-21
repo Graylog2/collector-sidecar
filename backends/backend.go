@@ -1,40 +1,42 @@
 package backends
 
 import (
-	"os/exec"
 	"reflect"
 
+	"fmt"
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/system"
+	"os/exec"
+	"strings"
 )
 
 type Backend struct {
-	Enabled           *bool
-	Id                string
-	Name              string
-	ServiceType       string
-	OperatingSystem   string
-	ExecutablePath    string
-	ConfigurationPath string
-	ExecuteParameters []string
-	ValidationCommand string
-	Template          string
-	backendStatus     system.Status
+	Enabled              *bool
+	Id                   string
+	Name                 string
+	ServiceType          string
+	OperatingSystem      string
+	ExecutablePath       string
+	ConfigurationPath    string
+	ExecuteParameters    []string
+	ValidationParameters []string
+	Template             string
+	backendStatus        system.Status
 }
 
 func BackendFromResponse(response graylog.ResponseCollectorBackend) *Backend {
 	return &Backend{
-		Enabled:           common.NewTrue(),
-		Id:                response.Id,
-		Name:              response.Name,
-		ServiceType:       response.ServiceType,
-		OperatingSystem:   response.OperatingSystem,
-		ExecutablePath:    response.ExecutablePath,
-		ConfigurationPath: response.ConfigurationPath,
-		ExecuteParameters: response.ExecuteParameters,
-		ValidationCommand: response.ValidationCommand,
-		backendStatus:     system.Status{},
+		Enabled:              common.NewTrue(),
+		Id:                   response.Id,
+		Name:                 response.Name,
+		ServiceType:          response.ServiceType,
+		OperatingSystem:      response.OperatingSystem,
+		ExecutablePath:       response.ExecutablePath,
+		ConfigurationPath:    response.ConfigurationPath,
+		ExecuteParameters:    response.ExecuteParameters,
+		ValidationParameters: response.ValidationParameters,
+		backendStatus:        system.Status{},
 	}
 }
 
@@ -47,10 +49,23 @@ func (b *Backend) ValidatePreconditions() bool {
 }
 
 func (b *Backend) ValidateConfigurationFile() bool {
-	output, err := exec.Command(b.ValidationCommand).CombinedOutput()
-	soutput := string(output)
+	if b.ValidationParameters == nil {
+		log.Errorf("[%s] No parameters configured to validate configuration!", b.Name)
+		return false
+	}
+
+	var parameters []string
+	for _, parameter := range b.ValidationParameters {
+		if strings.Contains(parameter, "%s") {
+			parameters = append(parameters, fmt.Sprintf(parameter, b.ConfigurationPath))
+		} else {
+			parameters = append(parameters, parameter)
+		}
+	}
+	output, err := exec.Command(b.ExecutablePath, parameters...).CombinedOutput()
 	if err != nil {
-		log.Errorf("[%s] Error during configuration validation: %s", b.Name, soutput)
+		soutput := string(output)
+		log.Errorf("[%s] Error during configuration validation: %s %s", b.Name, soutput, err)
 		return false
 	}
 

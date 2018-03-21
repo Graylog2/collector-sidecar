@@ -47,14 +47,14 @@ func (r *ResponseBackendList) IsEmpty() bool {
 }
 
 type ResponseCollectorBackend struct {
-	Id                string   `json:"id"`
-	Name              string   `json:"name"`
-	ServiceType       string   `json:"service_type"`
-	OperatingSystem   string   `json:"node_operating_system"`
-	ExecutablePath    string   `json:"executable_path"`
-	ConfigurationPath string   `json:"configuration_path"`
-	ExecuteParameters []string `json:"execute_parameters"`
-	ValidationCommand string   `json:"validation_command"`
+	Id                   string   `json:"id"`
+	Name                 string   `json:"name"`
+	ServiceType          string   `json:"service_type"`
+	OperatingSystem      string   `json:"node_operating_system"`
+	ExecutablePath       string   `json:"executable_path"`
+	ConfigurationPath    string   `json:"configuration_path"`
+	ExecuteParameters    []string `json:"execute_parameters"`
+	ValidationParameters []string `json:"validation_parameters"`
 }
 
 type ResponseCollectorConfiguration struct {

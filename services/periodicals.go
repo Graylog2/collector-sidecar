@@ -98,7 +98,6 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context 
 			log.Debug("Adding backend runner: " + backend.Name)
 			daemon.Daemon.AddBackend(*backend, context)
 			backend.RenderOnChange(backends.Backend{})
-			daemon.Daemon.Runner[backend.Name].Restart()
 		}
 	}
 	for name := range daemon.Daemon.Runner {

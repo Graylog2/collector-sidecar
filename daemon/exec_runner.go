@@ -102,7 +102,7 @@ func (r *ExecRunner) SetDaemon(d *DaemonConfig) {
 func (r *ExecRunner) ValidateBeforeStart() error {
 	_, err := exec.LookPath(r.exec)
 	if err != nil {
-		return backends.SetStatusLogErrorf(r.name, "Failed to find collector executable %q: %v", r.exec, err)
+		return backends.SetStatusLogErrorf(r.name, "Failed to find collector executable %s: %s", r.exec, err)
 	}
 	if r.Running() {
 		return errors.New("Failed to start collector, it's already running")
@@ -148,7 +148,6 @@ func (r *ExecRunner) startSupervisor() {
 
 func (r *ExecRunner) start() error {
 	if err := r.ValidateBeforeStart(); err != nil {
-		log.Errorf("[%s] %s", r.Name(), err)
 		return err
 	}
 
