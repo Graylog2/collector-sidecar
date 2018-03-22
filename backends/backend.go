@@ -52,12 +52,7 @@ func (b *Backend) ValidateConfigurationFile() bool {
 		return false
 	}
 
-	parameters, err := common.SprintfList(b.ValidationParameters, b.ConfigurationPath)
-	if err != nil {
-		log.Error("[%s] Validation parameters can't be parsed: %s", b.Name, b.ValidationParameters)
-		return false
-	}
-	output, err := exec.Command(b.ExecutablePath, parameters...).CombinedOutput()
+	output, err := exec.Command(b.ExecutablePath, b.ValidationParameters...).CombinedOutput()
 	if err != nil {
 		soutput := string(output)
 		log.Errorf("[%s] Error during configuration validation: %s %s", b.Name, soutput, err)

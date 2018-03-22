@@ -17,6 +17,7 @@ package backends
 
 import (
 	"github.com/Graylog2/collector-sidecar/logger"
+	"github.com/Graylog2/collector-sidecar/common"
 )
 
 var (
@@ -31,6 +32,18 @@ type backendStore struct {
 
 func (bs *backendStore) AddBackend(backend *Backend) {
 	bs.backends[backend.Name] = backend
+	executeParameters, err := common.SprintfList(backend.ExecuteParameters, backend.ConfigurationPath)
+	if err != nil {
+		log.Errorf("Invalid execute parameters, skip adding backend: %s", backend.Name)
+		return
+	}
+	bs.backends[backend.Name].ExecuteParameters = executeParameters
+	validationParameters, err := common.SprintfList(backend.ValidationParameters, backend.ConfigurationPath)
+	if err != nil {
+		log.Errorf("Invalid validation parameters, skip adding backend: %s", backend.Name)
+		return
+	}
+	bs.backends[backend.Name].ValidationParameters = validationParameters
 }
 
 func (bs *backendStore) GetBackend(name string) *Backend {
