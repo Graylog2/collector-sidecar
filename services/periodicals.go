@@ -77,7 +77,9 @@ func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx
 
 	for _, backendEntry := range backendList.Backends {
 		backend := backends.BackendFromResponse(backendEntry)
-		backends.Store.AddBackend(backend)
+		if backends.Store.GetBackendById(backend.Id) == nil {
+			backends.Store.AddBackend(backend)
+		}
 	}
 
 	return backendList.Checksum
@@ -97,7 +99,6 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context 
 		if daemon.Daemon.Runner[backend.Name] == nil {
 			log.Debug("Adding backend runner: " + backend.Name)
 			daemon.Daemon.AddBackend(*backend, context)
-			backend.RenderOnChange(backends.Backend{})
 		}
 	}
 	for name := range daemon.Daemon.Runner {
