@@ -3,12 +3,10 @@ package backends
 import (
 	"reflect"
 
-	"fmt"
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/system"
 	"os/exec"
-	"strings"
 )
 
 type Backend struct {
@@ -54,13 +52,10 @@ func (b *Backend) ValidateConfigurationFile() bool {
 		return false
 	}
 
-	var parameters []string
-	for _, parameter := range b.ValidationParameters {
-		if strings.Contains(parameter, "%s") {
-			parameters = append(parameters, fmt.Sprintf(parameter, b.ConfigurationPath))
-		} else {
-			parameters = append(parameters, parameter)
-		}
+	parameters, err := common.SprintfList(b.ValidationParameters, b.ConfigurationPath)
+	if err != nil {
+		log.Error("[%s] Validation parameters can't be parsed: %s", b.Name, b.ValidationParameters)
+		return false
 	}
 	output, err := exec.Command(b.ExecutablePath, parameters...).CombinedOutput()
 	if err != nil {

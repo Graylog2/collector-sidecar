@@ -16,18 +16,19 @@
 package common
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
+	"github.com/Graylog2/collector-sidecar/cfgfile"
+	"github.com/pborman/uuid"
 	"io/ioutil"
+	"net"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"unicode"
-	"bytes"
-	"fmt"
-	"github.com/pborman/uuid"
-	"net"
-	"github.com/Graylog2/collector-sidecar/cfgfile"
 )
 
 func GetRootPath() (string, error) {
@@ -154,4 +155,19 @@ func IsInList(id string, list []string) bool {
 		}
 	}
 	return false
+}
+
+func SprintfList(list []string, values ...interface{}) (result []string, err error) {
+	for _, entry := range list {
+		matched, err := regexp.MatchString("%[vTsqxX]", entry)
+		if err != nil {
+			return nil, err
+		}
+		if matched {
+			result = append(result, fmt.Sprintf(entry, values...))
+		} else {
+			result = append(result, entry)
+		}
+	}
+	return
 }
