@@ -15,16 +15,11 @@
 
 package cfgfile
 
-import (
-	"errors"
-)
-
 type SidecarConfig struct {
 	ServerUrl       string   `config:"server_url"`
 	TlsSkipVerify   bool     `config:"tls_skip_verify"`
 	NodeName        string   `config:"node_name"`
 	NodeId          string   `config:"node_id"`
-	Tags            []string `config:"tags"`
 	CachePath       string   `config:"cache_path"`
 	LogPath         string   `config:"log_path"`
 	LogRotationTime int      `config:"log_rotation_time"`
@@ -32,7 +27,6 @@ type SidecarConfig struct {
 	UpdateInterval  int      `config:"update_interval"`
 	SendStatus      bool     `config:"send_status"`
 	ListLogFiles    []string `config:"list_log_files"`
-	Backends        []SidecarBackend
 }
 
 type SidecarBackend struct {
@@ -41,17 +35,4 @@ type SidecarBackend struct {
 	BinaryPath        string `config:"binary_path"`
 	ConfigurationPath string `config:"configuration_path"`
 	RunPath           string `config:"run_path"`
-}
-
-func (sc *SidecarConfig) GetBackendIndexByName(name string) (int, error) {
-	index := -1
-	for i, backend := range sc.Backends {
-		if backend.Name == name {
-			index = i
-		}
-	}
-	if index < 0 {
-		return index, errors.New("Can not find configuration for: " + name)
-	}
-	return index, nil
 }

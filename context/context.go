@@ -76,13 +76,6 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 	}
         ctx.NodeName = ctx.UserConfig.NodeName
 
-	// tags
-	if len(ctx.UserConfig.Tags) == 0 {
-		log.Fatal("Please define configuration tags.")
-	} else if !cfgfile.ValidateConfig() {
-		log.Info("Fetching configurations tagged by: ", ctx.UserConfig.Tags)
-	}
-
 	// cache_path
 	if ctx.UserConfig.CachePath == "" {
 		var cachePath string
@@ -122,11 +115,6 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 	// update_interval
 	if !(ctx.UserConfig.UpdateInterval > 0) {
 		log.Fatal("Please set update interval > 0 seconds.")
-	}
-
-	// backends
-	if len(ctx.UserConfig.Backends) == 0 {
-		log.Fatal("Please define at least one collector backend.")
 	}
 
 	return nil
