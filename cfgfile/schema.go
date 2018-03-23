@@ -28,11 +28,3 @@ type SidecarConfig struct {
 	SendStatus      bool     `config:"send_status"`
 	ListLogFiles    []string `config:"list_log_files"`
 }
-
-type SidecarBackend struct {
-	Name              string `config:"name"`
-	Enabled           *bool  `config:"enabled"`
-	BinaryPath        string `config:"binary_path"`
-	ConfigurationPath string `config:"configuration_path"`
-	RunPath           string `config:"run_path"`
-}
