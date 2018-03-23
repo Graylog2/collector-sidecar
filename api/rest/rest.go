@@ -30,6 +30,7 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/logger"
+	"github.com/Graylog2/collector-sidecar/context"
 )
 
 var (
@@ -44,6 +45,7 @@ const (
 
 type Client struct {
 	client             *http.Client
+	ApiToken           string
 	BaseURL            *url.URL
 	UserAgent          string
 	onRequestCompleted RequestCompletionCallback
@@ -84,13 +86,13 @@ func NewHTTPClient(tlsConfig *tls.Config) *http.Client {
 	}
 }
 
-func NewClient(httpClient *http.Client) *Client {
+func NewClient(httpClient *http.Client, ctx *context.Ctx) *Client {
 	if httpClient == nil {
 		log.Fatal("http client must not be nil")
 	}
 
 	baseURL, _ := url.Parse(defaultBaseURL)
-	c := &Client{client: httpClient, BaseURL: baseURL, UserAgent: userAgent}
+	c := &Client{client: httpClient, ApiToken: ctx.UserConfig.ApiToken, BaseURL: baseURL, UserAgent: userAgent}
 
 	return c
 }
@@ -130,6 +132,7 @@ func (c *Client) NewRequest(method, urlStr string, params map[string]string, bod
 	req.Header.Add("Accept", mediaType)
 	req.Header.Add("User-Agent", userAgent)
 	req.Header.Add("X-Graylog-Collector-Version", common.CollectorVersion)
+	req.SetBasicAuth(c.ApiToken, "token")
 	return req, nil
 }
 

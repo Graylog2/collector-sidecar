@@ -60,6 +60,11 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 		log.Fatalf("Server-url is empty.")
 	}
 
+	// api_token
+	if ctx.UserConfig.ApiToken == "" {
+		log.Fatal("No API token was configured.")
+	}
+
 	// node_id
 	if ctx.UserConfig.NodeId == "" {
 		log.Fatal("No node ID was configured.")

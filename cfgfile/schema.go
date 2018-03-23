@@ -17,6 +17,7 @@ package cfgfile
 
 type SidecarConfig struct {
 	ServerUrl       string   `config:"server_url"`
+	ApiToken        string   `config:"api_token"`
 	TlsSkipVerify   bool     `config:"tls_skip_verify"`
 	NodeName        string   `config:"node_name"`
 	NodeId          string   `config:"node_id"`

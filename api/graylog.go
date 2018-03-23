@@ -40,7 +40,7 @@ var (
 )
 
 func RequestBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx) (graylog.ResponseBackendList, error) {
-	c := rest.NewClient(httpClient)
+	c := rest.NewClient(httpClient, ctx)
 	c.BaseURL = ctx.ServerUrl
 
 	r, err := c.NewRequest("GET", "/plugins/org.graylog.plugins.collector/altconfiguration/backends", nil, nil)
@@ -83,7 +83,7 @@ func RequestConfiguration(
 	configurationId string,
 	checksum string,
 	ctx *context.Ctx) (graylog.ResponseCollectorConfiguration, error) {
-	c := rest.NewClient(httpClient)
+	c := rest.NewClient(httpClient, ctx)
 	c.BaseURL = ctx.ServerUrl
 
 	r, err := c.NewRequest("GET", "/plugins/org.graylog.plugins.collector/altconfiguration/render/"+ctx.NodeId+"/"+configurationId, nil, nil)
@@ -130,7 +130,7 @@ func RequestConfiguration(
 }
 
 func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *graylog.StatusRequest) {
-	c := rest.NewClient(httpClient)
+	c := rest.NewClient(httpClient, ctx)
 	c.BaseURL = ctx.ServerUrl
 
 	metrics := &graylog.MetricsRequest{
