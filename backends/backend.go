@@ -46,18 +46,18 @@ func (b *Backend) ValidatePreconditions() bool {
 	return true
 }
 
-func (b *Backend) ValidateConfigurationFile() bool {
+func (b *Backend) ValidateConfigurationFile() (bool, string) {
 	if b.ValidationParameters == nil {
 		log.Errorf("[%s] No parameters configured to validate configuration!", b.Name)
-		return false
+		return false, ""
 	}
 
 	output, err := exec.Command(b.ExecutablePath, b.ValidationParameters...).CombinedOutput()
 	if err != nil {
 		soutput := string(output)
 		log.Errorf("[%s] Error during configuration validation: %s %s", b.Name, soutput, err)
-		return false
+		return false, soutput
 	}
 
-	return true
+	return true, ""
 }

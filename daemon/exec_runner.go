@@ -36,6 +36,7 @@ type ExecRunner struct {
 	exec           string
 	args           []string
 	stderr, stdout string
+	output         []byte
 	isRunning      atomic.Value
 	isSupervised   atomic.Value
 	restartCount   int
@@ -134,7 +135,7 @@ func (r *ExecRunner) startSupervisor() {
 			// don't continue to restart after 3 tries, stop the supervisor and wait for a configuration update
 			// or manual restart
 			if r.restartCount > 3 {
-				backends.SetStatusLogErrorf(r.name, "Unable to start collector after 3 tries, giving up!")
+				backends.SetStatusLogErrorf(r.name, "Unable to start collector after 3 tries, giving up! " + string(r.output))
 				r.setSupervised(false)
 				continue
 			}
@@ -159,6 +160,7 @@ func (r *ExecRunner) start() error {
 	// start the actual process and don't block
 	r.startTime = time.Now()
 	r.run()
+	r.output, _ = r.cmd.CombinedOutput()
 
 	r.setSupervised(true)
 	return nil

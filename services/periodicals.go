@@ -21,11 +21,11 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/api"
 	"github.com/Graylog2/collector-sidecar/api/rest"
+	"github.com/Graylog2/collector-sidecar/assignments"
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/context"
-	"github.com/Graylog2/collector-sidecar/logger"
-	"github.com/Graylog2/collector-sidecar/assignments"
 	"github.com/Graylog2/collector-sidecar/daemon"
+	"github.com/Graylog2/collector-sidecar/logger"
 )
 
 var log = logger.Log()
@@ -122,8 +122,9 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context 
 
 		backend := backends.Store.GetBackendById(backendId)
 		if backend.RenderOnChange(backends.Backend{Template: response.Template}) {
-			if !backend.ValidateConfigurationFile() {
-				backends.SetStatusLogErrorf(backend.Name, "Collector configuration file is not valid, waiting for the next update.")
+			if valid, output := backend.ValidateConfigurationFile(); !valid {
+				backends.SetStatusLogErrorf(backend.Name,
+					"Collector configuration file is not valid, waiting for the next update. "+output)
 				continue
 			}
 
