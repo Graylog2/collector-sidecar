@@ -61,6 +61,7 @@ func updateCollectorRegistration(httpClient *http.Client, context *context.Ctx) 
 	statusRequest := api.NewStatusRequest()
 	response := api.UpdateRegistration(httpClient, context, &statusRequest)
 	assignments.Store.Update(response.Assignments)
+	daemon.Daemon.SyncWithAssignments(context)
 }
 
 func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx) string {
@@ -89,25 +90,6 @@ func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx
 func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context *context.Ctx) string {
 	time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
 
-	// cleanup backends that should not run anymore
-	for name := range daemon.Daemon.Runner {
-		backend := backends.Store.GetBackend(name)
-		if assignments.Store.GetAll()[backend.Id] == "" {
-			log.Info("Removing backend from registry: " + backend.Name)
-			daemon.Daemon.DeleteBackend(*backend)
-		}
-	}
-
-	// add new backends to daemon registry
-	for backendId := range assignments.Store.GetAll() {
-		backend := backends.Store.GetBackendById(backendId)
-		if daemon.Daemon.Runner[backend.Name] == nil {
-			log.Info("Adding backend to registry: " + backend.Name)
-			daemon.Daemon.AddBackend(*backend, context)
-		}
-	}
-
-	// skip anything else if no assignments exist
 	if assignments.Store.Len() == 0 {
 		log.Info("No configurations assigned to this instance. Skipping configuration request.")
 		return ""

@@ -20,6 +20,7 @@ import (
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/logger"
+	"github.com/Graylog2/collector-sidecar/assignments"
 )
 
 var (
@@ -95,4 +96,24 @@ func (dc *DaemonConfig) DeleteBackend(backend backends.Backend) {
 		}
 	}
 	delete(dc.Runner, backend.Name)
+}
+
+func (dc *DaemonConfig) SyncWithAssignments(context *context.Ctx) {
+	// cleanup backends that should not run anymore
+	for name := range dc.Runner {
+		backend := backends.Store.GetBackend(name)
+		if assignments.Store.GetAll()[backend.Id] == "" {
+			log.Info("Removing backend from registry: " + backend.Name)
+			dc.DeleteBackend(*backend)
+		}
+	}
+
+	// add new backends to registry
+	for backendId := range assignments.Store.GetAll() {
+		backend := backends.Store.GetBackendById(backendId)
+		if dc.Runner[backend.Name] == nil {
+			log.Info("Adding backend to registry: " + backend.Name)
+			dc.AddBackend(*backend, context)
+		}
+	}
 }

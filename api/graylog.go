@@ -178,7 +178,6 @@ func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *grayl
 		daemon.HandleCollectorActions(respBody.CollectorActions)
 	}
 
-
 	return *respBody
 }
 
