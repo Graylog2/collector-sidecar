@@ -39,3 +39,16 @@ func (as *assignmentStore) CleanStore(validBackendIds []string) {
 		}
 	}
 }
+
+func (as *assignmentStore) Update(assignments []ConfigurationAssignment) {
+	if len(assignments) != 0 {
+		var activeIds []string
+		for _, assignment := range assignments {
+			Store.SetAssignment(&assignment)
+			activeIds = append(activeIds, assignment.BackendId)
+		}
+		Store.CleanStore(activeIds)
+	} else {
+		Store.CleanStore([]string{})
+	}
+}

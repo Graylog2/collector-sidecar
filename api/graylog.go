@@ -24,7 +24,6 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/api/rest"
-	"github.com/Graylog2/collector-sidecar/assignments"
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/cfgfile"
 	"github.com/Graylog2/collector-sidecar/common"
@@ -129,7 +128,7 @@ func RequestConfiguration(
 	return configurationResponse, nil
 }
 
-func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *graylog.StatusRequest) {
+func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *graylog.StatusRequest) graylog.ResponseCollectorRegistration {
 	c := rest.NewClient(httpClient, ctx)
 	c.BaseURL = ctx.ServerUrl
 
@@ -155,7 +154,7 @@ func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *grayl
 	r, err := c.NewRequest("PUT", "/plugins/org.graylog.plugins.collector/altcollectors/"+ctx.NodeId, nil, registration)
 	if err != nil {
 		log.Error("[UpdateRegistration] Can not initialize REST request")
-		return
+		return graylog.ResponseCollectorRegistration{}
 	}
 
 	respBody := new(graylog.ResponseCollectorRegistration)
@@ -179,17 +178,8 @@ func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *grayl
 		daemon.HandleCollectorActions(respBody.CollectorActions)
 	}
 
-	// Update assignment store with configurations from response
-	if len(respBody.Assignments) != 0 {
-		var activeIds []string
-		for _, assignment := range respBody.Assignments {
-			assignments.Store.SetAssignment(&assignment)
-			activeIds = append(activeIds, assignment.BackendId)
-		}
-		assignments.Store.CleanStore(activeIds)
-	} else {
-		assignments.Store.CleanStore([]string{})
-	}
+
+	return *respBody
 }
 
 func updateRuntimeConfiguration(respBody *graylog.ResponseCollectorRegistration, ctx *context.Ctx) error {

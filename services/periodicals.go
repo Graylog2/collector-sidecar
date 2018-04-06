@@ -59,8 +59,8 @@ func StartPeriodicals(context *context.Ctx) {
 func updateCollectorRegistration(httpClient *http.Client, context *context.Ctx) {
 	time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
 	statusRequest := api.NewStatusRequest()
-	// Assignment store
-	api.UpdateRegistration(httpClient, context, &statusRequest)
+	response := api.UpdateRegistration(httpClient, context, &statusRequest)
+	assignments.Store.Update(response.Assignments)
 }
 
 func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx) string {
