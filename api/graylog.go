@@ -187,6 +187,8 @@ func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *grayl
 			activeIds = append(activeIds, assignment.BackendId)
 		}
 		assignments.Store.CleanStore(activeIds)
+	} else {
+		assignments.Store.CleanStore([]string{})
 	}
 }
 

@@ -89,8 +89,10 @@ func (dc *DaemonConfig) DeleteBackend(backend backends.Backend) {
 		return
 	}
 
-	if err := dc.Runner[backend.Name].Shutdown(); err != nil {
-		log.Errorf("[%s] Failed to stop backend during deletion: %v", backend.Name, err)
+	if  dc.Runner[backend.Name].Running() {
+		if err := dc.Runner[backend.Name].Shutdown(); err != nil {
+			log.Errorf("[%s] Failed to stop backend during deletion: %v", backend.Name, err)
+		}
 	}
 	delete(dc.Runner, backend.Name)
 }
