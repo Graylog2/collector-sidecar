@@ -91,8 +91,10 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context 
 	time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
 
 	if assignments.Store.Len() == 0 {
-		log.Info("No configurations assigned to this instance. Skipping configuration request.")
-		return ""
+		if checksum != "_" {
+			log.Info("No configurations assigned to this instance. Skipping configuration request.")
+		}
+		return "_"
 	}
 
 	for backendId, configurationId := range assignments.Store.GetAll() {
