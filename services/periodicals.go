@@ -61,29 +61,29 @@ func updateCollectorRegistration(httpClient *http.Client, context *context.Ctx) 
 	statusRequest := api.NewStatusRequest()
 	response := api.UpdateRegistration(httpClient, context, &statusRequest)
 	assignments.Store.Update(response.Assignments)
+	backends.Store.Cleanup(assignments.Store.AssignedBackendIds())
 	daemon.Daemon.SyncWithAssignments(context)
 }
 
 func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx) string {
 	time.Sleep(time.Duration(ctx.UserConfig.UpdateInterval) * time.Second)
-	backendList, err := api.RequestBackendList(httpClient, checksum, ctx)
+	response, err := api.RequestBackendList(httpClient, checksum, ctx)
 	if err != nil {
 		log.Error("Can't fetch configuration from Graylog API: ", err)
 		return ""
 	}
-	if backendList.IsEmpty() {
+	if response.IsEmpty() {
 		// etag match, skipping all other actions
-		return backendList.Checksum
+		return response.Checksum
 	}
 
-	for _, backendEntry := range backendList.Backends {
-		backend := backends.BackendFromResponse(backendEntry)
-		if backends.Store.GetBackendById(backend.Id) == nil {
-			backends.Store.AddBackend(backend)
-		}
+	backendList := []backends.Backend{}
+	for _, backendEntry := range response.Backends {
+		backendList = append(backendList, *backends.BackendFromResponse(backendEntry))
 	}
+	backends.Store.Update(backendList)
 
-	return backendList.Checksum
+	return response.Checksum
 }
 
 // fetch configuration periodically
@@ -110,7 +110,7 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context 
 		}
 
 		backend := backends.Store.GetBackendById(backendId)
-		if backend.RenderOnChange(backends.Backend{Template: response.Template}) {
+		if backend != nil && backend.RenderOnChange(backends.Backend{Template: response.Template}) {
 			if valid, output := backend.ValidateConfigurationFile(); !valid {
 				backends.SetStatusLogErrorf(backend.Name,
 					"Collector configuration file is not valid, waiting for the next update. "+output)

@@ -71,7 +71,7 @@ func RegisterBackendRunner(name string, c RunnerCreator) error {
 	return nil
 }
 
-func (dc *DaemonConfig) AddBackend(backend backends.Backend, context *context.Ctx) {
+func (dc *DaemonConfig) AddRunner(backend backends.Backend, context *context.Ctx) {
 	var runner Runner
 	switch backend.ServiceType {
 	case "exec":
@@ -85,17 +85,17 @@ func (dc *DaemonConfig) AddBackend(backend backends.Backend, context *context.Ct
 	dc.Runner[backend.Name] = runner
 }
 
-func (dc *DaemonConfig) DeleteBackend(backend backends.Backend) {
-	if dc.Runner[backend.Name] == nil {
+func (dc *DaemonConfig) DeleteRunner(backendName string) {
+	if dc.Runner[backendName] == nil {
 		return
 	}
 
-	if  dc.Runner[backend.Name].Running() {
-		if err := dc.Runner[backend.Name].Shutdown(); err != nil {
-			log.Errorf("[%s] Failed to stop backend during deletion: %v", backend.Name, err)
+	if  dc.Runner[backendName].Running() {
+		if err := dc.Runner[backendName].Shutdown(); err != nil {
+			log.Errorf("[%s] Failed to stop backend during deletion: %v", backendName, err)
 		}
 	}
-	delete(dc.Runner, backend.Name)
+	delete(dc.Runner, backendName)
 }
 
 func (dc *DaemonConfig) SyncWithAssignments(context *context.Ctx) {
@@ -106,18 +106,18 @@ func (dc *DaemonConfig) SyncWithAssignments(context *context.Ctx) {
 	// cleanup backends that should not run anymore
 	for name := range dc.Runner {
 		backend := backends.Store.GetBackend(name)
-		if assignments.Store.GetAll()[backend.Id] == "" {
-			log.Info("Removing backend from registry: " + backend.Name)
-			dc.DeleteBackend(*backend)
+		if backend == nil || assignments.Store.GetAll()[backend.Id] == "" {
+			log.Info("Removing process runner: " + name)
+			dc.DeleteRunner(name)
 		}
 	}
 
 	// add new backends to registry
 	for backendId := range assignments.Store.GetAll() {
 		backend := backends.Store.GetBackendById(backendId)
-		if dc.Runner[backend.Name] == nil {
-			log.Info("Adding backend to registry: " + backend.Name)
-			dc.AddBackend(*backend, context)
+		if backend != nil && dc.Runner[backend.Name] == nil {
+			log.Info("Adding process runner for: " + backend.Name)
+			dc.AddRunner(*backend, context)
 		}
 	}
 }

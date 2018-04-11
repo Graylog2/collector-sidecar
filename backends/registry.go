@@ -30,8 +30,8 @@ type backendStore struct {
 	backends map[string]*Backend
 }
 
-func (bs *backendStore) AddBackend(backend *Backend) {
-	bs.backends[backend.Name] = backend
+func (bs *backendStore) SetBackend(backend Backend) {
+	bs.backends[backend.Name] = &backend
 	executeParameters, err := common.SprintfList(backend.ExecuteParameters, backend.ConfigurationPath)
 	if err != nil {
 		log.Errorf("Invalid execute parameters, skip adding backend: %s", backend.Name)
@@ -57,4 +57,27 @@ func (bs *backendStore) GetBackendById(id string) *Backend {
 		}
 	}
 	return nil
+}
+
+func (bs *backendStore) Update(backends []Backend) {
+	if len(backends) != 0 {
+		var activeIds []string
+		for _, backend := range backends {
+			activeIds = append(activeIds, backend.Id)
+			if bs.backends[backend.Name] == nil {
+				bs.SetBackend(backend)
+			}
+		}
+		bs.Cleanup(activeIds)
+	} else {
+		bs.Cleanup([]string{})
+	}
+}
+
+func (bs *backendStore) Cleanup(validBackendIds []string) {
+	for _, backend := range bs.backends {
+		if !common.IsInList(backend.Id, validBackendIds) {
+			delete(bs.backends, backend.Name)
+		}
+	}
 }

@@ -160,10 +160,10 @@ func commandLineSetup() error {
 //			continue
 //		}
 //		backend := backendCreator(context)
-//		backends.Store.AddBackend(backend)
+//		backends.Store.AddRunner(backend)
 //		if *collector.Enabled == true && backend.ValidatePreconditions() {
 //			log.Debug("Add collector backend: " + backend.Name())
-//			daemon.Daemon.AddBackend(backend, context)
+//			daemon.Daemon.AddRunner(backend, context)
 //		}
 //	}
 //}
