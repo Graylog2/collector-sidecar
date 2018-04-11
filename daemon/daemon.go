@@ -99,6 +99,10 @@ func (dc *DaemonConfig) DeleteBackend(backend backends.Backend) {
 }
 
 func (dc *DaemonConfig) SyncWithAssignments(context *context.Ctx) {
+	if dc.Runner == nil {
+		return
+	}
+
 	// cleanup backends that should not run anymore
 	for name := range dc.Runner {
 		backend := backends.Store.GetBackend(name)
