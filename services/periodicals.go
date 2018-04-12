@@ -37,27 +37,21 @@ func StartPeriodicals(context *context.Ctx) {
 	}
 
 	go func() {
+		backendChecksum, configurationChecksum := "", ""
 		for {
+			time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
+			// backend list is needed before configuration assignments are fetched
+			backendChecksum = fetchBackendList(httpClient, backendChecksum, context)
+			// registration response contains configuration assignments
 			updateCollectorRegistration(httpClient, context)
-		}
-	}()
-	go func() {
-		checksum := ""
-		for {
-			checksum = fetchBackendList(httpClient, checksum, context)
-		}
-	}()
-	go func() {
-		checksum := ""
-		for {
-			checksum = checkForUpdateAndRestart(httpClient, checksum, context)
+			// last step is to test for new or updated configurations and start the corresponding collector
+			configurationChecksum = checkForUpdateAndRestart(httpClient, configurationChecksum, context)
 		}
 	}()
 }
 
 // report collector status to Graylog server
 func updateCollectorRegistration(httpClient *http.Client, context *context.Ctx) {
-	time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
 	statusRequest := api.NewStatusRequest()
 	response := api.UpdateRegistration(httpClient, context, &statusRequest)
 	assignments.Store.Update(response.Assignments)
@@ -66,7 +60,6 @@ func updateCollectorRegistration(httpClient *http.Client, context *context.Ctx) 
 }
 
 func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx) string {
-	time.Sleep(time.Duration(ctx.UserConfig.UpdateInterval) * time.Second)
 	response, err := api.RequestBackendList(httpClient, checksum, ctx)
 	if err != nil {
 		log.Error("Can't fetch configuration from Graylog API: ", err)
@@ -88,8 +81,6 @@ func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx
 
 // fetch configuration periodically
 func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context *context.Ctx) string {
-	time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
-
 	if assignments.Store.Len() == 0 {
 		if checksum != "_" {
 			log.Info("No configurations assigned to this instance. Skipping configuration request.")
