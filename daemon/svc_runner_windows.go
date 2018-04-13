@@ -48,14 +48,14 @@ func init() {
 func NewSvcRunner(backend backends.Backend, context *context.Ctx) Runner {
 	r := &SvcRunner{
 		RunnerCommon: RunnerCommon{
-			name:    backend.Name(),
+			name:    backend.Name,
 			context: context,
 			backend: backend,
 		},
-		exec:        backend.ExecPath(),
-		args:        backend.ExecArgs(),
+		exec:        backend.ExecutablePath,
+		args:        backend.ExecuteParameters,
 		signals:     make(chan string),
-		serviceName: "graylog-collector-" + backend.Name(),
+		serviceName: "graylog-collector-" + backend.Name,
 	}
 
 	// set default state
@@ -105,6 +105,16 @@ func (r *SvcRunner) setSupervised(state bool) {
 
 func (r *SvcRunner) SetDaemon(d *DaemonConfig) {
 	r.daemon = d
+}
+
+func (r *SvcRunner) GetBackend() backends.Backend {
+	return r.backend
+}
+
+func (r *SvcRunner) SetBackend(b backends.Backend) {
+	r.backend = b
+	r.exec = b.ExecutablePath
+	r.args = b.ExecuteParameters
 }
 
 func (r *SvcRunner) ValidateBeforeStart() error {
@@ -187,7 +197,7 @@ func (r *SvcRunner) start() error {
 	}
 
 	r.startTime = time.Now()
-	log.Infof("[%s] Starting (%s driver)", r.name, r.backend.Driver())
+	log.Infof("[%s] Starting (%s driver)", r.name, r.backend.ServiceType)
 
 	m, err := mgr.Connect()
 	if err != nil {

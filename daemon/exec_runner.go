@@ -100,6 +100,21 @@ func (r *ExecRunner) SetDaemon(d *DaemonConfig) {
 	r.daemon = d
 }
 
+func (r *ExecRunner) GetBackend() backends.Backend {
+	return r.backend
+}
+
+func (r *ExecRunner) SetBackend(b backends.Backend) {
+	r.backend = b
+	r.exec = b.ExecutablePath
+	r.args = b.ExecuteParameters
+	r.restartCount = 1
+}
+
+func (r *ExecRunner) ResetRestartCounter() {
+	r.restartCount = 1
+}
+
 func (r *ExecRunner) ValidateBeforeStart() error {
 	_, err := exec.LookPath(r.exec)
 	if err != nil {
@@ -135,7 +150,7 @@ func (r *ExecRunner) startSupervisor() {
 			// don't continue to restart after 3 tries, stop the supervisor and wait for a configuration update
 			// or manual restart
 			if r.restartCount > 3 {
-				backends.SetStatusLogErrorf(r.name, "Unable to start collector after 3 tries, giving up! " + string(r.output))
+				backends.SetStatusLogErrorf(r.name, "Unable to start collector after 3 tries, giving up! "+string(r.output))
 				r.setSupervised(false)
 				continue
 			}
@@ -183,7 +198,7 @@ func (r *ExecRunner) stop() error {
 	log.Infof("[%s] Stopping", r.name)
 
 	// give the chance to cleanup resources
-	if r.cmd.Process != nil && runtime.GOOS != "windows"{
+	if r.cmd.Process != nil && runtime.GOOS != "windows" {
 		r.cmd.Process.Signal(syscall.SIGHUP)
 	}
 	time.Sleep(2 * time.Second)

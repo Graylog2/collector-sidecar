@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/Graylog2/collector-sidecar/api"
+	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/api/rest"
 	"github.com/Graylog2/collector-sidecar/assignments"
 	"github.com/Graylog2/collector-sidecar/backends"
@@ -40,23 +41,24 @@ func StartPeriodicals(context *context.Ctx) {
 		backendChecksum, configurationChecksum := "", ""
 		for {
 			time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
+
 			// backend list is needed before configuration assignments are fetched
 			backendChecksum = fetchBackendList(httpClient, backendChecksum, context)
 			// registration response contains configuration assignments
-			updateCollectorRegistration(httpClient, context)
-			// last step is to test for new or updated configurations and start the corresponding collector
+			response := updateCollectorRegistration(httpClient, context)
+			assignments.Store.Update(response.Assignments)
+			// create process instances
+			daemon.Daemon.SyncWithAssignments(context)
+			// test for new or updated configurations and start the corresponding collector
 			configurationChecksum = checkForUpdateAndRestart(httpClient, configurationChecksum, context)
 		}
 	}()
 }
 
 // report collector status to Graylog server
-func updateCollectorRegistration(httpClient *http.Client, context *context.Ctx) {
+func updateCollectorRegistration(httpClient *http.Client, context *context.Ctx) graylog.ResponseCollectorRegistration {
 	statusRequest := api.NewStatusRequest()
-	response := api.UpdateRegistration(httpClient, context, &statusRequest)
-	assignments.Store.Update(response.Assignments)
-	backends.Store.Cleanup(assignments.Store.AssignedBackendIds())
-	daemon.Daemon.SyncWithAssignments(context)
+	return api.UpdateRegistration(httpClient, context, &statusRequest)
 }
 
 func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx) string {

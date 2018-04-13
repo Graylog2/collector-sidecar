@@ -16,14 +16,14 @@
 package backends
 
 import (
-	"github.com/Graylog2/collector-sidecar/logger"
 	"github.com/Graylog2/collector-sidecar/common"
+	"github.com/Graylog2/collector-sidecar/logger"
 )
 
 var (
 	log = logger.Log()
 	// global store of available backends, like reported from Graylog server
-	Store   = &backendStore{backends: make(map[string]*Backend)}
+	Store = &backendStore{backends: make(map[string]*Backend)}
 )
 
 type backendStore struct {
@@ -64,8 +64,15 @@ func (bs *backendStore) Update(backends []Backend) {
 		var activeIds []string
 		for _, backend := range backends {
 			activeIds = append(activeIds, backend.Id)
+
+			// add new backend
 			if bs.backends[backend.Name] == nil {
 				bs.SetBackend(backend)
+				// update if settings did change
+			} else {
+				if !bs.backends[backend.Name].EqualSettings(&backend) {
+					bs.SetBackend(backend)
+				}
 			}
 		}
 		bs.Cleanup(activeIds)
@@ -77,6 +84,7 @@ func (bs *backendStore) Update(backends []Backend) {
 func (bs *backendStore) Cleanup(validBackendIds []string) {
 	for _, backend := range bs.backends {
 		if !common.IsInList(backend.Id, validBackendIds) {
+			log.Debug("Cleaning up backend: " + backend.Name)
 			delete(bs.backends, backend.Name)
 		}
 	}

@@ -27,6 +27,8 @@ type Runner interface {
 	Restart() error
 	Shutdown() error
 	SetDaemon(*DaemonConfig)
+	GetBackend() backends.Backend
+	SetBackend(backends.Backend)
 }
 
 type RunnerCommon struct {

@@ -16,11 +16,11 @@
 package daemon
 
 import (
+	"github.com/Graylog2/collector-sidecar/assignments"
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/logger"
-	"github.com/Graylog2/collector-sidecar/assignments"
 )
 
 var (
@@ -90,7 +90,7 @@ func (dc *DaemonConfig) DeleteRunner(backendName string) {
 		return
 	}
 
-	if  dc.Runner[backendName].Running() {
+	if dc.Runner[backendName].Running() {
 		if err := dc.Runner[backendName].Shutdown(); err != nil {
 			log.Errorf("[%s] Failed to stop backend during deletion: %v", backendName, err)
 		}
@@ -103,9 +103,17 @@ func (dc *DaemonConfig) SyncWithAssignments(context *context.Ctx) {
 		return
 	}
 
-	// cleanup backends that should not run anymore
-	for name := range dc.Runner {
+	for name, runner := range dc.Runner {
 		backend := backends.Store.GetBackend(name)
+
+		// update outdated runner backend
+		runnerBackend := runner.GetBackend()
+		if backend != nil && !runnerBackend.EqualSettings(backend) {
+			log.Info("Updating process configuration for: " + runner.Name())
+			runner.SetBackend(*backend)
+		}
+
+		// cleanup backends that should not run anymore
 		if backend == nil || assignments.Store.GetAll()[backend.Id] == "" {
 			log.Info("Removing process runner: " + name)
 			dc.DeleteRunner(name)

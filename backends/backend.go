@@ -42,6 +42,31 @@ func (b *Backend) Equals(a *Backend) bool {
 	return reflect.DeepEqual(a, b)
 }
 
+func (b *Backend) EqualSettings(a *Backend) bool {
+	executeParameters, _ := common.SprintfList(
+		a.ExecuteParameters,
+		a.ConfigurationPath)
+	validationParameters, _ := common.SprintfList(
+		a.ValidationParameters,
+		a.ConfigurationPath)
+
+	aBackend := &Backend{
+		Enabled:              b.Enabled,
+		Id:                   a.Id,
+		Name:                 a.Name,
+		ServiceType:          a.ServiceType,
+		OperatingSystem:      a.OperatingSystem,
+		ExecutablePath:       a.ExecutablePath,
+		ConfigurationPath:    a.ConfigurationPath,
+		ExecuteParameters:    executeParameters,
+		ValidationParameters: validationParameters,
+		Template: 			  b.Template,
+		backendStatus:        b.Status(),
+	}
+
+	return b.Equals(aBackend)
+}
+
 func (b *Backend) ValidatePreconditions() bool {
 	return true
 }
