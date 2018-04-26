@@ -65,7 +65,10 @@ func RequestBackendList(httpClient *http.Client, checksum string, ctx *context.C
 	if resp != nil {
 		// preserver Etag as checksum for the next request. Empty string if header is not available
 		backendResponse.Checksum = resp.Header.Get("Etag")
-		if resp.StatusCode != 200 {
+		switch {
+		case resp.StatusCode == 304:
+			log.Debug("[RequestBackendList] No backend update available.")
+		case resp.StatusCode != 200:
 			msg := "Bad response status from Graylog server"
 			system.GlobalStatus.Set(backends.StatusError, msg)
 			log.Errorf("[RequestBackendList] %s: %s", msg, resp.Status)
