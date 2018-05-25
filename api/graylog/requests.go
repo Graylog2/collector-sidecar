@@ -34,7 +34,7 @@ type NodeDetailsRequest struct {
 }
 
 type StatusRequest struct {
-	Backends map[string]system.Status `json:"backends"`
+	Backends map[string]system.Status `json:"collectors"`
 	Status   int                      `json:"status"`
 	Message  string                   `json:"message"`
 }

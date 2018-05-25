@@ -14,7 +14,7 @@ type assignmentStore struct {
 }
 
 type ConfigurationAssignment struct {
-	BackendId       string `json:"backend_id"`
+	BackendId       string `json:"collector_id"`
 	ConfigurationId string `json:"configuration_id"`
 }
 

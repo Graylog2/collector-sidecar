@@ -25,7 +25,7 @@ type ResponseCollectorRegistration struct {
 }
 
 type ResponseCollectorAction struct {
-	Backend    string                 `json:"backend"`
+	Backend    string                 `json:"collector"`
 	Properties map[string]interface{} `json:"properties"`
 }
 
@@ -35,7 +35,7 @@ type ResponseCollectorRegistrationConfiguration struct {
 }
 
 type ResponseBackendList struct {
-	Backends []ResponseCollectorBackend `json:"backends"`
+	Backends []ResponseCollectorBackend `json:"collectors"`
 	Checksum string                     //Etag of the response
 }
 
@@ -59,7 +59,7 @@ type ResponseCollectorBackend struct {
 
 type ResponseCollectorConfiguration struct {
 	ConfigurationId string `json:"id"`
-	BackendId       string `json:"backend_id"`
+	BackendId       string `json:"collector_id"`
 	Name            string `json:"name"`
 	Template        string `json:"template"`
 	Checksum        string //Etag of the response
@@ -70,28 +70,4 @@ func (r *ResponseCollectorConfiguration) IsEmpty() bool {
 		return true
 	}
 	return false
-}
-
-type ResponseCollectorInput struct {
-	Id         string                 `json:"input_id"`
-	Backend    string                 `json:"backend"`
-	Type       string                 `json:"type"`
-	Name       string                 `json:"name"`
-	Properties map[string]interface{} `json:"properties"`
-	ForwardTo  string                 `json:"forward_to"`
-}
-
-type ResponseCollectorOutput struct {
-	Id         string                 `json:"output_id"`
-	Backend    string                 `json:"backend"`
-	Type       string                 `json:"type"`
-	Name       string                 `json:"name"`
-	Properties map[string]interface{} `json:"properties"`
-}
-
-type ResponseCollectorSnippet struct {
-	Id      string `json:"snippet_id"`
-	Backend string `json:"backend"`
-	Name    string `json:"name"`
-	Value   string `json:"snippet"`
 }
