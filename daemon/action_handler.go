@@ -31,6 +31,10 @@ func HandleCollectorActions(actions []graylog.ResponseCollectorAction) {
 
 func restartAction(action graylog.ResponseCollectorAction) {
 	backend := backends.Store.GetBackendById(action.BackendId)
+	if backend == nil {
+		log.Errorf("Got action for non-existing collector: %s", action.BackendId)
+		return
+	}
 	for name, runner := range Daemon.Runner {
 		if name == backend.Name {
 			log.Infof("[%s] Executing requested collector restart", name)
