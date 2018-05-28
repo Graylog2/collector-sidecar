@@ -17,6 +17,7 @@ package daemon
 
 import (
 	"github.com/Graylog2/collector-sidecar/api/graylog"
+	"github.com/Graylog2/collector-sidecar/backends"
 )
 
 func HandleCollectorActions(actions []graylog.ResponseCollectorAction) {
@@ -29,8 +30,9 @@ func HandleCollectorActions(actions []graylog.ResponseCollectorAction) {
 }
 
 func restartAction(action graylog.ResponseCollectorAction) {
+	backend := backends.Store.GetBackendById(action.BackendId)
 	for name, runner := range Daemon.Runner {
-		if name == action.Backend {
+		if name == backend.Name {
 			log.Infof("[%s] Executing requested collector restart", name)
 			runner.Restart()
 		}
