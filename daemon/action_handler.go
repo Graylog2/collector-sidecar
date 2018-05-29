@@ -18,27 +18,57 @@ package daemon
 import (
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/backends"
+	"github.com/Graylog2/collector-sidecar/common"
 )
 
 func HandleCollectorActions(actions []graylog.ResponseCollectorAction) {
 	for _, action := range actions {
+		backend := backends.Store.GetBackendById(action.BackendId)
+		if backend == nil {
+			log.Errorf("Got action for non-existing collector: %s", action.BackendId)
+			continue
+		}
+
 		switch {
+		case action.Properties["start"] == true:
+			startAction(backend)
 		case action.Properties["restart"] == true:
-			restartAction(action)
+			restartAction(backend)
+		case action.Properties["stop"] == true:
+			stopAction(backend)
+		default:
+			log.Infof("Got unsupported collector command: %s", common.Inspect(action.Properties))
 		}
 	}
 }
 
-func restartAction(action graylog.ResponseCollectorAction) {
-	backend := backends.Store.GetBackendById(action.BackendId)
-	if backend == nil {
-		log.Errorf("Got action for non-existing collector: %s", action.BackendId)
-		return
-	}
+func startAction(backend *backends.Backend) {
 	for name, runner := range Daemon.Runner {
 		if name == backend.Name {
-			log.Infof("[%s] Executing requested collector restart", name)
+			if !runner.Running() {
+				log.Infof("[%s] Staring collector", name)
+				runner.Restart()
+			} else {
+				log.Infof("Collector [%s] is already running, skipping start action.", name)
+			}
+		}
+	}
+}
+
+func restartAction(backend *backends.Backend) {
+	for name, runner := range Daemon.Runner {
+		if name == backend.Name {
+			log.Infof("[%s] Restarting collector", name)
 			runner.Restart()
+		}
+	}
+}
+
+func stopAction(backend *backends.Backend) {
+	for name, runner := range Daemon.Runner {
+		if name == backend.Name {
+			log.Infof("[%s] Stopping collector", name)
+			runner.Shutdown()
 		}
 	}
 }
