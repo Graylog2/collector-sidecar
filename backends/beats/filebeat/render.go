@@ -42,7 +42,7 @@ func (fbc *FileBeatConfig) snippetsToString() string {
 		}
 		result.WriteString("\n")
 	}
-	return result.String()
+	return string(common.ConvertLineBreak(result.Bytes()))
 }
 
 func (fbc *FileBeatConfig) Render() bytes.Buffer {

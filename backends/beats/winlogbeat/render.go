@@ -42,7 +42,7 @@ func (wlbc *WinLogBeatConfig) snippetsToString() string {
 		}
 		result.WriteString("\n")
 	}
-	return result.String()
+	return string(common.ConvertLineBreak(result.Bytes()))
 }
 
 func (wlbc *WinLogBeatConfig) Render() bytes.Buffer {
