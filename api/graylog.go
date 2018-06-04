@@ -42,7 +42,7 @@ func RequestBackendList(httpClient *http.Client, checksum string, ctx *context.C
 	c := rest.NewClient(httpClient, ctx)
 	c.BaseURL = ctx.ServerUrl
 
-	r, err := c.NewRequest("GET", "/plugins/org.graylog.plugins.collector/sidecar/collectors", nil, nil)
+	r, err := c.NewRequest("GET", "/plugins/org.graylog.plugins.sidecar/sidecar/collectors", nil, nil)
 	if err != nil {
 		msg := "Can not initialize REST request"
 		system.GlobalStatus.Set(backends.StatusError, msg)
@@ -88,7 +88,7 @@ func RequestConfiguration(
 	c := rest.NewClient(httpClient, ctx)
 	c.BaseURL = ctx.ServerUrl
 
-	r, err := c.NewRequest("GET", "/plugins/org.graylog.plugins.collector/sidecar/configurations/render/"+ctx.NodeId+"/"+configurationId, nil, nil)
+	r, err := c.NewRequest("GET", "/plugins/org.graylog.plugins.sidecar/sidecar/configurations/render/"+ctx.NodeId+"/"+configurationId, nil, nil)
 	if err != nil {
 		msg := "Can not initialize REST request"
 		system.GlobalStatus.Set(backends.StatusError, msg)
@@ -154,7 +154,7 @@ func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *grayl
 		}
 	}
 
-	r, err := c.NewRequest("PUT", "/plugins/org.graylog.plugins.collector/sidecars/"+ctx.NodeId, nil, registration)
+	r, err := c.NewRequest("PUT", "/plugins/org.graylog.plugins.sidecar/sidecars/"+ctx.NodeId, nil, registration)
 	if err != nil {
 		log.Error("[UpdateRegistration] Can not initialize REST request")
 		return graylog.ResponseCollectorRegistration{}
