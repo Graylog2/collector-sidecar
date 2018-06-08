@@ -29,12 +29,12 @@ import (
 	"time"
 
 	"github.com/Graylog2/collector-sidecar/common"
-	"github.com/Graylog2/collector-sidecar/logger"
 	"github.com/Graylog2/collector-sidecar/context"
+	"github.com/Graylog2/collector-sidecar/logger"
 )
 
 var (
-	log = logger.Log()
+	log       = logger.Log()
 	userAgent = "Graylog Collector v" + common.CollectorVersion
 )
 

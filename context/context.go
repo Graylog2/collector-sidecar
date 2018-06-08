@@ -18,24 +18,24 @@ package context
 import (
 	"fmt"
 	"net/url"
-	"runtime"
-	"path/filepath"
 	"os"
+	"path/filepath"
+	"runtime"
 
 	"github.com/Graylog2/collector-sidecar/cfgfile"
 	"github.com/Graylog2/collector-sidecar/common"
-	"github.com/Graylog2/collector-sidecar/system"
 	"github.com/Graylog2/collector-sidecar/logger"
+	"github.com/Graylog2/collector-sidecar/system"
 )
 
 var log = logger.Log()
 
 type Ctx struct {
-	ServerUrl   *url.URL
-	NodeId 		string
-	NodeName    string
-	UserConfig  *cfgfile.SidecarConfig
-	Inventory   *system.Inventory
+	ServerUrl  *url.URL
+	NodeId     string
+	NodeName   string
+	UserConfig *cfgfile.SidecarConfig
+	Inventory  *system.Inventory
 }
 
 func NewContext() *Ctx {
@@ -79,7 +79,7 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 			log.Fatal("No node name configured and not able to obtain hostname as alternative.")
 		}
 	}
-        ctx.NodeName = ctx.UserConfig.NodeName
+	ctx.NodeName = ctx.UserConfig.NodeName
 
 	// cache_path
 	if ctx.UserConfig.CachePath == "" {

@@ -21,7 +21,7 @@ import (
 )
 
 type RegistrationRequest struct {
-	NodeName      string           `json:"node_name"`
+	NodeName    string             `json:"node_name"`
 	NodeDetails NodeDetailsRequest `json:"node_details"`
 }
 

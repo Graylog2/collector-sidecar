@@ -56,7 +56,9 @@ func (dist *Distributor) Stop(s service.Service) error {
 		runner.Shutdown()
 	}
 	for _, runner := range Daemon.Runner {
-		for runner.Running() {time.Sleep(300 * time.Millisecond)}
+		for runner.Running() {
+			time.Sleep(300 * time.Millisecond)
+		}
 	}
 	dist.Running = false
 

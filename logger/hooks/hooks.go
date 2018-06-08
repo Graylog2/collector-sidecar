@@ -18,12 +18,12 @@ package hooks
 import (
 	"path/filepath"
 
-	"github.com/rifflock/lfshook"
 	"github.com/Sirupsen/logrus"
+	"github.com/rifflock/lfshook"
 
+	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/logger"
-	"github.com/Graylog2/collector-sidecar/common"
 )
 
 func AddLogHooks(context *context.Ctx, log *logrus.Logger) {
@@ -40,8 +40,8 @@ func filesystemHook(context *context.Ctx, log *logrus.Logger) {
 	log.Hooks.Add(lfshook.NewHook(lfshook.WriterMap{
 		logrus.FatalLevel: writer,
 		logrus.ErrorLevel: writer,
-		logrus.WarnLevel: writer,
-		logrus.InfoLevel: writer,
+		logrus.WarnLevel:  writer,
+		logrus.InfoLevel:  writer,
 		logrus.DebugLevel: writer,
 	}))
 }

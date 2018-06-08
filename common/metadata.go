@@ -16,7 +16,7 @@
 package common
 
 var (
-	CollectorVersion string
+	CollectorVersion       string
 	CollectorVersionSuffix string
-	GitRevision string
+	GitRevision            string
 )
