@@ -35,7 +35,7 @@ func (b *Backend) renderToFile() error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(b.ConfigurationPath, stringConfig, 0644)
+	err = ioutil.WriteFile(b.ConfigurationPath, stringConfig, 0600)
 	return err
 }
 
