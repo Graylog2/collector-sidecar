@@ -175,6 +175,7 @@ func (r *ExecRunner) start() error {
 	// start the actual process and don't block
 	r.startTime = time.Now()
 	r.run()
+	// TODO(bernd): Why has this been added? It returns with an error because the process is already running
 	r.output, _ = r.cmd.CombinedOutput()
 
 	r.setSupervised(true)
