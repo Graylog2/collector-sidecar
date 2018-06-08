@@ -25,7 +25,7 @@ type ResponseCollectorRegistration struct {
 }
 
 type ResponseCollectorAction struct {
-	BackendId  string                 `json:"collectorId"`
+	BackendId  string                 `json:"collector_id"`
 	Properties map[string]interface{} `json:"properties"`
 }
 
