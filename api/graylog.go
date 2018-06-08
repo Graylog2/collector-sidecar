@@ -42,7 +42,7 @@ func RequestBackendList(httpClient *http.Client, checksum string, ctx *context.C
 	c := rest.NewClient(httpClient, ctx)
 	c.BaseURL = ctx.ServerUrl
 
-	r, err := c.NewRequest("GET", "/plugins/org.graylog.plugins.sidecar/sidecar/collectors", nil, nil)
+	r, err := c.NewRequest("GET", "/sidecar/collectors", nil, nil)
 	if err != nil {
 		msg := "Can not initialize REST request"
 		system.GlobalStatus.Set(backends.StatusError, msg)
@@ -63,7 +63,7 @@ func RequestBackendList(httpClient *http.Client, checksum string, ctx *context.C
 	}
 
 	if resp != nil {
-		// preserver Etag as checksum for the next request. Empty string if header is not available
+		// preserve Etag as checksum for the next request. Empty string if header is not available
 		backendResponse.Checksum = resp.Header.Get("Etag")
 		switch {
 		case resp.StatusCode == 304:
@@ -88,7 +88,7 @@ func RequestConfiguration(
 	c := rest.NewClient(httpClient, ctx)
 	c.BaseURL = ctx.ServerUrl
 
-	r, err := c.NewRequest("GET", "/plugins/org.graylog.plugins.sidecar/sidecar/configurations/render/"+ctx.NodeId+"/"+configurationId, nil, nil)
+	r, err := c.NewRequest("GET", "/sidecar/configurations/render/"+ctx.NodeId+"/"+configurationId, nil, nil)
 	if err != nil {
 		msg := "Can not initialize REST request"
 		system.GlobalStatus.Set(backends.StatusError, msg)
@@ -109,7 +109,7 @@ func RequestConfiguration(
 	}
 
 	if resp != nil {
-		// preserver Etag as checksum for the next request. Empty string if header is not available
+		// preserve Etag as checksum for the next request. Empty string if header is not available
 		configurationResponse.Checksum = resp.Header.Get("Etag")
 		switch {
 		case resp.StatusCode == 204:
@@ -154,7 +154,7 @@ func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *grayl
 		}
 	}
 
-	r, err := c.NewRequest("PUT", "/plugins/org.graylog.plugins.sidecar/sidecars/"+ctx.NodeId, nil, registration)
+	r, err := c.NewRequest("PUT", "/sidecars/"+ctx.NodeId, nil, registration)
 	if err != nil {
 		log.Error("[UpdateRegistration] Can not initialize REST request")
 		return graylog.ResponseCollectorRegistration{}
