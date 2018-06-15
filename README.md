@@ -2,10 +2,9 @@
 
 [![Build Status](https://travis-ci.org/Graylog2/collector-sidecar.svg?branch=master)](https://travis-ci.org/Graylog2/collector-sidecar) [![Go Report Card](https://goreportcard.com/badge/github.com/graylog2/collector-sidecar)](https://goreportcard.com/report/github.com/graylog2/collector-sidecar)
 
-**Required Graylog version:** 2.0 and later + installed [graylog-plugin-collector](https://github.com/Graylog2/graylog-plugin-collector/blob/master/README.md)
+**Required Graylog version:** 3.0 and later.
 
-The Graylog Collector Sidecar is a supervisor process for 3rd party log collectors like NXLog. The Sidecar program is able to fetch configurations from a Graylog server and render
-them as a valid configuration file for various log collectors. You can think of it like a centralized configuration management system for your log collectors.
+The Graylog Collector Sidecar is a supervisor process for 3rd party log collectors like NXLog and filebeat. The Sidecar program is able to fetch and validate configuration files from a Graylog server for various log collectors. You can think of it like a centralized configuration and process management system for your log collectors.
 
 ## Documentation
 
@@ -18,6 +17,7 @@ Especially the [Step-by-Step](http://docs.graylog.org/en/2.4/pages/collector_sid
 | ---------------- | ---------------------- |
 | 0.0.9            | 2.1.x                  |
 | 0.1.x            | 2.2.x, 2.3.x, 2.4.x    |
+| 1.x.x            | 3.0.x                  |
 
 [Download a package](https://github.com/Graylog2/collector-sidecar/releases) and install it on the target system.
 
@@ -28,7 +28,7 @@ Especially the [Step-by-Step](http://docs.graylog.org/en/2.4/pages/collector_sid
 The Beats binaries (Filebeat and Winlogeventbeat) are included in the Sidecar package. So installation is just one command.
 
 ```
-  $ sudo dpkg -i collector-sidecar_0.1.5-1_amd64.deb
+  $ sudo dpkg -i collector-sidecar_1.0.0-1_amd64.deb
 ```
 
 Edit `/etc/graylog/collector-sidecar/collector_sidecar.yml`, you should set at least the correct URL to your Graylog server and proper tags.
@@ -49,7 +49,7 @@ Create a system service and start it
 **CentOS**
 
 ```
-  $ sudo rpm -i collector-sidecar-0.1.5-1.x86_64.rpm
+  $ sudo rpm -i collector-sidecar-1.0.0-1.x86_64.rpm
 ```
 
 Activate the Sidecar as a system service
@@ -105,7 +105,7 @@ Install the NXLog package from the offical download [page](https://nxlog.org/pro
   $ sudo update-rc.d -f nxlog remove
   $ sudo gpasswd -a nxlog adm
  
-  $ sudo dpkg -i collector-sidecar_0.1.5-1_amd64.deb
+  $ sudo dpkg -i collector-sidecar_1.0.0-1_amd64.deb
   $ sudo chown -R nxlog.nxlog /var/spool/collector-sidecar/nxlog
 ```
 
@@ -129,7 +129,7 @@ Edit `/etc/graylog/collector-sidecar/collector_sidecar.yml`accordingly.
   $ sudo gpasswd -a nxlog root
   $ sudo chown -R nxlog.nxlog /var/spool/collector-sidecar/nxlog
 
-  $ sudo rpm -i collector-sidecar-0.1.5-1.x86_64.rpm
+  $ sudo rpm -i collector-sidecar-1.0.0-1.x86_64.rpm
 ```
 
 Activate the Sidecar as a system service
