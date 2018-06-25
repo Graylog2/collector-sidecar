@@ -16,7 +16,7 @@ TEST_SUITE = \
 
 all: clean misc build
 
-misc: ## Build NXMock for testing collector-sidecar
+misc: ## Build NXMock for testing sidecar
 	$(GO) build -o misc/nxmock/nxlog misc/nxmock/main.go
 
 fmt: ## Run gofmt
@@ -51,14 +51,14 @@ endif
 test: ## Run tests
 	$(GO) test -v $(TEST_SUITE)
 
-build: ## Build collector-sidecar binary for local target system
-	$(GO) build $(BUILD_OPTS) -v -i -o graylog-collector-sidecar
+build: ## Build sidecar binary for local target system
+	$(GO) build $(BUILD_OPTS) -v -i -o graylog-sidecar
 
 build-all: build-linux build-linux32 build-darwin build-windows build-windows32
 
-build-linux: ## Build collector-sidecar binary for Linux
+build-linux: ## Build sidecar binary for Linux
 	@mkdir -p build/$(COLLECTOR_VERSION)/linux/amd64
-	GOOS=linux GOARCH=amd64 $(GO) build $(BUILD_OPTS) -v -i -o build/$(COLLECTOR_VERSION)/linux/amd64/graylog-collector-sidecar
+	GOOS=linux GOARCH=amd64 $(GO) build $(BUILD_OPTS) -v -i -o build/$(COLLECTOR_VERSION)/linux/amd64/graylog-sidecar
 
 solaris-sigar-patch:
 	# https://github.com/cloudfoundry/gosigar/pull/28
@@ -66,29 +66,29 @@ solaris-sigar-patch:
 		wget -O vendor/github.com/cloudfoundry/gosigar/sigar_solaris.go https://raw.githubusercontent.com/amitkris/gosigar/9fc0903125acd1a0dc7635f8670088339865bcd5/sigar_solaris.go; \
 	fi
 
-build-solaris: solaris-sigar-patch ## Build collector-sidecar binary for Solaris/OmniOS/Illumos
+build-solaris: solaris-sigar-patch ## Build sidecar binary for Solaris/OmniOS/Illumos
 	@mkdir -p build/$(COLLECTOR_VERSION)/solaris/amd64
-	GOOS=solaris GOARCH=amd64 $(GO) build $(BUILD_OPTS) -v -i -o build/$(COLLECTOR_VERSION)/solaris/amd64/graylog-collector-sidecar
+	GOOS=solaris GOARCH=amd64 $(GO) build $(BUILD_OPTS) -v -i -o build/$(COLLECTOR_VERSION)/solaris/amd64/graylog-sidecar
 
-build-linux32: ## Build collector-sidecar binary for Linux 32bit
+build-linux32: ## Build sidecar binary for Linux 32bit
 	@mkdir -p build/$(COLLECTOR_VERSION)/linux/386
-	GOOS=linux GOARCH=386 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_linux32  -v -i -o build/$(COLLECTOR_VERSION)/linux/386/graylog-collector-sidecar
+	GOOS=linux GOARCH=386 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_linux32  -v -i -o build/$(COLLECTOR_VERSION)/linux/386/graylog-sidecar
 
-build-darwin: ## Build collector-sidecar binary for OSX
+build-darwin: ## Build sidecar binary for OSX
 	@mkdir -p build/$(COLLECTOR_VERSION)/darwin/amd64
-	GOOS=darwin GOARCH=amd64 $(GO) build $(BUILD_OPTS) -v -i -o build/$(COLLECTOR_VERSION)/darwin/amd64/graylog-collector-sidecar
+	GOOS=darwin GOARCH=amd64 $(GO) build $(BUILD_OPTS) -v -i -o build/$(COLLECTOR_VERSION)/darwin/amd64/graylog-sidecar
 
 build-freebsd:
 	@mkdir -p build/$(COLLECTOR_VERSION)/freebsd/amd64
-	GOOS=freebsd GOARCH=amd64 $(GO) build $(BUILD_OPTS) -v -i -o build/$(COLLECTOR_VERSION)/freebsd/amd64/graylog-collector-sidecar
+	GOOS=freebsd GOARCH=amd64 $(GO) build $(BUILD_OPTS) -v -i -o build/$(COLLECTOR_VERSION)/freebsd/amd64/graylog-sidecar
 
-build-windows: ## Build collector-sidecar binary for Windows
+build-windows: ## Build sidecar binary for Windows
 	@mkdir -p build/$(COLLECTOR_VERSION)/windows/amd64
-	GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_win -v -i -o build/$(COLLECTOR_VERSION)/windows/amd64/graylog-collector-sidecar.exe
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_win -v -i -o build/$(COLLECTOR_VERSION)/windows/amd64/graylog-sidecar.exe
 
-build-windows32: ## Build collector-sidecar binary for Windows 32bit
+build-windows32: ## Build sidecar binary for Windows 32bit
 	@mkdir -p build/$(COLLECTOR_VERSION)/windows/386
-	GOOS=windows GOARCH=386 CGO_ENABLED=1 CC=i686-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_win32 -v -i -o build/$(COLLECTOR_VERSION)/windows/386/graylog-collector-sidecar.exe
+	GOOS=windows GOARCH=386 CGO_ENABLED=1 CC=i686-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_win32 -v -i -o build/$(COLLECTOR_VERSION)/windows/386/graylog-sidecar.exe
 
 package-all: prepare-package package-linux package-linux32 package-windows package-tar
 
@@ -113,7 +113,7 @@ package-windows: ## Create Windows installer
 
 package-tar: ## Create tar archive for all platforms
 	@mkdir -p dist/pkg
-	@tar --transform="s|/build|/collector-sidecar|" -Pczf dist/pkg/collector-sidecar-$(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX).tar.gz ./build
+	@tar --transform="s|/build|/graylog-sidecar|" -Pczf dist/pkg/graylog-sidecar-$(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX).tar.gz ./build
 
 help:
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | $(AWK) 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'

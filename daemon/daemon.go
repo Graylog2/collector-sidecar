@@ -51,7 +51,7 @@ func NewConfig() *DaemonConfig {
 	}
 
 	dc := &DaemonConfig{
-		Name:        "collector-sidecar",
+		Name:        "graylog-sidecar",
 		DisplayName: "Graylog collector sidecar",
 		Description: "Wrapper service for Graylog controlled collector",
 		Dir:         rootDir,
