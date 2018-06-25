@@ -26,7 +26,7 @@ import (
 
 func TestGetCollectorIdFromExistingFile(t *testing.T) {
 	content := []byte(" 2135792e-8556-4bf0-8aef-503f29890b09 \n")
-	tmpfile, err := ioutil.TempFile("", "test-collector-id")
+	tmpfile, err := ioutil.TempFile("", "test-node-id")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,13 +45,13 @@ func TestGetCollectorIdFromExistingFile(t *testing.T) {
 }
 
 func TestGetCollectorIdFromNonExistingFile(t *testing.T) {
-	dir, err := ioutil.TempDir("", "test-collector-id")
+	dir, err := ioutil.TempDir("", "test-node-id")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(dir)
 
-	tmpfile := filepath.Join(dir, "collector-id")
+	tmpfile := filepath.Join(dir, "node-id")
 	result := GetCollectorId("file:/" + tmpfile)
 	match, err := regexp.Match("^[0-9a-f]{8}-", []byte(result))
 	if err != nil {

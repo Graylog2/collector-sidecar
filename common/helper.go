@@ -82,19 +82,19 @@ func GetCollectorId(collectorId string) string {
 		filePath := strings.SplitAfterN(collectorId, ":", 2)[1]
 		err := FileExists(filePath)
 		if err != nil {
-			log.Info("collector-id file doesn't exist, generating a new one")
+			log.Info("node-id file doesn't exist, generating a new one")
 			CreatePathToFile(filePath)
 			ioutil.WriteFile(filePath, []byte(RandomUuid()), 0644)
 		}
 		file, err := ioutil.ReadFile(filePath)
 		if err != nil {
-			log.Fatal("Can not read collector-id file: ", err)
+			log.Fatal("Can not read node-id file: ", err)
 		}
 		id = strings.Trim(string(file), " \n")
 	}
 
 	if id != "" && !cfgfile.ValidateConfig() {
-		log.Info("Using collector-id: ", id)
+		log.Info("Using node-id: ", id)
 	}
 	return id
 }
