@@ -1,21 +1,21 @@
 require_relative 'tools'
 
 class GraylogSidecar < FPM::Cookery::Recipe
-  description 'Graylog collector sidecar'
+  description 'Graylog sidecar'
 
-  name     'collector-sidecar'
+  name     'graylog-sidecar'
   version  data.version
   revision data.revision
   homepage 'https://graylog.org'
   arch     'i386'
 
-  source   "file:../../build/#{version}/linux/386/graylog-collector-sidecar"
+  source   "file:../../build/#{version}/linux/386/graylog-sidecar"
 
   maintainer 'Graylog, Inc. <hello@graylog.org>'
   vendor     'graylog'
   license    'GPLv3'
 
-  config_files '/etc/graylog/collector-sidecar/collector_sidecar.yml'
+  config_files '/etc/graylog/sidecar/sidecar.yml'
 
   fpm_attributes rpm_os: 'linux'
 
@@ -23,12 +23,12 @@ class GraylogSidecar < FPM::Cookery::Recipe
   end
 
   def install
-    bin.install 'graylog-collector-sidecar'
+    bin.install 'graylog-sidecar'
     bin.install '../../collectors/filebeat/linux/x86/filebeat'
-    etc('graylog/collector-sidecar').install '../../../collector_sidecar.yml'
-    etc('graylog/collector-sidecar/generated').mkdir
-    var('log/graylog/collector-sidecar').mkdir
-    var('run/graylog/collector-sidecar').mkdir
-    var('spool/collector-sidecar/nxlog').mkdir
+    etc('graylog/sidecar').install '../../../sidecar.yml'
+    etc('graylog/sidecar/generated').mkdir
+    var('log/graylog/sidecar').mkdir
+    var('run/graylog/sidecar').mkdir
+    var('spool/graylog-sidecar/nxlog').mkdir
   end
 end

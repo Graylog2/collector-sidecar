@@ -39,7 +39,6 @@ dist/cache
 dist/pkg
 dist/tmp-build
 dist/tmp-dest
-dist/graylog_collector_sidecar_installer.exe
 dist/collectors/
 
 .filebeat

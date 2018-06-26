@@ -1,0 +1,25 @@
+server_url: <SERVERURL> 
+update_interval: <UPDATEINTERVAL>
+tls_skip_verify: <TLSSKIPVERIFY>
+send_status: <SENDSTATUS>
+list_log_files:
+node_id: <NODEID>
+collector_id: file:C:\Program Files\graylog\sidecar\node-id
+cache_path: C:\Program Files\graylog\sidecar\cache
+log_path: C:\Program Files\graylog\sidecar\logs
+log_rotation_time: 86400
+log_max_age: 604800
+tags: <TAGS>
+backends:
+    - name: nxlog
+      enabled: <NXLOGENABLED>
+      binary_path: C:\Program Files (x86)\nxlog\nxlog.exe
+      configuration_path: C:\Program Files\graylog\sidecar\generated\nxlog.conf
+    - name: winlogbeat
+      enabled: <WINLOGBEATENABLED>
+      binary_path: C:\Program Files\graylog\sidecar\winlogbeat.exe
+      configuration_path: C:\Program Files\graylog\sidecar\generated\winlogbeat.yml
+    - name: filebeat
+      enabled: <FILEBEATENABLED>
+      binary_path: C:\Program Files\graylog\sidecar\filebeat.exe
+      configuration_path: C:\Program Files\graylog\sidecar\generated\filebeat.yml

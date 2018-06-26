@@ -31,7 +31,7 @@ func AddLogHooks(context *context.Ctx, log *logrus.Logger) {
 }
 
 func filesystemHook(context *context.Ctx, log *logrus.Logger) {
-	logfile := filepath.Join(context.UserConfig.LogPath, "collector_sidecar.log")
+	logfile := filepath.Join(context.UserConfig.LogPath, "sidecar.log")
 	err := common.CreatePathToFile(logfile)
 	if err != nil {
 		log.Fatalf("Failed to create directory for log file %s: %s", logfile, err)

@@ -49,9 +49,9 @@ var (
 func init() {
 	var configurationPath string
 	if runtime.GOOS == "windows" {
-		configurationPath = filepath.Join(os.Getenv("SystemDrive")+"\\", "Program Files", "graylog", "collector-sidecar", "collector_sidecar.yml")
+		configurationPath = filepath.Join(os.Getenv("SystemDrive")+"\\", "Program Files", "graylog", "sidecar", "sidecar.yml")
 	} else {
-		configurationPath = filepath.Join("/etc", "graylog", "collector-sidecar", "collector_sidecar.yml")
+		configurationPath = filepath.Join("/etc", "graylog", "sidecar", "sidecar.yml")
 	}
 
 	serviceParam = flag.String("service", "", "Control the system service [start stop restart install uninstall]")
@@ -60,7 +60,7 @@ func init() {
 	debug = flag.Bool("debug", false, "Set log level to debug")
 
 	flag.Usage = func() {
-		fmt.Fprint(os.Stderr, "Usage: graylog-collector-sidecar -c [CONFIGURATION FILE]\n")
+		fmt.Fprint(os.Stderr, "Usage: graylog-sidecar -c [CONFIGURATION FILE]\n")
 		flag.PrintDefaults()
 	}
 

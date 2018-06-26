@@ -3,9 +3,9 @@ update_interval: 10
 tls_skip_verify: false
 send_status: true
 list_log_files:
-collector_id: file:/etc/graylog/collector-sidecar/collector-id
-cache_path: /var/cache/graylog/collector-sidecar
-log_path: /var/log/graylog/collector-sidecar
+collector_id: file:/etc/graylog/sidecar/node-id
+cache_path: /var/cache/graylog/sidecar
+log_path: /var/log/graylog/sidecar
 log_rotation_time: 86400
 log_max_age: 604800
 tags:
@@ -15,8 +15,8 @@ backends:
     - name: nxlog
       enabled: false
       binary_path: /usr/bin/nxlog
-      configuration_path: /etc/graylog/collector-sidecar/generated/nxlog.conf
+      configuration_path: /etc/graylog/sidecar/generated/nxlog.conf
     - name: filebeat
       enabled: true
       binary_path: /usr/bin/filebeat
-      configuration_path: /etc/graylog/collector-sidecar/generated/filebeat.yml
+      configuration_path: /etc/graylog/sidecar/generated/filebeat.yml

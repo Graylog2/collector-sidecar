@@ -1,9 +1,9 @@
 ; -------------------------------
 ; Start
  
-  Name "Graylog Collector Sidecar"
+  Name "Graylog Sidecar"
   !define MUI_FILE "savefile"
-  !define MUI_BRANDINGTEXT "Graylog Collector Sidecar v${VERSION}${VERSION_SUFFIX}"
+  !define MUI_BRANDINGTEXT "Graylog Sidecar v${VERSION}${VERSION_SUFFIX}"
   CRCCheck On
   SetCompressor "bzip2"
  
@@ -20,14 +20,14 @@
 
   VIProductVersion "0.${VERSION}${VERSION_SUFFIX}"
   VIAddVersionKey "FileVersion" "${VERSION}"
-  VIAddVersionKey "FileDescription" "Graylog Collector Sidecar"
+  VIAddVersionKey "FileDescription" "Graylog Sidecar"
   VIAddVersionKey "LegalCopyright" "Graylog, Inc."
  
 ;---------------------------------
 ;General
 
   !searchreplace SUFFIX '${VERSION_SUFFIX}' "-" "."
-  OutFile "pkg/collector_sidecar_installer_${VERSION}-${REVISION}${SUFFIX}.exe"
+  OutFile "pkg/graylog_sidecar_installer_${VERSION}-${REVISION}${SUFFIX}.exe"
   RequestExecutionLevel admin ;Require admin rights
   ShowInstDetails "nevershow"
   ShowUninstDetails "nevershow"
@@ -95,7 +95,7 @@
       SetRegView 32
       Strcpy $GraylogDir "$PROGRAMFILES32\Graylog"
     ${EndIf}
-    Strcpy $INSTDIR "$GraylogDir\collector-sidecar"
+    Strcpy $INSTDIR "$GraylogDir\sidecar"
   !macroend
 
 ;--------------------------------
@@ -121,56 +121,56 @@ Section "Install"
   ${EndIf}
 
   SetOverwrite off
-  File /oname=collector_sidecar.yml "../collector_sidecar_windows.yml"
+  File /oname=sidecar.yml "../sidecar_windows.yml"
   SetOverwrite on
-  File /oname=collector_sidecar.yml.dist "../collector_sidecar_windows.yml"
+  File /oname=sidecar.yml.dist "../sidecar_windows.yml"
   File "../COPYING"
   File "graylog.ico"  
 
   ;Stop service to allow binary upgrade
-  !insertmacro _IfKeyExists HKLM "SYSTEM\CurrentControlSet\Services" "collector-sidecar"
+  !insertmacro _IfKeyExists HKLM "SYSTEM\CurrentControlSet\Services" "graylog-sidecar"
   Pop $R0
   ${If} $R0 = 1
-    ExecWait '"$INSTDIR\graylog-collector-sidecar.exe" -service stop'
+    ExecWait '"$INSTDIR\graylog-sidecar.exe" -service stop'
   ${EndIf}
 
   ${If} ${RunningX64}
-    File /oname=Graylog-collector-sidecar.exe "../build/${VERSION}/windows/amd64/graylog-collector-sidecar.exe"
+    File /oname=Graylog-sidecar.exe "../build/${VERSION}/windows/amd64/graylog-sidecar.exe"
   ${Else}
-    File /oname=Graylog-collector-sidecar.exe "../build/${VERSION}/windows/386/graylog-collector-sidecar.exe"
+    File /oname=Graylog-sidecar.exe "../build/${VERSION}/windows/386/graylog-sidecar.exe"
   ${EndIf}
 
   ;When we stop the Sidecar service we also turn it on again
   ${If} $R0 = 1
-    ExecWait '"$INSTDIR\graylog-collector-sidecar.exe" -service start'
+    ExecWait '"$INSTDIR\graylog-sidecar.exe" -service start'
   ${EndIf}
 
   WriteUninstaller "$INSTDIR\uninstall.exe"
 
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogCollectorSidecar" \
-                 "DisplayName" "Graylog Collector Sidecar"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogCollectorSidecar" \
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
+                 "DisplayName" "Graylog Sidecar"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
                  "UninstallString" "$\"$INSTDIR\uninstall.exe$\""
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogCollectorSidecar" \
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
                  "DisplayIcon" "$\"$INSTDIR\graylog.ico$\""				 
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogCollectorSidecar" \
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
                  "QuietUninstallString" "$\"$INSTDIR\uninstall.exe$\" /S"				 
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogCollectorSidecar" \
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
                  "DisplayVersion" "${VERSION}${VERSION_SUFFIX}"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogCollectorSidecar" \
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
                  "InstallLocation" "$INSTDIR"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogCollectorSidecar" \
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
                  "RegCompany" "Graylog, Inc."
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogCollectorSidecar" \
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
                  "Publisher" "Graylog, Inc."
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogCollectorSidecar" \
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
                  "HelpLink" "https://www.graylog.org"
 				 
-  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogCollectorSidecar" \
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
                  "NoModify" "1"
-  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogCollectorSidecar" \
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
                  "NoRepair" "1"				 
-  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogCollectorSidecar" \
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
                  "EstimatedSize" "25000"
 
 
@@ -240,7 +240,7 @@ Section "Post"
     StrCpy $Tags "windows, iis"
   ${EndIf}
   ${If} $NodeId == ""
-    StrCpy $NodeId "graylog-collector-sidecar"
+    StrCpy $NodeId "graylog-sidecar"
   ${EndIf}
   ${If} $UpdateInterval == ""
     StrCpy $UpdateInterval "10"
@@ -261,15 +261,15 @@ Section "Post"
     StrCpy $WinlogbeatEnabled "true"
   ${EndIf}
 
-  !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<SERVERURL>" $ServerUrl
-  !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<TAGS>" `[$Tags]`
-  !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<NODEID>" $NodeId
-  !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<UPDATEINTERVAL>" $UpdateInterval
-  !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<TLSSKIPVERIFY>" $TlsSkipVerify
-  !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<SENDSTATUS>" $SendStatus
-  !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<NXLOGENABLED>" $NxlogEnabled
-  !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<FILEBEATENABLED>" $FilebeatEnabled
-  !insertmacro _ReplaceInFile "$INSTDIR\collector_sidecar.yml" "<WINLOGBEATENABLED>" $WinlogbeatEnabled
+  !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<SERVERURL>" $ServerUrl
+  !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<TAGS>" `[$Tags]`
+  !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<NODEID>" $NodeId
+  !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<UPDATEINTERVAL>" $UpdateInterval
+  !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<TLSSKIPVERIFY>" $TlsSkipVerify
+  !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<SENDSTATUS>" $SendStatus
+  !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<NXLOGENABLED>" $NxlogEnabled
+  !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<FILEBEATENABLED>" $FilebeatEnabled
+  !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<WINLOGBEATENABLED>" $WinlogbeatEnabled
 
 SectionEnd
  
@@ -278,8 +278,8 @@ SectionEnd
 Section "Uninstall"
 
   ;Uninstall system service
-  ExecWait '"$INSTDIR\graylog-collector-sidecar.exe" -service stop'
-  ExecWait '"$INSTDIR\graylog-collector-sidecar.exe" -service uninstall'
+  ExecWait '"$INSTDIR\graylog-sidecar.exe" -service stop'
+  ExecWait '"$INSTDIR\graylog-sidecar.exe" -service uninstall'
  
   ;Delete Files
   RMDir /r "$INSTDIR\*.*"    
@@ -290,7 +290,7 @@ Section "Uninstall"
   RMDir $GraylogDir
  
   ;Remove uninstall entries in the registry 
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogCollectorSidecar"
+  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar"
 
 SectionEnd
  
@@ -345,7 +345,7 @@ Function nsDialogsPage
 
   ${NSD_CreateLabel} 0 100 100% 12u "Enter the name of this instance:"
   Pop $Label
-  ${NSD_CreateText} 50 120 75% 12u "graylog-collector-sidecar"
+  ${NSD_CreateText} 50 120 75% 12u "graylog-sidecar"
   Pop $InputNodeId
 
   nsDialogs::Show
