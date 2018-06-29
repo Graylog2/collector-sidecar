@@ -60,6 +60,7 @@ func RequestBackendList(httpClient *http.Client, checksum string, ctx *context.C
 		msg := "Fetching backend list"
 		system.GlobalStatus.Set(backends.StatusError, msg)
 		log.Errorf("[RequestBackendList] %s: %v", msg, err)
+		return graylog.ResponseBackendList{}, err
 	}
 
 	if resp != nil {
@@ -131,7 +132,7 @@ func RequestConfiguration(
 	return configurationResponse, nil
 }
 
-func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *graylog.StatusRequest) graylog.ResponseCollectorRegistration {
+func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *graylog.StatusRequest) (graylog.ResponseCollectorRegistration, error) {
 	c := rest.NewClient(httpClient, ctx)
 	c.BaseURL = ctx.ServerUrl
 
@@ -157,7 +158,7 @@ func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *grayl
 	r, err := c.NewRequest("PUT", "/sidecars/"+ctx.NodeId, nil, registration)
 	if err != nil {
 		log.Error("[UpdateRegistration] Can not initialize REST request")
-		return graylog.ResponseCollectorRegistration{}
+		return graylog.ResponseCollectorRegistration{}, err
 	}
 
 	respBody := new(graylog.ResponseCollectorRegistration)
@@ -167,8 +168,10 @@ func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *grayl
 		ctx.UserConfig.SendStatus = false
 	} else if resp != nil && resp.StatusCode != 202 {
 		log.Error("[UpdateRegistration] Bad response from Graylog server: ", resp.Status)
+		return graylog.ResponseCollectorRegistration{}, err
 	} else if err != nil && err != io.EOF { // err is nil for GL 2.2 and EOF for 2.1 and earlier
 		log.Error("[UpdateRegistration] Failed to report collector status to server: ", err)
+		return graylog.ResponseCollectorRegistration{}, err
 	}
 
 	// Update configuration if provided
@@ -181,7 +184,7 @@ func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *grayl
 		daemon.HandleCollectorActions(respBody.CollectorActions)
 	}
 
-	return *respBody
+	return *respBody, nil
 }
 
 func updateRuntimeConfiguration(respBody *graylog.ResponseCollectorRegistration, ctx *context.Ctx) error {

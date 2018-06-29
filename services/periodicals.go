@@ -39,13 +39,20 @@ func StartPeriodicals(context *context.Ctx) {
 
 	go func() {
 		backendChecksum, configurationChecksum := "", ""
+		var err error
 		for {
 			time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
 
 			// backend list is needed before configuration assignments are fetched
-			backendChecksum = fetchBackendList(httpClient, backendChecksum, context)
+			backendChecksum, err = fetchBackendList(httpClient, backendChecksum, context)
+			if err != nil {
+				continue
+			}
 			// registration response contains configuration assignments
-			response := updateCollectorRegistration(httpClient, context)
+			response, err := updateCollectorRegistration(httpClient, context)
+			if err != nil {
+				continue
+			}
 			assignments.Store.Update(response.Assignments)
 			// create process instances
 			daemon.Daemon.SyncWithAssignments(context)
@@ -56,20 +63,20 @@ func StartPeriodicals(context *context.Ctx) {
 }
 
 // report collector status to Graylog server
-func updateCollectorRegistration(httpClient *http.Client, context *context.Ctx) graylog.ResponseCollectorRegistration {
+func updateCollectorRegistration(httpClient *http.Client, context *context.Ctx) (graylog.ResponseCollectorRegistration, error) {
 	statusRequest := api.NewStatusRequest()
 	return api.UpdateRegistration(httpClient, context, &statusRequest)
 }
 
-func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx) string {
+func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx) (string, error) {
 	response, err := api.RequestBackendList(httpClient, checksum, ctx)
 	if err != nil {
-		log.Error("Can't fetch configuration from Graylog API: ", err)
-		return ""
+		log.Error("Can't fetch collector list from Graylog API: ", err)
+		return "", err
 	}
 	if response.IsEmpty() {
 		// etag match, skipping all other actions
-		return response.Checksum
+		return response.Checksum, nil
 	}
 
 	backendList := []backends.Backend{}
@@ -78,7 +85,7 @@ func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx
 	}
 	backends.Store.Update(backendList)
 
-	return response.Checksum
+	return response.Checksum, nil
 }
 
 // fetch configuration periodically
