@@ -98,6 +98,15 @@ func (dc *DaemonConfig) DeleteRunner(backendName string) {
 	delete(dc.Runner, backendName)
 }
 
+func (dc *DaemonConfig) GetRunnerByBackendId(id string) Runner {
+	for _, runner := range dc.Runner {
+		if runner.GetBackend().Id == id {
+			return runner
+		}
+	}
+	return nil
+}
+
 func (dc *DaemonConfig) SyncWithAssignments(context *context.Ctx) {
 	if dc.Runner == nil {
 		return
@@ -109,7 +118,7 @@ func (dc *DaemonConfig) SyncWithAssignments(context *context.Ctx) {
 		// update outdated runner backend
 		runnerBackend := runner.GetBackend()
 		if backend != nil && !runnerBackend.EqualSettings(backend) {
-			log.Info("Updating process configuration for: " + runner.Name())
+			log.Infof("[%s] Updating process configuration", runner.Name())
 			runner.SetBackend(*backend)
 		}
 

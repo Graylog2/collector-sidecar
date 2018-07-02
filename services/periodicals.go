@@ -109,11 +109,15 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context 
 			continue
 		}
 
-		backend := backends.Store.GetBackendById(backendId)
-		if backend != nil && backend.RenderOnChange(backends.Backend{Template: response.Template}) {
+		runner := daemon.Daemon.GetRunnerByBackendId(backendId)
+		if runner == nil {
+			log.Errorf("Got collector ID with no existing instance, skipping configuration check: %s", backendId)
+			continue
+		}
+		backend := runner.GetBackend()
+		if backend.RenderOnChange(backends.Backend{Template: response.Template}) {
 			if valid, output := backend.ValidateConfigurationFile(); !valid {
-				backends.SetStatusLogErrorf(backend.Name,
-					"Collector configuration file is not valid, waiting for the next update. "+output)
+				backend.SetStatusLogErrorf("Collector configuration file is not valid, waiting for the next update. "+output)
 				continue
 			}
 

@@ -27,7 +27,7 @@ type Runner interface {
 	Restart() error
 	Shutdown() error
 	SetDaemon(*DaemonConfig)
-	GetBackend() backends.Backend
+	GetBackend() *backends.Backend
 	SetBackend(backends.Backend)
 }
 

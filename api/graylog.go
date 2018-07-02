@@ -232,8 +232,8 @@ func GetTlsConfig(ctx *context.Ctx) *tls.Config {
 func NewStatusRequest() graylog.StatusRequest {
 	statusRequest := graylog.StatusRequest{Backends: make(map[string]system.Status)}
 	combined, count := system.GlobalStatus.Status, 0
-	for name := range daemon.Daemon.Runner {
-		backend := backends.Store.GetBackend(name)
+	for name, runner := range daemon.Daemon.Runner {
+		backend := runner.GetBackend()
 		statusRequest.Backends[name] = backend.Status()
 		if backend.Status().Status > combined {
 			combined = backend.Status().Status

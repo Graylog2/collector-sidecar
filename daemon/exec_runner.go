@@ -100,8 +100,8 @@ func (r *ExecRunner) SetDaemon(d *DaemonConfig) {
 	r.daemon = d
 }
 
-func (r *ExecRunner) GetBackend() backends.Backend {
-	return r.backend
+func (r *ExecRunner) GetBackend() *backends.Backend {
+	return &r.backend
 }
 
 func (r *ExecRunner) SetBackend(b backends.Backend) {
@@ -118,7 +118,7 @@ func (r *ExecRunner) ResetRestartCounter() {
 func (r *ExecRunner) ValidateBeforeStart() error {
 	_, err := exec.LookPath(r.exec)
 	if err != nil {
-		return backends.SetStatusLogErrorf(r.name, "Failed to find collector executable %s: %s", r.exec, err)
+		return r.backend.SetStatusLogErrorf("Failed to find collector executable %s: %s", r.exec, err)
 	}
 	if r.Running() {
 		return errors.New("Failed to start collector, it's already running")
@@ -150,7 +150,7 @@ func (r *ExecRunner) startSupervisor() {
 			// don't continue to restart after 3 tries, stop the supervisor and wait for a configuration update
 			// or manual restart
 			if r.restartCount > 3 {
-				backends.SetStatusLogErrorf(r.name, "Unable to start collector after 3 tries, giving up! "+string(r.output))
+				r.backend.SetStatusLogErrorf("Unable to start collector after 3 tries, giving up! "+string(r.output))
 				r.setSupervised(false)
 				continue
 			}
@@ -238,7 +238,7 @@ func (r *ExecRunner) run() {
 	if r.stderr != "" {
 		err := common.CreatePathToFile(r.stderr)
 		if err != nil {
-			backends.SetStatusLogErrorf(r.name, "Failed to create path to collector's stderr log: %s", r.stderr)
+			r.backend.SetStatusLogErrorf("Failed to create path to collector's stderr log: %s", r.stderr)
 		}
 
 		f := logger.GetRotatedLog(r.stderr, r.context.UserConfig.LogRotationTime, r.context.UserConfig.LogMaxAge)
@@ -248,7 +248,7 @@ func (r *ExecRunner) run() {
 	if r.stdout != "" {
 		err := common.CreatePathToFile(r.stdout)
 		if err != nil {
-			backends.SetStatusLogErrorf(r.name, "Failed to create path to collector's stdout log: %s", r.stdout)
+			r.backend.SetStatusLogErrorf("Failed to create path to collector's stdout log: %s", r.stdout)
 		}
 
 		f := logger.GetRotatedLog(r.stderr, r.context.UserConfig.LogRotationTime, r.context.UserConfig.LogMaxAge)
@@ -259,7 +259,7 @@ func (r *ExecRunner) run() {
 	r.backend.SetStatus(backends.StatusRunning, "Running")
 	err := r.cmd.Start()
 	if err != nil {
-		backends.SetStatusLogErrorf(r.name, "Failed to start collector: %s", err)
+		r.backend.SetStatusLogErrorf("Failed to start collector: %s", err)
 	}
 
 	// wait for process exit in the background. Ensure single cmd.Wait() call
