@@ -16,12 +16,14 @@
 package backends
 
 import (
+	"bytes"
+	"os/exec"
 	"reflect"
+	"time"
 
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/system"
-	"os/exec"
 )
 
 type Backend struct {
@@ -88,16 +90,40 @@ func (b *Backend) ValidatePreconditions() bool {
 
 func (b *Backend) ValidateConfigurationFile() (bool, string) {
 	if b.ValidationParameters == nil {
-		log.Errorf("[%s] No parameters configured to validate configuration!", b.Name)
+		log.Errorf("[%s] No parameters for validating the configuration file are configured!", b.Name)
 		return false, ""
 	}
 
-	output, err := exec.Command(b.ExecutablePath, b.ValidationParameters...).CombinedOutput()
-	if err != nil {
-		soutput := string(output)
-		log.Errorf("[%s] Error during configuration validation: %s %s", b.Name, soutput, err)
-		return false, soutput
+	cmd := exec.Command(b.ExecutablePath, b.ValidationParameters...)
+
+	var combinedOutputBuffer bytes.Buffer
+	cmd.Stdout = &combinedOutputBuffer
+	cmd.Stderr = &combinedOutputBuffer
+
+	if err := cmd.Start(); err != nil {
+		log.Errorf("[%s] Couldn't start validation command: %s %s", b.Name, string(combinedOutputBuffer.Bytes()), err)
+		return false, string(combinedOutputBuffer.Bytes())
 	}
 
-	return true, ""
+	done := make(chan error)
+	go func() {
+		done <- cmd.Wait()
+	}()
+
+	select {
+	case <-time.After(time.Duration(30) * time.Second):
+		if err := cmd.Process.Kill(); err != nil {
+			log.Errorf("[%s] Failed to kill validation process: %s", b.Name, err)
+			return false, err.Error()
+		}
+		log.Errorf("[%s] Timeout reached for validation command.", b.Name)
+		return false, "Unable to validate configuration, timeout reached."
+	case err := <-done:
+		if err != nil {
+			close(done)
+			log.Errorf("[%s] Error during configuration validation: %s %s", b.Name, string(combinedOutputBuffer.Bytes()), err)
+			return false, string(combinedOutputBuffer.Bytes())
+		}
+		return true, ""
+	}
 }
