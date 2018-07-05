@@ -18,9 +18,11 @@
   !include x64.nsh
   !include IfKeyExists.nsh
 
-  VIProductVersion "0.${VERSION}${VERSION_SUFFIX}"
+  VIProductVersion "${VERSION}.${REVISION}" ;Required format is X.X.X.X
   VIAddVersionKey "FileVersion" "${VERSION}"
-  VIAddVersionKey "FileDescription" "Graylog Sidecar"
+  VIAddVersionKey "FileDescription" "Graylog Sidecar Installer"
+  VIAddVersionKey "ProductName" "Graylog Sidecar"
+  VIAddVersionKey "ProductVersion" "${VERSION}${VERSION_SUFFIX}"
   VIAddVersionKey "LegalCopyright" "Graylog, Inc."
  
 ;---------------------------------
