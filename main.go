@@ -99,7 +99,7 @@ func main() {
 	ctx := context.NewContext()
 	err = ctx.LoadConfig(configurationFile)
 	if err != nil {
-		fmt.Println("Failed loading configuration file: " + *configurationFile)
+		fmt.Println(err.Error())
 		os.Exit(1)
 	} else {
 		// Persist path for later reloads

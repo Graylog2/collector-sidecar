@@ -16,7 +16,6 @@
 package context
 
 import (
-	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -47,7 +46,7 @@ func NewContext() *Ctx {
 func (ctx *Ctx) LoadConfig(path *string) error {
 	err := cfgfile.Read(&ctx.UserConfig, *path)
 	if err != nil {
-		return fmt.Errorf("loading config file error: %v\n", err)
+		return err
 	}
 
 	// Process top-level configuration
