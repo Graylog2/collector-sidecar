@@ -74,7 +74,7 @@ func (r *SvcRunner) Name() string {
 func (r *SvcRunner) Running() bool {
 	m, err := mgr.Connect()
 	if err != nil {
-		backends.SetStatusLogErrorf(r.name, "Failed to connect to service manager: %v", err)
+		r.backend.SetStatusLogErrorf("Failed to connect to service manager: %v", err)
 		return false
 	}
 	defer m.Disconnect()
@@ -82,14 +82,14 @@ func (r *SvcRunner) Running() bool {
 	s, err := m.OpenService(r.serviceName)
 	// service exist so we only update the properties
 	if err != nil {
-		backends.SetStatusLogErrorf(r.name, "Can't get status of service %s cause it doesn't exist: %v", r.serviceName, err)
+		r.backend.SetStatusLogErrorf("Can't get status of service %s cause it doesn't exist: %v", r.serviceName, err)
 		return false
 	}
 	defer s.Close()
 
 	status, err := s.Query()
 	if err != nil {
-		backends.SetStatusLogErrorf(r.name, "Can't query status of service %s: %v", r.serviceName, err)
+		r.backend.SetStatusLogErrorf("Can't query status of service %s: %v", r.serviceName, err)
 	}
 
 	return status.State == svc.Running
@@ -107,8 +107,8 @@ func (r *SvcRunner) SetDaemon(d *DaemonConfig) {
 	r.daemon = d
 }
 
-func (r *SvcRunner) GetBackend() backends.Backend {
-	return r.backend
+func (r *SvcRunner) GetBackend() *backends.Backend {
+	return &r.backend
 }
 
 func (r *SvcRunner) SetBackend(b backends.Backend) {
@@ -120,12 +120,12 @@ func (r *SvcRunner) SetBackend(b backends.Backend) {
 func (r *SvcRunner) ValidateBeforeStart() error {
 	execPath, err := exec.LookPath(r.exec)
 	if err != nil {
-		return backends.SetStatusLogErrorf(r.name, "Failed to find collector executable %s", r.exec)
+		return r.backend.SetStatusLogErrorf("Failed to find collector executable %s", r.exec)
 	}
 
 	m, err := mgr.Connect()
 	if err != nil {
-		return backends.SetStatusLogErrorf(r.name, "Failed to connect to service manager: %v", err)
+		return r.backend.SetStatusLogErrorf("Failed to connect to service manager: %v", err)
 	}
 	defer m.Disconnect()
 
@@ -147,7 +147,7 @@ func (r *SvcRunner) ValidateBeforeStart() error {
 		}
 		err = s.UpdateConfig(currentConfig)
 		if err != nil {
-			backends.SetStatusLogErrorf(r.name, "Failed to update service: %v", err)
+			r.backend.SetStatusLogErrorf("Failed to update service: %v", err)
 		}
 		// service needs to be created
 	} else {
@@ -155,13 +155,13 @@ func (r *SvcRunner) ValidateBeforeStart() error {
 			execPath,
 			serviceConfig)
 		if err != nil {
-			backends.SetStatusLogErrorf(r.name, "Failed to install service: %v", err)
+			r.backend.SetStatusLogErrorf("Failed to install service: %v", err)
 		}
 		defer s.Close()
 		err = eventlog.InstallAsEventCreate(r.serviceName, eventlog.Error|eventlog.Warning|eventlog.Info)
 		if err != nil {
 			s.Delete()
-			backends.SetStatusLogErrorf(r.name, "SetupEventLogSource() failed: %v", err)
+			r.backend.SetStatusLogErrorf("SetupEventLogSource() failed: %v", err)
 		}
 	}
 
@@ -184,7 +184,7 @@ func (r *SvcRunner) startSupervisor() {
 				continue
 			}
 
-			backends.SetStatusLogErrorf(r.name, "Backend finished unexpectedly, sending restart signal")
+			r.backend.SetStatusLogErrorf("Backend finished unexpectedly, sending restart signal")
 			r.Restart()
 		}
 	}()
@@ -201,19 +201,19 @@ func (r *SvcRunner) start() error {
 
 	m, err := mgr.Connect()
 	if err != nil {
-		return backends.SetStatusLogErrorf(r.name, "Failed to connect to service manager: %v", err)
+		return r.backend.SetStatusLogErrorf("Failed to connect to service manager: %v", err)
 	}
 	defer m.Disconnect()
 
 	ws, err := m.OpenService(r.serviceName)
 	if err != nil {
-		return backends.SetStatusLogErrorf(r.name, "Could not access service: %v", err)
+		return r.backend.SetStatusLogErrorf("Could not access service: %v", err)
 	}
 	defer ws.Close()
 
 	err = ws.Start("is", "manual-started")
 	if err != nil {
-		return backends.SetStatusLogErrorf(r.name, "Could not start service: %v", err)
+		return r.backend.SetStatusLogErrorf("Could not start service: %v", err)
 	}
 
 	r.setSupervised(true)
@@ -235,30 +235,30 @@ func (r *SvcRunner) stop() error {
 
 	m, err := mgr.Connect()
 	if err != nil {
-		return backends.SetStatusLogErrorf(r.name, "Failed to connect to service manager: %v", err)
+		return r.backend.SetStatusLogErrorf("Failed to connect to service manager: %v", err)
 	}
 	defer m.Disconnect()
 
 	ws, err := m.OpenService(r.serviceName)
 	if err != nil {
-		return backends.SetStatusLogErrorf(r.name, "Could not access service: %v", err)
+		return r.backend.SetStatusLogErrorf("Could not access service: %v", err)
 	}
 	defer ws.Close()
 
 	status, err := ws.Control(svc.Stop)
 	if err != nil {
-		return backends.SetStatusLogErrorf(r.name, "Could not send stop control: %v", err)
+		return r.backend.SetStatusLogErrorf("Could not send stop control: %v", err)
 	}
 
 	timeout := time.Now().Add(10 * time.Second)
 	for status.State != svc.Stopped {
 		if timeout.Before(time.Now()) {
-			return backends.SetStatusLogErrorf(r.name, "Timeout waiting for service to go to stopped state: %v", err)
+			return r.backend.SetStatusLogErrorf("Timeout waiting for service to go to stopped state: %v", err)
 		}
 		time.Sleep(300 * time.Millisecond)
 		status, err = ws.Query()
 		if err != nil {
-			return backends.SetStatusLogErrorf(r.name, "Could not retrieve service status: %v", err)
+			return r.backend.SetStatusLogErrorf("Could not retrieve service status: %v", err)
 		}
 	}
 
