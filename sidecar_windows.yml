@@ -1,25 +1,62 @@
-server_url: <SERVERURL> 
+# The URL to the Graylog server API.
+# Default: "http://127.0.0.1:9000/api/"
+server_url: "<SERVERURL>"
+
+# The API token to use to authenticate against the Graylog server API.
+# Default: none
+server_api_token: ""
+
+# The node ID of the sidecar. This can be a path to a file or an ID string.
+# If set to a file and the file doesn't exist, the sidecar will generate an
+# unique ID and writes it to the configured path.
+#
+# Example file path: "file:C:\\Program Files\\graylog\\sidecar\\node-id"
+# Example ID string: "6033137e-d56b-47fc-9762-cd699c11a5a9"
+#
+# ATTENTION: Every sidecar instance needs a unique ID!
+#
+# Default: "file:C:\\Program Files\\graylog\\sidecar\\node-id"
+node_id: "file:C:\\Program Files\\graylog\\sidecar\\node-id"
+
+# The node name of the sidecar. If this is empty, the sidecar will use the
+# hostname of the host it is running on.
+# Default: ""
+node_name: "<NODENAME>"
+
+# The update interval in secods. This configures how often the sidecar will
+# contact the Graylog server for keep-alive and configuration update requests.
+# Default: 10
 update_interval: <UPDATEINTERVAL>
+
+# This configures if the sidecar should skip the verification of TLS connections.
+# Default: false
 tls_skip_verify: <TLSSKIPVERIFY>
+
+# This enables/disables the transmission of detailed sidecar information like
+# collector statues, metrics and log file lists. It can be disabled to reduce
+# load on the Graylog server if needed. (disables some features in the server UI)
+# Default: true
 send_status: <SENDSTATUS>
+
+# A list of directories to scan for log files. The sidecar will scan each
+# directory for log files and submits them to the server on each update.
+#
+# Example:
+#     list_log_files:
+#       - "/var/log/nginx"
+#       - "/opt/app/logs"
+#
+# Default: empty list
 list_log_files:
-node_id: <NODEID>
-collector_id: file:C:\Program Files\graylog\sidecar\node-id
-cache_path: C:\Program Files\graylog\sidecar\cache
-log_path: C:\Program Files\graylog\sidecar\logs
+
+# Directory where the sidecar stores internal data.
+# Default: "C:\\Program Files\\graylog\\sidecar\\cache"
+cache_path: "C:\\Program Files\\graylog\\sidecar\\cache"
+
+# Directory where the sidecar stores logs for collectors and the sidecar itself.
+# Default: "C:\\Program Files\\graylog\\sidecar\\logs"
+log_path: "C:\\Program Files\\graylog\\sidecar\\logs"
+
+# TODO: Document or remove depending on the outcome of https://github.com/Graylog2/collector-sidecar/issues/251
 log_rotation_time: 86400
 log_max_age: 604800
-tags: <TAGS>
-backends:
-    - name: nxlog
-      enabled: <NXLOGENABLED>
-      binary_path: C:\Program Files (x86)\nxlog\nxlog.exe
-      configuration_path: C:\Program Files\graylog\sidecar\generated\nxlog.conf
-    - name: winlogbeat
-      enabled: <WINLOGBEATENABLED>
-      binary_path: C:\Program Files\graylog\sidecar\winlogbeat.exe
-      configuration_path: C:\Program Files\graylog\sidecar\generated\winlogbeat.yml
-    - name: filebeat
-      enabled: <FILEBEATENABLED>
-      binary_path: C:\Program Files\graylog\sidecar\filebeat.exe
-      configuration_path: C:\Program Files\graylog\sidecar\generated\filebeat.yml
