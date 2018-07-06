@@ -114,9 +114,9 @@ Section "Install"
   ${EndIf}
 
   SetOverwrite off
-  File /oname=sidecar.yml "../sidecar_windows.yml"
+  File /oname=sidecar.yml "../sidecar-windows-example.yml"
   SetOverwrite on
-  File /oname=sidecar.yml.dist "../sidecar_windows.yml"
+  File /oname=sidecar.yml.dist "../sidecar-windows-example.yml"
   File "../COPYING"
   File "graylog.ico"  
 

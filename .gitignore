@@ -42,3 +42,5 @@ dist/tmp-dest
 dist/collectors/
 
 .filebeat
+
+/sidecar.yml
