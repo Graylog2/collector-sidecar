@@ -60,7 +60,7 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 	}
 
 	// api_token
-	if ctx.UserConfig.ApiToken == "" {
+	if ctx.UserConfig.ServerApiToken == "" {
 		log.Fatal("No API token was configured.")
 	}
 

@@ -92,7 +92,7 @@ func NewClient(httpClient *http.Client, ctx *context.Ctx) *Client {
 	}
 
 	baseURL, _ := url.Parse(defaultBaseURL)
-	c := &Client{client: httpClient, ApiToken: ctx.UserConfig.ApiToken, BaseURL: baseURL, UserAgent: userAgent}
+	c := &Client{client: httpClient, ApiToken: ctx.UserConfig.ServerApiToken, BaseURL: baseURL, UserAgent: userAgent}
 
 	return c
 }
