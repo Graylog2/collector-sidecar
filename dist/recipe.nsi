@@ -39,24 +39,15 @@
   Var ParamServerUrl
   Var InputServerUrl
   Var ServerUrl
-  Var ParamTags
-  Var InputTags
-  Var Tags
-  Var ParamNodeId
-  Var InputNodeId
-  Var NodeId
+  Var ParamNodeName
+  Var InputNodeName
+  Var NodeName
   Var ParamUpdateInterval
   Var UpdateInterval
   Var ParamTlsSkipVerify
   Var TlsSkipVerify
   Var ParamSendStatus
   Var SendStatus
-  Var ParamNxlogEnabled
-  Var NxlogEnabled
-  Var ParamFilebeatEnabled
-  Var FilebeatEnabled
-  Var ParamWinlogbeatEnabled
-  Var WinlogbeatEnabled
   Var Dialog
   Var Label
   Var GraylogDir
@@ -123,9 +114,9 @@ Section "Install"
   ${EndIf}
 
   SetOverwrite off
-  File /oname=sidecar.yml "../sidecar_windows.yml"
+  File /oname=sidecar.yml "../sidecar-windows-example.yml"
   SetOverwrite on
-  File /oname=sidecar.yml.dist "../sidecar_windows.yml"
+  File /oname=sidecar.yml.dist "../sidecar-windows-example.yml"
   File "../COPYING"
   File "graylog.ico"  
 
@@ -182,38 +173,19 @@ Section "Post"
 
   ; Parse command line options
   ; The first character in the option string is treated as a parameter delimiter, so we prepend a white-space
-  ; to allow options like -NODEID=my-collector (second dash would interrupt option parsing otherwise)
+  ; to allow options like -NODENAME=my-collector (second dash would interrupt option parsing otherwise)
   ${GetParameters} $Params
   ${GetOptions} $Params " -SERVERURL=" $ParamServerUrl
-  ${GetOptions} $Params " -TAGS=" $ParamTags
-  ${GetOptions} $Params " -NODEID=" $ParamNodeId
+  ${GetOptions} $Params " -NODENAME=" $ParamNodeName
   ${GetOptions} $Params " -UPDATE_INTERVAL=" $ParamUpdateInterval
   ${GetOptions} $Params " -TLS_SKIP_VERIFY=" $ParamTlsSkipVerify
   ${GetOptions} $Params " -SEND_STATUS=" $ParamSendStatus
-  ${GetOptions} $Params " -NXLOG_ENABLED=" $ParamNxlogEnabled
-  ${GetOptions} $Params " -FILEBEAT_ENABLED=" $ParamFilebeatEnabled
-  ${GetOptions} $Params " -WINLOGBEAT_ENABLED=" $ParamWinlogbeatEnabled
 
   ${If} $ParamServerUrl != ""
     StrCpy $ServerUrl $ParamServerUrl
   ${EndIf}
-  ${If} $ParamTags != ""
-    StrCpy $0 $ParamTags
-    Loop_Tags:
-      ${WordFind} $0 " " "+1" $1
-      ${If} $Tags == ""
-        StrCpy $Tags $1
-      ${Else}
-        StrCpy $Tags `$Tags, $1`
-      ${EndIf}
-
-      ${WordFind2X} $0 $1 " " "-1}}" $0
-      StrCmp $0 $1 Loop_End Loop_Tags
-
-    Loop_End:
-  ${EndIf}
-  ${If} $ParamNodeId != ""
-    StrCpy $NodeId $ParamNodeId
+  ${If} $ParamNodeName != ""
+    StrCpy $NodeName $ParamNodeName
   ${EndIf}
   ${If} $ParamUpdateInterval != ""
     StrCpy $UpdateInterval $ParamUpdateInterval
@@ -224,25 +196,13 @@ Section "Post"
   ${If} $ParamSendStatus != ""
     StrCpy $SendStatus $ParamSendStatus
   ${EndIf}
-  ${If} $ParamNxlogEnabled != ""
-    StrCpy $NxlogEnabled $ParamNxlogEnabled
-  ${EndIf}
-  ${If} $ParamFilebeatEnabled != ""
-    StrCpy $FilebeatEnabled $ParamFilebeatEnabled
-  ${EndIf}
-  ${If} $ParamWinlogbeatEnabled != ""
-    StrCpy $WinlogbeatEnabled $ParamWinlogbeatEnabled
-  ${EndIf}
 
   ; set defaults
   ${If} $ServerUrl == ""
     StrCpy $ServerUrl "http://127.0.0.1:9000/api"
   ${EndIf}
-  ${If} $Tags == ""
-    StrCpy $Tags "windows, iis"
-  ${EndIf}
-  ${If} $NodeId == ""
-    StrCpy $NodeId "graylog-sidecar"
+  ${If} $NodeName == ""
+    StrCpy $NodeName "graylog-sidecar"
   ${EndIf}
   ${If} $UpdateInterval == ""
     StrCpy $UpdateInterval "10"
@@ -253,25 +213,12 @@ Section "Post"
   ${If} $SendStatus == ""
     StrCpy $SendStatus "true"
   ${EndIf}
-  ${If} $NxlogEnabled == ""
-    StrCpy $NxlogEnabled "false"
-  ${EndIf}
-  ${If} $FilebeatEnabled == ""
-    StrCpy $FilebeatEnabled "true"
-  ${EndIf}
-  ${If} $WinlogbeatEnabled == ""
-    StrCpy $WinlogbeatEnabled "true"
-  ${EndIf}
 
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<SERVERURL>" $ServerUrl
-  !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<TAGS>" `[$Tags]`
-  !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<NODEID>" $NodeId
+  !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<NODENAME>" $NodeName
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<UPDATEINTERVAL>" $UpdateInterval
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<TLSSKIPVERIFY>" $TlsSkipVerify
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<SENDSTATUS>" $SendStatus
-  !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<NXLOGENABLED>" $NxlogEnabled
-  !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<FILEBEATENABLED>" $FilebeatEnabled
-  !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<WINLOGBEATENABLED>" $WinlogbeatEnabled
 
 SectionEnd
  
@@ -340,33 +287,23 @@ Function nsDialogsPage
   ${NSD_CreateText} 50 20 75% 12u "http://127.0.0.1:9000/api"
   Pop $InputServerUrl
 
-  ${NSD_CreateLabel} 0 50 100% 12u "Enter the configuration tags this host should receive:"
-  Pop $Label
-  ${NSD_CreateText} 50 70 75% 12u "windows, iis"
-  Pop $InputTags
-
   ${NSD_CreateLabel} 0 100 100% 12u "Enter the name of this instance:"
   Pop $Label
   ${NSD_CreateText} 50 120 75% 12u "graylog-sidecar"
-  Pop $InputNodeId
+  Pop $InputNodeName
 
   nsDialogs::Show
 FunctionEnd
 
 Function nsDialogsPageLeave
   ${NSD_GetText} $InputServerUrl $ServerUrl
-  ${NSD_GetText} $InputTags $Tags
-  ${NSD_GetText} $InputNodeId $NodeId
+  ${NSD_GetText} $InputNodeName $NodeName
 
   ${If} $ServerUrl == ""
       MessageBox MB_OK "Please enter a valid address to your Graylog server!"
       Abort
   ${EndIf}
-  ${If} $Tags == ""
-      MessageBox MB_OK "Please enter one or more tags!"
-      Abort
-  ${EndIf}
-  ${If} $NodeId == ""
+  ${If} $NodeName == ""
       MessageBox MB_OK "Please enter the instance name!"
       Abort
   ${EndIf}
