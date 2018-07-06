@@ -187,7 +187,7 @@ There are a couple of configuration settings for the Sidecar:
 | Parameter           | Description                                                                                                                           |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------|
 | `server_url`        | URL to the Graylog API, e.g. `http://127.0.0.1:9000/api/`                                                                             |
-| `api_token`         | The API token to use for authentication against the Graylog API                                                                       |
+| `server_api_token`  | The API token to use for authentication against the Graylog API                                                                       |
 | `update_interval`   | The interval in seconds the sidecar will fetch new configurations from the Graylog server                                             |
 | `tls_skip_verify`   | Ignore errors when the REST API was started with a self-signed certificate                                                            |
 | `send_status`       | Send the status of each backend back to Graylog and display it on the status page for the host                                        |
