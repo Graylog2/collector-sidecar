@@ -106,6 +106,7 @@ func (r *ExecRunner) GetBackend() *backends.Backend {
 
 func (r *ExecRunner) SetBackend(b backends.Backend) {
 	r.backend = b
+	r.name = b.Name
 	r.exec = b.ExecutablePath
 	r.args = b.ExecuteParameters
 	r.restartCount = 1

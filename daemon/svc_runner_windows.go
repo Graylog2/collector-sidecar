@@ -113,6 +113,7 @@ func (r *SvcRunner) GetBackend() *backends.Backend {
 
 func (r *SvcRunner) SetBackend(b backends.Backend) {
 	r.backend = b
+	r.name = b.Name
 	r.exec = b.ExecutablePath
 	r.args = b.ExecuteParameters
 }

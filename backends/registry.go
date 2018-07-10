@@ -31,23 +31,23 @@ type backendStore struct {
 }
 
 func (bs *backendStore) SetBackend(backend Backend) {
-	bs.backends[backend.Name] = &backend
+	bs.backends[backend.Id] = &backend
 	executeParameters, err := common.SprintfList(backend.ExecuteParameters, backend.ConfigurationPath)
 	if err != nil {
 		log.Errorf("Invalid execute parameters, skip adding backend: %s", backend.Name)
 		return
 	}
-	bs.backends[backend.Name].ExecuteParameters = executeParameters
+	bs.backends[backend.Id].ExecuteParameters = executeParameters
 	validationParameters, err := common.SprintfList(backend.ValidationParameters, backend.ConfigurationPath)
 	if err != nil {
 		log.Errorf("Invalid validation parameters, skip adding backend: %s", backend.Name)
 		return
 	}
-	bs.backends[backend.Name].ValidationParameters = validationParameters
+	bs.backends[backend.Id].ValidationParameters = validationParameters
 }
 
-func (bs *backendStore) GetBackend(name string) *Backend {
-	return bs.backends[name]
+func (bs *backendStore) GetBackend(id string) *Backend {
+	return bs.backends[id]
 }
 
 func (bs *backendStore) GetBackendById(id string) *Backend {
@@ -66,11 +66,11 @@ func (bs *backendStore) Update(backends []Backend) {
 			activeIds = append(activeIds, backend.Id)
 
 			// add new backend
-			if bs.backends[backend.Name] == nil {
+			if bs.backends[backend.Id] == nil {
 				bs.SetBackend(backend)
 				// update if settings did change
 			} else {
-				if !bs.backends[backend.Name].EqualSettings(&backend) {
+				if !bs.backends[backend.Id].EqualSettings(&backend) {
 					bs.SetBackend(backend)
 				}
 			}
@@ -85,7 +85,7 @@ func (bs *backendStore) Cleanup(validBackendIds []string) {
 	for _, backend := range bs.backends {
 		if !common.IsInList(backend.Id, validBackendIds) {
 			log.Debug("Cleaning up backend: " + backend.Name)
-			delete(bs.backends, backend.Name)
+			delete(bs.backends, backend.Id)
 		}
 	}
 }

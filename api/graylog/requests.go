@@ -33,7 +33,7 @@ type NodeDetailsRequest struct {
 }
 
 type StatusRequestBackend struct {
-	Name    string `json:"name"`
+	Id      string `json:"collector_id"`
 	Status  int    `json:"status"`
 	Message string `json:"message"`
 }
