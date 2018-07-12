@@ -69,6 +69,9 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 		log.Fatal("No node ID was configured.")
 	}
 	ctx.NodeId = common.GetCollectorId(ctx.UserConfig.NodeId)
+	if ctx.NodeId == "" {
+		log.Fatal("Empty node-id, exiting! Make sure a valid id is configured.")
+	}
 
 	// node_name
 	if ctx.UserConfig.NodeName == "" {
