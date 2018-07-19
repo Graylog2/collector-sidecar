@@ -137,7 +137,7 @@ func GetLoad1() float64 {
 }
 
 func getWindowsDrives() (drives []sigar.FileSystem) {
-	for _, drive := range "ABCDEFGHIJKLMNOPQRSTUVWXYZ" {
+	for _, drive := range "CDEFGHIJKLMNOPQRSTUVWXYZ" {
 		dirName := string(drive) + ":\\"
 		dirHandle, err := os.Open(dirName)
 		defer dirHandle.Close()
