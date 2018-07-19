@@ -43,31 +43,31 @@ func HandleCollectorActions(actions []graylog.ResponseCollectorAction) {
 }
 
 func startAction(backend *backends.Backend) {
-	for name, runner := range Daemon.Runner {
-		if name == backend.Name {
+	for id, runner := range Daemon.Runner {
+		if id == backend.Id {
 			if !runner.Running() {
-				log.Infof("[%s] Staring collector", name)
+				log.Infof("[%s] Staring collector", backend.Name)
 				runner.Restart()
 			} else {
-				log.Infof("Collector [%s] is already running, skipping start action.", name)
+				log.Infof("Collector [%s] is already running, skipping start action.", backend.Name)
 			}
 		}
 	}
 }
 
 func restartAction(backend *backends.Backend) {
-	for name, runner := range Daemon.Runner {
-		if name == backend.Name {
-			log.Infof("[%s] Restarting collector", name)
+	for id, runner := range Daemon.Runner {
+		if id == backend.Id {
+			log.Infof("[%s] Restarting collector", backend.Name)
 			runner.Restart()
 		}
 	}
 }
 
 func stopAction(backend *backends.Backend) {
-	for name, runner := range Daemon.Runner {
-		if name == backend.Name {
-			log.Infof("[%s] Stopping collector", name)
+	for id, runner := range Daemon.Runner {
+		if id == backend.Id {
+			log.Infof("[%s] Stopping collector", backend.Name)
 			runner.Shutdown()
 		}
 	}

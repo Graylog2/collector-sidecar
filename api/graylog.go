@@ -233,10 +233,10 @@ func NewStatusRequest() graylog.StatusRequest {
 	statusRequest := graylog.StatusRequest{Backends: make([]graylog.StatusRequestBackend, 0)}
 	combined, count := system.GlobalStatus.Status, 0
 
-	for name, runner := range daemon.Daemon.Runner {
+	for id, runner := range daemon.Daemon.Runner {
 		backendStatus := runner.GetBackend().Status()
 		statusRequest.Backends = append(statusRequest.Backends, graylog.StatusRequestBackend{
-			Name:    name,
+			Id:      id,
 			Status:  backendStatus.Status,
 			Message: backendStatus.Message,
 		})

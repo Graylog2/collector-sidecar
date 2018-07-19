@@ -121,7 +121,7 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context 
 				continue
 			}
 
-			if err := daemon.Daemon.Runner[backend.Name].Restart(); err != nil {
+			if err := daemon.Daemon.Runner[backend.Id].Restart(); err != nil {
 				msg := "Failed to restart collector"
 				backend.SetStatus(backends.StatusError, msg)
 				log.Errorf("[%s] %s: %v", backend.Name, msg, err)

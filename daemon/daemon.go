@@ -82,20 +82,20 @@ func (dc *DaemonConfig) AddRunner(backend backends.Backend, context *context.Ctx
 		log.Fatalf("Execution driver %s is not supported on this platform", backend.ServiceType)
 	}
 	runner.SetDaemon(dc)
-	dc.Runner[backend.Name] = runner
+	dc.Runner[backend.Id] = runner
 }
 
-func (dc *DaemonConfig) DeleteRunner(backendName string) {
-	if dc.Runner[backendName] == nil {
+func (dc *DaemonConfig) DeleteRunner(backendId string) {
+	if dc.Runner[backendId] == nil {
 		return
 	}
 
-	if dc.Runner[backendName].Running() {
-		if err := dc.Runner[backendName].Shutdown(); err != nil {
-			log.Errorf("[%s] Failed to stop backend during deletion: %v", backendName, err)
+	if dc.Runner[backendId].Running() {
+		if err := dc.Runner[backendId].Shutdown(); err != nil {
+			log.Errorf("[%s] Failed to stop backend during deletion: %v", backendId, err)
 		}
 	}
-	delete(dc.Runner, backendName)
+	delete(dc.Runner, backendId)
 }
 
 func (dc *DaemonConfig) GetRunnerByBackendId(id string) Runner {
@@ -112,8 +112,8 @@ func (dc *DaemonConfig) SyncWithAssignments(context *context.Ctx) {
 		return
 	}
 
-	for name, runner := range dc.Runner {
-		backend := backends.Store.GetBackend(name)
+	for id, runner := range dc.Runner {
+		backend := backends.Store.GetBackend(id)
 
 		// update outdated runner backend
 		runnerBackend := runner.GetBackend()
@@ -124,15 +124,15 @@ func (dc *DaemonConfig) SyncWithAssignments(context *context.Ctx) {
 
 		// cleanup backends that should not run anymore
 		if backend == nil || assignments.Store.GetAll()[backend.Id] == "" {
-			log.Info("Removing process runner: " + name)
-			dc.DeleteRunner(name)
+			log.Info("Removing process runner: " + backend.Name)
+			dc.DeleteRunner(id)
 		}
 	}
 
 	// add new backends to registry
 	for backendId := range assignments.Store.GetAll() {
 		backend := backends.Store.GetBackendById(backendId)
-		if backend != nil && dc.Runner[backend.Name] == nil {
+		if backend != nil && dc.Runner[backend.Id] == nil {
 			log.Info("Adding process runner for: " + backend.Name)
 			dc.AddRunner(*backend, context)
 		}
