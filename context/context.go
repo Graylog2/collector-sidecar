@@ -89,7 +89,7 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 		if runtime.GOOS == "windows" {
 			cachePath = filepath.Join(os.Getenv("SystemDrive")+"\\", "Program Files", "graylog", "sidecar", "cache")
 		} else {
-			cachePath = filepath.Join("/var", "cache", "graylog", "sidecar")
+			cachePath = filepath.Join("/var", "cache", "graylog-sidecar")
 		}
 		ctx.UserConfig.CachePath = cachePath
 		log.Errorf("No cache directory was configured. Using default: %s", cachePath)
