@@ -89,9 +89,9 @@ func (b *Backend) ValidatePreconditions() bool {
 }
 
 func (b *Backend) ValidateConfigurationFile() (bool, string) {
-	if b.ValidationParameters == nil {
-		log.Errorf("[%s] No parameters for validating the configuration file are configured!", b.Name)
-		return false, ""
+	if b.ValidationParameters == nil || (len(b.ValidationParameters) == 1 && b.ValidationParameters[0] == "") {
+		log.Warnf("[%s] Skipping configuration test. No validation command configured.", b.Name)
+		return true, ""
 	}
 
 	cmd := exec.Command(b.ExecutablePath, b.ValidationParameters...)
