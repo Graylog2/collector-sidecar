@@ -60,3 +60,18 @@ log_path: "/var/log/graylog-sidecar"
 # TODO: Document or remove depending on the outcome of https://github.com/Graylog2/collector-sidecar/issues/251
 log_rotation_time: 86400
 log_max_age: 604800
+
+# A list of binaries which are allowed to be execute by the Sidecar. An empty list disables the whitelist feature.
+# Example:
+#     collector_binaries_whitelist:
+#       - "/usr/bin/filebeat"
+#       - "/opt/collectors/*"
+#
+collector_binaries_whitelist:
+  - "/usr/lib/graylog-sidecar/filebeat"
+  - "/usr/bin/filebeat"
+  - "/usr/bin/packetbeat"
+  - "/usr/bin/metricbeat"
+  - "/usr/bin/heartbeat"
+  - "/usr/bin/auditbeat"
+  - "/opt/nxlog/bin/nxlog"

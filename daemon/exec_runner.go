@@ -117,7 +117,15 @@ func (r *ExecRunner) ResetRestartCounter() {
 }
 
 func (r *ExecRunner) ValidateBeforeStart() error {
-	_, err := exec.LookPath(r.exec)
+	whitelisted, err := common.PathMatch(r.GetBackend().ExecutablePath, r.context.UserConfig.CollectorBinariesWhitelist)
+	if err != nil {
+		return errors.New("Can not validate binary path")
+	}
+	if !whitelisted && len(r.context.UserConfig.CollectorBinariesWhitelist) > 0 {
+		return r.backend.SetStatusLogErrorf("Can not execute collector %s, binary is not whitelisted", r.backend.ExecutablePath)
+	}
+
+	_, err = exec.LookPath(r.exec)
 	if err != nil {
 		return r.backend.SetStatusLogErrorf("Failed to find collector executable %s: %s", r.exec, err)
 	}
@@ -151,7 +159,7 @@ func (r *ExecRunner) startSupervisor() {
 			// don't continue to restart after 3 tries, stop the supervisor and wait for a configuration update
 			// or manual restart
 			if r.restartCount > 3 {
-				r.backend.SetStatusLogErrorf("Unable to start collector after 3 tries, giving up! "+string(r.output))
+				r.backend.SetStatusLogErrorf("Unable to start collector after 3 tries, giving up! " + string(r.output))
 				r.setSupervised(false)
 				continue
 			}

@@ -171,3 +171,16 @@ func SprintfList(list []string, values ...interface{}) (result []string, err err
 	}
 	return
 }
+
+func PathMatch(path string, patternList []string) (bool, error) {
+	for _, pattern := range patternList {
+		result, err := filepath.Match(pattern, path)
+		if err != nil {
+			return false, err
+		}
+		if result {
+			return true, nil
+		}
+	}
+	return false, nil
+}
