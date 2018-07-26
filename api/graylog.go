@@ -16,12 +16,13 @@
 package api
 
 import (
+	"bytes"
 	"crypto/tls"
+	"encoding/json"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
-	"unsafe"
 
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/api/rest"
@@ -153,7 +154,11 @@ func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *grayl
 		registration.NodeDetails.Metrics = metrics
 		if len(ctx.UserConfig.ListLogFiles) > 0 {
 			fileList := common.ListFiles(ctx.UserConfig.ListLogFiles)
-			fileListSize := (int)(unsafe.Sizeof(common.File{})) * len(fileList)
+			buf := new(bytes.Buffer)
+			if fileList != nil {
+				json.NewEncoder(buf).Encode(fileList)
+			}
+			fileListSize := buf.Len()
 			// Maximum MongoDB document size is 16793600 bytes so we leave some extra space for the rest of the request
 			// before we skip to send the file list.
 			if fileListSize < 10000000 {
