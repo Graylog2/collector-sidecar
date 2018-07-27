@@ -124,5 +124,11 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 		log.Fatal("Please set update interval > 0 seconds.")
 	}
 
+	// collector binary whitelist
+	if ctx.UserConfig.CollectorBinariesWhitelist == nil {
+		log.Fatal("`collector_binaries_whitelist` is not set. Explicitly allow to execute all binaries by setting it to an empty list" +
+			" or limit the execution by defining proper values.")
+	}
+
 	return nil
 }
