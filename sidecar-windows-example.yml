@@ -61,11 +61,15 @@ log_path: "C:\\Program Files\\graylog\\sidecar\\logs"
 log_rotation_time: 86400
 log_max_age: 604800
 
-# A list of binaries which are allowed to be execute by the Sidecar. An empty list disables the whitelist feature.
+# A list of binaries which are allowed to be executed by the Sidecar. An empty list disables the whitelist feature.
+# Wildcards can be used, for a full pattern description see https://golang.org/pkg/path/filepath/#Match
 # Example:
 #     collector_binaries_whitelist:
 #       - "/usr/bin/filebeat"
 #       - "/opt/collectors/*"
+#
+# Example disable whitelisting:
+#     collector_binaries_whitelist:
 #
 collector_binaries_whitelist:
   - "C:\\Program Files\\graylog\\sidecar\\filebeat.exe"
