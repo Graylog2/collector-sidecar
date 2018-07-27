@@ -125,7 +125,7 @@ func (r *SvcRunner) ValidateBeforeStart() error {
 	if err != nil {
 		return errors.New("Can not validate binary path")
 	}
-	if !whitelisted && len(*r.context.UserConfig.CollectorBinariesWhitelist) > 0 {
+	if !whitelisted.Match && len(*r.context.UserConfig.CollectorBinariesWhitelist) > 0 {
 		return r.backend.SetStatusLogErrorf("Couldn't execute collector %s, binary path is not included in `collector_binaries_whitelist' config option.", r.backend.ExecutablePath)
 	}
 
