@@ -180,7 +180,13 @@ type PathMatchResult struct {
 
 func PathMatch(path string, patternList []string) (PathMatchResult, error) {
 	result := PathMatchResult{}
-	result.Path, _ = filepath.EvalSymlinks(path)
+	resolvedPath, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return result, err
+	} else {
+		result.Path = resolvedPath
+	}
+
 	if result.Path != path {
 		result.IsLink = true
 	}
