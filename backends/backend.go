@@ -24,6 +24,7 @@ import (
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/system"
+	"github.com/Graylog2/collector-sidecar/context"
 )
 
 type Backend struct {
@@ -84,7 +85,16 @@ func (b *Backend) EqualSettings(a *Backend) bool {
 	return b.Equals(aBackend)
 }
 
-func (b *Backend) ValidatePreconditions() bool {
+func (b *Backend) ValidatePreconditions(context *context.Ctx) bool {
+	configuration, err := common.PathMatch(b.ConfigurationPath, *context.UserConfig.CollectorBinariesWhitelist)
+	if err != nil {
+		log.Error("Can not validate configuration path")
+		return false
+	}
+	if configuration.Match {
+		b.SetStatusLogErrorf("Collector configuration %s is in executable path, exclude it from `collector_binaries_whitelist' config option.", b.ConfigurationPath)
+		return false
+	}
 	return true
 }
 

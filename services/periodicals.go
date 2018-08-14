@@ -115,6 +115,9 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context 
 			continue
 		}
 		backend := runner.GetBackend()
+		if !backend.ValidatePreconditions(context) {
+			continue
+		}
 		if backend.RenderOnChange(backends.Backend{Template: response.Template}) {
 			if valid, output := backend.ValidateConfigurationFile(); !valid {
 				backend.SetStatusLogErrorf("Collector configuration file is not valid, waiting for the next update. "+output)

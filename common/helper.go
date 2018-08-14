@@ -171,3 +171,36 @@ func SprintfList(list []string, values ...interface{}) (result []string, err err
 	}
 	return
 }
+
+type PathMatchResult struct {
+	Path   string
+	Match  bool
+	IsLink bool
+}
+
+func PathMatch(path string, patternList []string) (PathMatchResult, error) {
+	result := PathMatchResult{}
+	resolvedPath, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return result, err
+	} else {
+		result.Path = resolvedPath
+	}
+
+	if result.Path != path {
+		result.IsLink = true
+	}
+	for _, pattern := range patternList {
+		match, err := filepath.Match(pattern, result.Path)
+		if err != nil {
+			result.Match = false
+			return result, err
+		}
+		if match {
+			result.Match = true
+			return result, nil
+		}
+	}
+	result.Match = false
+	return result, nil
+}
