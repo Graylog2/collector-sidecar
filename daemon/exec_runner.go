@@ -25,6 +25,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/flynn-archive/go-shlex"
+
 	"github.com/Graylog2/collector-sidecar/backends"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
@@ -34,7 +36,7 @@ import (
 type ExecRunner struct {
 	RunnerCommon
 	exec           string
-	args           []string
+	args           string
 	stderr, stdout string
 	output         []byte
 	isRunning      atomic.Value
@@ -183,7 +185,11 @@ func (r *ExecRunner) start() error {
 	}
 
 	// setup process environment
-	r.cmd = exec.Command(r.exec, r.args...)
+	quotedArgs, err := shlex.Split(r.args)
+	if err != nil {
+		return err
+	}
+	r.cmd = exec.Command(r.exec, quotedArgs...)
 	r.cmd.Dir = r.daemon.Dir
 	r.cmd.Env = append(os.Environ(), r.daemon.Env...)
 

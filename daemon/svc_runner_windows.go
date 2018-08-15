@@ -18,7 +18,6 @@ package daemon
 import (
 	"errors"
 	"os/exec"
-	"strings"
 	"sync/atomic"
 	"time"
 
@@ -34,7 +33,7 @@ import (
 type SvcRunner struct {
 	RunnerCommon
 	exec         string
-	args         []string
+	args         string
 	startTime    time.Time
 	serviceName  string
 	isSupervised atomic.Value
@@ -143,7 +142,7 @@ func (r *SvcRunner) ValidateBeforeStart() error {
 	serviceConfig := mgr.Config{
 		DisplayName:    "Graylog collector sidecar - " + r.name + " backend",
 		Description:    "Wrapper service for the NXLog backend",
-		BinaryPathName: "\"" + r.exec + "\" " + strings.Join(r.args, " ")}
+		BinaryPathName: "\"" + r.exec + "\" " + r.args}
 
 	s, err := m.OpenService(r.serviceName)
 	// service exist so we only update the properties

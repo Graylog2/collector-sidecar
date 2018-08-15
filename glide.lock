@@ -1,10 +1,12 @@
-hash: 8c3fa547f85bc8d3445aa71b93fac56bf51d503486867b79beadb97303d1c38d
-updated: 2017-06-19T12:35:05.244834712+02:00
+hash: bc35d7d5b047ba6e288278d289184b6fea6e4f9c4f878fd7c3e06c210fde0d8a
+updated: 2018-08-15T16:57:35.735955193+02:00
 imports:
 - name: bitbucket.org/tebeka/strftime
   version: 2194253a23c090a4d5953b152a3c63fb5da4f5a4
 - name: github.com/elastic/gosigar
   version: 2716c1fe855ee5c88eae707195e0688374458c92
+- name: github.com/flynn-archive/go-shlex
+  version: 3f9db97f856818214da2e1057f8ad84803971cff
 - name: github.com/go-ole/go-ole
   version: 5e9c030faf78847db7aa77e3661b9cc449de29b7
   subpackages:

@@ -157,19 +157,16 @@ func IsInList(id string, list []string) bool {
 	return false
 }
 
-func SprintfList(list []string, values ...interface{}) (result []string, err error) {
-	for _, entry := range list {
-		matched, err := regexp.MatchString("%[vTsqxX]", entry)
-		if err != nil {
-			return nil, err
-		}
-		if matched {
-			result = append(result, fmt.Sprintf(entry, values...))
-		} else {
-			result = append(result, entry)
-		}
+func Sprintf(format string, values ...interface{}) (string, error) {
+	matched, err := regexp.MatchString("%[vTsqxX]", format)
+	if err != nil {
+		return "", err
 	}
-	return
+	if matched {
+		return fmt.Sprintf(format, values...), nil
+	} else {
+		return format, nil
+	}
 }
 
 type PathMatchResult struct {

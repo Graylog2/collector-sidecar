@@ -53,8 +53,8 @@ type ResponseCollectorBackend struct {
 	OperatingSystem      string   `json:"node_operating_system"`
 	ExecutablePath       string   `json:"executable_path"`
 	ConfigurationPath    string   `json:"configuration_path"`
-	ExecuteParameters    []string `json:"execute_parameters"`
-	ValidationParameters []string `json:"validation_parameters"`
+	ExecuteParameters    string `json:"execute_parameters"`
+	ValidationParameters string `json:"validation_parameters"`
 }
 
 type ResponseCollectorConfiguration struct {

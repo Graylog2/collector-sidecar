@@ -21,10 +21,12 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/flynn-archive/go-shlex"
+
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/common"
-	"github.com/Graylog2/collector-sidecar/system"
 	"github.com/Graylog2/collector-sidecar/context"
+	"github.com/Graylog2/collector-sidecar/system"
 )
 
 type Backend struct {
@@ -35,8 +37,8 @@ type Backend struct {
 	OperatingSystem      string
 	ExecutablePath       string
 	ConfigurationPath    string
-	ExecuteParameters    []string
-	ValidationParameters []string
+	ExecuteParameters    string
+	ValidationParameters string
 	Template             string
 	backendStatus        system.Status
 }
@@ -61,10 +63,10 @@ func (b *Backend) Equals(a *Backend) bool {
 }
 
 func (b *Backend) EqualSettings(a *Backend) bool {
-	executeParameters, _ := common.SprintfList(
+	executeParameters, _ := common.Sprintf(
 		a.ExecuteParameters,
 		a.ConfigurationPath)
-	validationParameters, _ := common.SprintfList(
+	validationParameters, _ := common.Sprintf(
 		a.ValidationParameters,
 		a.ConfigurationPath)
 
@@ -99,12 +101,17 @@ func (b *Backend) ValidatePreconditions(context *context.Ctx) bool {
 }
 
 func (b *Backend) ValidateConfigurationFile() (bool, string) {
-	if b.ValidationParameters == nil || (len(b.ValidationParameters) == 1 && b.ValidationParameters[0] == "") {
+	if b.ValidationParameters == "" {
 		log.Warnf("[%s] Skipping configuration test. No validation command configured.", b.Name)
 		return true, ""
 	}
 
-	cmd := exec.Command(b.ExecutablePath, b.ValidationParameters...)
+	quotedArgs, err := shlex.Split(b.ValidationParameters)
+	if err != nil {
+		log.Errorf("[%s] Error during configuration validation: %s", b.Name, err)
+		return false, err.Error()
+	}
+	cmd := exec.Command(b.ExecutablePath, quotedArgs...)
 
 	var combinedOutputBuffer bytes.Buffer
 	cmd.Stdout = &combinedOutputBuffer

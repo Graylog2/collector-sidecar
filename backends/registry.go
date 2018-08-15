@@ -32,13 +32,13 @@ type backendStore struct {
 
 func (bs *backendStore) SetBackend(backend Backend) {
 	bs.backends[backend.Id] = &backend
-	executeParameters, err := common.SprintfList(backend.ExecuteParameters, backend.ConfigurationPath)
+	executeParameters, err := common.Sprintf(backend.ExecuteParameters, backend.ConfigurationPath)
 	if err != nil {
 		log.Errorf("Invalid execute parameters, skip adding backend: %s", backend.Name)
 		return
 	}
 	bs.backends[backend.Id].ExecuteParameters = executeParameters
-	validationParameters, err := common.SprintfList(backend.ValidationParameters, backend.ConfigurationPath)
+	validationParameters, err := common.Sprintf(backend.ValidationParameters, backend.ConfigurationPath)
 	if err != nil {
 		log.Errorf("Invalid validation parameters, skip adding backend: %s", backend.Name)
 		return
