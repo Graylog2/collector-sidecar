@@ -18,6 +18,7 @@ Especially the [Step-by-Step](http://docs.graylog.org/en/2.4/pages/collector_sid
 | ---------------- | ---------------------- |
 | 0.0.9            | 2.1.x                  |
 | 0.1.x            | 2.2.x, 2.3.x, 2.4.x    |
+| 0.2.x            | 2.5.x                  |
 
 [Download a package](https://github.com/Graylog2/collector-sidecar/releases) and install it on the target system.
 
