@@ -18,3 +18,4 @@ import:
 - package: bitbucket.org/tebeka/strftime
 - package: github.com/elastic/gosigar
 - package: github.com/rifflock/lfshook
+- package: github.com/flynn-archive/go-shlex
