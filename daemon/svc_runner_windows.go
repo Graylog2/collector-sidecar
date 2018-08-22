@@ -272,6 +272,8 @@ func (r *SvcRunner) stop() error {
 		}
 	}
 
+	r.backend.SetStatus(backends.StatusStopped, "Stopped")
+
 	return nil
 }
 
