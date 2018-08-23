@@ -58,7 +58,7 @@ func startAction(backend *backends.Backend) {
 func restartAction(backend *backends.Backend) {
 	for id, runner := range Daemon.Runner {
 		if id == backend.Id {
-			log.Infof("[%s] Got remote restarting command", backend.Name)
+			log.Infof("[%s] Got remote restart command", backend.Name)
 			runner.Restart()
 		}
 	}
