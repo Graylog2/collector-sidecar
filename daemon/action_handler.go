@@ -46,7 +46,7 @@ func startAction(backend *backends.Backend) {
 	for id, runner := range Daemon.Runner {
 		if id == backend.Id {
 			if !runner.Running() {
-				log.Infof("[%s] Staring collector", backend.Name)
+				log.Infof("[%s] Got remote start command", backend.Name)
 				runner.Restart()
 			} else {
 				log.Infof("Collector [%s] is already running, skipping start action.", backend.Name)
@@ -58,7 +58,7 @@ func startAction(backend *backends.Backend) {
 func restartAction(backend *backends.Backend) {
 	for id, runner := range Daemon.Runner {
 		if id == backend.Id {
-			log.Infof("[%s] Restarting collector", backend.Name)
+			log.Infof("[%s] Got remote restarting command", backend.Name)
 			runner.Restart()
 		}
 	}
@@ -67,7 +67,7 @@ func restartAction(backend *backends.Backend) {
 func stopAction(backend *backends.Backend) {
 	for id, runner := range Daemon.Runner {
 		if id == backend.Id {
-			log.Infof("[%s] Stopping collector", backend.Name)
+			log.Infof("[%s] Got remote stop command", backend.Name)
 			runner.Shutdown()
 		}
 	}
