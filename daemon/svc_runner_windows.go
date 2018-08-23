@@ -281,10 +281,12 @@ func (r *SvcRunner) Restart() error {
 }
 
 func (r *SvcRunner) restart() error {
-	r.stop()
-	for timeout := 0; r.Running() || timeout >= 5; timeout++ {
-		log.Debugf("[%s] waiting for process to finish...", r.Name())
-		time.Sleep(1 * time.Second)
+	if r.Running() {
+		r.stop()
+		for timeout := 0; r.Running() || timeout >= 5; timeout++ {
+			log.Debugf("[%s] waiting for process to finish...", r.Name())
+			time.Sleep(1 * time.Second)
+		}
 	}
 	r.start()
 
