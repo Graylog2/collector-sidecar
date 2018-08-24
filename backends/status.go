@@ -24,6 +24,7 @@ const (
 	StatusRunning int = 0
 	StatusUnknown int = 1
 	StatusError   int = 2
+	StatusStopped int = 3
 )
 
 func (b *Backend) SetStatus(state int, message string) {

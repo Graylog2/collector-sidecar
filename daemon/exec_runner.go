@@ -234,6 +234,8 @@ func (r *ExecRunner) stop() error {
 		}
 	}
 
+	r.backend.SetStatus(backends.StatusStopped, "Stopped")
+
 	return nil
 }
 
