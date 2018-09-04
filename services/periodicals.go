@@ -39,17 +39,16 @@ func StartPeriodicals(context *context.Ctx) {
 
 	go func() {
 		backendChecksum, configurationChecksum := "", ""
-		var err error
 		for {
 			time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
 
-			// backend list is needed before configuration assignments are fetched
-			backendChecksum, err = fetchBackendList(httpClient, backendChecksum, context)
+			// registration response contains configuration assignments
+			response, err := updateCollectorRegistration(httpClient, context)
 			if err != nil {
 				continue
 			}
-			// registration response contains configuration assignments
-			response, err := updateCollectorRegistration(httpClient, context)
+			// backend list is needed before configuration assignments are updated
+			backendChecksum, err = fetchBackendList(httpClient, backendChecksum, context)
 			if err != nil {
 				continue
 			}
