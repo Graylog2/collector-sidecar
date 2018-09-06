@@ -90,7 +90,7 @@ func (b *Backend) EqualSettings(a *Backend) bool {
 func (b *Backend) ValidatePreconditions(context *context.Ctx) bool {
 	configuration, err := common.PathMatch(b.ConfigurationPath, *context.UserConfig.CollectorBinariesWhitelist)
 	if err != nil {
-		log.Error("Can not validate configuration path")
+		log.Errorf("Can not validate configuration path: %s", err)
 		return false
 	}
 	if configuration.Match {
