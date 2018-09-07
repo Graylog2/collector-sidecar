@@ -271,6 +271,7 @@ func NewStatusRequest() graylog.StatusRequest {
 		combinedStatus = backends.StatusRunning
 	case stoppedCount != 0:
 		combinedStatus = backends.StatusStopped
+		fallthrough
 	case errorCount != 0:
 		combinedStatus = backends.StatusError
 	}
