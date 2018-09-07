@@ -107,7 +107,7 @@ func RequestConfiguration(
 	resp, err := c.Do(r, &configurationResponse)
 	if err != nil && resp == nil {
 		msg := "Fetching configuration failed"
-		system.GlobalStatus.Set(backends.StatusError, msg)
+		system.GlobalStatus.Set(backends.StatusError, msg + ": " + err.Error())
 		log.Errorf("[RequestConfiguration] %s: %v", msg, err)
 	}
 
@@ -124,7 +124,7 @@ func RequestConfiguration(
 			log.Debug("[RequestConfiguration] No configuration update available, skipping update.")
 		case resp.StatusCode != 200:
 			msg := "Bad response status from Graylog server"
-			system.GlobalStatus.Set(backends.StatusError, msg)
+			system.GlobalStatus.Set(backends.StatusError, msg + ": " + err.Error())
 			log.Errorf("[RequestConfiguration] %s: %s", msg, resp.Status)
 			return graylog.ResponseCollectorConfiguration{}, err
 		}
@@ -246,7 +246,8 @@ func GetTlsConfig(ctx *context.Ctx) *tls.Config {
 
 func NewStatusRequest() graylog.StatusRequest {
 	statusRequest := graylog.StatusRequest{Backends: make([]graylog.StatusRequestBackend, 0)}
-	combined, count := system.GlobalStatus.Status, 0
+	combinedStatus := backends.StatusUnknown
+	runningCount, stoppedCount, errorCount := 0, 0, 0
 
 	for id, runner := range daemon.Daemon.Runner {
 		backendStatus := runner.GetBackend().Status()
@@ -255,22 +256,40 @@ func NewStatusRequest() graylog.StatusRequest {
 			Status:  backendStatus.Status,
 			Message: backendStatus.Message,
 		})
-		if backendStatus.Status > combined {
-			combined = backendStatus.Status
+		switch backendStatus.Status {
+		case backends.StatusRunning:
+			runningCount++
+		case backends.StatusStopped:
+			stoppedCount++
+		case backends.StatusError:
+			errorCount++
 		}
-		count++
 	}
 
-	if combined != backends.StatusRunning {
-		statusRequest.Status = combined
+	switch {
+	default:
+		combinedStatus = backends.StatusRunning
+	case stoppedCount != 0:
+		combinedStatus = backends.StatusStopped
+		fallthrough
+	case errorCount != 0:
+		combinedStatus = backends.StatusError
+	}
+
+	statusMessage := strconv.Itoa(runningCount) + " running / " +
+		strconv.Itoa(stoppedCount) + " stopped / " +
+		strconv.Itoa(errorCount) + " failing"
+
+	if combinedStatus != backends.StatusRunning {
+		statusRequest.Status = combinedStatus
+		statusRequest.Message = statusMessage
+	} else {
+		statusRequest.Status = system.GlobalStatus.Status
 		if len(system.GlobalStatus.Message) != 0 {
 			statusRequest.Message = system.GlobalStatus.Message
 		} else {
-			statusRequest.Message = "At least one backend with errors"
+			statusRequest.Message = statusMessage
 		}
-	} else {
-		statusRequest.Status = system.GlobalStatus.Status
-		statusRequest.Message = strconv.Itoa(count) + " collectors running"
 	}
 
 	return statusRequest
