@@ -116,7 +116,7 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context 
 		backend := runner.GetBackend()
 		if !backend.ValidatePreconditions(context) {
 			backend.SetStatusLogErrorf(
-				"Collector does not pass ValidatePreconditions. Check `collector_binaries_whitelist' config option.")
+				"Executable or configuration path violates `collector_binaries_whitelist' config option.")
 			continue
 		}
 		if backend.RenderOnChange(backends.Backend{Template: response.Template}) {
