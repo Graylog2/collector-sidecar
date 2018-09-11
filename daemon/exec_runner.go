@@ -119,18 +119,10 @@ func (r *ExecRunner) ResetRestartCounter() {
 }
 
 func (r *ExecRunner) ValidateBeforeStart() error {
-	whitelisted, err := common.PathMatch(r.GetBackend().ExecutablePath, *r.context.UserConfig.CollectorBinariesWhitelist)
+	err := r.backend.CheckExecutableAgainstWhitelist(r.context)
 	if err != nil {
-		return errors.New("Can not validate binary path")
-	}
-	if !whitelisted.Match && len(*r.context.UserConfig.CollectorBinariesWhitelist) > 0 {
-		if whitelisted.IsLink {
-			msg := "Couldn't execute collector %s [%s], binary path is not included in `collector_binaries_whitelist' config option."
-			return r.backend.SetStatusLogErrorf(msg, whitelisted.Path, r.GetBackend().ExecutablePath)
-		} else {
-			msg := "Couldn't execute collector %s, binary path is not included in `collector_binaries_whitelist' config option."
-			return r.backend.SetStatusLogErrorf(msg, whitelisted.Path)
-		}
+		r.backend.SetStatusLogErrorf(err.Error())
+		return err
 	}
 
 	_, err = exec.LookPath(r.exec)

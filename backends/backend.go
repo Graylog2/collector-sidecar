@@ -17,6 +17,7 @@ package backends
 
 import (
 	"bytes"
+	"fmt"
 	"os/exec"
 	"reflect"
 	"time"
@@ -87,6 +88,26 @@ func (b *Backend) EqualSettings(a *Backend) bool {
 	return b.Equals(aBackend)
 }
 
+func (b *Backend) CheckExecutableAgainstWhitelist(context *context.Ctx) error {
+	if len(*context.UserConfig.CollectorBinariesWhitelist) <= 0 {
+		return nil
+	}
+	whitelisted, err := common.PathMatch(b.ExecutablePath, *context.UserConfig.CollectorBinariesWhitelist)
+	if err != nil {
+		return fmt.Errorf("Can not validate binary path: %s", err)
+	}
+	if !whitelisted.Match {
+		if whitelisted.IsLink {
+			msg := "Couldn't execute collector %s [%s], binary path is not included in `collector_binaries_whitelist' config option."
+			return fmt.Errorf(msg, whitelisted.Path, b.ExecutablePath)
+		} else {
+			msg := "Couldn't execute collector %s, binary path is not included in `collector_binaries_whitelist' config option."
+			return fmt.Errorf(msg, whitelisted.Path)
+		}
+	}
+	return nil
+}
+
 func (b *Backend) ValidatePreconditions(context *context.Ctx) bool {
 	configuration, err := common.PathMatch(b.ConfigurationPath, *context.UserConfig.CollectorBinariesWhitelist)
 	if err != nil {
@@ -97,21 +118,10 @@ func (b *Backend) ValidatePreconditions(context *context.Ctx) bool {
 		b.SetStatusLogErrorf("Collector configuration %s is in executable path, exclude it from `collector_binaries_whitelist' config option.", b.ConfigurationPath)
 		return false
 	}
-	whitelisted, err := common.PathMatch(b.ExecutablePath, *context.UserConfig.CollectorBinariesWhitelist)
+	err = b.CheckExecutableAgainstWhitelist(context)
 	if err != nil {
-		log.Errorf("Can not validate binary path: %s", err)
+		log.Error(err)
 		return false
-	}
-	if !whitelisted.Match && len(*context.UserConfig.CollectorBinariesWhitelist) > 0 {
-		if whitelisted.IsLink {
-			msg := "Couldn't execute collector %s [%s], binary path is not included in `collector_binaries_whitelist' config option."
-			log.Errorf(msg, whitelisted.Path, b.ExecutablePath)
-			return false
-		} else {
-			msg := "Couldn't execute collector %s, binary path is not included in `collector_binaries_whitelist' config option."
-			log.Errorf(msg, whitelisted.Path)
-			return false
-		}
 	}
 	return true
 }

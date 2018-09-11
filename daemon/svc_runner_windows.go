@@ -16,7 +16,6 @@
 package daemon
 
 import (
-	"errors"
 	"os/exec"
 	"sync/atomic"
 	"time"
@@ -26,7 +25,6 @@ import (
 	"golang.org/x/sys/windows/svc/mgr"
 
 	"github.com/Graylog2/collector-sidecar/backends"
-	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
 )
 
@@ -120,12 +118,10 @@ func (r *SvcRunner) SetBackend(b backends.Backend) {
 }
 
 func (r *SvcRunner) ValidateBeforeStart() error {
-	whitelisted, err := common.PathMatch(r.GetBackend().ExecutablePath, *r.context.UserConfig.CollectorBinariesWhitelist)
+	err := r.backend.CheckExecutableAgainstWhitelist(r.context)
 	if err != nil {
-		return errors.New("Can not validate binary path")
-	}
-	if !whitelisted.Match && len(*r.context.UserConfig.CollectorBinariesWhitelist) > 0 {
-		return r.backend.SetStatusLogErrorf("Couldn't execute collector %s, binary path is not included in `collector_binaries_whitelist' config option.", r.backend.ExecutablePath)
+		r.backend.SetStatusLogErrorf(err.Error())
+		return err
 	}
 
 	execPath, err := exec.LookPath(r.exec)
