@@ -115,11 +115,13 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context 
 		}
 		backend := runner.GetBackend()
 		if !backend.ValidatePreconditions(context) {
+			backend.SetStatusLogErrorf(
+				"Collector does not pass ValidatePreconditions. Check `collector_binaries_whitelist' config option.")
 			continue
 		}
 		if backend.RenderOnChange(backends.Backend{Template: response.Template}) {
 			if valid, output := backend.ValidateConfigurationFile(); !valid {
-				backend.SetStatusLogErrorf("Collector configuration file is not valid, waiting for the next update. "+output)
+				backend.SetStatusLogErrorf("Collector configuration file is not valid, waiting for the next update. " + output)
 				continue
 			}
 
