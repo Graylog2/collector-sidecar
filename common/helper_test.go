@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -96,5 +97,76 @@ func TestEncloseWithoutData(t *testing.T) {
 
 	if result != "" {
 		t.Fail()
+	}
+}
+
+func TestPathMatch(t *testing.T) {
+	dir, err := ioutil.TempDir("", "test-path-match")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	execfile := filepath.Join(dir, "myexec")
+	patternList := []string{"/usr/bin/moo", "/sbin/bar"}
+	result, err := PathMatch(execfile, patternList)
+	if err != nil || result.Match {
+		t.Fatalf("'%s' should not match patternList %v err '%v' result '%v'", execfile, patternList, err, result)
+	}
+	if result.DoesExist {
+		t.Fatalf("DoesExist should not be set")
+	}
+
+	os.Create(execfile)
+	patternList = []string{"/usr/bin/moo", "/sbin/bar", execfile}
+	result, err = PathMatch(execfile, patternList)
+	if err != nil || !result.Match {
+		t.Fatalf("'%s' should match patternList %v err '%v' result '%v'", execfile, patternList, err, result)
+	}
+	if !result.DoesExist {
+		t.Fatalf("DoesExist should be set")
+	}
+
+	patternList = []string{"/usr/bin/moo", "/sbin/bar", dir + "/*"}
+	result, err = PathMatch(execfile, patternList)
+	if err != nil || !result.Match {
+		t.Fatalf("'%s' should match globbing patternList %v err '%v' result '%v'",
+			execfile, patternList, err, result)
+	}
+
+}
+
+func TestPathMatchSymlink(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip()
+	}
+
+	dir, err := ioutil.TempDir("", "test-path-match")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	execfile := filepath.Join(dir, "myexec")
+	symlink := filepath.Join(dir, "symlink")
+	if err = os.Symlink(execfile, symlink); err != nil {
+		t.Fatal()
+	}
+	patternList := []string{"moo", "bar", execfile}
+	result, err := PathMatch(symlink, patternList)
+	if err == nil {
+		t.Fatalf("broken symlinks should report an error")
+	}
+
+	os.Create(execfile)
+	result, err = PathMatch(symlink, patternList)
+	if err != nil || !result.Match {
+		t.Fatalf("'%s' should match patternList %v err '%v' result '%v'", execfile, patternList, err, result)
+	}
+	if !result.IsLink {
+		t.Fatalf("result.IsLink is false")
+	}
+	if result.Path != execfile {
+		t.Fatalf("result.Path did not contain resolved symlink")
 	}
 }

@@ -170,25 +170,32 @@ func Sprintf(format string, values ...interface{}) (string, error) {
 }
 
 type PathMatchResult struct {
-	Path   string
-	Match  bool
-	IsLink bool
+	Path      string
+	Match     bool
+	IsLink    bool
+	DoesExist bool
 }
 
 func PathMatch(path string, patternList []string) (PathMatchResult, error) {
-	result := PathMatchResult{}
-	if _, err := os.Stat(path); os.IsExist(err) {
+	result := PathMatchResult{Path: path, DoesExist: true}
+
+	if _, err := os.Lstat(path); err == nil {
 		resolvedPath, err := filepath.EvalSymlinks(path)
 		if err != nil {
+			// error out on broken symlinks, because we cannot resolve
+			// their path with EvalSymlinks
+			result.DoesExist = false
 			return result, err
 		} else {
-			result.Path = resolvedPath
+			if resolvedPath != path {
+				result.IsLink = true
+				result.Path = resolvedPath
+			}
 		}
+	} else {
+		result.DoesExist = false
 	}
 
-	if result.Path != path {
-		result.IsLink = true
-	}
 	for _, pattern := range patternList {
 		match, err := filepath.Match(pattern, result.Path)
 		if err != nil {
