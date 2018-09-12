@@ -97,7 +97,13 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context 
 	}
 
 	for backendId, configurationId := range assignments.Store.GetAll() {
-		response, err := api.RequestConfiguration(httpClient, configurationId, checksum, context)
+		runner := daemon.Daemon.GetRunnerByBackendId(backendId)
+		if runner == nil {
+			log.Errorf("Got collector ID with no existing instance, skipping configuration check: %s", backendId)
+			continue
+		}
+		backend := runner.GetBackend()
+		response, err := api.RequestConfiguration(httpClient, configurationId, backend.ConfigChecksum, context)
 		if err != nil {
 			log.Error("Can't fetch configuration from Graylog API: ", err)
 			return ""
@@ -108,18 +114,13 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context 
 			continue
 		}
 
-		runner := daemon.Daemon.GetRunnerByBackendId(backendId)
-		if runner == nil {
-			log.Errorf("Got collector ID with no existing instance, skipping configuration check: %s", backendId)
-			continue
-		}
-		backend := runner.GetBackend()
 		if !backend.ValidatePreconditions(context) {
 			continue
 		}
 		if backend.RenderOnChange(backends.Backend{Template: response.Template}) {
+			backend.ConfigChecksum = response.Checksum
 			if valid, output := backend.ValidateConfigurationFile(); !valid {
-				backend.SetStatusLogErrorf("Collector configuration file is not valid, waiting for the next update. "+output)
+				backend.SetStatusLogErrorf("Collector configuration file is not valid, waiting for the next update. " + output)
 				continue
 			}
 
