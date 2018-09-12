@@ -108,7 +108,7 @@ func (b *Backend) CheckExecutableAgainstWhitelist(context *context.Ctx) error {
 	return nil
 }
 
-func (b *Backend) ValidatePreconditions(context *context.Ctx) bool {
+func (b *Backend) CheckConfigPathAgainstWhitelist(context *context.Ctx) bool {
 	configuration, err := common.PathMatch(b.ConfigurationPath, *context.UserConfig.CollectorBinariesWhitelist)
 	if err != nil {
 		log.Errorf("Can not validate configuration path: %s", err)
@@ -118,18 +118,16 @@ func (b *Backend) ValidatePreconditions(context *context.Ctx) bool {
 		b.SetStatusLogErrorf("Collector configuration %s is in executable path, exclude it from `collector_binaries_whitelist' config option.", b.ConfigurationPath)
 		return false
 	}
-	err = b.CheckExecutableAgainstWhitelist(context)
-	if err != nil {
-		log.Error(err)
-		return false
-	}
 	return true
 }
 
-func (b *Backend) ValidateConfigurationFile() (bool, string) {
+func (b *Backend) ValidateConfigurationFile(context *context.Ctx) (bool, string) {
 	if b.ValidationParameters == "" {
 		log.Warnf("[%s] Skipping configuration test. No validation command configured.", b.Name)
 		return true, ""
+	}
+	if err := b.CheckExecutableAgainstWhitelist(context); err != nil {
+		return false, err.Error()
 	}
 
 	quotedArgs, err := shlex.Split(b.ValidationParameters)
