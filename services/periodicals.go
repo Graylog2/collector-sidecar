@@ -38,7 +38,9 @@ func StartPeriodicals(context *context.Ctx) {
 	}
 
 	go func() {
-		backendChecksum, configurationChecksum := "", ""
+		configChecksums := make(map[string]string)
+		backendChecksum := ""
+		logOnce := true
 		for {
 			time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
 
@@ -54,9 +56,18 @@ func StartPeriodicals(context *context.Ctx) {
 			}
 			assignments.Store.Update(response.Assignments)
 			// create process instances
-			daemon.Daemon.SyncWithAssignments(context)
+			daemon.Daemon.SyncWithAssignments(configChecksums, context)
 			// test for new or updated configurations and start the corresponding collector
-			configurationChecksum = checkForUpdateAndRestart(httpClient, configurationChecksum, context)
+			if assignments.Store.Len() == 0 {
+				if logOnce {
+					log.Info("No configurations assigned to this instance. Skipping configuration request.")
+					logOnce = false
+				}
+				continue
+			} else {
+				logOnce = true
+			}
+			checkForUpdateAndRestart(httpClient, configChecksums, context)
 		}
 	}()
 }
@@ -88,14 +99,7 @@ func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx
 }
 
 // fetch configuration periodically
-func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context *context.Ctx) string {
-	if assignments.Store.Len() == 0 {
-		if checksum != "_" {
-			log.Info("No configurations assigned to this instance. Skipping configuration request.")
-		}
-		return "_"
-	}
-
+func checkForUpdateAndRestart(httpClient *http.Client, checksums map[string]string, context *context.Ctx) {
 	for backendId, configurationId := range assignments.Store.GetAll() {
 		runner := daemon.Daemon.GetRunnerByBackendId(backendId)
 		if runner == nil {
@@ -103,10 +107,10 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context 
 			continue
 		}
 		backend := runner.GetBackend()
-		response, err := api.RequestConfiguration(httpClient, configurationId, backend.ConfigChecksum, context)
+		response, err := api.RequestConfiguration(httpClient, configurationId, checksums[backendId], context)
 		if err != nil {
 			log.Error("Can't fetch configuration from Graylog API: ", err)
-			return ""
+			return
 		}
 
 		if response.IsEmpty() {
@@ -118,7 +122,7 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context 
 			continue
 		}
 		if backend.RenderOnChange(backends.Backend{Template: response.Template}) {
-			backend.ConfigChecksum = response.Checksum
+			checksums[backendId] = response.Checksum
 			if valid, output := backend.ValidateConfigurationFile(); !valid {
 				backend.SetStatusLogErrorf("Collector configuration file is not valid, waiting for the next update. " + output)
 				continue
@@ -132,6 +136,4 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context 
 
 		}
 	}
-
-	return ""
 }

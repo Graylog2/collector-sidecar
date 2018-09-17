@@ -40,7 +40,6 @@ type Backend struct {
 	ExecuteParameters    string
 	ValidationParameters string
 	Template             string
-	ConfigChecksum       string
 	backendStatus        system.Status
 }
 
@@ -82,7 +81,6 @@ func (b *Backend) EqualSettings(a *Backend) bool {
 		ExecuteParameters:    executeParameters,
 		ValidationParameters: validationParameters,
 		Template:             b.Template,
-		ConfigChecksum:       b.ConfigChecksum,
 		backendStatus:        b.Status(),
 	}
 
