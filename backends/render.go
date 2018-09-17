@@ -17,6 +17,8 @@ package backends
 
 import (
 	"bytes"
+	"fmt"
+	"github.com/Graylog2/collector-sidecar/context"
 	"io/ioutil"
 
 	"github.com/Graylog2/collector-sidecar/common"
@@ -29,7 +31,12 @@ func (b *Backend) render() []byte {
 	return common.ConvertLineBreak(result.Bytes())
 }
 
-func (b *Backend) renderToFile() error {
+func (b *Backend) renderToFile(context *context.Ctx) error {
+	if !b.CheckConfigPathAgainstWhitelist(context) {
+		err := fmt.Errorf("Configuration path violates `collector_binaries_whitelist' config option.")
+		b.SetStatusLogErrorf(err.Error())
+		return err
+	}
 	stringConfig := b.render()
 	err := common.CreatePathToFile(b.ConfigurationPath)
 	if err != nil {
@@ -39,13 +46,14 @@ func (b *Backend) renderToFile() error {
 	return err
 }
 
-func (b *Backend) RenderOnChange(changedBackend Backend) bool {
+func (b *Backend) RenderOnChange(changedBackend Backend, context *context.Ctx) bool {
 	if b.Template != changedBackend.Template {
 		log.Infof("[%s] Configuration change detected, rewriting configuration file.", b.Name)
 		b.Template = changedBackend.Template
-		b.renderToFile()
+		if err := b.renderToFile(context); err != nil {
+			return false
+		}
 		return true
 	}
-
 	return false
 }
