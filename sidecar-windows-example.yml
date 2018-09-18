@@ -72,8 +72,8 @@ log_max_age: 604800
 #     collector_binaries_whitelist:
 #
 collector_binaries_whitelist:
-  - "C:\\Program Files\\graylog\\sidecar\\filebeat.exe"
-  - "C:\\Program Files\\graylog\\sidecar\\winlogbeat.exe"
+  - "C:\\Program Files\\Graylog\\sidecar\\filebeat.exe"
+  - "C:\\Program Files\\Graylog\\sidecar\\winlogbeat.exe"
   - "C:\\Program Files\\Filebeat\\filebeat.exe"
   - "C:\\Program Files\\Packetbeat\\packetbeat.exe"
   - "C:\\Program Files\\Metricbeat\\metricbeat.exe"
