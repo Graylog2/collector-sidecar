@@ -107,7 +107,7 @@ func (dc *DaemonConfig) GetRunnerByBackendId(id string) Runner {
 	return nil
 }
 
-func (dc *DaemonConfig) SyncWithAssignments(context *context.Ctx) {
+func (dc *DaemonConfig) SyncWithAssignments(configChecksums map[string]string, context *context.Ctx) {
 	if dc.Runner == nil {
 		return
 	}
@@ -120,12 +120,14 @@ func (dc *DaemonConfig) SyncWithAssignments(context *context.Ctx) {
 		if backend != nil && !runnerBackend.EqualSettings(backend) {
 			log.Infof("[%s] Updating process configuration", runner.Name())
 			runner.SetBackend(*backend)
+			configChecksums[backend.Id] = ""
 		}
 
 		// cleanup backends that should not run anymore
 		if backend == nil || assignments.Store.GetAll()[backend.Id] == "" {
 			log.Info("Removing process runner: " + backend.Name)
 			dc.DeleteRunner(id)
+			configChecksums[backend.Id] = ""
 		}
 	}
 
