@@ -41,12 +41,15 @@
   Var ServerUrl
   Var ParamNodeName
   Var InputNodeName
+  Var InputApiToken
   Var NodeName
+  Var ApiToken
   Var ParamUpdateInterval
   Var UpdateInterval
   Var ParamTlsSkipVerify
   Var TlsSkipVerify
   Var ParamSendStatus
+  Var ParamApiToken
   Var SendStatus
   Var Dialog
   Var Label
@@ -180,6 +183,7 @@ Section "Post"
   ${GetOptions} $Params " -UPDATE_INTERVAL=" $ParamUpdateInterval
   ${GetOptions} $Params " -TLS_SKIP_VERIFY=" $ParamTlsSkipVerify
   ${GetOptions} $Params " -SEND_STATUS=" $ParamSendStatus
+  ${GetOptions} $Params " -APITOKEN=" $ParamApiToken
 
   ${If} $ParamServerUrl != ""
     StrCpy $ServerUrl $ParamServerUrl
@@ -195,6 +199,9 @@ Section "Post"
   ${EndIf}
   ${If} $ParamSendStatus != ""
     StrCpy $SendStatus $ParamSendStatus
+  ${EndIf}
+  ${If} $ParamApiToken != ""
+    StrCpy $ApiToken $ParamApiToken
   ${EndIf}
 
   ; set defaults
@@ -219,6 +226,7 @@ Section "Post"
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<UPDATEINTERVAL>" $UpdateInterval
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<TLSSKIPVERIFY>" $TlsSkipVerify
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<SENDSTATUS>" $SendStatus
+  !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<APITOKEN>" $ApiToken
 
 SectionEnd
  
@@ -287,10 +295,15 @@ Function nsDialogsPage
   ${NSD_CreateText} 50 20 75% 12u "http://127.0.0.1:9000/api"
   Pop $InputServerUrl
 
-  ${NSD_CreateLabel} 0 100 100% 12u "Enter the name of this instance:"
+  ${NSD_CreateLabel} 0 60 100% 12u "Enter the name of this instance:"
   Pop $Label
-  ${NSD_CreateText} 50 120 75% 12u "graylog-sidecar"
+  ${NSD_CreateText} 50 80 75% 12u "graylog-sidecar"
   Pop $InputNodeName
+
+  ${NSD_CreateLabel} 0 120 100% 12u "Enter the server API token:"
+  Pop $Label
+  ${NSD_CreateText} 50 140 75% 12u ""
+  Pop $InputApiToken
 
   nsDialogs::Show
 FunctionEnd
@@ -298,6 +311,7 @@ FunctionEnd
 Function nsDialogsPageLeave
   ${NSD_GetText} $InputServerUrl $ServerUrl
   ${NSD_GetText} $InputNodeName $NodeName
+  ${NSD_GetText} $InputApiToken $ApiToken
 
   ${If} $ServerUrl == ""
       MessageBox MB_OK "Please enter a valid address to your Graylog server!"
@@ -305,6 +319,10 @@ Function nsDialogsPageLeave
   ${EndIf}
   ${If} $NodeName == ""
       MessageBox MB_OK "Please enter the instance name!"
+      Abort
+  ${EndIf}
+  ${If} $ApiToken == ""
+      MessageBox MB_OK "Please enter an API token!"
       Abort
   ${EndIf}
 FunctionEnd
