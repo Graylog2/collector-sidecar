@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os/exec"
 	"reflect"
+	"runtime"
 	"time"
 
 	"github.com/flynn-archive/go-shlex"
@@ -130,7 +131,13 @@ func (b *Backend) ValidateConfigurationFile(context *context.Ctx) (bool, string)
 		return false, err.Error()
 	}
 
-	quotedArgs, err := shlex.Split(b.ValidationParameters)
+	var err error
+	var quotedArgs []string
+	if runtime.GOOS == "windows" {
+		quotedArgs = common.CommandLineToArgv(b.ValidationParameters)
+	} else {
+		quotedArgs, err = shlex.Split(b.ValidationParameters)
+	}
 	if err != nil {
 		log.Errorf("[%s] Error during configuration validation: %s", b.Name, err)
 		return false, err.Error()
