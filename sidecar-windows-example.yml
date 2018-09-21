@@ -4,7 +4,7 @@ server_url: "<SERVERURL>"
 
 # The API token to use to authenticate against the Graylog server API.
 # Default: none
-server_api_token: ""
+server_api_token: "<APITOKEN>"
 
 # The node ID of the sidecar. This can be a path to a file or an ID string.
 # If set to a file and the file doesn't exist, the sidecar will generate an
