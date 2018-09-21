@@ -80,8 +80,8 @@ It's also possible to run the installer in silent mode with
 Edit `C:\Program Files\graylog\sidecar\sidecar.yml`.
 
 ```
-  $ C:\Program Files\graylog\sidecar\graylog-sidecar.exe -service install
-  $ C:\Program Files\graylog\sidecar\graylog-sidecar.exe -service start
+  $ C:\Program Files\Graylog\sidecar\graylog-sidecar.exe -service install
+  $ C:\Program Files\Graylog\sidecar\graylog-sidecar.exe -service start
 ```
 
 All installer options:
@@ -89,14 +89,11 @@ All installer options:
 | Parameter             | Description                           | Default                   |
 |-----------------------|---------------------------------------|---------------------------|
 | `-SERVERURL`          | URL to the Graylog API                | http://127.0.0.1:9000/api |
-| `-TAGS`               | List of tags                          | "windows, iis"            |
-| `-NODEID`             | Name of the instance                  | graylog-sidecar           |
-| `-UPDATE_INTERVAL`    | seconds between configuration updates | 10                        |
-| `-TLS_SKIP_VERIFY`    | ignore self-signed API certificates   | false                     |
-| `-SEND_STATUS`        | send host metrics back to Graylog     | true                      |
-| `-NXLOG_ENABLED`      | enable NXLog backend                  | false                     |
-| `-FILEBEAT_ENABLED`   | enable Filebeat                       | true                      |
-| `-WINLOGBEAT_ENABLED` | enable Winlogbeat                     | true                      |
+| `-NODENAME`           | Name of the instance                  | graylog-sidecar           |
+| `-APITOKEN`           | The server API token                  |                           |
+| `-UPDATE_INTERVAL`    | Seconds between configuration updates | 10                        |
+| `-TLS_SKIP_VERIFY`    | Ignore self-signed API certificates   | false                     |
+| `-SEND_STATUS`        | Send host metrics back to Graylog     | true                      |
 
 ### NXLog backend
 

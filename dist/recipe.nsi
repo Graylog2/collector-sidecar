@@ -131,9 +131,9 @@ Section "Install"
   ${EndIf}
 
   ${If} ${RunningX64}
-    File /oname=Graylog-sidecar.exe "../build/${VERSION}/windows/amd64/graylog-sidecar.exe"
+    File /oname=graylog-sidecar.exe "../build/${VERSION}/windows/amd64/graylog-sidecar.exe"
   ${Else}
-    File /oname=Graylog-sidecar.exe "../build/${VERSION}/windows/386/graylog-sidecar.exe"
+    File /oname=graylog-sidecar.exe "../build/${VERSION}/windows/386/graylog-sidecar.exe"
   ${EndIf}
 
   ;When we stop the Sidecar service we also turn it on again
