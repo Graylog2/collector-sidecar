@@ -44,3 +44,6 @@ dist/collectors/
 .filebeat
 
 /sidecar.yml
+
+# Dependency management
+/glide
