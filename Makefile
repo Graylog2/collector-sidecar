@@ -7,6 +7,9 @@ ifeq ($(strip $(COLLECTOR_VERSION)),)
 $(error COLLECTOR_VERSION is not set)
 endif
 
+targets = graylog-sidecar sidecar-collector build dist/cache dist/tmp-build dist/tmp-dest dist/pkg dist/collectors
+dist_targets = vendor glide
+
 GIT_REV=$(shell git rev-parse --short HEAD)
 BUILD_OPTS = -ldflags "-s -X github.com/Graylog2/collector-sidecar/common.GitRevision=$(GIT_REV) -X github.com/Graylog2/collector-sidecar/common.CollectorVersion=$(COLLECTOR_VERSION) -X github.com/Graylog2/collector-sidecar/common.CollectorVersionSuffix=$(COLLECTOR_VERSION_SUFFIX)"
 GLIDE_VERSION = v0.13.1
@@ -14,21 +17,16 @@ GLIDE_VERSION = v0.13.1
 TEST_SUITE = \
 	github.com/Graylog2/collector-sidecar/common
 
-all: clean misc build
-
-misc: ## Build NXMock for testing sidecar
-	$(GO) build -o misc/nxmock/nxlog misc/nxmock/main.go
+all: deps build
 
 fmt: ## Run gofmt
 	@GOFMT=$(GOFMT) sh ./format.sh
 
 clean: ## Remove binaries
-	@rm -rf build
-	@rm -rf dist/cache
-	@rm -rf dist/tmp-build
-	@rm -rf dist/tmp-dest
-	@rm -rf dist/pkg
-	@rm -rf dist/collectors
+	-rm -rf $(targets)
+
+distclean: clean
+	-rm -rf $(dist_targets)
 
 deps: glide
 	./glide install
@@ -54,7 +52,8 @@ test: ## Run tests
 build: ## Build sidecar binary for local target system
 	$(GO) build $(BUILD_OPTS) -v -i -o graylog-sidecar
 
-build-all: build-linux build-linux32 build-darwin build-windows build-windows32
+# does not include build-darwin as that only runs with homebrew on a Mac
+build-all: build-linux build-linux32 build-windows build-windows32
 
 build-linux: ## Build sidecar binary for Linux
 	@mkdir -p build/$(COLLECTOR_VERSION)/linux/amd64
@@ -118,6 +117,6 @@ package-tar: ## Create tar archive for all platforms
 help:
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | $(AWK) 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-.DEFAULT_GOAL := help
+.DEFAULT_GOAL := all
 
-.PHONY: all build build-all build-linux build-linux32 build-darwin build-windows build-windows32 misc fmt clean help package-linux package-windows
+.PHONY: all build build-all build-linux build-linux32 build-darwin build-freebsd build-windows build-windows32 fmt clean distclean help package-all package-linux package-linux32 package-windows package-tar

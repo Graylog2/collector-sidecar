@@ -198,12 +198,6 @@ There are a couple of configuration settings for the Sidecar:
 ## Compile
 
   * Clone the repository into your `$GOPATH` under `src/github.com/Graylog2/collector-sidecar`
-  * Install the [glide package manager](https://glide.sh)
-  * run `glide install` in the collector-sidecar directory
-  * (for Go <1.6 `export GO15VENDOREXPERIMENT=1`)
-  * run `make build`
+  * run `make` to install the dependencies and build the binary for the local platform
+  * run `make help` to see more targets
 
-## Development
-
-There is a collector mock program in order to use the sidecar without actually running a collector like NXLog. Simply build it with
-`make misc` und use the option `binary_path: misc/nxmock/nxlog`.
