@@ -169,7 +169,6 @@ func (b *Backend) ValidateConfigurationFile(context *context.Ctx) (bool, string)
 	case err := <-done:
 		if err != nil {
 			close(done)
-			log.Errorf("[%s] Error during configuration validation: %s %s", b.Name, string(combinedOutputBuffer.Bytes()), err)
 			return false, string(combinedOutputBuffer.Bytes())
 		}
 		return true, ""
