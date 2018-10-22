@@ -150,6 +150,28 @@ func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *grayl
 	}
 }
 
+func UploadConfiguration(httpClient *http.Client, ctx *context.Ctx, activeConfigurations *graylog.ConfigurationUploadRequest) {
+	c := rest.NewClient(httpClient)
+	c.BaseURL = ctx.ServerUrl
+
+	if len(activeConfigurations.Configurations) == 0 {
+		return
+	}
+
+	r, err := c.NewRequest("PUT", "/plugins/org.graylog.plugins.collector/collectors/"+ctx.CollectorId+"/configuration", nil, activeConfigurations)
+	if err != nil {
+		log.Error("[UpdateConfiguration] Can not initialize REST request")
+		return
+	}
+
+	resp, err := c.Do(r, nil)
+	if resp != nil && resp.StatusCode == 404 {
+		log.Error("[UpdateConfiguration] Can't upload rendered configuration, please update your Graylog server to the latest version.")
+	} else if resp != nil && resp.StatusCode != 202 {
+		log.Error("[UpdateConfiguration] Bad response from Graylog server: ", resp.Status)
+	}
+}
+
 func updateRuntimeConfiguration(respBody *graylog.ResponseCollectorRegistration, ctx *context.Ctx) error {
 	// API query interval
 	if ctx.UserConfig.UpdateInterval != respBody.Configuration.UpdateInterval &&

@@ -17,6 +17,8 @@ package nxlog
 
 import (
 	"bytes"
+	"fmt"
+	"github.com/Graylog2/collector-sidecar/backends"
 	"io/ioutil"
 	"os/exec"
 	"strconv"
@@ -389,17 +391,17 @@ func (nxc *NxConfig) Render() []byte {
 	return common.ConvertLineBreak(result.Bytes())
 }
 
-func (nxc *NxConfig) RenderToFile() error {
+func (nxc *NxConfig) RenderToFile() (error, string) {
 	stringConfig := nxc.Render()
 	err := common.CreatePathToFile(nxc.UserConfig.ConfigurationPath)
 	if err != nil {
-		return err
+		return err, string(stringConfig)
 	}
 	err = ioutil.WriteFile(nxc.UserConfig.ConfigurationPath, stringConfig, 0644)
-	return err
+	return err, string(stringConfig)
 }
 
-func (nxc *NxConfig) RenderOnChange(json graylog.ResponseCollectorConfiguration) bool {
+func (nxc *NxConfig) RenderOnChange(json graylog.ResponseCollectorConfiguration) (bool, string) {
 	jsonConfig := NewCollectorConfig(nxc.Context)
 
 	for _, output := range json.Outputs {
@@ -448,11 +450,16 @@ func (nxc *NxConfig) RenderOnChange(json graylog.ResponseCollectorConfiguration)
 	if !nxc.Equals(jsonConfig) {
 		log.Infof("[%s] Configuration change detected, rewriting configuration file.", nxc.Name())
 		nxc.Update(jsonConfig)
-		nxc.RenderToFile()
-		return true
+		err, configurationContent := nxc.RenderToFile()
+		if err != nil {
+			msg := fmt.Sprintf("[%s] Failed to write configuration file: %s", nxc.Name(), err)
+			nxc.SetStatus(backends.StatusError, msg)
+			log.Errorf("[%s] %s", nxc.Name(), msg)
+		}
+		return true, configurationContent
 	}
 
-	return false
+	return false, ""
 }
 
 func (nxc *NxConfig) ValidateConfigurationFile() bool {

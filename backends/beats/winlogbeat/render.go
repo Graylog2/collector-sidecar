@@ -60,17 +60,17 @@ func (wlbc *WinLogBeatConfig) Render() bytes.Buffer {
 	return result
 }
 
-func (wlbc *WinLogBeatConfig) RenderToFile() error {
+func (wlbc *WinLogBeatConfig) RenderToFile() (error, string) {
 	stringConfig := wlbc.Render()
 	err := common.CreatePathToFile(wlbc.Beats.UserConfig.ConfigurationPath)
 	if err != nil {
-		return err
+		return err, stringConfig.String()
 	}
 	err = ioutil.WriteFile(wlbc.Beats.UserConfig.ConfigurationPath, stringConfig.Bytes(), 0644)
-	return err
+	return err, stringConfig.String()
 }
 
-func (wlbc *WinLogBeatConfig) RenderOnChange(response graylog.ResponseCollectorConfiguration) bool {
+func (wlbc *WinLogBeatConfig) RenderOnChange(response graylog.ResponseCollectorConfiguration) (bool, string) {
 	newConfig := NewCollectorConfig(wlbc.Beats.Context)
 
 	// holds event inputs
@@ -117,7 +117,7 @@ func (wlbc *WinLogBeatConfig) RenderOnChange(response graylog.ResponseCollectorC
 					msg := fmt.Sprintf("Nested YAML is not parsable: '%s'", value)
 					wlbc.SetStatus(backends.StatusError, msg)
 					log.Errorf("[%s] %s", wlbc.Name(), msg)
-					return false
+					return false, ""
 				} else {
 					for _, name := range vt {
 						eventlogs = append(eventlogs, name)
@@ -148,11 +148,16 @@ func (wlbc *WinLogBeatConfig) RenderOnChange(response graylog.ResponseCollectorC
 	if !wlbc.Beats.Equals(newConfig.Beats) {
 		log.Infof("[%s] Configuration change detected, rewriting configuration file.", wlbc.Name())
 		wlbc.Beats.Update(newConfig.Beats)
-		wlbc.RenderToFile()
-		return true
+		err, configurationContent := wlbc.RenderToFile()
+		if err != nil {
+			msg := fmt.Sprintf("[%s] Failed to write configuration file: %s", wlbc.Name(), err)
+			wlbc.SetStatus(backends.StatusError, msg)
+			log.Errorf("[%s] %s", wlbc.Name(), msg)
+		}
+		return true, configurationContent
 	}
 
-	return false
+	return false, ""
 }
 
 func (wlbc *WinLogBeatConfig) ValidateConfigurationFile() bool {

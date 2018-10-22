@@ -45,3 +45,12 @@ type MetricsRequest struct {
 	CpuIdle float64  `json:"cpu_idle"`
 	Load1   float64  `json:"load_1"`
 }
+
+type ConfigurationUploadRequest struct {
+	Configurations []CollectorConfiguration `json:"active_configurations"`
+}
+
+type CollectorConfiguration struct {
+	CollectorName string `json:"collector_name"`
+	Configuration string `json:"configuration"`
+}

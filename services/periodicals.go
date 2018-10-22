@@ -16,6 +16,7 @@
 package services
 
 import (
+	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"net/http"
 	"time"
 
@@ -68,9 +69,11 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context 
 		return jsonConfig.Checksum
 	}
 
+	activeConfigurations := graylog.ConfigurationUploadRequest{}
 	for name, runner := range daemon.Daemon.Runner {
 		backend := backends.Store.GetBackend(name)
-		if backend.RenderOnChange(jsonConfig) {
+		changed, configurationContent := backend.RenderOnChange(jsonConfig)
+		if changed {
 			if !backend.ValidateConfigurationFile() {
 				backends.SetStatusLogErrorf(name, "Collector configuration file is not valid, waiting for the next update.")
 				continue
@@ -81,9 +84,11 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context 
 				backend.SetStatus(backends.StatusError, msg)
 				log.Errorf("[%s] %s: %v", name, msg, err)
 			}
-
+			activeConfigurations.Configurations = append(activeConfigurations.Configurations,
+				graylog.CollectorConfiguration{CollectorName:name, Configuration: configurationContent})
 		}
 	}
+	api.UploadConfiguration(httpClient, context, &activeConfigurations)
 
 	return jsonConfig.Checksum
 }
