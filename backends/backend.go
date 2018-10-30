@@ -42,7 +42,7 @@ type Backend struct {
 	ExecuteParameters    string
 	ValidationParameters string
 	Template             string
-	backendStatus        system.Status
+	backendStatus        system.VerboseStatus
 }
 
 func BackendFromResponse(response graylog.ResponseCollectorBackend) *Backend {
@@ -56,7 +56,7 @@ func BackendFromResponse(response graylog.ResponseCollectorBackend) *Backend {
 		ConfigurationPath:    response.ConfigurationPath,
 		ExecuteParameters:    response.ExecuteParameters,
 		ValidationParameters: response.ValidationParameters,
-		backendStatus:        system.Status{},
+		backendStatus:        system.VerboseStatus{},
 	}
 }
 

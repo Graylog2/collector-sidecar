@@ -159,11 +159,12 @@ func (r *ExecRunner) startSupervisor() {
 			// don't continue to restart after 3 tries, stop the supervisor and wait for a configuration update
 			// or manual restart
 			if r.restartCount > 3 {
-				output := r.readCollectorOutput()
-				if output != "" {
-					output = "Collector output:\n" + output
+				r.backend.SetStatusLogErrorf("Unable to start collector after 3 tries, giving up!")
+
+				if output := r.readCollectorOutput(); output != "" {
+					log.Errorf("Collector output:\n" + output)
+					r.backend.SetVerboseStatus(output)
 				}
-				r.backend.SetStatusLogErrorf("Unable to start collector after 3 tries, giving up! " + output)
 				r.setSupervised(false)
 				continue
 			}
@@ -239,7 +240,7 @@ func (r *ExecRunner) stop() error {
 		}
 	}
 
-	r.backend.SetStatus(backends.StatusStopped, "Stopped")
+	r.backend.SetStatus(backends.StatusStopped, "Stopped", "")
 
 	return nil
 }
@@ -289,7 +290,7 @@ func (r *ExecRunner) run() {
 		r.cmd.Stdout = f
 	}
 
-	r.backend.SetStatus(backends.StatusRunning, "Running")
+	r.backend.SetStatus(backends.StatusRunning, "Running", "")
 	err := r.cmd.Start()
 	if err != nil {
 		r.backend.SetStatusLogErrorf("Failed to start collector: %s", err)

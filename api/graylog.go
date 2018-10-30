@@ -107,7 +107,7 @@ func RequestConfiguration(
 	resp, err := c.Do(r, &configurationResponse)
 	if err != nil && resp == nil {
 		msg := "Fetching configuration failed"
-		system.GlobalStatus.Set(backends.StatusError, msg + ": " + err.Error())
+		system.GlobalStatus.Set(backends.StatusError, msg+": "+err.Error())
 		log.Errorf("[RequestConfiguration] %s: %v", msg, err)
 	}
 
@@ -124,7 +124,7 @@ func RequestConfiguration(
 			log.Debug("[RequestConfiguration] No configuration update available, skipping update.")
 		case resp.StatusCode != 200:
 			msg := "Bad response status from Graylog server"
-			system.GlobalStatus.Set(backends.StatusError, msg + ": " + err.Error())
+			system.GlobalStatus.Set(backends.StatusError, msg+": "+err.Error())
 			log.Errorf("[RequestConfiguration] %s: %s", msg, resp.Status)
 			return graylog.ResponseCollectorConfiguration{}, err
 		}
@@ -252,9 +252,10 @@ func NewStatusRequest() graylog.StatusRequest {
 	for id, runner := range daemon.Daemon.Runner {
 		backendStatus := runner.GetBackend().Status()
 		statusRequest.Backends = append(statusRequest.Backends, graylog.StatusRequestBackend{
-			Id:      id,
-			Status:  backendStatus.Status,
-			Message: backendStatus.Message,
+			Id:             id,
+			Status:         backendStatus.Status,
+			Message:        backendStatus.Message,
+			VerboseMessage: backendStatus.VerboseMessage,
 		})
 		switch backendStatus.Status {
 		case backends.StatusRunning:
