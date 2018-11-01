@@ -162,7 +162,7 @@ func (r *ExecRunner) startSupervisor() {
 				r.backend.SetStatusLogErrorf("Unable to start collector after 3 tries, giving up!")
 
 				if output := r.readCollectorOutput(); output != "" {
-					log.Errorf("Collector output:\n" + output)
+					log.Errorf("[%s] Collector output: %s", r.name, output)
 					r.backend.SetVerboseStatus(output)
 				}
 				r.setSupervised(false)
