@@ -27,17 +27,20 @@ const (
 	StatusStopped int = 3
 )
 
-func (b *Backend) SetStatus(state int, message string) {
-	b.backendStatus.Set(state, message)
+func (b *Backend) SetStatus(state int, message string, verbose string) {
+	b.backendStatus.Set(state, message, verbose)
 }
 
-func (b *Backend)SetStatusLogErrorf(format string, args ...interface{}) error {
-	b.SetStatus(StatusError, fmt.Sprintf(format, args...))
+func (b *Backend) SetVerboseStatus(verbose string) {
+	b.backendStatus.VerboseMessage = verbose
+}
+
+func (b *Backend) SetStatusLogErrorf(format string, args ...interface{}) error {
+	b.SetStatus(StatusError, fmt.Sprintf(format, args...), "")
 	log.Errorf(fmt.Sprintf("[%s] ", b.Name)+format, args...)
 	return fmt.Errorf(format, args)
 }
 
-func (b *Backend) Status() system.Status {
+func (b *Backend) Status() system.VerboseStatus {
 	return b.backendStatus
 }
-

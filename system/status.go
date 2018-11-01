@@ -20,11 +20,23 @@ var (
 )
 
 type Status struct {
-	Status  int    `json:"status"`
-	Message string `json:"message"`
+	Status  int
+	Message string
 }
 
 func (status *Status) Set(state int, message string) {
 	status.Status = state
 	status.Message = message
+}
+
+type VerboseStatus struct {
+	Status         int
+	Message        string
+	VerboseMessage string
+}
+
+func (status *VerboseStatus) Set(state int, message string, verbose string) {
+	status.Status = state
+	status.Message = message
+	status.VerboseMessage = verbose
 }

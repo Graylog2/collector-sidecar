@@ -223,7 +223,7 @@ func (r *SvcRunner) start() error {
 	}
 
 	r.setSupervised(true)
-	r.backend.SetStatus(backends.StatusRunning, "Running")
+	r.backend.SetStatus(backends.StatusRunning, "Running", "")
 
 	return err
 }
@@ -268,7 +268,7 @@ func (r *SvcRunner) stop() error {
 		}
 	}
 
-	r.backend.SetStatus(backends.StatusStopped, "Stopped")
+	r.backend.SetStatus(backends.StatusStopped, "Stopped", "")
 
 	return nil
 }

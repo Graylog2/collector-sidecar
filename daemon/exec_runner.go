@@ -17,6 +17,7 @@ package daemon
 
 import (
 	"errors"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -38,7 +39,6 @@ type ExecRunner struct {
 	exec           string
 	args           string
 	stderr, stdout string
-	output         []byte
 	isRunning      atomic.Value
 	isSupervised   atomic.Value
 	restartCount   int
@@ -159,7 +159,12 @@ func (r *ExecRunner) startSupervisor() {
 			// don't continue to restart after 3 tries, stop the supervisor and wait for a configuration update
 			// or manual restart
 			if r.restartCount > 3 {
-				r.backend.SetStatusLogErrorf("Unable to start collector after 3 tries, giving up! " + string(r.output))
+				r.backend.SetStatusLogErrorf("Unable to start collector after 3 tries, giving up!")
+
+				if output := r.readCollectorOutput(); output != "" {
+					log.Errorf("[%s] Collector output: %s", r.name, output)
+					r.backend.SetVerboseStatus(output)
+				}
 				r.setSupervised(false)
 				continue
 			}
@@ -169,6 +174,17 @@ func (r *ExecRunner) startSupervisor() {
 			r.Restart()
 		}
 	}()
+}
+
+func (r *ExecRunner) readCollectorOutput() string {
+	output := ""
+	for _, file := range []string{r.stderr, r.stdout} {
+		out, err := ioutil.ReadFile(file)
+		if err == nil {
+			output += string(out)
+		}
+	}
+	return output
 }
 
 func (r *ExecRunner) start() error {
@@ -188,8 +204,6 @@ func (r *ExecRunner) start() error {
 	// start the actual process and don't block
 	r.startTime = time.Now()
 	r.run()
-	// TODO(bernd): Why has this been added? It returns with an error because the process is already running
-	r.output, _ = r.cmd.CombinedOutput()
 
 	r.setSupervised(true)
 	return nil
@@ -226,7 +240,7 @@ func (r *ExecRunner) stop() error {
 		}
 	}
 
-	r.backend.SetStatus(backends.StatusStopped, "Stopped")
+	r.backend.SetStatus(backends.StatusStopped, "Stopped", "")
 
 	return nil
 }
@@ -244,6 +258,9 @@ func (r *ExecRunner) restart() error {
 			time.Sleep(1 * time.Second)
 		}
 	}
+	// wipe collector log files after each try
+	os.Truncate(r.stderr, 0)
+	os.Truncate(r.stdout, 0)
 	r.start()
 
 	return nil
@@ -273,7 +290,7 @@ func (r *ExecRunner) run() {
 		r.cmd.Stdout = f
 	}
 
-	r.backend.SetStatus(backends.StatusRunning, "Running")
+	r.backend.SetStatus(backends.StatusRunning, "Running", "")
 	err := r.cmd.Start()
 	if err != nil {
 		r.backend.SetStatusLogErrorf("Failed to start collector: %s", err)
