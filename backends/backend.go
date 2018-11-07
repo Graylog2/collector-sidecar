@@ -45,7 +45,7 @@ type Backend struct {
 	backendStatus        system.VerboseStatus
 }
 
-func BackendFromResponse(response graylog.ResponseCollectorBackend) *Backend {
+func BackendFromResponse(response graylog.ResponseCollectorBackend, ctx *context.Ctx) *Backend {
 	return &Backend{
 		Enabled:              common.NewTrue(),
 		Id:                   response.Id,
@@ -53,10 +53,18 @@ func BackendFromResponse(response graylog.ResponseCollectorBackend) *Backend {
 		ServiceType:          response.ServiceType,
 		OperatingSystem:      response.OperatingSystem,
 		ExecutablePath:       response.ExecutablePath,
-		ConfigurationPath:    response.ConfigurationPath,
+		ConfigurationPath:    BuildConfigurationPath(response, ctx),
 		ExecuteParameters:    response.ExecuteParameters,
 		ValidationParameters: response.ValidationParameters,
 		backendStatus:        system.VerboseStatus{},
+	}
+}
+
+func BuildConfigurationPath(response graylog.ResponseCollectorBackend, ctx *context.Ctx) string {
+	if response.ConfigurationFileName != "" {
+		return ctx.UserConfig.CollectorConfigDirectory + "/" + response.ConfigurationFileName
+	} else {
+		return ctx.UserConfig.CollectorConfigDirectory + "/" + response.Name + ".conf"
 	}
 }
 

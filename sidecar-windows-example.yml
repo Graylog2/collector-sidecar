@@ -10,13 +10,13 @@ server_api_token: "<APITOKEN>"
 # If set to a file and the file doesn't exist, the sidecar will generate an
 # unique ID and writes it to the configured path.
 #
-# Example file path: "file:C:\\Program Files\\graylog\\sidecar\\node-id"
+# Example file path: "file:C:\\Program Files\\Graylog\\sidecar\\node-id"
 # Example ID string: "6033137e-d56b-47fc-9762-cd699c11a5a9"
 #
 # ATTENTION: Every sidecar instance needs a unique ID!
 #
-# Default: "file:C:\\Program Files\\graylog\\sidecar\\node-id"
-node_id: "file:C:\\Program Files\\graylog\\sidecar\\node-id"
+# Default: "file:C:\\Program Files\\Graylog\\sidecar\\node-id"
+node_id: "file:C:\\Program Files\\Graylog\\sidecar\\node-id"
 
 # The node name of the sidecar. If this is empty, the sidecar will use the
 # hostname of the host it is running on.
@@ -51,15 +51,19 @@ list_log_files:
 
 # Directory where the sidecar stores internal data.
 # Default: "C:\\Program Files\\graylog\\sidecar\\cache"
-cache_path: "C:\\Program Files\\graylog\\sidecar\\cache"
+cache_path: "C:\\Program Files\\Graylog\\sidecar\\cache"
 
 # Directory where the sidecar stores logs for collectors and the sidecar itself.
 # Default: "C:\\Program Files\\graylog\\sidecar\\logs"
-log_path: "C:\\Program Files\\graylog\\sidecar\\logs"
+log_path: "C:\\Program Files\\Graylog\\sidecar\\logs"
 
 # TODO: Document or remove depending on the outcome of https://github.com/Graylog2/collector-sidecar/issues/251
 log_rotation_time: 86400
 log_max_age: 604800
+
+# Directory where the sidecar generates configurations for collectors.
+# Default: "C:\\Program Files\\Graylog\\sidecar\\generated"
+collector_config_directory: "C:\\Program Files\\Graylog\\sidecar\\generated"
 
 # A list of binaries which are allowed to be executed by the Sidecar. An empty list disables the whitelist feature.
 # Wildcards can be used, for a full pattern description see https://golang.org/pkg/path/filepath/#Match

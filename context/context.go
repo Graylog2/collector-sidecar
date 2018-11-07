@@ -100,6 +100,11 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 		log.Fatal("No log directory was configured.")
 	}
 
+	// collector_config_directory
+	if ctx.UserConfig.CollectorConfigDirectory == "" {
+		log.Fatal("No collector config directory was configured.")
+	}
+
 	// log_rotation_time
 	if !(ctx.UserConfig.LogRotationTime > 0) {
 		log.Fatal("Please set the log rotation time > 0 seconds.")
