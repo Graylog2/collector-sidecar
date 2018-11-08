@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"reflect"
 	"runtime"
 	"time"
@@ -62,9 +63,9 @@ func BackendFromResponse(response graylog.ResponseCollectorBackend, ctx *context
 
 func BuildConfigurationPath(response graylog.ResponseCollectorBackend, ctx *context.Ctx) string {
 	if response.ConfigurationFileName != "" {
-		return ctx.UserConfig.CollectorConfigDirectory + "/" + response.ConfigurationFileName
+		return filepath.Join(ctx.UserConfig.CollectorConfigurationDirectory, response.ConfigurationFileName)
 	} else {
-		return ctx.UserConfig.CollectorConfigDirectory + "/" + response.Name + ".conf"
+		return filepath.Join(ctx.UserConfig.CollectorConfigurationDirectory, response.Name+".conf")
 	}
 }
 

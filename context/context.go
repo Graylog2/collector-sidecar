@@ -101,7 +101,7 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 	}
 
 	// collector_config_directory
-	if ctx.UserConfig.CollectorConfigDirectory == "" {
+	if ctx.UserConfig.CollectorConfigurationDirectory == "" {
 		log.Fatal("No collector config directory was configured.")
 	}
 
