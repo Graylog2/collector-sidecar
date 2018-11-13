@@ -69,7 +69,6 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context 
 		return jsonConfig.Checksum
 	}
 
-	activeConfigurations := graylog.ConfigurationUploadRequest{}
 	for name, runner := range daemon.Daemon.Runner {
 		backend := backends.Store.GetBackend(name)
 		changed, configurationContent := backend.RenderOnChange(jsonConfig)
@@ -84,11 +83,14 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context 
 				backend.SetStatus(backends.StatusError, msg)
 				log.Errorf("[%s] %s: %v", name, msg, err)
 			}
-			activeConfigurations.Configurations = append(activeConfigurations.Configurations,
-				graylog.CollectorConfiguration{CollectorName:name, Configuration: configurationContent})
+				api.UploadConfiguration(httpClient, context,
+					&graylog.CollectorUpload{
+						CollectorId: context.CollectorId,
+						NodeId: context.NodeId,
+						CollectorName: backend.Name(),
+						RenderedConfiguration: configurationContent})
 		}
 	}
-	api.UploadConfiguration(httpClient, context, &activeConfigurations)
 
 	return jsonConfig.Checksum
 }

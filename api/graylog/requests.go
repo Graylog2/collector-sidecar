@@ -46,11 +46,9 @@ type MetricsRequest struct {
 	Load1   float64  `json:"load_1"`
 }
 
-type ConfigurationUploadRequest struct {
-	Configurations []CollectorConfiguration `json:"active_configurations"`
-}
-
-type CollectorConfiguration struct {
-	CollectorName string `json:"collector_name"`
-	Configuration string `json:"configuration"`
+type CollectorUpload struct {
+	CollectorId           string `json:"collector_id"`
+	NodeId                string `json:"node_id"`
+	CollectorName         string `json:"collector_name"`
+	RenderedConfiguration string `json:"rendered_configuration"`
 }
