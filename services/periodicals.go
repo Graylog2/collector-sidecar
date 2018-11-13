@@ -91,7 +91,7 @@ func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx
 
 	backendList := []backends.Backend{}
 	for _, backendEntry := range response.Backends {
-		backendList = append(backendList, *backends.BackendFromResponse(backendEntry))
+		backendList = append(backendList, *backends.BackendFromResponse(backendEntry, ctx))
 	}
 	backends.Store.Update(backendList)
 

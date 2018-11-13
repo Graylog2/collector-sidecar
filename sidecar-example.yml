@@ -61,6 +61,10 @@ log_path: "/var/log/graylog-sidecar"
 log_rotation_time: 86400
 log_max_age: 604800
 
+# Directory where the sidecar generates configurations for collectors.
+# Default: "/var/lib/graylog-sidecar/generated"
+collector_configuration_directory: "/var/lib/graylog-sidecar/generated"
+
 # A list of binaries which are allowed to be executed by the Sidecar. An empty list disables the whitelist feature.
 # Wildcards can be used, for a full pattern description see https://golang.org/pkg/path/filepath/#Match
 # Example:
