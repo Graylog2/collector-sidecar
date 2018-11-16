@@ -146,7 +146,7 @@ func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *grayl
 
 	// Run collector actions if provided
 	if len(respBody.CollectorActions) != 0 {
-		daemon.HandleCollectorActions(respBody.CollectorActions)
+		HandleCollectorActions(respBody.CollectorActions, ctx)
 	}
 }
 

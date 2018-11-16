@@ -60,6 +60,11 @@ func (wlbc *WinLogBeatConfig) Render() bytes.Buffer {
 	return result
 }
 
+func (wlbc *WinLogBeatConfig) RenderToString() string {
+	buffer := wlbc.Render()
+	return  buffer.String()
+}
+
 func (wlbc *WinLogBeatConfig) RenderToFile() (error, string) {
 	stringConfig := wlbc.Render()
 	err := common.CreatePathToFile(wlbc.Beats.UserConfig.ConfigurationPath)

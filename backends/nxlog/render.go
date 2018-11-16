@@ -391,6 +391,10 @@ func (nxc *NxConfig) Render() []byte {
 	return common.ConvertLineBreak(result.Bytes())
 }
 
+func (nxc *NxConfig) RenderToString() string {
+	return string(nxc.RenderToString())
+}
+
 func (nxc *NxConfig) RenderToFile() (error, string) {
 	stringConfig := nxc.Render()
 	err := common.CreatePathToFile(nxc.UserConfig.ConfigurationPath)

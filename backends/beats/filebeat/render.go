@@ -60,6 +60,11 @@ func (fbc *FileBeatConfig) Render() bytes.Buffer {
 	return result
 }
 
+func (fbc *FileBeatConfig) RenderToString() string {
+	buffer := fbc.Render()
+	return buffer.String()
+}
+
 func (fbc *FileBeatConfig) RenderToFile() (error, string) {
 	stringConfig := fbc.Render()
 	err := common.CreatePathToFile(fbc.Beats.UserConfig.ConfigurationPath)
