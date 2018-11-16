@@ -104,6 +104,13 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 	if ctx.UserConfig.CollectorConfigurationDirectory == "" {
 		log.Fatal("No collector configuration directory was configured.")
 	}
+	if !filepath.IsAbs(ctx.UserConfig.CollectorConfigurationDirectory) {
+		log.Fatal("Collector configuration directory must be an absolute path.")
+	}
+	err = os.MkdirAll(ctx.UserConfig.CollectorConfigurationDirectory, 0750)
+	if err != nil {
+		log.Fatal("Failed to create collector configuration directory. ", err)
+	}
 
 	// log_rotation_time
 	if !(ctx.UserConfig.LogRotationTime > 0) {
