@@ -120,8 +120,8 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksums map[string]stri
 
 		if backend.RenderOnChange(backends.Backend{Template: response.Template}, context) {
 			checksums[backendId] = response.Checksum
-			if valid, output := backend.ValidateConfigurationFile(context); !valid {
-				backend.SetStatusLogErrorf("Collector configuration file is not valid, waiting for the next update.")
+			if err, output := backend.ValidateConfigurationFile(context); err != nil {
+				backend.SetStatusLogErrorf(err.Error())
 				if output != "" {
 					log.Errorf("[%s] Validation command output: %s", backend.Name, output)
 					backend.SetVerboseStatus(output)
