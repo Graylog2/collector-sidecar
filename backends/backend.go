@@ -131,13 +131,13 @@ func (b *Backend) CheckConfigPathAgainstWhitelist(context *context.Ctx) bool {
 	return true
 }
 
-func (b *Backend) ValidateConfigurationFile(context *context.Ctx) (bool, string) {
+func (b *Backend) ValidateConfigurationFile(context *context.Ctx) (error, string) {
 	if b.ValidationParameters == "" {
 		log.Warnf("[%s] Skipping configuration test. No validation command configured.", b.Name)
-		return true, ""
+		return nil, ""
 	}
 	if err := b.CheckExecutableAgainstWhitelist(context); err != nil {
-		return false, err.Error()
+		return err, ""
 	}
 
 	var err error
@@ -148,8 +148,8 @@ func (b *Backend) ValidateConfigurationFile(context *context.Ctx) (bool, string)
 		quotedArgs, err = shlex.Split(b.ValidationParameters)
 	}
 	if err != nil {
-		log.Errorf("[%s] Error during configuration validation: %s", b.Name, err)
-		return false, err.Error()
+		err = fmt.Errorf("Error during configuration validation: %s", err)
+		return err, ""
 	}
 	cmd := exec.Command(b.ExecutablePath, quotedArgs...)
 
@@ -158,8 +158,8 @@ func (b *Backend) ValidateConfigurationFile(context *context.Ctx) (bool, string)
 	cmd.Stderr = &combinedOutputBuffer
 
 	if err := cmd.Start(); err != nil {
-		log.Errorf("[%s] Couldn't start validation command: %s %s", b.Name, string(combinedOutputBuffer.Bytes()), err)
-		return false, string(combinedOutputBuffer.Bytes())
+		err = fmt.Errorf("Couldn't start validation command: %s", err)
+		return err, string(combinedOutputBuffer.Bytes())
 	}
 
 	done := make(chan error)
@@ -170,16 +170,16 @@ func (b *Backend) ValidateConfigurationFile(context *context.Ctx) (bool, string)
 	select {
 	case <-time.After(time.Duration(30) * time.Second):
 		if err := cmd.Process.Kill(); err != nil {
-			log.Errorf("[%s] Failed to kill validation process: %s", b.Name, err)
-			return false, err.Error()
+			err = fmt.Errorf("Failed to kill validation process: %s", err)
+			return err, ""
 		}
-		log.Errorf("[%s] Timeout reached for validation command.", b.Name)
-		return false, "Unable to validate configuration, timeout reached."
+		return fmt.Errorf("Unable to validate configuration, timeout reached."), ""
 	case err := <-done:
 		if err != nil {
 			close(done)
-			return false, string(combinedOutputBuffer.Bytes())
+			return fmt.Errorf("Collector configuration file is not valid, waiting for the next update."),
+				string(combinedOutputBuffer.Bytes())
 		}
-		return true, ""
+		return nil, ""
 	}
 }
