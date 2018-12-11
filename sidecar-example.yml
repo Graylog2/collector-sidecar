@@ -82,4 +82,6 @@ collector_binaries_whitelist:
   - "/usr/bin/metricbeat"
   - "/usr/bin/heartbeat"
   - "/usr/bin/auditbeat"
+  - "/usr/bin/nxlog"
   - "/opt/nxlog/bin/nxlog"
+  - "/usr/sbin/rsyslogd"
