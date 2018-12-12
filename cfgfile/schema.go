@@ -26,8 +26,8 @@ type SidecarConfig struct {
 	CachePath                       string        `config:"cache_path"`
 	LogPath                         string        `config:"log_path"`
 	CollectorConfigurationDirectory string        `config:"collector_configuration_directory"`
-	LogRotationTime                 time.Duration `config:"log_rotation_time"`
-	LogMaxAge                       time.Duration `config:"log_max_age"`
+	LogRotationEvery                time.Duration `config:"log_rotation_every"`
+	LogRotationKeepFiles            time.Duration `config:"log_rotation_keep_files"`
 	UpdateInterval                  int           `config:"update_interval"`
 	SendStatus                      bool          `config:"send_status"`
 	ListLogFiles                    []string      `config:"list_log_files"`

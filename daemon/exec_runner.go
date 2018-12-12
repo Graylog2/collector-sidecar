@@ -275,7 +275,7 @@ func (r *ExecRunner) run() {
 			r.backend.SetStatusLogErrorf("Failed to create path to collector's stderr log: %s", r.stderr)
 		}
 
-		f := logger.GetRotatedLog(r.stderr, r.context.UserConfig.LogRotationTime, r.context.UserConfig.LogMaxAge)
+		f := logger.GetRotatedLog(r.stderr, r.context.UserConfig.LogRotationEvery, r.context.UserConfig.LogRotationKeepFiles)
 		defer f.Close()
 		r.cmd.Stderr = f
 	}
@@ -285,7 +285,7 @@ func (r *ExecRunner) run() {
 			r.backend.SetStatusLogErrorf("Failed to create path to collector's stdout log: %s", r.stdout)
 		}
 
-		f := logger.GetRotatedLog(r.stderr, r.context.UserConfig.LogRotationTime, r.context.UserConfig.LogMaxAge)
+		f := logger.GetRotatedLog(r.stderr, r.context.UserConfig.LogRotationEvery, r.context.UserConfig.LogRotationKeepFiles)
 		defer f.Close()
 		r.cmd.Stdout = f
 	}

@@ -112,14 +112,14 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 		log.Fatal("Failed to create collector configuration directory. ", err)
 	}
 
-	// log_rotation_time
-	if !(ctx.UserConfig.LogRotationTime > 0) {
-		log.Fatal("Please set the log rotation time > 0 seconds.")
+	// log_rotation_every
+	if !(ctx.UserConfig.LogRotationEvery > 0) {
+		log.Fatal("Please set the log rotation interval.")
 	}
 
-	// log_max_age
-	if !(ctx.UserConfig.LogMaxAge > 0) {
-		log.Fatal("Please set the maximum age of log file rotation > 0 seconds.")
+	// log_rotation_keep_files
+	if !(ctx.UserConfig.LogRotationKeepFiles > 0) {
+		log.Fatal("Please set the maximum age to keep sidecar's logfiles.")
 	}
 
 	// list log files
