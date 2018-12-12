@@ -15,19 +15,21 @@
 
 package cfgfile
 
+import "time"
+
 type SidecarConfig struct {
-	ServerUrl                       string    `config:"server_url"`
-	ServerApiToken                  string    `config:"server_api_token"`
-	TlsSkipVerify                   bool      `config:"tls_skip_verify"`
-	NodeName                        string    `config:"node_name"`
-	NodeId                          string    `config:"node_id"`
-	CachePath                       string    `config:"cache_path"`
-	LogPath                         string    `config:"log_path"`
-	CollectorConfigurationDirectory string    `config:"collector_configuration_directory"`
-	LogRotationTime                 int       `config:"log_rotation_time"`
-	LogMaxAge                       int       `config:"log_max_age"`
-	UpdateInterval                  int       `config:"update_interval"`
-	SendStatus                      bool      `config:"send_status"`
-	ListLogFiles                    []string  `config:"list_log_files"`
-	CollectorBinariesWhitelist      *[]string `config:"collector_binaries_whitelist"`
+	ServerUrl                       string        `config:"server_url"`
+	ServerApiToken                  string        `config:"server_api_token"`
+	TlsSkipVerify                   bool          `config:"tls_skip_verify"`
+	NodeName                        string        `config:"node_name"`
+	NodeId                          string        `config:"node_id"`
+	CachePath                       string        `config:"cache_path"`
+	LogPath                         string        `config:"log_path"`
+	CollectorConfigurationDirectory string        `config:"collector_configuration_directory"`
+	LogRotationTime                 time.Duration `config:"log_rotation_time"`
+	LogMaxAge                       time.Duration `config:"log_max_age"`
+	UpdateInterval                  int           `config:"update_interval"`
+	SendStatus                      bool          `config:"send_status"`
+	ListLogFiles                    []string      `config:"list_log_files"`
+	CollectorBinariesWhitelist      *[]string     `config:"collector_binaries_whitelist"`
 }

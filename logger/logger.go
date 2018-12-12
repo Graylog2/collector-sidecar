@@ -28,15 +28,15 @@ func Log() *logrus.Logger {
 	return log
 }
 
-func GetRotatedLog(path string, rotation_time int, max_age int) *rotatelogs.RotateLogs {
+func GetRotatedLog(path string, rotation_time time.Duration, max_age time.Duration) *rotatelogs.RotateLogs {
 	log.Debugf("Creating rotated log writer for: %s", path+".%Y%m%d%H%M")
 
 	writer := rotatelogs.NewRotateLogs(
 		path + ".%Y%m%d%H%M",
 	)
 	writer.LinkName = path
-	writer.RotationTime = time.Duration(rotation_time) * time.Second
-	writer.MaxAge = time.Duration(max_age) * time.Second
+	writer.RotationTime = rotation_time
+	writer.MaxAge = max_age
 	writer.Offset = 0
 
 	return writer
