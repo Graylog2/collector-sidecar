@@ -1,9 +1,8 @@
 # The URL to the Graylog server API.
-# Default: "http://127.0.0.1:9000/api/"
-server_url: "http://127.0.0.1:9000/api/"
+#server_url: "http://127.0.0.1:9000/api/"
 
 # The API token to use to authenticate against the Graylog server API.
-# Default: none
+# This field is mandatory
 server_api_token: ""
 
 # The node ID of the sidecar. This can be a path to a file or an ID string.
@@ -15,28 +14,24 @@ server_api_token: ""
 #
 # ATTENTION: Every sidecar instance needs a unique ID!
 #
-# Default: "file:/etc/graylog/sidecar/node-id"
-node_id: "file:/etc/graylog/sidecar/node-id"
+#node_id: "file:/etc/graylog/sidecar/node-id"
 
 # The node name of the sidecar. If this is empty, the sidecar will use the
 # hostname of the host it is running on.
-# Default: ""
-node_name: ""
+#node_name: ""
 
 # The update interval in secods. This configures how often the sidecar will
 # contact the Graylog server for keep-alive and configuration update requests.
-# Default: 10
-update_interval: 10
+#update_interval: 10
 
 # This configures if the sidecar should skip the verification of TLS connections.
 # Default: false
-tls_skip_verify: false
+#tls_skip_verify: false
 
 # This enables/disables the transmission of detailed sidecar information like
 # collector statues, metrics and log file lists. It can be disabled to reduce
 # load on the Graylog server if needed. (disables some features in the server UI)
-# Default: true
-send_status: true
+#send_status: true
 
 # A list of directories to scan for log files. The sidecar will scan each
 # directory for log files and submits them to the server on each update.
@@ -47,23 +42,20 @@ send_status: true
 #       - "/opt/app/logs"
 #
 # Default: empty list
-list_log_files:
+#list_log_files:
 
 # Directory where the sidecar stores internal data.
-# Default: "/var/cache/graylog-sidecar"
-cache_path: "/var/cache/graylog-sidecar"
+#cache_path: "/var/cache/graylog-sidecar"
 
 # Directory where the sidecar stores logs for collectors and the sidecar itself.
-# Default: "/var/log/graylog-sidecar"
-log_path: "/var/log/graylog-sidecar"
+#log_path: "/var/log/graylog-sidecar"
 
 # TODO: Document or remove depending on the outcome of https://github.com/Graylog2/collector-sidecar/issues/251
-log_rotation_time: 86400
-log_max_age: 604800
+#log_rotation_time: 86400
+#log_max_age: 604800
 
 # Directory where the sidecar generates configurations for collectors.
-# Default: "/var/lib/graylog-sidecar/generated"
-collector_configuration_directory: "/var/lib/graylog-sidecar/generated"
+#collector_configuration_directory: "/var/lib/graylog-sidecar/generated"
 
 # A list of binaries which are allowed to be executed by the Sidecar. An empty list disables the whitelist feature.
 # Wildcards can be used, for a full pattern description see https://golang.org/pkg/path/filepath/#Match
@@ -75,11 +67,12 @@ collector_configuration_directory: "/var/lib/graylog-sidecar/generated"
 # Example disable whitelisting:
 #     collector_binaries_whitelist:
 #
-collector_binaries_whitelist:
-  - "/usr/lib/graylog-sidecar/filebeat"
-  - "/usr/bin/filebeat"
-  - "/usr/bin/packetbeat"
-  - "/usr/bin/metricbeat"
-  - "/usr/bin/heartbeat"
-  - "/usr/bin/auditbeat"
-  - "/opt/nxlog/bin/nxlog"
+# Default:
+# collector_binaries_whitelist:
+#  - "/usr/lib/graylog-sidecar/filebeat"
+#  - "/usr/bin/filebeat"
+#  - "/usr/bin/packetbeat"
+#  - "/usr/bin/metricbeat"
+#  - "/usr/bin/heartbeat"
+#  - "/usr/bin/auditbeat"
+#  - "/opt/nxlog/bin/nxlog"

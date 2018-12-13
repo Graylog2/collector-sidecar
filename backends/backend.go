@@ -99,10 +99,10 @@ func (b *Backend) EqualSettings(a *Backend) bool {
 }
 
 func (b *Backend) CheckExecutableAgainstWhitelist(context *context.Ctx) error {
-	if len(*context.UserConfig.CollectorBinariesWhitelist) <= 0 {
+	if len(context.UserConfig.CollectorBinariesWhitelist) <= 0 {
 		return nil
 	}
-	whitelisted, err := common.PathMatch(b.ExecutablePath, *context.UserConfig.CollectorBinariesWhitelist)
+	whitelisted, err := common.PathMatch(b.ExecutablePath, context.UserConfig.CollectorBinariesWhitelist)
 	if err != nil {
 		return fmt.Errorf("Can not validate binary path: %s", err)
 	}
@@ -119,7 +119,7 @@ func (b *Backend) CheckExecutableAgainstWhitelist(context *context.Ctx) error {
 }
 
 func (b *Backend) CheckConfigPathAgainstWhitelist(context *context.Ctx) bool {
-	configuration, err := common.PathMatch(b.ConfigurationPath, *context.UserConfig.CollectorBinariesWhitelist)
+	configuration, err := common.PathMatch(b.ConfigurationPath, context.UserConfig.CollectorBinariesWhitelist)
 	if err != nil {
 		log.Errorf("Can not validate configuration path: %s", err)
 		return false

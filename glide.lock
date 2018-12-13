@@ -1,8 +1,13 @@
-hash: bc35d7d5b047ba6e288278d289184b6fea6e4f9c4f878fd7c3e06c210fde0d8a
-updated: 2018-08-15T16:57:35.735955193+02:00
+hash: 3a8cae100aaf5da77ff932ad561fe3b48569093d47c1fc378f9e987cb2bafe82
+updated: 2018-12-13T10:56:39.625105465+01:00
 imports:
 - name: bitbucket.org/tebeka/strftime
   version: 2194253a23c090a4d5953b152a3c63fb5da4f5a4
+- name: github.com/elastic/go-ucfg
+  version: 92d43887f91851c9936621665af7f796f4d03412
+  subpackages:
+  - internal/parse
+  - yaml
 - name: github.com/elastic/gosigar
   version: 2716c1fe855ee5c88eae707195e0688374458c92
 - name: github.com/flynn-archive/go-shlex
@@ -27,10 +32,6 @@ imports:
   version: d26492970760ca5d33129d2d799e34be5c4782eb
 - name: github.com/StackExchange/wmi
   version: e54cbda6595d7293a7a468ccf9525f6bc8887f99
-- name: github.com/urso/ucfg
-  version: 30b040c279a4e6c83ded5cb44403a5c6fcd64e8d
-  subpackages:
-  - yaml
 - name: golang.org/x/sys
   version: 833a04a10549a95dc34458c195cbad61bbb6cb4d
   subpackages:

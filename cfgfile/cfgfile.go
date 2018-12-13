@@ -20,10 +20,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"runtime"
 	"strings"
 
-	"github.com/urso/ucfg"
-	"github.com/urso/ucfg/yaml"
+	"github.com/elastic/go-ucfg"
+	"github.com/elastic/go-ucfg/yaml"
 
 	"github.com/Graylog2/collector-sidecar/logger"
 )
@@ -36,6 +37,26 @@ var validateConfiguration *bool
 
 func init() {
 	validateConfiguration = flag.Bool("configtest", false, "Validate configuration file and exit.")
+}
+
+func ConfigDefaults() *SidecarConfig {
+	userConfig := SidecarConfig{}
+	defaults, err := yaml.NewConfig([]byte(CommonDefaults), ucfg.PathSep("."))
+	if err != nil {
+		log.Fatal("Could not parse default config", err)
+	}
+	if runtime.GOOS == "windows" {
+		winDefaults, err := yaml.NewConfig([]byte(WindowsDefaults), ucfg.PathSep("."))
+		if err != nil {
+			log.Fatal("Could not parse default config", err)
+		}
+		defaults.Merge(winDefaults)
+	}
+	err = defaults.Unpack(&userConfig)
+	if err != nil {
+		log.Fatal("Could not unpack default config", err)
+	}
+	return &userConfig
 }
 
 // Read reads the configuration from a yaml file into the given interface structure.

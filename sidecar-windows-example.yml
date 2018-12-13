@@ -47,40 +47,38 @@ send_status: <SENDSTATUS>
 #       - "/opt/app/logs"
 #
 # Default: empty list
-list_log_files:
+#list_log_files:
 
 # Directory where the sidecar stores internal data.
-# Default: "C:\\Program Files\\graylog\\sidecar\\cache"
-cache_path: "C:\\Program Files\\Graylog\\sidecar\\cache"
+#cache_path: "C:\\Program Files\\Graylog\\sidecar\\cache"
 
 # Directory where the sidecar stores logs for collectors and the sidecar itself.
-# Default: "C:\\Program Files\\graylog\\sidecar\\logs"
-log_path: "C:\\Program Files\\Graylog\\sidecar\\logs"
+#log_path: "C:\\Program Files\\Graylog\\sidecar\\logs"
 
 # TODO: Document or remove depending on the outcome of https://github.com/Graylog2/collector-sidecar/issues/251
-log_rotation_time: 86400
-log_max_age: 604800
+#log_rotation_time: 86400
+#log_max_age: 604800
 
 # Directory where the sidecar generates configurations for collectors.
-# Default: "C:\\Program Files\\Graylog\\sidecar\\generated"
-collector_configuration_directory: "C:\\Program Files\\Graylog\\sidecar\\generated"
+#collector_configuration_directory: "C:\\Program Files\\Graylog\\sidecar\\generated"
 
 # A list of binaries which are allowed to be executed by the Sidecar. An empty list disables the whitelist feature.
 # Wildcards can be used, for a full pattern description see https://golang.org/pkg/path/filepath/#Match
 # Example:
 #     collector_binaries_whitelist:
-#       - "/usr/bin/filebeat"
-#       - "/opt/collectors/*"
+#       - "C:\\Program Files\\Graylog\\sidecar\\winlogbeat.exe"
+#       - "C:\\Program Files\\Filebeat\\filebeat.exe"
 #
 # Example disable whitelisting:
 #     collector_binaries_whitelist:
 #
-collector_binaries_whitelist:
-  - "C:\\Program Files\\Graylog\\sidecar\\filebeat.exe"
-  - "C:\\Program Files\\Graylog\\sidecar\\winlogbeat.exe"
-  - "C:\\Program Files\\Filebeat\\filebeat.exe"
-  - "C:\\Program Files\\Packetbeat\\packetbeat.exe"
-  - "C:\\Program Files\\Metricbeat\\metricbeat.exe"
-  - "C:\\Program Files\\Heartbeat\\heartbeat.exe"
-  - "C:\\Program Files\\Auditbeat\\auditbeat.exe"
-  - "C:\\Program Files (x86)\\nxlog\\nxlog.exe"
+# Default:
+# collector_binaries_whitelist:
+#  - "C:\\Program Files\\Graylog\\sidecar\\filebeat.exe"
+#  - "C:\\Program Files\\Graylog\\sidecar\\winlogbeat.exe"
+#  - "C:\\Program Files\\Filebeat\\filebeat.exe"
+#  - "C:\\Program Files\\Packetbeat\\packetbeat.exe"
+#  - "C:\\Program Files\\Metricbeat\\metricbeat.exe"
+#  - "C:\\Program Files\\Heartbeat\\heartbeat.exe"
+#  - "C:\\Program Files\\Auditbeat\\auditbeat.exe"
+#  - "C:\\Program Files (x86)\\nxlog\\nxlog.exe"
