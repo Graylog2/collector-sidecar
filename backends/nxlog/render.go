@@ -392,20 +392,20 @@ func (nxc *NxConfig) Render() []byte {
 }
 
 func (nxc *NxConfig) RenderToString() string {
-	return string(nxc.RenderToString())
+	return string(nxc.Render())
 }
 
-func (nxc *NxConfig) RenderToFile() (error, string) {
+func (nxc *NxConfig) RenderToFile() (error) {
 	stringConfig := nxc.Render()
 	err := common.CreatePathToFile(nxc.UserConfig.ConfigurationPath)
 	if err != nil {
-		return err, string(stringConfig)
+		return err
 	}
 	err = ioutil.WriteFile(nxc.UserConfig.ConfigurationPath, stringConfig, 0644)
-	return err, string(stringConfig)
+	return err
 }
 
-func (nxc *NxConfig) RenderOnChange(json graylog.ResponseCollectorConfiguration) (bool, string) {
+func (nxc *NxConfig) RenderOnChange(json graylog.ResponseCollectorConfiguration) (bool) {
 	jsonConfig := NewCollectorConfig(nxc.Context)
 
 	for _, output := range json.Outputs {
@@ -454,16 +454,16 @@ func (nxc *NxConfig) RenderOnChange(json graylog.ResponseCollectorConfiguration)
 	if !nxc.Equals(jsonConfig) {
 		log.Infof("[%s] Configuration change detected, rewriting configuration file.", nxc.Name())
 		nxc.Update(jsonConfig)
-		err, configurationContent := nxc.RenderToFile()
+		err := nxc.RenderToFile()
 		if err != nil {
 			msg := fmt.Sprintf("[%s] Failed to write configuration file: %s", nxc.Name(), err)
 			nxc.SetStatus(backends.StatusError, msg)
 			log.Errorf("[%s] %s", nxc.Name(), msg)
 		}
-		return true, configurationContent
+		return true
 	}
 
-	return false, ""
+	return false
 }
 
 func (nxc *NxConfig) ValidateConfigurationFile() bool {

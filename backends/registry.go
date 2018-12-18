@@ -38,7 +38,7 @@ type Backend interface {
 	ConfigurationPath() string
 	ExecArgs() []string
 	RenderToString() string
-	RenderOnChange(graylog.ResponseCollectorConfiguration) (bool, string)
+	RenderOnChange(graylog.ResponseCollectorConfiguration) bool
 	ValidateConfigurationFile() bool
 	ValidatePreconditions() bool
 	Status() system.Status

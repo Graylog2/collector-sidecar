@@ -33,12 +33,12 @@ func TestWinlogbeatRenderTrigger(t *testing.T) {
 	engine.Beats.Version = []int{1, 0, 0}
 	serverResponse := graylog.ResponseCollectorConfiguration{}
 
-	triggered, _ := engine.RenderOnChange(serverResponse)
+	triggered := engine.RenderOnChange(serverResponse)
 	if triggered != true { // initially the configuration is empty, a render call create a new configuration
 		t.Error("Initial render call did not trigger a new configuration file")
 	}
 
-	triggered, _ = engine.RenderOnChange(serverResponse)
+	triggered = engine.RenderOnChange(serverResponse)
 	if triggered != false { // second should not be triggered, current configuration and server response are the same
 		t.Error("Second render call did trigger a new configuration. This could potentially loop forever.")
 	}
@@ -54,12 +54,12 @@ func TestWinlogbeat5RenderTrigger(t *testing.T) {
 	engine.Beats.Version = []int{5, 0, 0}
 	serverResponse := graylog.ResponseCollectorConfiguration{}
 
-	triggered, _ := engine.RenderOnChange(serverResponse)
+	triggered := engine.RenderOnChange(serverResponse)
 	if triggered != true { // initially the configuration is empty, a render call create a new configuration
 		t.Error("Initial render call did not trigger a new configuration file")
 	}
 
-	triggered, _ = engine.RenderOnChange(serverResponse)
+	triggered = engine.RenderOnChange(serverResponse)
 	if triggered != false { // second should not be triggered, current configuration and server response are the same
 		t.Error("Second render call did trigger a new configuration. This could potentially loop forever.")
 	}
