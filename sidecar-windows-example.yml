@@ -56,8 +56,8 @@ cache_path: "C:\\Program Files\\Graylog\\sidecar\\cache"
 # Directory where the sidecar stores logs for collectors and the sidecar itself.
 # Default: "C:\\Program Files\\graylog\\sidecar\\logs"
 log_path: "C:\\Program Files\\Graylog\\sidecar\\logs"
-# The maximum size in megabytes of the log file before it gets rotated.
-log_rotate_every_mb: 10
+# The maximum size of the log file before it gets rotated.
+log_rotate_max_file_size: "10MiB"
 # The maximum number of old log files to retain.
 log_rotate_keep_files: 10
 

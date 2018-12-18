@@ -19,3 +19,4 @@ import:
 - package: github.com/rifflock/lfshook
 - package: github.com/flynn-archive/go-shlex
 - package: github.com/natefinch/lumberjack
+- package: github.com/docker/go-units

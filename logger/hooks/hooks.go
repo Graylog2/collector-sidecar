@@ -36,7 +36,7 @@ func filesystemHook(context *context.Ctx, log *logrus.Logger) {
 	if err != nil {
 		log.Fatalf("Failed to create directory for log file %s: %s", logfile, err)
 	}
-	writer := logger.GetRotatedLog(logfile, context.UserConfig.LogRotateEveryMb, context.UserConfig.LogRotateKeepFiles)
+	writer := logger.GetRotatedLog(logfile, context.UserConfig.LogRotateMaxFileSize, context.UserConfig.LogRotateKeepFiles)
 	log.Hooks.Add(lfshook.NewHook(lfshook.WriterMap{
 		logrus.FatalLevel: writer,
 		logrus.ErrorLevel: writer,

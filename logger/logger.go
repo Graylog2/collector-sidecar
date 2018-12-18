@@ -17,6 +17,7 @@ package logger
 
 import (
 	"github.com/Sirupsen/logrus"
+	"github.com/docker/go-units"
 	"github.com/natefinch/lumberjack"
 	"io"
 )
@@ -27,15 +28,14 @@ func Log() *logrus.Logger {
 	return log
 }
 
-func GetRotatedLog(path string, maxSize int, maxBackups int) io.WriteCloser {
-	log.Debugf("Creating rotated log writer for: %s", path)
-
+func GetRotatedLog(path string, maxSize int64, maxBackups int) io.WriteCloser {
 	writer := &lumberjack.Logger{
 		Filename:   path,
-		MaxSize:    maxSize, // megabytes
+		MaxSize:    int(maxSize / units.MiB), // megabytes
 		MaxBackups: maxBackups,
 		MaxAge:     0,     // disable time based rotation
 		Compress:   false, // disabled by default
 	}
+	log.Debugf("Creating rotated log writer (%d/%d) for: %s", writer.MaxSize, writer.MaxBackups, path)
 	return writer
 }
