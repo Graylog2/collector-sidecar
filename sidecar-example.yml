@@ -56,8 +56,10 @@ cache_path: "/var/cache/graylog-sidecar"
 # Directory where the sidecar stores logs for collectors and the sidecar itself.
 # Default: "/var/log/graylog-sidecar"
 log_path: "/var/log/graylog-sidecar"
-log_rotation_every: "24h"
-log_rotation_keep_files: "168h"
+# The maximum size in megabytes of the log file before it gets rotated.
+log_rotate_every_mb: 10
+# The maximum number of old log files to retain.
+log_rotate_keep_files: 10
 
 # Directory where the sidecar generates configurations for collectors.
 # Default: "/var/lib/graylog-sidecar/generated"

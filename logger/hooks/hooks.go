@@ -16,6 +16,7 @@
 package hooks
 
 import (
+	"github.com/Graylog2/collector-sidecar/logger"
 	"path/filepath"
 
 	"github.com/Sirupsen/logrus"
@@ -23,7 +24,6 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
-	"github.com/Graylog2/collector-sidecar/logger"
 )
 
 func AddLogHooks(context *context.Ctx, log *logrus.Logger) {
@@ -36,7 +36,7 @@ func filesystemHook(context *context.Ctx, log *logrus.Logger) {
 	if err != nil {
 		log.Fatalf("Failed to create directory for log file %s: %s", logfile, err)
 	}
-	writer := logger.GetRotatedLog(logfile, context.UserConfig.LogRotationEvery, context.UserConfig.LogRotationKeepFiles)
+	writer := logger.GetRotatedLog(logfile, context.UserConfig.LogRotateEveryMb, context.UserConfig.LogRotateKeepFiles)
 	log.Hooks.Add(lfshook.NewHook(lfshook.WriterMap{
 		logrus.FatalLevel: writer,
 		logrus.ErrorLevel: writer,

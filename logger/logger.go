@@ -16,10 +16,9 @@
 package logger
 
 import (
-	"time"
-
 	"github.com/Sirupsen/logrus"
-	"github.com/lestrrat/go-file-rotatelogs"
+	"github.com/natefinch/lumberjack"
+	"io"
 )
 
 var log = logrus.New()
@@ -28,16 +27,15 @@ func Log() *logrus.Logger {
 	return log
 }
 
-func GetRotatedLog(path string, rotation_time time.Duration, max_age time.Duration) *rotatelogs.RotateLogs {
-	log.Debugf("Creating rotated log writer for: %s", path+".%Y%m%d%H%M")
+func GetRotatedLog(path string, maxSize int, maxBackups int) io.WriteCloser {
+	log.Debugf("Creating rotated log writer for: %s", path)
 
-	writer := rotatelogs.NewRotateLogs(
-		path + ".%Y%m%d%H%M",
-	)
-	writer.LinkName = path
-	writer.RotationTime = rotation_time
-	writer.MaxAge = max_age
-	writer.Offset = 0
-
+	writer := &lumberjack.Logger{
+		Filename:   path,
+		MaxSize:    maxSize, // megabytes
+		MaxBackups: maxBackups,
+		MaxAge:     0,     // disable time based rotation
+		Compress:   false, // disabled by default
+	}
 	return writer
 }

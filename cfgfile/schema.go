@@ -15,21 +15,19 @@
 
 package cfgfile
 
-import "time"
-
 type SidecarConfig struct {
-	ServerUrl                       string        `config:"server_url"`
-	ServerApiToken                  string        `config:"server_api_token"`
-	TlsSkipVerify                   bool          `config:"tls_skip_verify"`
-	NodeName                        string        `config:"node_name"`
-	NodeId                          string        `config:"node_id"`
-	CachePath                       string        `config:"cache_path"`
-	LogPath                         string        `config:"log_path"`
-	CollectorConfigurationDirectory string        `config:"collector_configuration_directory"`
-	LogRotationEvery                time.Duration `config:"log_rotation_every"`
-	LogRotationKeepFiles            time.Duration `config:"log_rotation_keep_files"`
-	UpdateInterval                  int           `config:"update_interval"`
-	SendStatus                      bool          `config:"send_status"`
-	ListLogFiles                    []string      `config:"list_log_files"`
-	CollectorBinariesWhitelist      *[]string     `config:"collector_binaries_whitelist"`
+	ServerUrl                       string    `config:"server_url"`
+	ServerApiToken                  string    `config:"server_api_token"`
+	TlsSkipVerify                   bool      `config:"tls_skip_verify"`
+	NodeName                        string    `config:"node_name"`
+	NodeId                          string    `config:"node_id"`
+	CachePath                       string    `config:"cache_path"`
+	LogPath                         string    `config:"log_path"`
+	CollectorConfigurationDirectory string    `config:"collector_configuration_directory"`
+	LogRotateEveryMb                int       `config:"log_rotate_every_mb"`
+	LogRotateKeepFiles              int       `config:"log_rotate_keep_files"`
+	UpdateInterval                  int       `config:"update_interval"`
+	SendStatus                      bool      `config:"send_status"`
+	ListLogFiles                    []string  `config:"list_log_files"`
+	CollectorBinariesWhitelist      *[]string `config:"collector_binaries_whitelist"`
 }
