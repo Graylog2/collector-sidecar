@@ -165,6 +165,8 @@ func UploadConfiguration(httpClient *http.Client, ctx *context.Ctx, payload *gra
 		log.Error("[UploadConfiguration] Can't upload rendered configuration, please update your Graylog server to the latest version.")
 	} else if resp != nil && resp.StatusCode != 202 {
 		log.Errorf("[UploadConfiguration] Bad response from Graylog server: %v", resp.Body)
+	} else if err != nil {
+		log.Error("[UploadConfiguration] Failed to upload collector configuration to server: ", err)
 	}
 }
 
