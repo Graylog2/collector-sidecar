@@ -28,6 +28,8 @@ import (
 	"github.com/Graylog2/collector-sidecar/context"
 )
 
+const ServiceNamePrefix = "graylog-collector-"
+
 type SvcRunner struct {
 	RunnerCommon
 	exec         string
@@ -54,7 +56,7 @@ func NewSvcRunner(backend backends.Backend, context *context.Ctx) Runner {
 		exec:        backend.ExecutablePath,
 		args:        backend.ExecuteParameters,
 		signals:     make(chan string),
-		serviceName: "graylog-collector-" + backend.Name,
+		serviceName: ServiceNamePrefix + backend.Name,
 	}
 
 	// set default state
@@ -113,6 +115,7 @@ func (r *SvcRunner) GetBackend() *backends.Backend {
 func (r *SvcRunner) SetBackend(b backends.Backend) {
 	r.backend = b
 	r.name = b.Name
+	r.serviceName = ServiceNamePrefix + b.Name
 	r.exec = b.ExecutablePath
 	r.args = b.ExecuteParameters
 }
@@ -137,14 +140,14 @@ func (r *SvcRunner) ValidateBeforeStart() error {
 
 	serviceConfig := mgr.Config{
 		DisplayName:    "Graylog collector sidecar - " + r.name + " backend",
-		Description:    "Wrapper service for the NXLog backend",
+		Description:    "Wrapper service for the " + r.name + " backend",
 		BinaryPathName: "\"" + r.exec + "\" " + r.args}
 
 	s, err := m.OpenService(r.serviceName)
 	// service exist so we only update the properties
 	if err == nil {
 		defer s.Close()
-		log.Debugf("[%s] service %s already exists, updating properties", r.name)
+		log.Debugf("Service %s already exists, updating properties", r.name)
 		currentConfig, err := s.Config()
 		if err == nil {
 			currentConfig.DisplayName = serviceConfig.DisplayName
@@ -161,13 +164,13 @@ func (r *SvcRunner) ValidateBeforeStart() error {
 			execPath,
 			serviceConfig)
 		if err != nil {
-			r.backend.SetStatusLogErrorf("Failed to install service: %v", err)
+			return r.backend.SetStatusLogErrorf("Failed to install service: %v", err)
 		}
 		defer s.Close()
 		err = eventlog.InstallAsEventCreate(r.serviceName, eventlog.Error|eventlog.Warning|eventlog.Info)
 		if err != nil {
 			s.Delete()
-			r.backend.SetStatusLogErrorf("SetupEventLogSource() failed: %v", err)
+			return r.backend.SetStatusLogErrorf("SetupEventLogSource() failed: %v", err)
 		}
 	}
 
@@ -213,7 +216,7 @@ func (r *SvcRunner) start() error {
 
 	ws, err := m.OpenService(r.serviceName)
 	if err != nil {
-		return r.backend.SetStatusLogErrorf("Could not access service: %v", err)
+		return r.backend.SetStatusLogErrorf("Could not access service %s: %v", r.serviceName, err)
 	}
 	defer ws.Close()
 
@@ -239,35 +242,10 @@ func (r *SvcRunner) stop() error {
 	// deactivate supervisor
 	r.setSupervised(false)
 
-	m, err := mgr.Connect()
+	err := stopService(r.serviceName)
 	if err != nil {
-		return r.backend.SetStatusLogErrorf("Failed to connect to service manager: %v", err)
+		return r.backend.SetStatusLogErrorf("%s", err)
 	}
-	defer m.Disconnect()
-
-	ws, err := m.OpenService(r.serviceName)
-	if err != nil {
-		return r.backend.SetStatusLogErrorf("Could not access service: %v", err)
-	}
-	defer ws.Close()
-
-	status, err := ws.Control(svc.Stop)
-	if err != nil {
-		return r.backend.SetStatusLogErrorf("Could not send stop control: %v", err)
-	}
-
-	timeout := time.Now().Add(10 * time.Second)
-	for status.State != svc.Stopped {
-		if timeout.Before(time.Now()) {
-			return r.backend.SetStatusLogErrorf("Timeout waiting for service to go to stopped state: %v", err)
-		}
-		time.Sleep(300 * time.Millisecond)
-		status, err = ws.Query()
-		if err != nil {
-			return r.backend.SetStatusLogErrorf("Could not retrieve service status: %v", err)
-		}
-	}
-
 	r.backend.SetStatus(backends.StatusStopped, "Stopped", "")
 
 	return nil
