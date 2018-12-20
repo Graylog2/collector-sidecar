@@ -70,7 +70,8 @@ func RequestBackendList(httpClient *http.Client, checksum string, ctx *context.C
 		backendResponse.Checksum = resp.Header.Get("Etag")
 		switch {
 		case resp.StatusCode == 304:
-			log.Debug("[RequestBackendList] No backend update available.")
+			backendResponse.NotModified = true
+			log.Debug("[RequestBackendList] No update available.")
 		case resp.StatusCode != 200:
 			msg := "Bad response status from Graylog server"
 			system.GlobalStatus.Set(backends.StatusError, msg)
@@ -121,7 +122,8 @@ func RequestConfiguration(
 			log.Infof("[RequestConfiguration] %s", msg)
 			return graylog.ResponseCollectorConfiguration{}, nil
 		case resp.StatusCode == 304:
-			log.Debug("[RequestConfiguration] No configuration update available, skipping update.")
+			log.Debug("[RequestConfiguration] No update available, skipping update.")
+			configurationResponse.NotModified = true
 		case resp.StatusCode != 200:
 			msg := "Bad response status from Graylog server"
 			system.GlobalStatus.Set(backends.StatusError, msg+": "+err.Error())
@@ -134,7 +136,7 @@ func RequestConfiguration(
 	return configurationResponse, nil
 }
 
-func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *graylog.StatusRequest) (graylog.ResponseCollectorRegistration, error) {
+func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.Ctx, status *graylog.StatusRequest) (graylog.ResponseCollectorRegistration, error) {
 	c := rest.NewClient(httpClient, ctx)
 	c.BaseURL = ctx.ServerUrl
 
@@ -171,6 +173,9 @@ func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *grayl
 	}
 
 	r, err := c.NewRequest("PUT", "/sidecars/"+ctx.NodeId, nil, registration)
+	if checksum != "" {
+		r.Header.Add("If-None-Match", "\""+checksum+"\"")
+	}
 	if err != nil {
 		log.Error("[UpdateRegistration] Can not initialize REST request")
 		return graylog.ResponseCollectorRegistration{}, err
@@ -181,6 +186,9 @@ func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *grayl
 	if resp != nil && resp.StatusCode == 400 && strings.Contains(err.Error(), "Unable to map property") {
 		log.Error("[UpdateRegistration] Sending collector status failed. Disabling `send_status` as fallback! ", err)
 		ctx.UserConfig.SendStatus = false
+	} else if resp != nil && resp.StatusCode == 304 {
+		log.Debug("[UpdateRegistration] No update available.")
+		respBody.NotModified = true
 	} else if resp != nil && resp.StatusCode != 202 {
 		log.Error("[UpdateRegistration] Bad response from Graylog server: ", resp.Status)
 		return graylog.ResponseCollectorRegistration{}, err
@@ -188,6 +196,7 @@ func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *grayl
 		log.Error("[UpdateRegistration] Failed to report collector status to server: ", err)
 		return graylog.ResponseCollectorRegistration{}, err
 	}
+	respBody.Checksum = resp.Header.Get("Etag")
 
 	// Update configuration if provided
 	if respBody.Configuration != (graylog.ResponseCollectorRegistrationConfiguration{}) {

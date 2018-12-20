@@ -22,6 +22,8 @@ type ResponseCollectorRegistration struct {
 	ConfigurationOverride bool                                       `json:"configuration_override"`
 	CollectorActions      []ResponseCollectorAction                  `json:"actions,omitempty"`
 	Assignments           []assignments.ConfigurationAssignment      `json:"assignments,omitempty"`
+	Checksum              string                                     //Etag of the response
+	NotModified           bool
 }
 
 type ResponseCollectorAction struct {
@@ -35,15 +37,9 @@ type ResponseCollectorRegistrationConfiguration struct {
 }
 
 type ResponseBackendList struct {
-	Backends []ResponseCollectorBackend `json:"collectors"`
-	Checksum string                     //Etag of the response
-}
-
-func (r *ResponseBackendList) IsEmpty() bool {
-	if len(r.Backends) == 0 {
-		return true
-	}
-	return false
+	Backends    []ResponseCollectorBackend `json:"collectors"`
+	Checksum    string                     //Etag of the response
+	NotModified bool
 }
 
 type ResponseCollectorBackend struct {
@@ -63,11 +59,5 @@ type ResponseCollectorConfiguration struct {
 	Name            string `json:"name"`
 	Template        string `json:"template"`
 	Checksum        string //Etag of the response
-}
-
-func (r *ResponseCollectorConfiguration) IsEmpty() bool {
-	if len(r.Template) == 0 {
-		return true
-	}
-	return false
+	NotModified     bool
 }
