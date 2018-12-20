@@ -16,6 +16,7 @@
 package context
 
 import (
+	"github.com/docker/go-units"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -112,14 +113,22 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 		log.Fatal("Failed to create collector configuration directory. ", err)
 	}
 
-	// log_rotation_time
-	if !(ctx.UserConfig.LogRotationTime > 0) {
-		log.Fatal("Please set the log rotation time > 0 seconds.")
+	// log_rotate_max_file_size
+	if ctx.UserConfig.LogRotateMaxFileSizeString == "" {
+		log.Fatal("Please set the maximum log rotation size.")
+	}
+	ctx.UserConfig.LogRotateMaxFileSize, err = units.RAMInBytes(ctx.UserConfig.LogRotateMaxFileSizeString)
+	if err != nil {
+		log.Fatal("Cannot parse maximum log rotation size: ", err)
+	}
+	if ctx.UserConfig.LogRotateMaxFileSize < 1*units.MiB {
+		log.Fatalf("Maximum log rotation size (%s) needs to be at least 1MiB",
+			units.HumanSize(float64(ctx.UserConfig.LogRotateMaxFileSize)))
 	}
 
-	// log_max_age
-	if !(ctx.UserConfig.LogMaxAge > 0) {
-		log.Fatal("Please set the maximum age of log file rotation > 0 seconds.")
+	// log_rotate_keep_files
+	if !(ctx.UserConfig.LogRotateKeepFiles > 0) {
+		log.Fatal("Please set the maximum number of logfiles to retain.")
 	}
 
 	// list log files
