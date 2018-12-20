@@ -1,8 +1,10 @@
-hash: 3a8cae100aaf5da77ff932ad561fe3b48569093d47c1fc378f9e987cb2bafe82
-updated: 2018-12-13T10:56:39.625105465+01:00
+hash: c4dcc2e4704247f944548da5b113b7f497e0d2e7d7435d18c40177ed955801cd
+updated: 2018-12-20T18:54:30.605617065+01:00
 imports:
 - name: bitbucket.org/tebeka/strftime
   version: 2194253a23c090a4d5953b152a3c63fb5da4f5a4
+- name: github.com/docker/go-units
+  version: 47565b4f722fb6ceae66b95f853feed578a4a51c
 - name: github.com/elastic/go-ucfg
   version: 92d43887f91851c9936621665af7f796f4d03412
   subpackages:
@@ -20,8 +22,8 @@ imports:
   version: 10da29423eb9a6269092eebdc2be32209612d9d2
 - name: github.com/kardianos/service
   version: 6d3a0ee7d3425d9d835debc51a0ca1ffa28f4893
-- name: github.com/lestrrat/go-file-rotatelogs
-  version: bb1d28fd5ac7ec9873540d5bba975d009f271f67
+- name: github.com/natefinch/lumberjack
+  version: 7d6a1875575e09256dc552b4c0e450dcd02bd10e
 - name: github.com/pborman/uuid
   version: c55201b036063326c5b1b89ccfe45a184973d073
 - name: github.com/rakyll/goini

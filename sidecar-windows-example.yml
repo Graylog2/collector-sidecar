@@ -55,9 +55,11 @@ send_status: <SENDSTATUS>
 # Directory where the sidecar stores logs for collectors and the sidecar itself.
 #log_path: "C:\\Program Files\\Graylog\\sidecar\\logs"
 
-# TODO: Document or remove depending on the outcome of https://github.com/Graylog2/collector-sidecar/issues/251
-#log_rotation_time: 86400
-#log_max_age: 604800
+# The maximum size of the log file before it gets rotated.
+#log_rotate_max_file_size: "10MiB"
+
+# The maximum number of old log files to retain.
+#log_rotate_keep_files: 10
 
 # Directory where the sidecar generates configurations for collectors.
 #collector_configuration_directory: "C:\\Program Files\\Graylog\\sidecar\\generated"

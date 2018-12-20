@@ -24,8 +24,9 @@ type SidecarConfig struct {
 	CachePath                       string   `config:"cache_path"`
 	LogPath                         string   `config:"log_path"`
 	CollectorConfigurationDirectory string   `config:"collector_configuration_directory"`
-	LogRotationTime                 int      `config:"log_rotation_time"`
-	LogMaxAge                       int      `config:"log_max_age"`
+	LogRotateMaxFileSizeString      string   `config:"log_rotate_max_file_size"`
+	LogRotateMaxFileSize            int64    // set from LogRotateMaxFileSizeString
+	LogRotateKeepFiles              int      `config:"log_rotate_keep_files"`
 	UpdateInterval                  int      `config:"update_interval"`
 	SendStatus                      bool     `config:"send_status"`
 	ListLogFiles                    []string `config:"list_log_files"`
@@ -43,8 +44,8 @@ send_status: true
 list_log_files:
 cache_path: "/var/cache/graylog-sidecar"
 log_path: "/var/log/graylog-sidecar"
-log_rotation_time: 86400
-log_max_age: 604800
+log_rotate_max_file_size: "10MiB"
+log_rotate_keep_files: 10
 collector_configuration_directory: "/var/lib/graylog-sidecar/generated"
 collector_binaries_whitelist:
   - "/usr/lib/graylog-sidecar/filebeat"
