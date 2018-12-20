@@ -81,9 +81,7 @@ func (r *SvcRunner) Running() bool {
 	defer m.Disconnect()
 
 	s, err := m.OpenService(r.serviceName)
-	// service exist so we only update the properties
 	if err != nil {
-		r.backend.SetStatusLogErrorf("Can't get status of service %s cause it doesn't exist: %v", r.serviceName, err)
 		return false
 	}
 	defer s.Close()
@@ -91,6 +89,7 @@ func (r *SvcRunner) Running() bool {
 	status, err := s.Query()
 	if err != nil {
 		r.backend.SetStatusLogErrorf("Can't query status of service %s: %v", r.serviceName, err)
+		return false
 	}
 
 	return status.State == svc.Running
@@ -127,8 +126,7 @@ func (r *SvcRunner) ValidateBeforeStart() error {
 		return err
 	}
 
-	execPath, err := exec.LookPath(r.exec)
-	if err != nil {
+	if _, err := exec.LookPath(r.exec); err != nil {
 		return r.backend.SetStatusLogErrorf("Failed to find collector executable %s", r.exec)
 	}
 
@@ -161,10 +159,20 @@ func (r *SvcRunner) ValidateBeforeStart() error {
 		// service needs to be created
 	} else {
 		s, err = m.CreateService(r.serviceName,
-			execPath,
+			r.exec,
 			serviceConfig)
 		if err != nil {
 			return r.backend.SetStatusLogErrorf("Failed to install service: %v", err)
+		}
+		// It seems impossible to create a service with properly quoted arguments :-(
+		// Updating the BinaryPathName afterwards does the trick
+		currentConfig, err := s.Config()
+		if err == nil {
+			currentConfig.BinaryPathName = serviceConfig.BinaryPathName
+		}
+		err = s.UpdateConfig(currentConfig)
+		if err != nil {
+			r.backend.SetStatusLogErrorf("Failed to update the created service: %v", err)
 		}
 		defer s.Close()
 		err = eventlog.InstallAsEventCreate(r.serviceName, eventlog.Error|eventlog.Warning|eventlog.Info)
