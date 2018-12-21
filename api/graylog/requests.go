@@ -45,3 +45,10 @@ type MetricsRequest struct {
 	CpuIdle float64  `json:"cpu_idle"`
 	Load1   float64  `json:"load_1"`
 }
+
+type CollectorUpload struct {
+	CollectorId           string `json:"collector_id"`
+	NodeId                string `json:"node_id"`
+	CollectorName         string `json:"collector_name"`
+	RenderedConfiguration string `json:"rendered_configuration"`
+}

@@ -146,7 +146,27 @@ func UpdateRegistration(httpClient *http.Client, ctx *context.Ctx, status *grayl
 
 	// Run collector actions if provided
 	if len(respBody.CollectorActions) != 0 {
-		daemon.HandleCollectorActions(respBody.CollectorActions)
+		HandleCollectorActions(respBody.CollectorActions, ctx)
+	}
+}
+
+func UploadConfiguration(httpClient *http.Client, ctx *context.Ctx, payload *graylog.CollectorUpload) {
+	c := rest.NewClient(httpClient)
+	c.BaseURL = ctx.ServerUrl
+
+	r, err := c.NewRequest("PUT", "/plugins/org.graylog.plugins.collector/collectors/"+ctx.CollectorId+"/configuration", nil, payload)
+	if err != nil {
+		log.Error("[UploadConfiguration] Can not initialize REST request")
+		return
+	}
+
+	resp, err := c.Do(r, nil)
+	if resp != nil && resp.StatusCode == 404 {
+		log.Error("[UploadConfiguration] Can't upload rendered configuration, please update your Graylog server to the latest version.")
+	} else if resp != nil && resp.StatusCode != 202 {
+		log.Errorf("[UploadConfiguration] Bad response from Graylog server: %v", resp.Body)
+	} else if err != nil {
+		log.Error("[UploadConfiguration] Failed to upload collector configuration to server: ", err)
 	}
 }
 

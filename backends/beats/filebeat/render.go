@@ -60,7 +60,12 @@ func (fbc *FileBeatConfig) Render() bytes.Buffer {
 	return result
 }
 
-func (fbc *FileBeatConfig) RenderToFile() error {
+func (fbc *FileBeatConfig) RenderToString() string {
+	buffer := fbc.Render()
+	return buffer.String()
+}
+
+func (fbc *FileBeatConfig) RenderToFile() (error) {
 	stringConfig := fbc.Render()
 	err := common.CreatePathToFile(fbc.Beats.UserConfig.ConfigurationPath)
 	if err != nil {
@@ -70,7 +75,7 @@ func (fbc *FileBeatConfig) RenderToFile() error {
 	return err
 }
 
-func (fbc *FileBeatConfig) RenderOnChange(response graylog.ResponseCollectorConfiguration) bool {
+func (fbc *FileBeatConfig) RenderOnChange(response graylog.ResponseCollectorConfiguration) (bool) {
 	newConfig := NewCollectorConfig(fbc.Beats.Context)
 
 	// holds file inputs
@@ -191,7 +196,12 @@ func (fbc *FileBeatConfig) RenderOnChange(response graylog.ResponseCollectorConf
 	if !fbc.Beats.Equals(newConfig.Beats) {
 		log.Infof("[%s] Configuration change detected, rewriting configuration file.", fbc.Name())
 		fbc.Beats.Update(newConfig.Beats)
-		fbc.RenderToFile()
+		err := fbc.RenderToFile()
+		if err != nil {
+			msg := fmt.Sprintf("[%s] Failed to write configuration file: %s", fbc.Name(), err)
+			fbc.SetStatus(backends.StatusError, msg)
+			log.Errorf("[%s] %s", fbc.Name(), msg)
+		}
 		return true
 	}
 

@@ -70,7 +70,8 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context 
 
 	for name, runner := range daemon.Daemon.Runner {
 		backend := backends.Store.GetBackend(name)
-		if backend.RenderOnChange(jsonConfig) {
+		changed := backend.RenderOnChange(jsonConfig)
+		if changed {
 			if !backend.ValidateConfigurationFile() {
 				backends.SetStatusLogErrorf(name, "Collector configuration file is not valid, waiting for the next update.")
 				continue
@@ -81,7 +82,6 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksum string, context 
 				backend.SetStatus(backends.StatusError, msg)
 				log.Errorf("[%s] %s: %v", name, msg, err)
 			}
-
 		}
 	}
 
