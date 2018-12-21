@@ -52,7 +52,7 @@ func NewConfig() *DaemonConfig {
 
 	dc := &DaemonConfig{
 		Name:        "graylog-sidecar",
-		DisplayName: "Graylog collector sidecar",
+		DisplayName: "Graylog Sidecar",
 		Description: "Wrapper service for Graylog controlled collector",
 		Dir:         rootDir,
 		Env:         []string{},
@@ -130,11 +130,18 @@ func (dc *DaemonConfig) SyncWithAssignments(configChecksums map[string]string, c
 			configChecksums[backend.Id] = ""
 		}
 	}
-
-	// add new backends to registry
+	assignedBackends := []*backends.Backend{}
 	for backendId := range assignments.Store.GetAll() {
 		backend := backends.Store.GetBackendById(backendId)
-		if backend != nil && dc.Runner[backend.Id] == nil {
+		if backend != nil {
+			assignedBackends = append(assignedBackends, backend)
+		}
+	}
+	CleanOldServices(assignedBackends)
+
+	// add new backends to registry
+	for _, backend := range assignedBackends {
+		if dc.Runner[backend.Id] == nil {
 			log.Info("Adding process runner for: " + backend.Name)
 			dc.AddRunner(*backend, context)
 		}

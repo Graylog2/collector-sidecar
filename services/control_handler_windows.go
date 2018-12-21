@@ -16,10 +16,9 @@
 package services
 
 import (
+	"github.com/Graylog2/collector-sidecar/backends"
+	"github.com/Graylog2/collector-sidecar/daemon"
 	"github.com/kardianos/service"
-
-	"golang.org/x/sys/windows/svc/eventlog"
-	"golang.org/x/sys/windows/svc/mgr"
 )
 
 func ControlHandler(action string) {
@@ -37,35 +36,6 @@ func ControlHandler(action string) {
 }
 
 func cleanupInstalledServices() {
-	// backends are not initialized yet, let's use names directly
-	uninstallService("graylog-collector-nxlog")
-}
-
-func uninstallService(name string) {
-	log.Infof("Uninstalling service %s", name)
-	m, err := mgr.Connect()
-	if err != nil {
-		log.Errorf("Failed to connect to service manager: %v", err)
-	}
-	defer m.Disconnect()
-
-	s, err := m.OpenService(name)
-	// service exist so we try to uninstall it
-	if err != nil {
-		log.Debugf("Service %s doesn't exist, no uninstall action needed", name)
-		return
-	}
-
-	defer s.Close()
-	err = s.Delete()
-	if err != nil {
-		log.Errorf("Can't delete service %s: %v", name, err)
-	}
-
-	err = eventlog.Remove(s.Name)
-	if err != nil {
-		log.Errorf("RemoveEventLogSource() failed: %s", err)
-	}
-
-	return
+	// Cleans all services starting with "graylog-collector-"
+	daemon.CleanOldServices([]*backends.Backend{})
 }

@@ -35,7 +35,7 @@ imports:
 - name: github.com/StackExchange/wmi
   version: e54cbda6595d7293a7a468ccf9525f6bc8887f99
 - name: golang.org/x/sys
-  version: 833a04a10549a95dc34458c195cbad61bbb6cb4d
+  version: 98c5dad5d1a0e8a73845ecc8897d0bd56586511d
   subpackages:
   - unix
   - windows

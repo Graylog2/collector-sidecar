@@ -193,7 +193,13 @@ func (r *ExecRunner) start() error {
 	}
 
 	// setup process environment
-	quotedArgs, err := shlex.Split(r.args)
+	var err error
+	var quotedArgs []string
+	if runtime.GOOS == "windows" {
+		quotedArgs = common.CommandLineToArgv(r.args)
+	} else {
+		quotedArgs, err = shlex.Split(r.args)
+	}
 	if err != nil {
 		return err
 	}
