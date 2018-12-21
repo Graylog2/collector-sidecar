@@ -40,7 +40,8 @@ type Ctx struct {
 
 func NewContext() *Ctx {
 	return &Ctx{
-		Inventory: system.NewInventory(),
+		Inventory:  system.NewInventory(),
+		UserConfig: cfgfile.ConfigDefaults(),
 	}
 }
 

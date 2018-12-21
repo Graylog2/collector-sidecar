@@ -13,7 +13,7 @@ import:
 - package: github.com/rakyll/goini
 - package: github.com/pborman/uuid
 - package: gopkg.in/yaml.v2
-- package: github.com/urso/ucfg
+- package: github.com/elastic/go-ucfg
 - package: bitbucket.org/tebeka/strftime
 - package: github.com/elastic/gosigar
 - package: github.com/rifflock/lfshook
