@@ -119,8 +119,23 @@ func (dc *DaemonConfig) SyncWithAssignments(configChecksums map[string]string, c
 		runnerBackend := runner.GetBackend()
 		if backend != nil && !runnerBackend.EqualSettings(backend) {
 			log.Infof("[%s] Updating process configuration", runner.Name())
+			runnerServiceType := runnerBackend.ServiceType
 			runner.SetBackend(*backend)
 			configChecksums[backend.Id] = ""
+			if backend.ServiceType != runnerServiceType {
+				log.Infof("Changing process runner (%s -> %s) for: %s",
+					runnerServiceType, backend.ServiceType, backend.Name)
+				dc.DeleteRunner(id)
+				dc.AddRunner(*backend, context)
+			}
+			// XXX
+			// We should, but cannot trigger a restart here.
+			//
+			// If a backend gets renamed, it expects the configuration under a new path.
+			// Therefore, we don't copy the configuration from the old backend to the new backend,
+			// but keep it empty.
+			// This will trigger `services.checkForUpdateAndRestart()` to write a new
+			// configuration and then restart the runner.
 		}
 
 		// cleanup backends that should not run anymore
