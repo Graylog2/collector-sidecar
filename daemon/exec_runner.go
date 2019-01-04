@@ -234,11 +234,11 @@ func (r *ExecRunner) stop() error {
 	// give the chance to cleanup resources
 	if r.cmd.Process != nil && runtime.GOOS != "windows" {
 		r.cmd.Process.Signal(syscall.SIGHUP)
+		time.Sleep(2 * time.Second)
 	}
-	time.Sleep(2 * time.Second)
 
 	// in doubt kill the process
-	if r.cmd.Process != nil {
+	if r.Running() {
 		log.Debugf("[%s] SIGHUP ignored, killing process", r.Name())
 		err := r.cmd.Process.Kill()
 		if err != nil {
