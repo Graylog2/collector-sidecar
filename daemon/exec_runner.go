@@ -109,6 +109,8 @@ func (r *ExecRunner) GetBackend() *backends.Backend {
 func (r *ExecRunner) SetBackend(b backends.Backend) {
 	r.backend = b
 	r.name = b.Name
+	r.stderr = filepath.Join(r.context.UserConfig.LogPath, b.Name+"_stderr.log")
+	r.stdout = filepath.Join(r.context.UserConfig.LogPath, b.Name+"_stdout.log")
 	r.exec = b.ExecutablePath
 	r.args = b.ExecuteParameters
 	r.restartCount = 1
