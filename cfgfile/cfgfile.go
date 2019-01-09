@@ -39,24 +39,12 @@ func init() {
 	validateConfiguration = flag.Bool("configtest", false, "Validate configuration file and exit.")
 }
 
-func ConfigDefaults() *SidecarConfig {
-	userConfig := SidecarConfig{}
-	defaults, err := yaml.NewConfig([]byte(CommonDefaults), ucfg.PathSep("."))
-	if err != nil {
-		log.Fatal("Could not parse default config", err)
-	}
+func ConfigDefaults() []byte {
+	defaults := []byte(CommonDefaults)
 	if runtime.GOOS == "windows" {
-		winDefaults, err := yaml.NewConfig([]byte(WindowsDefaults), ucfg.PathSep("."))
-		if err != nil {
-			log.Fatal("Could not parse default config", err)
-		}
-		defaults.Merge(winDefaults)
+		defaults = append(defaults, WindowsDefaults...)
 	}
-	err = defaults.Unpack(&userConfig)
-	if err != nil {
-		log.Fatal("Could not unpack default config", err)
-	}
-	return &userConfig
+	return defaults
 }
 
 // Read reads the configuration from a yaml file into the given interface structure.
@@ -72,6 +60,9 @@ func Read(out interface{}, path string) error {
 		return fmt.Errorf("[ConfigFile] Failed to read %s: %v. Exiting.", path, err)
 	}
 	filecontent = expandEnv(filecontent)
+
+	// prepend configuration defaults before parsing
+	filecontent = append(ConfigDefaults(), filecontent...)
 
 	config, err := yaml.NewConfig(filecontent, ucfg.PathSep("."))
 	if err != nil {
