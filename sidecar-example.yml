@@ -71,7 +71,6 @@ server_api_token: ""
 #
 # Default:
 # collector_binaries_whitelist:
-#  - "/usr/lib/graylog-sidecar/filebeat"
 #  - "/usr/bin/filebeat"
 #  - "/usr/bin/packetbeat"
 #  - "/usr/bin/metricbeat"

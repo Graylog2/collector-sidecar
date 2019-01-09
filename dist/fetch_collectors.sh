@@ -40,7 +40,6 @@ download_beat()
 
 for ARCH in "${ARCHS[@]}"
 do
-  download_beat "filebeat" "linux" ${FILEBEAT_VERSION} ${ARCH}
   download_beat "filebeat" "windows" ${FILEBEAT_VERSION} ${ARCH}
   download_beat "winlogbeat" "windows" ${WINLOGBEAT_VERSION} ${ARCH}
 done
