@@ -48,7 +48,6 @@ log_rotate_max_file_size: "10MiB"
 log_rotate_keep_files: 10
 collector_configuration_directory: "/var/lib/graylog-sidecar/generated"
 collector_binaries_whitelist:
-  - "/usr/lib/graylog-sidecar/filebeat"
   - "/usr/bin/filebeat"
   - "/usr/bin/packetbeat"
   - "/usr/bin/metricbeat"
