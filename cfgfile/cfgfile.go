@@ -16,9 +16,9 @@
 package cfgfile
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"runtime"
 	"strings"
@@ -55,14 +55,21 @@ func Read(out interface{}, path string) error {
 		path = configurationFile
 	}
 
-	filecontent, err := ioutil.ReadFile(path)
+	configfile, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("[ConfigFile] Failed to read %s: %v. Exiting.", path, err)
 	}
-	filecontent = expandEnv(filecontent)
+	// start with configuration defaults
+	filecontent := ConfigDefaults()
 
-	// prepend configuration defaults before parsing
-	filecontent = append(ConfigDefaults(), filecontent...)
+	// append configuration, but strip away possible yaml doc separators
+	scanner := bufio.NewScanner(configfile)
+	for scanner.Scan() {
+		if line := scanner.Text(); line != "---" {
+			filecontent = append(filecontent, []byte(line+"\n")...)
+		}
+	}
+	filecontent = expandEnv(filecontent)
 
 	config, err := yaml.NewConfig(filecontent, ucfg.PathSep("."))
 	if err != nil {
