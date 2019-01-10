@@ -47,7 +47,7 @@ send_status: <SENDSTATUS>
 #       - "/opt/app/logs"
 #
 # Default: empty list
-#list_log_files:
+#list_log_files: []
 
 # Directory where the sidecar stores internal data.
 #cache_path: "C:\\Program Files\\Graylog\\sidecar\\cache"
@@ -72,7 +72,7 @@ send_status: <SENDSTATUS>
 #       - "C:\\Program Files\\Filebeat\\filebeat.exe"
 #
 # Example disable whitelisting:
-#     collector_binaries_whitelist:
+#     collector_binaries_whitelist: []
 #
 # Default:
 # collector_binaries_whitelist:
