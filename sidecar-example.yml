@@ -42,7 +42,7 @@ server_api_token: ""
 #       - "/opt/app/logs"
 #
 # Default: empty list
-#list_log_files:
+#list_log_files: []
 
 # Directory where the sidecar stores internal data.
 #cache_path: "/var/cache/graylog-sidecar"
@@ -67,7 +67,7 @@ server_api_token: ""
 #       - "/opt/collectors/*"
 #
 # Example disable whitelisting:
-#     collector_binaries_whitelist:
+#     collector_binaries_whitelist: []
 #
 # Default:
 # collector_binaries_whitelist:

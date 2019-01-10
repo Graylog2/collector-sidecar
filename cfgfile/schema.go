@@ -41,7 +41,7 @@ node_id: "file:/etc/graylog/sidecar/node-id"
 update_interval: 10
 tls_skip_verify: false
 send_status: true
-list_log_files:
+list_log_files: []
 cache_path: "/var/cache/graylog-sidecar"
 log_path: "/var/log/graylog-sidecar"
 log_rotate_max_file_size: "10MiB"

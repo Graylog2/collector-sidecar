@@ -16,9 +16,9 @@
 package cfgfile
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"runtime"
 	"strings"
@@ -39,24 +39,12 @@ func init() {
 	validateConfiguration = flag.Bool("configtest", false, "Validate configuration file and exit.")
 }
 
-func ConfigDefaults() *SidecarConfig {
-	userConfig := SidecarConfig{}
-	defaults, err := yaml.NewConfig([]byte(CommonDefaults), ucfg.PathSep("."))
-	if err != nil {
-		log.Fatal("Could not parse default config", err)
-	}
+func ConfigDefaults() []byte {
+	defaults := []byte(CommonDefaults)
 	if runtime.GOOS == "windows" {
-		winDefaults, err := yaml.NewConfig([]byte(WindowsDefaults), ucfg.PathSep("."))
-		if err != nil {
-			log.Fatal("Could not parse default config", err)
-		}
-		defaults.Merge(winDefaults)
+		defaults = append(defaults, WindowsDefaults...)
 	}
-	err = defaults.Unpack(&userConfig)
-	if err != nil {
-		log.Fatal("Could not unpack default config", err)
-	}
-	return &userConfig
+	return defaults
 }
 
 // Read reads the configuration from a yaml file into the given interface structure.
@@ -67,9 +55,19 @@ func Read(out interface{}, path string) error {
 		path = configurationFile
 	}
 
-	filecontent, err := ioutil.ReadFile(path)
+	configfile, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("[ConfigFile] Failed to read %s: %v. Exiting.", path, err)
+	}
+	// start with configuration defaults
+	filecontent := ConfigDefaults()
+
+	// append configuration, but strip away possible yaml doc separators
+	scanner := bufio.NewScanner(configfile)
+	for scanner.Scan() {
+		if line := scanner.Text(); line != "---" {
+			filecontent = append(filecontent, []byte(line+"\n")...)
+		}
 	}
 	filecontent = expandEnv(filecontent)
 
