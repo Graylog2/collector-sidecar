@@ -123,9 +123,9 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksums map[string]stri
 			// etag match, skip file render
 			continue
 		}
+		checksums[backendId] = response.Checksum
 
 		if backend.RenderOnChange(backends.Backend{Template: response.Template}, context) {
-			checksums[backendId] = response.Checksum
 			if err, output := backend.ValidateConfigurationFile(context); err != nil {
 				backend.SetStatusLogErrorf(err.Error())
 				if output != "" {
