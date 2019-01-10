@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -65,7 +66,8 @@ func Read(out interface{}, path string) error {
 	// append configuration, but strip away possible yaml doc separators
 	scanner := bufio.NewScanner(configfile)
 	for scanner.Scan() {
-		if line := scanner.Text(); line != "---" {
+		line := scanner.Text()
+		if match, _ := regexp.Match("^---[ \t]*$", []byte(line)); !match {
 			filecontent = append(filecontent, []byte(line+"\n")...)
 		}
 	}
