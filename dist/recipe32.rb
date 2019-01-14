@@ -28,6 +28,5 @@ class GraylogSidecar < FPM::Cookery::Recipe
     var('lib/graylog-sidecar/generated').mkdir
     var('log/graylog-sidecar').mkdir
     var('run/graylog-sidecar').mkdir
-    var('spool/graylog-sidecar/nxlog').mkdir
   end
 end
