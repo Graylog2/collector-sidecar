@@ -53,6 +53,13 @@ collector_binaries_whitelist:
   - "/usr/bin/metricbeat"
   - "/usr/bin/heartbeat"
   - "/usr/bin/auditbeat"
+  - "/usr/bin/journalbeat"
+  - "/usr/share/filebeat/bin/filebeat"
+  - "/usr/share/packetbeat/bin/packetbeat"
+  - "/usr/share/metricbeat/bin/metricbeat"
+  - "/usr/share/heartbeat/bin/heartbeat"
+  - "/usr/share/auditbeat/bin/auditbeat"
+  - "/usr/share/journalbeat/bin/journalbeat"
   - "/opt/nxlog/bin/nxlog"
 `
 
