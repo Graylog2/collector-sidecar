@@ -40,53 +40,59 @@ func StartPeriodicals(context *context.Ctx) {
 	go func() {
 		configChecksums := make(map[string]string)
 		backendChecksum := ""
+		assignmentChecksum := ""
 		logOnce := true
 		for {
 			time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
 
 			// registration response contains configuration assignments
-			response, err := updateCollectorRegistration(httpClient, context)
+			response, err := updateCollectorRegistration(httpClient, assignmentChecksum, context)
 			if err != nil {
 				continue
 			}
+			assignmentChecksum = response.Checksum
 			// backend list is needed before configuration assignments are updated
-			backendChecksum, err = fetchBackendList(httpClient, backendChecksum, context)
+			backendResponse, err := fetchBackendList(httpClient, backendChecksum, context)
 			if err != nil {
 				continue
 			}
-			assignments.Store.Update(response.Assignments)
-			// create process instances
-			daemon.Daemon.SyncWithAssignments(configChecksums, context)
-			// test for new or updated configurations and start the corresponding collector
-			if assignments.Store.Len() == 0 {
-				if logOnce {
-					log.Info("No configurations assigned to this instance. Skipping configuration request.")
-					logOnce = false
+			backendChecksum = backendResponse.Checksum
+
+			if !response.NotModified || !backendResponse.NotModified {
+				assignments.Store.Update(response.Assignments)
+				// create process instances
+				daemon.Daemon.SyncWithAssignments(configChecksums, context)
+				// test for new or updated configurations and start the corresponding collector
+				if assignments.Store.Len() == 0 {
+					if logOnce {
+						log.Info("No configurations assigned to this instance. Skipping configuration request.")
+						logOnce = false
+					}
+					continue
+				} else {
+					logOnce = true
 				}
-				continue
-			} else {
-				logOnce = true
 			}
 			checkForUpdateAndRestart(httpClient, configChecksums, context)
 		}
 	}()
 }
 
-// report collector status to Graylog server
-func updateCollectorRegistration(httpClient *http.Client, context *context.Ctx) (graylog.ResponseCollectorRegistration, error) {
+// report collector status to Graylog server and receive assignments
+func updateCollectorRegistration(httpClient *http.Client, checksum string, context *context.Ctx) (graylog.ResponseCollectorRegistration, error) {
 	statusRequest := api.NewStatusRequest()
-	return api.UpdateRegistration(httpClient, context, &statusRequest)
+	return api.UpdateRegistration(httpClient, checksum, context, &statusRequest)
 }
 
-func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx) (string, error) {
+func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx) (graylog.ResponseBackendList, error) {
 	response, err := api.RequestBackendList(httpClient, checksum, ctx)
 	if err != nil {
 		log.Error("Can't fetch collector list from Graylog API: ", err)
-		return "", err
+		return response, err
 	}
-	if response.IsEmpty() {
+	if response.NotModified {
 		// etag match, skipping all other actions
-		return response.Checksum, nil
+		return response, nil
 	}
 
 	backendList := []backends.Backend{}
@@ -95,7 +101,7 @@ func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx
 	}
 	backends.Store.Update(backendList)
 
-	return response.Checksum, nil
+	return response, nil
 }
 
 // fetch configuration periodically
@@ -113,13 +119,13 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksums map[string]stri
 			return
 		}
 
-		if response.IsEmpty() {
+		if response.NotModified {
 			// etag match, skip file render
 			continue
 		}
+		checksums[backendId] = response.Checksum
 
 		if backend.RenderOnChange(backends.Backend{Template: response.Template}, context) {
-			checksums[backendId] = response.Checksum
 			if err, output := backend.ValidateConfigurationFile(context); err != nil {
 				backend.SetStatusLogErrorf(err.Error())
 				if output != "" {
