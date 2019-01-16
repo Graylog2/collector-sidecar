@@ -60,6 +60,7 @@ collector_binaries_whitelist:
   - "/usr/share/heartbeat/bin/heartbeat"
   - "/usr/share/auditbeat/bin/auditbeat"
   - "/usr/share/journalbeat/bin/journalbeat"
+  - "/usr/bin/nxlog"
   - "/opt/nxlog/bin/nxlog"
 `
 
