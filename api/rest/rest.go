@@ -170,6 +170,7 @@ func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
 	}
 
 	defer func() {
+		io.Copy(ioutil.Discard, resp.Body)
 		if rerr := resp.Body.Close(); err == nil {
 			err = rerr
 		}
