@@ -34,8 +34,8 @@ import (
 )
 
 var (
-	log       = logger.Log()
-	userAgent = "Graylog Collector v" + common.CollectorVersion
+	log                 = logger.Log()
+	userAgent           = "Graylog Collector v" + common.CollectorVersion
 	customRequestHeader = "sidecar"
 )
 
