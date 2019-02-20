@@ -208,9 +208,6 @@ Section "Post"
   ${If} $ServerUrl == ""
     StrCpy $ServerUrl "http://127.0.0.1:9000/api"
   ${EndIf}
-  ${If} $NodeName == ""
-    StrCpy $NodeName "graylog-sidecar"
-  ${EndIf}
   ${If} $UpdateInterval == ""
     StrCpy $UpdateInterval "10"
   ${EndIf}
