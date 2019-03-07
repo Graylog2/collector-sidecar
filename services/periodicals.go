@@ -45,12 +45,12 @@ func StartPeriodicals(context *context.Ctx) {
 		for {
 			time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
 
-			// registration response contains configuration assignments
-			response, err := updateCollectorRegistration(httpClient, assignmentChecksum, context)
+			// registration regResponse contains configuration assignments
+			regResponse, err := updateCollectorRegistration(httpClient, assignmentChecksum, context)
 			if err != nil {
 				continue
 			}
-			assignmentChecksum = response.Checksum
+			assignmentChecksum = regResponse.Checksum
 			// backend list is needed before configuration assignments are updated
 			backendResponse, err := fetchBackendList(httpClient, backendChecksum, context)
 			if err != nil {
@@ -58,10 +58,15 @@ func StartPeriodicals(context *context.Ctx) {
 			}
 			backendChecksum = backendResponse.Checksum
 
-			if !response.NotModified || !backendResponse.NotModified {
-				assignments.Store.Update(response.Assignments)
+			if !regResponse.NotModified || !backendResponse.NotModified {
+				modified := assignments.Store.Update(regResponse.Assignments)
+				// regResponse.NotModified is always false, because graylog does not implement caching yet.
+				// Thus we need to double check.
+				if modified || !backendResponse.NotModified {
+					configChecksums = make(map[string]string)
+				}
 				// create process instances
-				daemon.Daemon.SyncWithAssignments(configChecksums, context)
+				daemon.Daemon.SyncWithAssignments(context)
 				// test for new or updated configurations and start the corresponding collector
 				if assignments.Store.Len() == 0 {
 					if logOnce {
