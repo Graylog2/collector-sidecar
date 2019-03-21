@@ -93,12 +93,12 @@ build-windows32: ## Build sidecar binary for Windows 32bit
 	@mkdir -p build/$(COLLECTOR_VERSION)/windows/386
 	GOOS=windows GOARCH=386 CGO_ENABLED=1 CC=i686-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_win32 -v -i -o build/$(COLLECTOR_VERSION)/windows/386/graylog-sidecar.exe
 
-package-all: prepare-package package-arm package-linux package-linux32 package-windows package-tar
+package-all: prepare-package package-armhf package-linux package-linux32 package-windows package-tar
 
 prepare-package:
 	@dist/fetch_collectors.sh
 
-package-arm: ## Create Linux system package
+package-armhf: ## Create Linux system package
 	@fpm-cook clean dist/recipearm.rb
 	@rm -rf dist/cache dist/tmp-build dist/tmp-dest
 	@fpm-cook -t deb package dist/recipearm.rb
