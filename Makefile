@@ -66,8 +66,8 @@ solaris-sigar-patch:
 	fi
 
 build-armhf: ## Build sidecar binary for armhf
-        @mkdir -p build/$(COLLECTOR_VERSION)/linux/armhf
-        GOOS=linux GOARCH=arm GOARM=7 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_armhf  -v -i -o build/$(COLLECTOR_VERSION)/linux/armhf/graylog-sidecar
+	@mkdir -p build/$(COLLECTOR_VERSION)/linux/armhf
+	GOOS=linux GOARCH=arm GOARM=7 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_armhf  -v -i -o build/$(COLLECTOR_VERSION)/linux/armhf/graylog-sidecar
 
 build-solaris: solaris-sigar-patch ## Build sidecar binary for Solaris/OmniOS/Illumos
 	@mkdir -p build/$(COLLECTOR_VERSION)/solaris/amd64
