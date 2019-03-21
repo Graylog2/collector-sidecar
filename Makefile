@@ -65,6 +65,10 @@ solaris-sigar-patch:
 		wget -O vendor/github.com/cloudfoundry/gosigar/sigar_solaris.go https://raw.githubusercontent.com/amitkris/gosigar/9fc0903125acd1a0dc7635f8670088339865bcd5/sigar_solaris.go; \
 	fi
 
+build-armhf: ## Build sidecar binary for armhf
+        @mkdir -p build/$(COLLECTOR_VERSION)/linux/armhf
+        GOOS=linux GOARCH=arm GOARM=7 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_armhf  -v -i -o build/$(COLLECTOR_VERSION)/linux/armhf/graylog-sidecar
+
 build-solaris: solaris-sigar-patch ## Build sidecar binary for Solaris/OmniOS/Illumos
 	@mkdir -p build/$(COLLECTOR_VERSION)/solaris/amd64
 	GOOS=solaris GOARCH=amd64 $(GO) build $(BUILD_OPTS) -v -i -o build/$(COLLECTOR_VERSION)/solaris/amd64/graylog-sidecar
