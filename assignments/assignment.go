@@ -17,6 +17,7 @@ package assignments
 
 import (
 	"github.com/Graylog2/collector-sidecar/common"
+	"reflect"
 )
 
 var (
@@ -59,7 +60,11 @@ func (as *assignmentStore) AssignedBackendIds() []string {
 	return result
 }
 
-func (as *assignmentStore) Update(assignments []ConfigurationAssignment) {
+func (as *assignmentStore) Update(assignments []ConfigurationAssignment) bool {
+	beforeUpdate := make(map[string]string)
+	for k, v := range as.assignments {
+		beforeUpdate[k] = v
+	}
 	if len(assignments) != 0 {
 		var activeIds []string
 		for _, assignment := range assignments {
@@ -70,6 +75,7 @@ func (as *assignmentStore) Update(assignments []ConfigurationAssignment) {
 	} else {
 		Store.cleanup([]string{})
 	}
+	return !reflect.DeepEqual(beforeUpdate, as.assignments)
 }
 
 func (as *assignmentStore) cleanup(validBackendIds []string) {
