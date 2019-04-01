@@ -7,9 +7,9 @@ class GraylogSidecar < FPM::Cookery::Recipe
   version  data.version
   revision data.revision
   homepage 'https://graylog.org'
-  arch     'armhf'
+  arch     'armv7'
 
-  source   "file:../../build/#{version}/linux/armhf/graylog-sidecar"
+  source   "file:../../build/#{version}/linux/armv7/graylog-sidecar"
 
   maintainer 'Graylog, Inc. <hello@graylog.org>'
   vendor     'graylog'
