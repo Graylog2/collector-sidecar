@@ -208,9 +208,6 @@ Section "Post"
   ${If} $ServerUrl == ""
     StrCpy $ServerUrl "http://127.0.0.1:9000/api"
   ${EndIf}
-  ${If} $NodeName == ""
-    StrCpy $NodeName "graylog-sidecar"
-  ${EndIf}
   ${If} $UpdateInterval == ""
     StrCpy $UpdateInterval "10"
   ${EndIf}
@@ -295,14 +292,16 @@ Function nsDialogsPage
   ${NSD_CreateText} 50 20 75% 12u "http://127.0.0.1:9000/api"
   Pop $InputServerUrl
 
-  ${NSD_CreateLabel} 0 60 100% 12u "Enter the name of this instance:"
+  ${NSD_CreateLabel} 0 60 100% 12u "The name of this instance:"
   Pop $Label
-  ${NSD_CreateText} 50 80 75% 12u "graylog-sidecar"
+  ${NSD_CreateText} 50 80 75% 12u ""
   Pop $InputNodeName
-
-  ${NSD_CreateLabel} 0 120 100% 12u "Enter the server API token:"
+  ${NSD_CreateLabel} 50 100 100% 12u "If empty, the hostname will be used."
   Pop $Label
-  ${NSD_CreateText} 50 140 75% 12u ""
+
+  ${NSD_CreateLabel} 0 140 100% 12u "Enter the server API token:"
+  Pop $Label
+  ${NSD_CreateText} 50 160 75% 12u ""
   Pop $InputApiToken
 
   nsDialogs::Show
@@ -315,10 +314,6 @@ Function nsDialogsPageLeave
 
   ${If} $ServerUrl == ""
       MessageBox MB_OK "Please enter a valid address to your Graylog server!"
-      Abort
-  ${EndIf}
-  ${If} $NodeName == ""
-      MessageBox MB_OK "Please enter the instance name!"
       Abort
   ${EndIf}
   ${If} $ApiToken == ""
