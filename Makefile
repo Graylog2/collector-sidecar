@@ -53,7 +53,7 @@ build: ## Build sidecar binary for local target system
 	$(GO) build $(BUILD_OPTS) -v -i -o graylog-sidecar
 
 # does not include build-darwin as that only runs with homebrew on a Mac
-build-all: build-linux-armv7 build-linux build-linux32 build-windows build-windows32
+build-all: build-linux-armv7 build-linux build-linux32 build-windows build-windows32 build-darwin build-freebsd
 
 build-linux: ## Build sidecar binary for Linux
 	@mkdir -p build/$(COLLECTOR_VERSION)/linux/amd64
