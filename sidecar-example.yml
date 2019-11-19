@@ -20,7 +20,7 @@ server_api_token: ""
 # hostname of the host it is running on.
 #node_name: ""
 
-# The update interval in secods. This configures how often the sidecar will
+# The update interval in seconds. This configures how often the sidecar will
 # contact the Graylog server for keep-alive and configuration update requests.
 #update_interval: 10
 
