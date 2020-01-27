@@ -1,4 +1,4 @@
-Please follow [the instructions on graylog.org](https://www.graylog.org/contributing-to-graylog/).
+Please follow [the instructions on graylog.org](https://www.graylog.org/community).
 
 #### Code of Conduct
 
