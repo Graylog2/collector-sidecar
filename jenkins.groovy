@@ -13,17 +13,41 @@ pipeline
      go 'Go'
    }
 
+   environment
+   {
+     GO15VENDOREXPERIMENT=1
+   }
+
    stages
    {
+     stage('Install Deps')
+     {
+        steps
+        {
+           sh 'go version'
+           sh 'go env'
+           sh 'glide install'
+        }
+     }
+      stage('Test')
+      {
+         steps
+         {
+            sh "make test"
+         }
+      }
       stage('Build')
       {
-         steps {
-            git 'https://github.com/Graylog2/graylog-project-cli.git'
-
-            sh 'go version'
-            sh 'glide install'
-            sh 'make test'
+         steps
+         {
             sh 'make build-all'
+         }
+      }
+
+      stage('Package')
+      {
+         steps
+         {
             sh 'make package-all'
          }
 
@@ -38,7 +62,6 @@ pipeline
 
       stage('Release')
       {
-
          when
          {
              buildingTag()
