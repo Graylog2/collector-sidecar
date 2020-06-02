@@ -1,6 +1,10 @@
 pipeline
 {
-   agent { label 'linux' }
+   agent
+   {
+     label 'test'
+     customWorkspace '/home/jenkins/go/src/github.com/Graylog2/collector-sidecar'
+   }
 
    options
    {
@@ -20,22 +24,23 @@ pipeline
 
    stages
    {
-     stage('Install Deps')
-     {
-        steps
-        {
-           sh 'go version'
-           sh 'go env'
-           sh 'glide install'
-        }
-     }
-      stage('Test')
+      stage('Install Deps')
       {
          steps
          {
-            sh "make test"
+            sh 'go version'
+            sh 'go env'
+            sh 'glide update'
+            sh 'glide install'
          }
-      }
+     }
+      stage('Test')
+      {
+          steps
+          {
+             sh "make test"
+          }
+       }
       stage('Build')
       {
          steps
