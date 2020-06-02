@@ -28,7 +28,6 @@ pipeline
           steps
           {
              sh 'go version'
-             sh 'go env'
              sh 'go mod vendor'
              sh "make test"
           }

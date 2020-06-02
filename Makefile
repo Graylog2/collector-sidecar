@@ -66,31 +66,31 @@ solaris-sigar-patch:
 	fi
 
 build-linux-armv7: ## Build sidecar binary for linux-armv7
-	mkdir -p build/$(COLLECTOR_VERSION)/linux/armv7
+	@mkdir -p build/$(COLLECTOR_VERSION)/linux/armv7
 	GOOS=linux GOARCH=arm GOARM=7 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_linux-armv7  -v -i -o build/$(COLLECTOR_VERSION)/linux/armv7/graylog-sidecar
 
 build-solaris: solaris-sigar-patch ## Build sidecar binary for Solaris/OmniOS/Illumos
-	mkdir -p build/$(COLLECTOR_VERSION)/solaris/amd64
+	@mkdir -p build/$(COLLECTOR_VERSION)/solaris/amd64
 	GOOS=solaris GOARCH=amd64 $(GO) build $(BUILD_OPTS) -v -i -o build/$(COLLECTOR_VERSION)/solaris/amd64/graylog-sidecar
 
 build-linux32: ## Build sidecar binary for Linux 32bit
-	mkdir -p build/$(COLLECTOR_VERSION)/linux/386
+	@mkdir -p build/$(COLLECTOR_VERSION)/linux/386
 	GOOS=linux GOARCH=386 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_linux32  -v -i -o build/$(COLLECTOR_VERSION)/linux/386/graylog-sidecar
 
 build-darwin: ## Build sidecar binary for OSX
-	mkdir -p build/$(COLLECTOR_VERSION)/darwin/amd64
+	@mkdir -p build/$(COLLECTOR_VERSION)/darwin/amd64
 	GOOS=darwin GOARCH=amd64 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_darwin -v -i -o build/$(COLLECTOR_VERSION)/darwin/amd64/graylog-sidecar
 
 build-freebsd:
-	mkdir -p build/$(COLLECTOR_VERSION)/freebsd/amd64
+	@mkdir -p build/$(COLLECTOR_VERSION)/freebsd/amd64
 	GOOS=freebsd GOARCH=amd64 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_freebsd -v -i -o build/$(COLLECTOR_VERSION)/freebsd/amd64/graylog-sidecar
 
 build-windows: ## Build sidecar binary for Windows
-	mkdir -p build/$(COLLECTOR_VERSION)/windows/amd64
+	@mkdir -p build/$(COLLECTOR_VERSION)/windows/amd64
 	GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_win -v -i -o build/$(COLLECTOR_VERSION)/windows/amd64/graylog-sidecar.exe
 
 build-windows32: ## Build sidecar binary for Windows 32bit
-	mkdir -p build/$(COLLECTOR_VERSION)/windows/386
+	@mkdir -p build/$(COLLECTOR_VERSION)/windows/386
 	GOOS=windows GOARCH=386 CGO_ENABLED=1 CC=i686-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_win32 -v -i -o build/$(COLLECTOR_VERSION)/windows/386/graylog-sidecar.exe
 
 package-all: prepare-package package-linux-armv7 package-linux package-linux32 package-windows package-tar
@@ -117,12 +117,12 @@ package-linux32: ## Create Linux i386 system package
 	fpm-cook -t rpm package dist/recipe32.rb
 
 package-windows: ## Create Windows installer
-	mkdir -p dist/pkg
+	@mkdir -p dist/pkg
 	makensis -DVERSION=$(COLLECTOR_VERSION) -DVERSION_SUFFIX=$(COLLECTOR_VERSION_SUFFIX) -DREVISION=$(COLLECTOR_REVISION) dist/recipe.nsi
 
 package-tar: ## Create tar archive for all platforms
-	mkdir -p dist/pkg
-	tar --transform="s|/build|/graylog-sidecar|" -Pczf dist/pkg/graylog-sidecar-$(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX).tar.gz ./build ./sidecar-example.yml ./sidecar-windows-example.yml
+	@mkdir -p dist/pkg
+	@tar --transform="s|/build|/graylog-sidecar|" -Pczf dist/pkg/graylog-sidecar-$(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX).tar.gz ./build ./sidecar-example.yml ./sidecar-windows-example.yml
 
 help:
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | $(AWK) 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
