@@ -3,7 +3,6 @@ pipeline
    agent
    {
      label 'test'
-     customWorkspace '/home/jenkins/go/src/github.com/Graylog2/collector-sidecar'
    }
 
    options
@@ -30,6 +29,7 @@ pipeline
           {
              sh 'go version'
              sh 'go env'
+             sh 'go mod vendor'
              sh "make test"
           }
        }
