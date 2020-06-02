@@ -24,20 +24,12 @@ pipeline
 
    stages
    {
-      stage('Install Deps')
-      {
-         steps
-         {
-            sh 'go version'
-            sh 'go env'
-            sh 'glide update'
-            sh 'glide install'
-         }
-     }
       stage('Test')
       {
           steps
           {
+             sh 'go version'
+             sh 'go env'
              sh "make test"
           }
        }
