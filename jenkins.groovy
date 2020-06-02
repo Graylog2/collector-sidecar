@@ -1,9 +1,6 @@
 pipeline
 {
-   agent
-   {
-     label 'test'
-   }
+   agent none
 
    options
    {
@@ -24,25 +21,33 @@ pipeline
 
    stages
    {
-      stage('Test')
+      stage('Build')
       {
+          agent
+          {
+            label 'linux'
+          }
           steps
           {
              sh 'go version'
              sh 'go mod vendor'
              sh "make test"
+             sh 'make build-all'
           }
        }
-      stage('Build')
-      {
-         steps
-         {
-            sh 'make build-all'
-         }
-      }
 
       stage('Package')
       {
+         agent
+         {
+           docker
+           {
+             label 'linux'
+             image 'torch/jenkins-fpm-cook:latest'
+             args '-u jenkins:docker'
+           }
+         }
+
          steps
          {
             sh 'make package-all'
@@ -62,6 +67,11 @@ pipeline
          when
          {
              buildingTag()
+         }
+
+         agent
+         {
+           label 'linux'
          }
 
          environment
