@@ -89,8 +89,7 @@ pipeline
              def props = readJSON text: RELEASE_DATA
              env.RELEASE_ID = props.id
 
-             sh 'curl -H "Authorization: token $GITHUB_CREDS" -H "Content-Type: application/octet-stream" --data-binary @graylog-project.linux https://uploads.github.com/repos/Graylog2/collector-sidecar/releases/$RELEASE_ID/assets?name=graylog-project.linux'
-             sh 'curl -H "Authorization: token $GITHUB_CREDS" -H "Content-Type: application/octet-stream" --data-binary @graylog-project.linux https://uploads.github.com/repos/Graylog2/graylog-project-cli/releases/$RELEASE_ID/assets?name=graylog-project.darwin'
+             sh 'curl -H "Authorization: token $GITHUB_CREDS" -H "Content-Type: application/octet-stream" --data-binary @dist/pkg/graylog-sidecar-1.1.0-SNAPSHOT.tar.gz https://uploads.github.com/repos/Graylog2/collector-sidecar/releases/$RELEASE_ID/assets?name=graylog-sidecar-1.1.0-SNAPSHOT.tar.gz'
            }
          }
          post

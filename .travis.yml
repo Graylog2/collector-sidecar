@@ -1,9 +1,0 @@
-sudo: false
-dist: xenial
-language: go
-go:
-  - 1.11.x
-
-script: make deps test
-env:
-  - GO15VENDOREXPERIMENT=1
