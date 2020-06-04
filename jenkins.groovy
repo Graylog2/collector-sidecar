@@ -90,6 +90,12 @@ pipeline
              env.RELEASE_ID = props.id
 
              sh 'curl -H "Authorization: token $GITHUB_CREDS" -H "Content-Type: application/octet-stream" --data-binary @dist/pkg/graylog-sidecar-1.1.0-SNAPSHOT.tar.gz https://uploads.github.com/repos/Graylog2/collector-sidecar/releases/$RELEASE_ID/assets?name=graylog-sidecar-1.1.0-SNAPSHOT.tar.gz'
+             sh 'curl -H "Authorization: token $GITHUB_CREDS" -H "Content-Type: application/octet-stream" --data-binary @dist/pkg/graylog-sidecar-1.1.0-0.SNAPSHOT.armv7.rpm https://uploads.github.com/repos/Graylog2/collector-sidecar/releases/$RELEASE_ID/assets?name=graylog-sidecar-1.1.0-0.SNAPSHOT.armv7.rpm'
+             sh 'curl -H "Authorization: token $GITHUB_CREDS" -H "Content-Type: application/octet-stream" --data-binary @dist/pkg/graylog-sidecar-1.1.0-0.SNAPSHOT.i386.rpm https://uploads.github.com/repos/Graylog2/collector-sidecar/releases/$RELEASE_ID/assets?name=graylog-sidecar-1.1.0-0.SNAPSHOT.i386.rpm'
+             sh 'curl -H "Authorization: token $GITHUB_CREDS" -H "Content-Type: application/octet-stream" --data-binary @dist/pkg/graylog-sidecar-1.1.0-0.SNAPSHOT.x86_64.rpm https://uploads.github.com/repos/Graylog2/collector-sidecar/releases/$RELEASE_ID/assets?name=graylog-sidecar-1.1.0-0.SNAPSHOT.x86_64.rpm'
+             sh 'curl -H "Authorization: token $GITHUB_CREDS" -H "Content-Type: application/octet-stream" --data-binary @dist/pkg/graylog-sidecar_1.1.0-0.SNAPSHOT_amd64.deb https://uploads.github.com/repos/Graylog2/collector-sidecar/releases/$RELEASE_ID/assets?name=graylog-sidecar_1.1.0-0.SNAPSHOT_amd64.deb'
+             sh 'curl -H "Authorization: token $GITHUB_CREDS" -H "Content-Type: application/octet-stream" --data-binary @dist/pkg/graylog-sidecar_1.1.0-0.SNAPSHOT_armv7.deb https://uploads.github.com/repos/Graylog2/collector-sidecar/releases/$RELEASE_ID/assets?name=graylog-sidecar_1.1.0-0.SNAPSHOT_armv7.deb'
+             sh 'curl -H "Authorization: token $GITHUB_CREDS" -H "Content-Type: application/octet-stream" --data-binary @dist/pkg/graylog-sidecar_1.1.0-0.SNAPSHOT_i386.deb https://uploads.github.com/repos/Graylog2/collector-sidecar/releases/$RELEASE_ID/assets?name=graylog-sidecar_1.1.0-0.SNAPSHOT_i386.deb'
            }
          }
          post
