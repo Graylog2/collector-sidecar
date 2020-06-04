@@ -8,11 +8,10 @@ $(error COLLECTOR_VERSION is not set)
 endif
 
 targets = graylog-sidecar sidecar-collector build dist/cache dist/tmp-build dist/tmp-dest dist/pkg dist/collectors
-dist_targets = vendor glide
+dist_targets = vendor
 
 GIT_REV=$(shell git rev-parse --short HEAD)
 BUILD_OPTS = -ldflags "-s -X github.com/Graylog2/collector-sidecar/common.GitRevision=$(GIT_REV) -X github.com/Graylog2/collector-sidecar/common.CollectorVersion=$(COLLECTOR_VERSION) -X github.com/Graylog2/collector-sidecar/common.CollectorVersionSuffix=$(COLLECTOR_VERSION_SUFFIX)"
-GLIDE_VERSION = v0.13.1
 
 TEST_SUITE = \
 	github.com/Graylog2/collector-sidecar/common
@@ -27,24 +26,6 @@ clean: ## Remove binaries
 
 distclean: clean
 	-rm -rf $(dist_targets)
-
-deps: glide
-	./glide install
-
-glide:
-ifeq ($(shell uname),Darwin)
-	curl -s -L https://github.com/Masterminds/glide/releases/download/$(GLIDE_VERSION)/glide-$(GLIDE_VERSION)-darwin-amd64.zip -o glide.zip
-	unzip glide.zip
-	mv ./darwin-amd64/glide ./glide
-	rm -fr ./darwin-amd64
-	rm -f ./glide.zip
-else
-	curl -s -L https://github.com/Masterminds/glide/releases/download/$(GLIDE_VERSION)/glide-$(GLIDE_VERSION)-linux-amd64.zip -o glide.zip
-	unzip glide.zip
-	mv ./linux-amd64/glide ./glide
-	rm -fr ./linux-amd64
-	rm -f ./glide.zip
-endif
 
 test: ## Run tests
 	$(GO) test -v $(TEST_SUITE)
