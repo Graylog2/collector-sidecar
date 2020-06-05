@@ -16,7 +16,7 @@ BUILD_OPTS = -ldflags "-s -X github.com/Graylog2/collector-sidecar/common.GitRev
 TEST_SUITE = \
 	github.com/Graylog2/collector-sidecar/common
 
-all: deps build
+all: build
 
 fmt: ## Run gofmt
 	@GOFMT=$(GOFMT) sh ./format.sh
