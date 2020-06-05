@@ -6,6 +6,7 @@ pipeline
    {
       buildDiscarder logRotator(artifactDaysToKeepStr: '30', artifactNumToKeepStr: '100', daysToKeepStr: '30', numToKeepStr: '100')
       timestamps()
+      withAWS(region:'eu-west-1', credentials:'aws-key-releases')
    }
 
    tools
@@ -109,6 +110,8 @@ pipeline
                    curl -H "Authorization: token $GITHUB_CREDS" -H "Content-Type: application/octet-stream" --data-binary @dist/pkg/$FILENAME https://uploads.github.com/repos/Graylog2/collector-sidecar/releases/$RELEASE_ID/assets?name=$FILENAME
                  done
              '''
+
+             s3Upload(workingDir:'dist/pkg', bucket:'graylog2-releases', path:"graylog2-releases/graylog-collector-sidecar/${TAG_NAME}", includePathPattern:'graylog*')
            }
          }
          post
