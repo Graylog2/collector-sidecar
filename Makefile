@@ -8,16 +8,15 @@ $(error COLLECTOR_VERSION is not set)
 endif
 
 targets = graylog-sidecar sidecar-collector build dist/cache dist/tmp-build dist/tmp-dest dist/pkg dist/collectors
-dist_targets = vendor glide
+dist_targets = vendor
 
 GIT_REV=$(shell git rev-parse --short HEAD)
 BUILD_OPTS = -ldflags "-s -X github.com/Graylog2/collector-sidecar/common.GitRevision=$(GIT_REV) -X github.com/Graylog2/collector-sidecar/common.CollectorVersion=$(COLLECTOR_VERSION) -X github.com/Graylog2/collector-sidecar/common.CollectorVersionSuffix=$(COLLECTOR_VERSION_SUFFIX)"
-GLIDE_VERSION = v0.13.1
 
 TEST_SUITE = \
 	github.com/Graylog2/collector-sidecar/common
 
-all: deps build
+all: build
 
 fmt: ## Run gofmt
 	@GOFMT=$(GOFMT) sh ./format.sh
@@ -27,24 +26,6 @@ clean: ## Remove binaries
 
 distclean: clean
 	-rm -rf $(dist_targets)
-
-deps: glide
-	./glide install
-
-glide:
-ifeq ($(shell uname),Darwin)
-	curl -s -L https://github.com/Masterminds/glide/releases/download/$(GLIDE_VERSION)/glide-$(GLIDE_VERSION)-darwin-amd64.zip -o glide.zip
-	unzip glide.zip
-	mv ./darwin-amd64/glide ./glide
-	rm -fr ./darwin-amd64
-	rm -f ./glide.zip
-else
-	curl -s -L https://github.com/Masterminds/glide/releases/download/$(GLIDE_VERSION)/glide-$(GLIDE_VERSION)-linux-amd64.zip -o glide.zip
-	unzip glide.zip
-	mv ./linux-amd64/glide ./glide
-	rm -fr ./linux-amd64
-	rm -f ./glide.zip
-endif
 
 test: ## Run tests
 	$(GO) test -v $(TEST_SUITE)
@@ -96,29 +77,29 @@ build-windows32: ## Build sidecar binary for Windows 32bit
 package-all: prepare-package package-linux-armv7 package-linux package-linux32 package-windows package-tar
 
 prepare-package:
-	@dist/fetch_collectors.sh
+	dist/fetch_collectors.sh
 
 package-linux-armv7: ## Create Linux ARMv7 system package
-	@fpm-cook clean dist/recipearmv7.rb
-	@rm -rf dist/cache dist/tmp-build dist/tmp-dest
-	@fpm-cook -t deb package dist/recipearmv7.rb
-	@fpm-cook -t rpm package dist/recipearmv7.rb
+	fpm-cook clean dist/recipearmv7.rb
+	rm -rf dist/cache dist/tmp-build dist/tmp-dest
+	fpm-cook -t deb package dist/recipearmv7.rb
+	fpm-cook -t rpm package dist/recipearmv7.rb
 
 package-linux: ## Create Linux amd64 system package
-	@fpm-cook clean dist/recipe.rb
-	@rm -rf dist/cache dist/tmp-build dist/tmp-dest
-	@fpm-cook -t deb package dist/recipe.rb
-	@fpm-cook -t rpm package dist/recipe.rb
+	fpm-cook clean dist/recipe.rb
+	rm -rf dist/cache dist/tmp-build dist/tmp-dest
+	fpm-cook -t deb package dist/recipe.rb
+	fpm-cook -t rpm package dist/recipe.rb
 
 package-linux32: ## Create Linux i386 system package
-	@fpm-cook clean dist/recipe32.rb
-	@rm -rf dist/cache dist/tmp-build dist/tmp-dest
-	@fpm-cook -t deb package dist/recipe32.rb
-	@fpm-cook -t rpm package dist/recipe32.rb
+	fpm-cook clean dist/recipe32.rb
+	rm -rf dist/cache dist/tmp-build dist/tmp-dest
+	fpm-cook -t deb package dist/recipe32.rb
+	fpm-cook -t rpm package dist/recipe32.rb
 
 package-windows: ## Create Windows installer
 	@mkdir -p dist/pkg
-	@makensis -DVERSION=$(COLLECTOR_VERSION) -DVERSION_SUFFIX=$(COLLECTOR_VERSION_SUFFIX) -DREVISION=$(COLLECTOR_REVISION) dist/recipe.nsi
+	makensis -DVERSION=$(COLLECTOR_VERSION) -DVERSION_SUFFIX=$(COLLECTOR_VERSION_SUFFIX) -DREVISION=$(COLLECTOR_REVISION) dist/recipe.nsi
 
 package-tar: ## Create tar archive for all platforms
 	@mkdir -p dist/pkg

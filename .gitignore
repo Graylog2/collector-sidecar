@@ -45,5 +45,3 @@ dist/collectors/
 
 /sidecar.yml
 
-# Dependency management
-/glide
