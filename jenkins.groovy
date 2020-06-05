@@ -33,6 +33,7 @@ pipeline
              sh 'go mod vendor'
              sh "make test"
              sh 'make build-all'
+             stash name: 'build artifacts', includes: 'build/**'
           }
        }
 
@@ -50,7 +51,9 @@ pipeline
 
          steps
          {
+            unstash 'build artifacts'
             sh 'make package-all'
+            stash name: 'package artifacts', includes: 'dist/pkg/**'
          }
 
          post
@@ -82,20 +85,30 @@ pipeline
          steps
          {
            echo "Releasing ${TAG_NAME} to Github..."
+           unstash 'package artifacts'
 
            script
            {
-             def RELEASE_DATA = sh returnStdout: true, script: "curl -s --user \"$GITHUB_CREDS\" -X POST --data \'{ \"tag_name\": \"${TAG_NAME}\", \"name\": \"${TAG_NAME}\", \"body\": \"Insert features here.\", \"draft\": true }\' https://api.github.com/repos/Graylog2/collector-sidecar/releases"
+             def RELEASE_DATA = sh returnStdout: true, script: "curl -s --user \"$GITHUB_CREDS\" -X POST --data \'{ \"tag_name\": \"${TAG_NAME}\", \"name\": \"${TAG_NAME}\", \"body\": \"Insert features here.\"}\' https://api.github.com/repos/Graylog2/collector-sidecar/releases"
              def props = readJSON text: RELEASE_DATA
-             env.RELEASE_ID = props.id
+             echo RELEASE_DATA
+             if (props.id)
+             {
+               env.RELEASE_ID = props.id
+             }
+             else
+             {
+               error('Github Release ID is null.')
+             }
 
-             sh 'curl -H "Authorization: token $GITHUB_CREDS" -H "Content-Type: application/octet-stream" --data-binary @dist/pkg/graylog-sidecar-1.1.0-SNAPSHOT.tar.gz https://uploads.github.com/repos/Graylog2/collector-sidecar/releases/$RELEASE_ID/assets?name=graylog-sidecar-1.1.0-SNAPSHOT.tar.gz'
-             sh 'curl -H "Authorization: token $GITHUB_CREDS" -H "Content-Type: application/octet-stream" --data-binary @dist/pkg/graylog-sidecar-1.1.0-0.SNAPSHOT.armv7.rpm https://uploads.github.com/repos/Graylog2/collector-sidecar/releases/$RELEASE_ID/assets?name=graylog-sidecar-1.1.0-0.SNAPSHOT.armv7.rpm'
-             sh 'curl -H "Authorization: token $GITHUB_CREDS" -H "Content-Type: application/octet-stream" --data-binary @dist/pkg/graylog-sidecar-1.1.0-0.SNAPSHOT.i386.rpm https://uploads.github.com/repos/Graylog2/collector-sidecar/releases/$RELEASE_ID/assets?name=graylog-sidecar-1.1.0-0.SNAPSHOT.i386.rpm'
-             sh 'curl -H "Authorization: token $GITHUB_CREDS" -H "Content-Type: application/octet-stream" --data-binary @dist/pkg/graylog-sidecar-1.1.0-0.SNAPSHOT.x86_64.rpm https://uploads.github.com/repos/Graylog2/collector-sidecar/releases/$RELEASE_ID/assets?name=graylog-sidecar-1.1.0-0.SNAPSHOT.x86_64.rpm'
-             sh 'curl -H "Authorization: token $GITHUB_CREDS" -H "Content-Type: application/octet-stream" --data-binary @dist/pkg/graylog-sidecar_1.1.0-0.SNAPSHOT_amd64.deb https://uploads.github.com/repos/Graylog2/collector-sidecar/releases/$RELEASE_ID/assets?name=graylog-sidecar_1.1.0-0.SNAPSHOT_amd64.deb'
-             sh 'curl -H "Authorization: token $GITHUB_CREDS" -H "Content-Type: application/octet-stream" --data-binary @dist/pkg/graylog-sidecar_1.1.0-0.SNAPSHOT_armv7.deb https://uploads.github.com/repos/Graylog2/collector-sidecar/releases/$RELEASE_ID/assets?name=graylog-sidecar_1.1.0-0.SNAPSHOT_armv7.deb'
-             sh 'curl -H "Authorization: token $GITHUB_CREDS" -H "Content-Type: application/octet-stream" --data-binary @dist/pkg/graylog-sidecar_1.1.0-0.SNAPSHOT_i386.deb https://uploads.github.com/repos/Graylog2/collector-sidecar/releases/$RELEASE_ID/assets?name=graylog-sidecar_1.1.0-0.SNAPSHOT_i386.deb'
+             sh '''#!/bin/bash
+                 set -x
+                 for file in dist/pkg/*
+                 do
+                   FILENAME=$(basename $file)
+                   curl -H "Authorization: token $GITHUB_CREDS" -H "Content-Type: application/octet-stream" --data-binary @dist/pkg/$FILENAME https://uploads.github.com/repos/Graylog2/collector-sidecar/releases/$RELEASE_ID/assets?name=$FILENAME
+                 done
+             '''
            }
          }
          post
