@@ -66,7 +66,7 @@ pipeline
          }
       }
 
-      stage('Release')
+      stage('Release to Github/S3')
       {
          when
          {
@@ -125,5 +125,58 @@ pipeline
            }
          }
       }
+
+      stage('Release to Package Repository')
+      {
+         when
+         {
+             buildingTag()
+         }
+
+         agent
+         {
+           label 'packages'
+         }
+
+         steps
+         {
+           echo "Checking out fpm-recipes..."
+           checkout poll: false, scm: [$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'WipeWorkspace']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'ea5e9782-80e6-4e2b-a6ef-d19a63f4799b', url: 'https://github.com/Graylog2/fpm-recipes.git']]]
+
+           script
+           {
+             def version = getShortVersion()
+             sh "gl2-build-pkg-sidecar ${version}"
+           }
+         }
+         post
+         {
+           success
+           {
+             script
+             {
+                cleanWs()
+             }
+           }
+         }
+      }
    }
+}
+
+//packaging script wants 1.0, not 1.0.1
+@NonCPS
+def getShortVersion()
+{
+  script
+  {
+    if(env.TAG_NAME ==~ /^\d+\.\d+.*/)
+    {
+      def parsed_version = env.TAG_NAME=~ /^\d\.\d/
+      return parsed_version.getAt(0)
+    }
+    else
+    {
+      error("Build Tag must be a version number")
+    }
+  }
 }
