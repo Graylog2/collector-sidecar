@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -136,6 +137,14 @@ func RequestConfiguration(
 	return configurationResponse, nil
 }
 
+func isUrlEOFError(err error) bool {
+	if errVal, _ := err.(*url.Error); errVal.Err.Error() == "EOF" {
+		return true
+	}
+
+	return false
+}
+
 func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.Ctx, status *graylog.StatusRequest) (graylog.ResponseCollectorRegistration, error) {
 	c := rest.NewClient(httpClient, ctx)
 	c.BaseURL = ctx.ServerUrl
@@ -192,7 +201,11 @@ func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.C
 		log.Error("[UpdateRegistration] Bad response from Graylog server: ", resp.Status)
 		return graylog.ResponseCollectorRegistration{}, err
 	} else if err != nil && err != io.EOF { // err is nil for GL 2.2 and EOF for 2.1 and earlier
-		log.Error("[UpdateRegistration] Failed to report collector status to server: ", err)
+		if !isUrlEOFError(err) {
+			log.Error("[UpdateRegistration] Failed to report collector status to server: ", err)
+		} else {
+			log.Debug("[UpdateRegistration] Received EOF from server: ", err)
+		}
 		return graylog.ResponseCollectorRegistration{}, err
 	}
 	respBody.Checksum = resp.Header.Get("Etag")
