@@ -13,7 +13,6 @@
 // along with this program. If not, see
 // <http://www.mongodb.com/licensing/server-side-public-license>.
 
-
 // This runs heartbeat and configuration requests against the server API
 //
 // Useful for profiling/benchmarking the sidecar <-> server communication without running an actual sidecar process.

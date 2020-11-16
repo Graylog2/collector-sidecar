@@ -30,7 +30,7 @@ w
 
 for file in $(find "$root" -name '*.go' | fgrep -v vendor/); do
 	$gofmt -w -l "$file" && \
-		grep -q 'under the terms of the GNU General Public License' $file || \
+		grep -q 'under the terms of the Server Side Public License' $file || \
 		add_license "$file"
 done
 
