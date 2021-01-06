@@ -120,7 +120,7 @@ func (r *SvcRunner) SetBackend(b backends.Backend) {
 }
 
 func (r *SvcRunner) ValidateBeforeStart() error {
-	err := r.backend.CheckExecutableAgainstWhitelist(r.context)
+	err := r.backend.CheckExecutableAgainstAccesslist(r.context)
 	if err != nil {
 		r.backend.SetStatusLogErrorf(err.Error())
 		return err
