@@ -61,7 +61,7 @@
   
   !define MUI_ICON "graylog.ico"  
   !insertmacro MUI_PAGE_WELCOME
-  !insertmacro MUI_PAGE_LICENSE  "../COPYING"
+  !insertmacro MUI_PAGE_LICENSE  "../LICENSE"
   !insertmacro MUI_UNPAGE_WELCOME
   !insertmacro MUI_UNPAGE_CONFIRM
   !insertmacro MUI_UNPAGE_INSTFILES
@@ -97,7 +97,7 @@
 ;--------------------------------
 ;Data
  
-  LicenseData "../COPYING"
+  LicenseData "../LICENSE"
 
 ;-------------------------------- 
 ;Installer Sections     
@@ -120,7 +120,7 @@ Section "Install"
   File /oname=sidecar.yml "../sidecar-windows-example.yml"
   SetOverwrite on
   File /oname=sidecar.yml.dist "../sidecar-windows-example.yml"
-  File "../COPYING"
+  File "../LICENSE"
   File "graylog.ico"  
 
   ;Stop service to allow binary upgrade
