@@ -1,1 +1,1 @@
-# Ignore sub-tree
+// Ignore sub-tree
