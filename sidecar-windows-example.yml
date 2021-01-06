@@ -64,18 +64,18 @@ send_status: <SENDSTATUS>
 # Directory where the sidecar generates configurations for collectors.
 #collector_configuration_directory: "C:\\Program Files\\Graylog\\sidecar\\generated"
 
-# A list of binaries which are allowed to be executed by the Sidecar. An empty list disables the whitelist feature.
+# A list of binaries which are allowed to be executed by the Sidecar. An empty list disables the access list feature.
 # Wildcards can be used, for a full pattern description see https://golang.org/pkg/path/filepath/#Match
 # Example:
-#     collector_binaries_whitelist:
+#     collector_binaries_accesslist:
 #       - "C:\\Program Files\\Graylog\\sidecar\\winlogbeat.exe"
 #       - "C:\\Program Files\\Filebeat\\filebeat.exe"
 #
-# Example disable whitelisting:
-#     collector_binaries_whitelist: []
+# Example disable access listing:
+#     collector_binaries_accesslist: []
 #
 # Default:
-# collector_binaries_whitelist:
+# collector_binaries_accesslist:
 #  - "C:\\Program Files\\Graylog\\sidecar\\filebeat.exe"
 #  - "C:\\Program Files\\Graylog\\sidecar\\winlogbeat.exe"
 #  - "C:\\Program Files\\Filebeat\\filebeat.exe"

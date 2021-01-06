@@ -31,6 +31,7 @@ type SidecarConfig struct {
 	SendStatus                      bool     `config:"send_status"`
 	ListLogFiles                    []string `config:"list_log_files"`
 	CollectorBinariesWhitelist      []string `config:"collector_binaries_whitelist"`
+	CollectorBinariesAccesslist     []string `config:"collector_binaries_accesslist"`
 }
 
 // Default Sidecar configuration
@@ -47,7 +48,7 @@ log_path: "/var/log/graylog-sidecar"
 log_rotate_max_file_size: "10MiB"
 log_rotate_keep_files: 10
 collector_configuration_directory: "/var/lib/graylog-sidecar/generated"
-collector_binaries_whitelist:
+collector_binaries_accesslist:
   - "/usr/bin/filebeat"
   - "/usr/bin/packetbeat"
   - "/usr/bin/metricbeat"
@@ -70,7 +71,7 @@ node_id: "file:C:\\Program Files\\Graylog\\sidecar\\node-id"
 cache_path: "C:\\Program Files\\Graylog\\sidecar\\cache"
 log_path: "C:\\Program Files\\Graylog\\sidecar\\logs"
 collector_configuration_directory: "C:\\Program Files\\Graylog\\sidecar\\generated"
-collector_binaries_whitelist:
+collector_binaries_accesslist:
   - "C:\\Program Files\\Graylog\\sidecar\\filebeat.exe"
   - "C:\\Program Files\\Graylog\\sidecar\\winlogbeat.exe"
   - "C:\\Program Files\\Filebeat\\filebeat.exe"
