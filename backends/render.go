@@ -32,8 +32,8 @@ func (b *Backend) render() []byte {
 }
 
 func (b *Backend) renderToFile(context *context.Ctx) error {
-	if !b.CheckConfigPathAgainstWhitelist(context) {
-		err := fmt.Errorf("Configuration path violates `collector_binaries_whitelist' config option.")
+	if !b.CheckConfigPathAgainstAccesslist(context) {
+		err := fmt.Errorf("Configuration path violates `collector_binaries_accesslist' config option.")
 		b.SetStatusLogErrorf(err.Error())
 		return err
 	}
