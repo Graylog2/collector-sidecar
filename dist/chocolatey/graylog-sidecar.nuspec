@@ -1,5 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
     <id>graylog-sidecar</id>
     <version>1.0.2</version>
     <packageSourceUrl>https://github.com/Graylog2/collector-sidecar</packageSourceUrl>
@@ -8,17 +9,14 @@
     <projectUrl>https://github.com/Graylog2/collector-sidecar</projectUrl>
     <iconUrl>http://cdn.rawgit.com/collector-sidecar/master/images/graylog-icon.svg</iconUrl>
     <licenseUrl>https://github.com/Graylog2/collector-sidecar/blob/master/LICENSE</licenseUrl>
-    <requireLicenseAcceptance>true</requireLicenseAcceptance>-->
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
     <projectSourceUrl>https://github.com/Graylog2/collector-sidecar</projectSourceUrl>
     <docsUrl>https://docs.graylog.org/en/latest/pages/sidecar.html</docsUrl>
     <bugTrackerUrl>https://github.com/Graylog2/collector-sidecar/issues</bugTrackerUrl>
     <tags>graylog graylog-sidecar</tags>
     <summary>Manage log collectors through Graylog </summary>
     <description>The Graylog Sidecar is a supervisor process for 3rd party log collectors like NXLog and filebeat. The Sidecar program is able to fetch and validate configuration files from a Graylog server for various log collectors. You can think of it like a centralized configuration and process management system for your log collectors.</description>
-    <releaseNotes>
-      - Stop setting default node name to `graylog-sidecar` (#346, #339)
-      - Add support for linux-armv7, darwin and freebsd (#376, #340)
-    </releaseNotes>
+    <releaseNotes></releaseNotes>
   </metadata>
   <files>
     <file src="tools/**" target="tools" />
