@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
   <metadata>
     <id>graylog-sidecar</id>
-    <version>1.0.2</version>
+    <version>$version$</version>
     <packageSourceUrl>https://github.com/Graylog2/collector-sidecar</packageSourceUrl>
     <title>Graylog Sidecar</title>
     <authors>donald.morton</authors>
