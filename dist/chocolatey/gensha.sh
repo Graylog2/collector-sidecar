@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# gensha.sh - Generate sha256 file for Chocolatey package and update chocolateyinstall.ps1 with the correct version and checksum. 
 
 COLLECTOR_VERSION=$1
 COLLECTOR_REVISION=$2
