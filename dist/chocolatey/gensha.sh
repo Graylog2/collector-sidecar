@@ -13,4 +13,4 @@ fi
 sed -i "s/checksum      = '.*'/checksum      = '$COLLECTOR_CHECKSUM'/" dist/chocolatey/tools/chocolateyinstall.ps1
 sed -i "s/url           = '.*'/url           = 'https:\/\/downloads.graylog.org\/releases\/graylog-collector-sidecar\/${COLLECTOR_VERSION}\/graylog_sidecar_installer_${COLLECTOR_VERSION}-${COLLECTOR_REVISION}.exe'/" dist/chocolatey/tools/chocolateyinstall.ps1
 
-find dist/pkg -name "graylog_sidecar_installer*.exe" -exec /usr/bin/bash -c "sha256sum {} | cut -d' ' -f1 > {}.sha256.txt" \;
+find dist/pkg -name "graylog_sidecar_installer*.exe" -exec /bin/bash -c "sha256sum {} | cut -d' ' -f1 > {}.sha256.txt" \;
