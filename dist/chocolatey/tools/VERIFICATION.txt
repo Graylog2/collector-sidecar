@@ -1,0 +1,11 @@
+VERIFICATION
+Verification is intended to assist the Chocolatey moderators and community
+in verifying that this package's contents are trustworthy.
+
+This package is published by Graylog, Inc.
+
+The sha256 checksum for any release can be found at the url below. Simply replace "VERSION" and "REVISION" with the appropriate parameters:
+https://downloads.graylog.org/releases/graylog-collector-sidecar/VERSION/graylog_sidecar_installer_VERSION-REVISION.exe.sha256.txt
+
+Example:
+https://downloads.graylog.org/releases/graylog-collector-sidecar/1.0.3/graylog_sidecar_installer_1.0.3-1.exe.sha256.txt
