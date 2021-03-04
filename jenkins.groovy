@@ -117,9 +117,9 @@ pipeline
                  done
              '''
 
-             s3Upload(workingDir:'dist/pkg', bucket:'graylog2-releases', path:"graylog2-releases/graylog-collector-sidecar/${TAG_NAME}", includePathPattern:'graylog*')
+             s3Upload(workingDir:'dist/pkg', bucket:'graylog2-releases', path:"graylog-collector-sidecar/${TAG_NAME}", includePathPattern:'graylog*')
 
-             sh "docker run --rm -v $PWD:$PWD -w $PWD/dist/chocolatey torch/jenkins-mono-choco:latest pack --version ${TAG_NAME}"
+              sh "docker run --rm -v $WORKSPACE:$WORKSPACE -w $WORKSPACE/dist/chocolatey torch/jenkins-mono-choco:latest pack --version ${TAG_NAME}"
            }
          }
          post
