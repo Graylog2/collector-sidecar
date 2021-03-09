@@ -1,8 +1,8 @@
 #!/bin/bash
 
 ARCHS=( x86 x86_64 )
-FILEBEAT_VERSION=7.6.2
-WINLOGBEAT_VERSION=7.6.2
+FILEBEAT_VERSION=6.4.2
+WINLOGBEAT_VERSION=6.4.2
 
 # $1: beat name
 # $2: beat operating system
@@ -43,4 +43,3 @@ do
   download_beat "filebeat" "windows" ${FILEBEAT_VERSION} ${ARCH}
   download_beat "winlogbeat" "windows" ${WINLOGBEAT_VERSION} ${ARCH}
 done
-
