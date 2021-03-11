@@ -97,7 +97,7 @@ package-linux32: ## Create Linux i386 system package
 	fpm-cook -t deb package dist/recipe32.rb
 	fpm-cook -t rpm package dist/recipe32.rb
 
-package-windows: ## Create Windows installer
+package-windows: prepare-package ## Create Windows installer
 	@mkdir -p dist/pkg
 	makensis -DVERSION=$(COLLECTOR_VERSION) -DVERSION_SUFFIX=$(COLLECTOR_VERSION_SUFFIX) -DREVISION=$(COLLECTOR_REVISION) dist/recipe.nsi
 	dist/chocolatey/gensha.sh $(COLLECTOR_VERSION) $(COLLECTOR_REVISION) $(COLLECTOR_VERSION_SUFFIX)
