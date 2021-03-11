@@ -60,7 +60,7 @@ pipeline
          {
             unstash 'build artifacts'
             sh 'make package-all'
-            stash name: 'package artifacts', includes: 'dist/pkg/**'
+            stash name: 'package artifacts', includes: 'dist/**'
          }
 
          post
@@ -72,7 +72,71 @@ pipeline
          }
       }
 
-      stage('Release to Github/S3')
+      stage('Upload packages to S3')
+      {
+         when
+         {
+             buildingTag()
+         }
+
+         agent
+         {
+           label 'linux'
+         }
+
+         steps
+         {
+           unstash 'package artifacts'
+           echo "Uploading to S3..."
+           s3Upload(workingDir:'dist/pkg', bucket:'graylog2-releases', path:"graylog-collector-sidecar/${TAG_NAME}", includePathPattern:'graylog*')
+         }
+         post
+         {
+           success
+           {
+             script
+             {
+                cleanWs()
+             }
+           }
+         }
+       }
+
+      // stage('Release to Package Repository')
+      // {
+      //    when
+      //    {
+      //        buildingTag()
+      //    }
+      //
+      //    agent
+      //    {
+      //      label 'packages'
+      //    }
+      //
+      //    steps
+      //    {
+      //      echo "Checking out fpm-recipes..."
+      //      checkout poll: false, scm: [$class: 'GitSCM', branches: [[name: '*/4.0']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'WipeWorkspace']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'github-access-token2', url: 'https://github.com/Graylog2/fpm-recipes.git']]]
+      //
+      //      script
+      //      {
+      //        sh "gl2-build-pkg-sidecar 1.1"
+      //      }
+      //    }
+      //    post
+      //    {
+      //      success
+      //      {
+      //        script
+      //        {
+      //           cleanWs()
+      //        }
+      //      }
+      //    }
+      // }
+
+      stage('Release to Github')
       {
          when
          {
@@ -94,32 +158,33 @@ pipeline
            echo "Releasing ${TAG_NAME} to Github..."
            unstash 'package artifacts'
 
-           script
+           catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE')
            {
-             def RELEASE_DATA = sh returnStdout: true, script: "curl -s --user \"$GITHUB_CREDS\" -X POST --data \'{ \"tag_name\": \"${TAG_NAME}\", \"name\": \"${TAG_NAME}\", \"body\": \"Insert features here.\"}\' https://api.github.com/repos/Graylog2/collector-sidecar/releases"
-             def props = readJSON text: RELEASE_DATA
-             echo RELEASE_DATA
-             if (props.id)
+             script
              {
-               env.RELEASE_ID = props.id
+               def RELEASE_DATA = sh returnStdout: true, script: "curl -s --user \"$GITHUB_CREDS\" -X POST --data \'{ \"tag_name\": \"${TAG_NAME}\", \"name\": \"${TAG_NAME}\", \"body\": \"Insert features here.\"}\' https://api.github.com/repos/Graylog2/collector-sidecar/releases"
+               def props = readJSON text: RELEASE_DATA
+               echo RELEASE_DATA
+               if (props.id)
+               {
+                 env.RELEASE_ID = props.id
+               }
+               else
+               {
+                 error('Github Release ID is null.')
+               }
+
+               sh '''#!/bin/bash
+                   set -x
+                   for file in dist/pkg/*
+                   do
+                     FILENAME=$(basename $file)
+                     curl -H "Authorization: token $GITHUB_CREDS" -H "Content-Type: application/octet-stream" --data-binary @dist/pkg/$FILENAME https://uploads.github.com/repos/Graylog2/collector-sidecar/releases/$RELEASE_ID/assets?name=$FILENAME
+                   done
+               '''
+
+               sh "docker run --rm -v $WORKSPACE:$WORKSPACE -w $WORKSPACE/dist/chocolatey torch/jenkins-mono-choco:latest pack --version ${TAG_NAME}"
              }
-             else
-             {
-               error('Github Release ID is null.')
-             }
-
-             sh '''#!/bin/bash
-                 set -x
-                 for file in dist/pkg/*
-                 do
-                   FILENAME=$(basename $file)
-                   curl -H "Authorization: token $GITHUB_CREDS" -H "Content-Type: application/octet-stream" --data-binary @dist/pkg/$FILENAME https://uploads.github.com/repos/Graylog2/collector-sidecar/releases/$RELEASE_ID/assets?name=$FILENAME
-                 done
-             '''
-
-             s3Upload(workingDir:'dist/pkg', bucket:'graylog2-releases', path:"graylog-collector-sidecar/${TAG_NAME}", includePathPattern:'graylog*')
-
-             sh "docker run --rm -v $WORKSPACE:$WORKSPACE -w $WORKSPACE/dist/chocolatey torch/jenkins-mono-choco:latest pack --version ${TAG_NAME}"
            }
          }
          post
@@ -134,58 +199,5 @@ pipeline
            }
          }
       }
-
-      stage('Release to Package Repository')
-      {
-         when
-         {
-             buildingTag()
-         }
-
-         agent
-         {
-           label 'packages'
-         }
-
-         steps
-         {
-           echo "Checking out fpm-recipes..."
-           checkout poll: false, scm: [$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'WipeWorkspace']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'ea5e9782-80e6-4e2b-a6ef-d19a63f4799b', url: 'https://github.com/Graylog2/fpm-recipes.git']]]
-
-           script
-           {
-             def version = getShortVersion()
-             sh "gl2-build-pkg-sidecar ${version}"
-           }
-         }
-         post
-         {
-           success
-           {
-             script
-             {
-                cleanWs()
-             }
-           }
-         }
-      }
    }
-}
-
-//packaging script wants 1.0, not 1.0.1
-@NonCPS
-def getShortVersion()
-{
-  script
-  {
-    if(env.TAG_NAME ==~ /^\d+\.\d+.*/)
-    {
-      def parsed_version = env.TAG_NAME=~ /^\d\.\d/
-      return parsed_version.getAt(0)
-    }
-    else
-    {
-      error("Build Tag must be a version number")
-    }
-  }
 }
