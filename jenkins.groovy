@@ -128,7 +128,7 @@ pipeline
            {
              script
              {
-                archiveArtifacts 'dist/pkg/*.nupkg'
+                archiveArtifacts 'dist/chocolatey/*.nupkg'
                 cleanWs()
              }
            }
