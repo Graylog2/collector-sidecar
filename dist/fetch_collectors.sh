@@ -1,8 +1,8 @@
 #!/bin/bash
 
 ARCHS=( x86 x86_64 )
-FILEBEAT_VERSION=7.6.2
-WINLOGBEAT_VERSION=7.6.2
+FILEBEAT_VERSION=7.11.1
+WINLOGBEAT_VERSION=7.11.1
 
 # $1: beat name
 # $2: beat operating system
@@ -21,7 +21,7 @@ download_beat()
     archive="/tmp/${name}-${version}-${os}-${arch}.zip"
     if [ ! -f $archive ]; then
       echo "==> Downloading ${name}-${version}-${os}-${arch}"
-      curl -o $archive https://artifacts.elastic.co/downloads/beats/${name}/${name}-${version}-${os}-${arch}.zip
+      curl -o $archive https://artifacts.elastic.co/downloads/beats/${name}/${name}-oss-${version}-${os}-${arch}.zip
     fi
     unzip -o -d dist/collectors/${name}/${os}/${arch} $archive
     mv dist/collectors/${name}/${os}/${arch}/${name}-${version}-${os}-${arch}/* dist/collectors/${name}/${os}/${arch}/
@@ -31,7 +31,7 @@ download_beat()
     archive="/tmp/${name}-${version}-${os}-${arch}.tar.gz"
     if [ ! -f $archive ]; then
       echo "==> Downloading ${name}-${version}-${os}-${arch}"
-      curl -o $archive https://artifacts.elastic.co/downloads/beats/${name}/${name}-${version}-${os}-${arch}.tar.gz
+      curl -o $archive https://artifacts.elastic.co/downloads/beats/${name}/${name}-oss-${version}-${os}-${arch}.tar.gz
     fi
     tar -xzf $archive --strip-components=1 -C dist/collectors/${name}/${os}/${arch}
     ;;
