@@ -7,7 +7,7 @@
     <title>Graylog Sidecar</title>
     <authors>juju2112</authors>
     <projectUrl>https://github.com/Graylog2/collector-sidecar</projectUrl>
-    <iconUrl>https://raw.githubusercontent.com/Graylog2/collector-sidecar/master/images/graylog-icon.svg</iconUrl>
+    <iconUrl>https://rawcdn.githack.com/Graylog2/collector-sidecar/1ec7260410caddfabe4c972f347d0237b2f5f323/images/graylog-icon.svg</iconUrl>
     <licenseUrl>https://github.com/Graylog2/collector-sidecar/blob/master/LICENSE</licenseUrl>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
     <projectSourceUrl>https://github.com/Graylog2/collector-sidecar</projectSourceUrl>
