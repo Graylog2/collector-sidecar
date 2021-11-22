@@ -36,6 +36,8 @@ pipeline
           }
           steps
           {
+            //TODO: Clean workspace before building
+
              sh 'go version'
              sh 'go mod vendor'
              sh "make test"
@@ -60,6 +62,7 @@ pipeline
          {
             unstash 'build artifacts'
             sh 'make package-all'
+
             stash name: 'package artifacts', includes: 'dist/pkg/**'
          }
 
@@ -94,6 +97,9 @@ pipeline
            echo "Releasing ${TAG_NAME} to Github..."
            unstash 'package artifacts'
 
+           //TODO: Update fpm-recipes with url and checksum
+
+           //TODO: Handle multiple runs from the same tag.
            script
            {
              def RELEASE_DATA = sh returnStdout: true, script: "curl -s --user \"$GITHUB_CREDS\" -X POST --data \'{ \"tag_name\": \"${TAG_NAME}\", \"name\": \"${TAG_NAME}\", \"body\": \"Insert features here.\"}\' https://api.github.com/repos/Graylog2/collector-sidecar/releases"
@@ -119,7 +125,12 @@ pipeline
 
              s3Upload(workingDir:'dist/pkg', bucket:'graylog2-releases', path:"graylog-collector-sidecar/${TAG_NAME}", includePathPattern:'graylog*')
 
+
+            //TODO: Update chocolatey install script with url and checksum
+
              sh "docker run --rm -v $WORKSPACE:$WORKSPACE -w $WORKSPACE/dist/chocolatey torch/jenkins-mono-choco:latest pack --version ${TAG_NAME}"
+
+            //TODO publish chocolatey package
            }
          }
          post
@@ -151,6 +162,8 @@ pipeline
          steps
          {
            echo "Checking out fpm-recipes..."
+
+           //TODO: Make branch dynamic. It should be the latest version, not 'master'
            checkout poll: false, scm: [$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'WipeWorkspace']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'ea5e9782-80e6-4e2b-a6ef-d19a63f4799b', url: 'https://github.com/Graylog2/fpm-recipes.git']]]
 
            script
@@ -172,6 +185,9 @@ pipeline
       }
    }
 }
+
+
+//TODO: Fix this -- it doesn't work
 
 //packaging script wants 1.0, not 1.0.1
 @NonCPS
