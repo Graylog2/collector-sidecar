@@ -1,6 +1,6 @@
 # Graylog Sidecar
 
-[![Build Status](https://travis-ci.org/Graylog2/collector-sidecar.svg?branch=master)](https://travis-ci.org/Graylog2/collector-sidecar) [![Go Report Card](https://goreportcard.com/badge/github.com/graylog2/collector-sidecar)](https://goreportcard.com/report/github.com/graylog2/collector-sidecar)
+[![Go Report Card](https://goreportcard.com/badge/Github.com/graylog2/collector-sidecar)](https://goreportcard.com/report/github.com/Graylog2/collector-sidecar)
 
 The Graylog Sidecar is a supervisor process for 3rd party log collectors like NXLog and filebeat.
 The Sidecar program is able to fetch and validate configuration files from a Graylog server for various log collectors.
@@ -22,4 +22,3 @@ Please check our [installation documentation](http://docs.graylog.org/en/latest/
   * Clone the repository into your `$GOPATH` under `src/github.com/Graylog2/collector-sidecar`
   * run `make` to install the dependencies and build the binary for the local platform
   * run `make help` to see more targets
-
