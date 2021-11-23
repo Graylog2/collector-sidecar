@@ -4,6 +4,8 @@ github.com/Sirupsen/logrus v0.11.0 h1:e67CSCQN/h7Iozb0J2qUoCFldk79UIoPL8FbzsW0r0
 github.com/Sirupsen/logrus v0.11.0/go.mod h1:rmk17hk6i8ZSAJkSDa7nOxamrG+SP4P0mm+DAvExv4U=
 github.com/StackExchange/wmi v0.0.0-20160811214555-e54cbda6595d h1:L9ZGqHf7d+ZeQDjVT/qv9WukazHxT+folVGy/xgaIc8=
 github.com/StackExchange/wmi v0.0.0-20160811214555-e54cbda6595d/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
+github.com/akavel/rsrc v0.10.2 h1:Zxm8V5eI1hW4gGaYsJQUhxpjkENuG91ki8B4zCrvEsw=
+github.com/akavel/rsrc v0.10.2/go.mod h1:uLoCtb9J+EyAqh+26kdrTgmzRBFPGOolLWKpdxkKq+c=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
@@ -18,6 +20,8 @@ github.com/flynn-archive/go-shlex v0.0.0-20150515145356-3f9db97f8568 h1:BMXYYRWT
 github.com/flynn-archive/go-shlex v0.0.0-20150515145356-3f9db97f8568/go.mod h1:rZfgFAXFS/z/lEd6LJmf9HVZ1LkgYiHx5pHhV5DR16M=
 github.com/go-ole/go-ole v1.2.1-0.20161116064658-5e9c030faf78 h1:0afyVEbxVeRz0ioQYn+9oDaeveMBXJi7juWqz2newuY=
 github.com/go-ole/go-ole v1.2.1-0.20161116064658-5e9c030faf78/go.mod h1:7FAglXiTm7HKlQRDeOQ6ZNUHidzCWXuZWq/1dTyBNF8=
+github.com/josephspurrier/goversioninfo v1.3.0 h1:pmgDhWnG8I59p5kCR09J73s/gy9JqRPAtiaUK8jixtE=
+github.com/josephspurrier/goversioninfo v1.3.0/go.mod h1:JWzv5rKQr+MmW+LvM412ToT/IkYDZjaclF2pKDss8IY=
 github.com/kardianos/osext v0.0.0-20151124170342-10da29423eb9 h1:/l57iytyQiCkn2MnhrtYWyo+Rrinngfr20jcqeL6H80=
 github.com/kardianos/osext v0.0.0-20151124170342-10da29423eb9/go.mod h1:1NbS8ALrpOvjt0rHPNLyCIeMtbizbir8U//inJ+zuB8=
 github.com/kardianos/service v0.0.0-20161119210648-6d3a0ee7d342 h1:qs0Bq3RWs0NIJ1W7DwOabM7pQvivSFCtzTl4puKax9g=
