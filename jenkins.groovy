@@ -30,8 +30,6 @@ pipeline
           }
           steps
           {
-            //TODO: Clean workspace before building
-
              sh 'go version'
              sh 'go mod vendor'
              sh "make test"
