@@ -7,6 +7,7 @@ pipeline
       buildDiscarder logRotator(artifactDaysToKeepStr: '30', artifactNumToKeepStr: '10', daysToKeepStr: '30', numToKeepStr: '10')
       timestamps()
       withAWS(region:'eu-west-1', credentials:'aws-key-releases')
+      skipDefaultCheckout(true)
    }
 
    tools
@@ -30,6 +31,8 @@ pipeline
           }
           steps
           {
+             checkout([$class: 'GitSCM', branches: [[name: '*/master']], extensions: [[$class: 'WipeWorkspace']], userRemoteConfigs: [[url: 'https://github.com/Graylog2/collector-sidecar.git']]])
+
              sh 'go version'
              sh 'go mod vendor'
              sh "make test"
@@ -52,6 +55,7 @@ pipeline
 
          steps
          {
+            checkout([$class: 'GitSCM', branches: [[name: '*/master']], extensions: [[$class: 'WipeWorkspace']], userRemoteConfigs: [[url: 'https://github.com/Graylog2/collector-sidecar.git']]])
             unstash 'build artifacts'
             sh 'make package-all'
 
