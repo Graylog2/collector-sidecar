@@ -38,6 +38,6 @@
             "CharsetID": "04B0"
         }
     },
-    "IconPath": "images/graylog-icon.ico",
+    "IconPath": "dist/graylog.ico",
     "ManifestPath": ""
 }
