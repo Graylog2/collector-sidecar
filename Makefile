@@ -2,7 +2,7 @@ GO ?= go
 GOFMT ?= gofmt
 AWK ?= awk
 
-GOVERSIONINFO_BIN=$(go env GOPATH)/bin/goversioninfo
+GOVERSIONINFO_BIN = $(shell go env GOPATH)/bin/goversioninfo
 
 include version.mk
 ifeq ($(strip $(COLLECTOR_VERSION)),)
