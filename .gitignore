@@ -44,4 +44,4 @@ dist/collectors/
 .filebeat
 
 /sidecar.yml
-
+resource.syso

@@ -2,12 +2,14 @@ GO ?= go
 GOFMT ?= gofmt
 AWK ?= awk
 
+GOVERSIONINFO_BIN = $(shell go env GOPATH)/bin/goversioninfo
+
 include version.mk
 ifeq ($(strip $(COLLECTOR_VERSION)),)
 $(error COLLECTOR_VERSION is not set)
 endif
 
-targets = graylog-sidecar sidecar-collector build dist/cache dist/tmp-build dist/tmp-dest dist/pkg dist/collectors
+targets = graylog-sidecar sidecar-collector build dist/cache dist/tmp-build dist/tmp-dest dist/pkg dist/collectors resource.syso
 dist_targets = vendor
 
 GIT_REV=$(shell git rev-parse --short HEAD)
@@ -66,13 +68,19 @@ build-freebsd:
 	@mkdir -p build/$(COLLECTOR_VERSION)/freebsd/amd64
 	GOOS=freebsd GOARCH=amd64 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_freebsd -v -i -o build/$(COLLECTOR_VERSION)/freebsd/amd64/graylog-sidecar
 
-build-windows: ## Build sidecar binary for Windows
+build-windows: install-goversioninfo ## Build sidecar binary for Windows
 	@mkdir -p build/$(COLLECTOR_VERSION)/windows/amd64
+	$(GOVERSIONINFO_BIN) -64 -product-version="$(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)" -ver-major="$(COLLECTOR_VERSION_MAJOR)" -product-ver-minor="$(COLLECTOR_VERSION_MINOR)" -product-ver-patch="$(COLLECTOR_VERSION_PATCH)" -product-ver-build="$(COLLECTOR_REVISION)" -file-version="$(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)" -ver-major="$(COLLECTOR_VERSION_MAJOR)" -ver-minor="$(COLLECTOR_VERSION_MINOR)" -ver-patch="$(COLLECTOR_VERSION_PATCH)" -ver-build="$(COLLECTOR_REVISION)"
 	GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_win -v -i -o build/$(COLLECTOR_VERSION)/windows/amd64/graylog-sidecar.exe
 
-build-windows32: ## Build sidecar binary for Windows 32bit
+build-windows32: install-goversioninfo ## Build sidecar binary for Windows 32bit
 	@mkdir -p build/$(COLLECTOR_VERSION)/windows/386
+	$(GOVERSIONINFO_BIN) -product-version="$(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)" -ver-major="$(COLLECTOR_VERSION_MAJOR)" -product-ver-minor="$(COLLECTOR_VERSION_MINOR)" -product-ver-patch="$(COLLECTOR_VERSION_PATCH)" -product-ver-build="$(COLLECTOR_REVISION)" -file-version="$(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)" -ver-major="$(COLLECTOR_VERSION_MAJOR)" -ver-minor="$(COLLECTOR_VERSION_MINOR)" -ver-patch="$(COLLECTOR_VERSION_PATCH)" -ver-build="$(COLLECTOR_REVISION)"
 	GOOS=windows GOARCH=386 CGO_ENABLED=1 CC=i686-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_win32 -v -i -o build/$(COLLECTOR_VERSION)/windows/386/graylog-sidecar.exe
+
+## Adds version info to Windows executable
+install-goversioninfo:
+	go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
 
 package-all: prepare-package package-linux-armv7 package-linux package-linux32 package-windows package-tar
 
