@@ -106,6 +106,7 @@ Section "Install"
   ;These folders are needed at runtime
   CreateDirectory "$INSTDIR\generated"
   CreateDirectory "$INSTDIR\logs"
+  CreateDirectory "$INSTDIR\module"
   SetOutPath "$INSTDIR"
  
   ${If} ${RunningX64}
