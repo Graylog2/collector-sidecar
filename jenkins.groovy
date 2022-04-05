@@ -21,11 +21,11 @@ pipeline
      GO15VENDOREXPERIMENT=1
    }
 
-    stages
-            {
-                stage('Build')
-                        {
-                            agent
+   stages
+   {
+      stage('Build')
+      {
+          agent
           {
             label 'linux'
           }
