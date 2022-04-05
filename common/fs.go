@@ -17,7 +17,6 @@ package common
 
 import (
 	"os"
-	"path"
 	"path/filepath"
 
 	"github.com/Graylog2/collector-sidecar/logger"
@@ -47,11 +46,11 @@ func IsDir(filePath string) bool {
 
 }
 
-func CreatePathToFile(filepath string) error {
-	dir := path.Dir(filepath)
+func CreatePathToFile(path string) error {
+	dir := filepath.Dir(path)
 	_, err := os.Open(dir)
 	if err != nil {
-		log.Info("Trying to create directory for: ", filepath)
+		log.Info("Trying to create directory for: ", path)
 		err = os.MkdirAll(dir, 0750)
 		if err != nil {
 			log.Error("Not able to create directory path: ", dir)

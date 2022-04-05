@@ -64,6 +64,25 @@ func TestGetCollectorIdFromNonExistingFile(t *testing.T) {
 	}
 }
 
+func TestGetCollectorIdFromNonExistingPath(t *testing.T) {
+	dir, err := ioutil.TempDir("", "test-node-id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	tmpfile := filepath.Join(dir, "subdir", "node-id")
+	result := GetCollectorId("file:/" + tmpfile)
+	match, err := regexp.Match("^[0-9a-f]{8}-", []byte(result))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !match {
+		t.Fail()
+	}
+}
+
 func TestCollectorIdFileNotWritable(t *testing.T) {
 	dir, err := ioutil.TempDir("", "test-node-id")
 	if err != nil {
