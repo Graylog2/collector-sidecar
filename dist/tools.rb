@@ -11,7 +11,7 @@ module FPM
         end
 
         def version
-          data('COLLECTOR_VERSION')
+          data('COLLECTOR_VERSION_MAJOR') + '.' + data('COLLECTOR_VERSION_MINOR') + '.' + data('COLLECTOR_VERSION_PATCH')
         end
 
         def suffix
