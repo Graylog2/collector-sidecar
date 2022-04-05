@@ -35,7 +35,6 @@ test: ## Run tests
 build: ## Build sidecar binary for local target system
 	$(GO) build $(BUILD_OPTS) -v -i -o graylog-sidecar
 
-# does not include build-darwin as that only runs with homebrew on a Mac
 build-all: build-linux-armv7 build-linux build-linux32 build-windows build-windows32 build-darwin build-freebsd
 
 build-linux: ## Build sidecar binary for Linux
@@ -64,7 +63,7 @@ build-darwin: ## Build sidecar binary for OSX
 	@mkdir -p build/$(COLLECTOR_VERSION)/darwin/amd64
 	GOOS=darwin GOARCH=amd64 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_darwin -v -i -o build/$(COLLECTOR_VERSION)/darwin/amd64/graylog-sidecar
 
-build-freebsd:
+build-freebsd: ## Build sidecar binary for FreeBSD
 	@mkdir -p build/$(COLLECTOR_VERSION)/freebsd/amd64
 	GOOS=freebsd GOARCH=amd64 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_freebsd -v -i -o build/$(COLLECTOR_VERSION)/freebsd/amd64/graylog-sidecar
 

@@ -12,8 +12,7 @@ require (
 	github.com/elastic/gosigar v0.0.0-20160829190344-2716c1fe855e
 	github.com/flynn-archive/go-shlex v0.0.0-20150515145356-3f9db97f8568
 	github.com/go-ole/go-ole v1.2.1-0.20161116064658-5e9c030faf78 // indirect
-	github.com/kardianos/osext v0.0.0-20151124170342-10da29423eb9 // indirect
-	github.com/kardianos/service v0.0.0-20161119210648-6d3a0ee7d342
+	github.com/kardianos/service v1.2.1
 	github.com/kr/text v0.2.0 // indirect
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
