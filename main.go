@@ -77,6 +77,7 @@ func main() {
 		Name:        daemon.Daemon.Name,
 		DisplayName: daemon.Daemon.DisplayName,
 		Description: daemon.Daemon.Description,
+		Option:      services.ServiceOptions(),
 	}
 
 	distributor := daemon.Daemon.NewDistributor()
