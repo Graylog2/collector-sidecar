@@ -80,23 +80,34 @@ func GetCollectorId(collectorId string) string {
 	id := collectorId
 	if strings.HasPrefix(collectorId, "file:") {
 		filePath := strings.SplitAfterN(collectorId, ":", 2)[1]
-		err := FileExists(filePath)
-		if err != nil {
-			log.Info("node-id file doesn't exist, generating a new one")
-			CreatePathToFile(filePath)
-			ioutil.WriteFile(filePath, []byte(RandomUuid()), 0644)
-		}
-		file, err := ioutil.ReadFile(filePath)
-		if err != nil {
-			log.Fatal("Can not read node-id file: ", err)
-		}
-		id = strings.Trim(string(file), " \n")
+		id = idFromFile(filePath)
 	}
 
 	if id != "" && !cfgfile.ValidateConfig() {
 		log.Info("Using node-id: ", id)
 	}
 	return id
+}
+
+func idFromFile(filePath string) string {
+	err := FileExists(filePath)
+	if err != nil {
+		log.Info("node-id file doesn't exist, generating a new one")
+		err = CreatePathToFile(filePath)
+		if err == nil {
+			err = ioutil.WriteFile(filePath, []byte(RandomUuid()), 0644)
+			if err != nil {
+				log.Error("Can not write node-id file: ", err)
+			}
+		}
+	}
+
+	file, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		log.Error("Can not read node-id file: ", err)
+		return ""
+	}
+	return strings.Trim(string(file), " \n")
 }
 
 func RandomUuid() string {

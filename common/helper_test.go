@@ -64,6 +64,46 @@ func TestGetCollectorIdFromNonExistingFile(t *testing.T) {
 	}
 }
 
+func TestGetCollectorIdFromNonExistingPath(t *testing.T) {
+	dir, err := ioutil.TempDir("", "test-node-id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	tmpfile := filepath.Join(dir, "subdir", "node-id")
+	result := GetCollectorId("file:/" + tmpfile)
+	match, err := regexp.Match("^[0-9a-f]{8}-", []byte(result))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !match {
+		t.Fail()
+	}
+}
+
+func TestCollectorIdFileNotWritable(t *testing.T) {
+	dir, err := ioutil.TempDir("", "test-node-id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	nodeIdDir := filepath.Join(dir, "non-writable")
+
+	err = os.MkdirAll(nodeIdDir, 0500)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tmpfile := filepath.Join(nodeIdDir, "node-id")
+	result := GetCollectorId("file:/" + tmpfile)
+	if result != "" {
+		t.Fatalf("Unwritable node-id file should result in empty node-id")
+	}
+}
+
 func TestEncloseWithWithoutAction(t *testing.T) {
 	content := "/some regex/"
 	result := EncloseWith(content, "/")
