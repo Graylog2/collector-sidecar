@@ -110,6 +110,7 @@ func RequestConfiguration(
 		msg := "Fetching configuration failed"
 		system.GlobalStatus.Set(backends.StatusError, msg+": "+err.Error())
 		log.Errorf("[RequestConfiguration] %s: %v", msg, err)
+		return graylog.ResponseCollectorConfiguration{}, err
 	}
 
 	if resp != nil {
