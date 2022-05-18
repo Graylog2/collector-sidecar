@@ -35,7 +35,7 @@ test: ## Run tests
 build: ## Build sidecar binary for local target system
 	$(GO) build $(BUILD_OPTS) -v -i -o graylog-sidecar
 
-build-all: build-linux-armv7 build-linux build-linux32 build-windows build-windows32 build-darwin build-freebsd
+build-all: build-linux-armv7 build-linux build-linux32 build-windows build-windows32 build-darwin build-darwin-arm64 build-freebsd
 
 build-linux: ## Build sidecar binary for Linux
 	@mkdir -p build/$(COLLECTOR_VERSION)/linux/amd64
@@ -62,6 +62,10 @@ build-linux32: ## Build sidecar binary for Linux 32bit
 build-darwin: ## Build sidecar binary for OSX
 	@mkdir -p build/$(COLLECTOR_VERSION)/darwin/amd64
 	GOOS=darwin GOARCH=amd64 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_darwin -v -i -o build/$(COLLECTOR_VERSION)/darwin/amd64/graylog-sidecar
+
+build-darwin-arm64: ## Build sidecar binary for OSX
+	@mkdir -p build/$(COLLECTOR_VERSION)/darwin/amd64
+	GOOS=darwin GOARCH=arm64 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_darwin-arm64 -v -i -o build/$(COLLECTOR_VERSION)/darwin/arm64/graylog-sidecar
 
 build-freebsd: ## Build sidecar binary for FreeBSD
 	@mkdir -p build/$(COLLECTOR_VERSION)/freebsd/amd64
