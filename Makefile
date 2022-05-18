@@ -64,7 +64,7 @@ build-darwin: ## Build sidecar binary for OSX
 	GOOS=darwin GOARCH=amd64 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_darwin -v -o build/$(COLLECTOR_VERSION)/darwin/amd64/graylog-sidecar
 
 build-darwin-arm64: ## Build sidecar binary for OSX
-	@mkdir -p build/$(COLLECTOR_VERSION)/darwin/amd64
+	@mkdir -p build/$(COLLECTOR_VERSION)/darwin/arm64
 	GOOS=darwin GOARCH=arm64 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_darwin-arm64 -v -o build/$(COLLECTOR_VERSION)/darwin/arm64/graylog-sidecar
 
 build-freebsd: ## Build sidecar binary for FreeBSD
