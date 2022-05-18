@@ -9,7 +9,7 @@ ifeq ($(strip $(COLLECTOR_VERSION)),)
 $(error COLLECTOR_VERSION is not set)
 endif
 
-targets = graylog-sidecar sidecar-collector build dist/cache dist/tmp-build dist/tmp-dest dist/pkg dist/collectors resource.syso
+targets = graylog-sidecar sidecar-collector build dist/cache dist/tmp-build dist/tmp-dest dist/pkg dist/collectors resource_windows.syso
 dist_targets = vendor
 
 GIT_REV=$(shell git rev-parse --short HEAD)
@@ -33,13 +33,13 @@ test: ## Run tests
 	$(GO) test -v $(TEST_SUITE)
 
 build: ## Build sidecar binary for local target system
-	$(GO) build $(BUILD_OPTS) -v -i -o graylog-sidecar
+	$(GO) build $(BUILD_OPTS) -v -o graylog-sidecar
 
-build-all: build-linux-armv7 build-linux build-linux32 build-windows build-windows32 build-darwin build-freebsd
+build-all: build-linux-armv7 build-linux build-linux32 build-windows build-windows32 build-darwin build-darwin-arm64 build-freebsd
 
 build-linux: ## Build sidecar binary for Linux
 	@mkdir -p build/$(COLLECTOR_VERSION)/linux/amd64
-	GOOS=linux GOARCH=amd64 $(GO) build $(BUILD_OPTS) -v -i -o build/$(COLLECTOR_VERSION)/linux/amd64/graylog-sidecar
+	GOOS=linux GOARCH=amd64 $(GO) build $(BUILD_OPTS) -v -o build/$(COLLECTOR_VERSION)/linux/amd64/graylog-sidecar
 
 solaris-sigar-patch:
 	# https://github.com/cloudfoundry/gosigar/pull/28
@@ -49,33 +49,37 @@ solaris-sigar-patch:
 
 build-linux-armv7: ## Build sidecar binary for linux-armv7
 	@mkdir -p build/$(COLLECTOR_VERSION)/linux/armv7
-	GOOS=linux GOARCH=arm GOARM=7 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_linux-armv7  -v -i -o build/$(COLLECTOR_VERSION)/linux/armv7/graylog-sidecar
+	GOOS=linux GOARCH=arm GOARM=7 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_linux-armv7  -v -o build/$(COLLECTOR_VERSION)/linux/armv7/graylog-sidecar
 
 build-solaris: solaris-sigar-patch ## Build sidecar binary for Solaris/OmniOS/Illumos
 	@mkdir -p build/$(COLLECTOR_VERSION)/solaris/amd64
-	GOOS=solaris GOARCH=amd64 $(GO) build $(BUILD_OPTS) -v -i -o build/$(COLLECTOR_VERSION)/solaris/amd64/graylog-sidecar
+	GOOS=solaris GOARCH=amd64 $(GO) build $(BUILD_OPTS) -v -o build/$(COLLECTOR_VERSION)/solaris/amd64/graylog-sidecar
 
 build-linux32: ## Build sidecar binary for Linux 32bit
 	@mkdir -p build/$(COLLECTOR_VERSION)/linux/386
-	GOOS=linux GOARCH=386 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_linux32  -v -i -o build/$(COLLECTOR_VERSION)/linux/386/graylog-sidecar
+	GOOS=linux GOARCH=386 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_linux32  -v -o build/$(COLLECTOR_VERSION)/linux/386/graylog-sidecar
 
 build-darwin: ## Build sidecar binary for OSX
 	@mkdir -p build/$(COLLECTOR_VERSION)/darwin/amd64
-	GOOS=darwin GOARCH=amd64 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_darwin -v -i -o build/$(COLLECTOR_VERSION)/darwin/amd64/graylog-sidecar
+	GOOS=darwin GOARCH=amd64 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_darwin -v -o build/$(COLLECTOR_VERSION)/darwin/amd64/graylog-sidecar
+
+build-darwin-arm64: ## Build sidecar binary for OSX
+	@mkdir -p build/$(COLLECTOR_VERSION)/darwin/arm64
+	GOOS=darwin GOARCH=arm64 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_darwin-arm64 -v -o build/$(COLLECTOR_VERSION)/darwin/arm64/graylog-sidecar
 
 build-freebsd: ## Build sidecar binary for FreeBSD
 	@mkdir -p build/$(COLLECTOR_VERSION)/freebsd/amd64
-	GOOS=freebsd GOARCH=amd64 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_freebsd -v -i -o build/$(COLLECTOR_VERSION)/freebsd/amd64/graylog-sidecar
+	GOOS=freebsd GOARCH=amd64 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_freebsd -v -o build/$(COLLECTOR_VERSION)/freebsd/amd64/graylog-sidecar
 
 build-windows: install-goversioninfo ## Build sidecar binary for Windows
 	@mkdir -p build/$(COLLECTOR_VERSION)/windows/amd64
-	$(GOVERSIONINFO_BIN) -64 -product-version="$(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)" -ver-major="$(COLLECTOR_VERSION_MAJOR)" -product-ver-minor="$(COLLECTOR_VERSION_MINOR)" -product-ver-patch="$(COLLECTOR_VERSION_PATCH)" -product-ver-build="$(COLLECTOR_REVISION)" -file-version="$(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)" -ver-major="$(COLLECTOR_VERSION_MAJOR)" -ver-minor="$(COLLECTOR_VERSION_MINOR)" -ver-patch="$(COLLECTOR_VERSION_PATCH)" -ver-build="$(COLLECTOR_REVISION)"
-	GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_win -v -i -o build/$(COLLECTOR_VERSION)/windows/amd64/graylog-sidecar.exe
+	$(GOVERSIONINFO_BIN) -64 -product-version="$(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)" -ver-major="$(COLLECTOR_VERSION_MAJOR)" -product-ver-minor="$(COLLECTOR_VERSION_MINOR)" -product-ver-patch="$(COLLECTOR_VERSION_PATCH)" -product-ver-build="$(COLLECTOR_REVISION)" -file-version="$(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)" -ver-major="$(COLLECTOR_VERSION_MAJOR)" -ver-minor="$(COLLECTOR_VERSION_MINOR)" -ver-patch="$(COLLECTOR_VERSION_PATCH)" -ver-build="$(COLLECTOR_REVISION)" -o resource_windows.syso
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_win -v -o build/$(COLLECTOR_VERSION)/windows/amd64/graylog-sidecar.exe
 
 build-windows32: install-goversioninfo ## Build sidecar binary for Windows 32bit
 	@mkdir -p build/$(COLLECTOR_VERSION)/windows/386
-	$(GOVERSIONINFO_BIN) -product-version="$(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)" -ver-major="$(COLLECTOR_VERSION_MAJOR)" -product-ver-minor="$(COLLECTOR_VERSION_MINOR)" -product-ver-patch="$(COLLECTOR_VERSION_PATCH)" -product-ver-build="$(COLLECTOR_REVISION)" -file-version="$(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)" -ver-major="$(COLLECTOR_VERSION_MAJOR)" -ver-minor="$(COLLECTOR_VERSION_MINOR)" -ver-patch="$(COLLECTOR_VERSION_PATCH)" -ver-build="$(COLLECTOR_REVISION)"
-	GOOS=windows GOARCH=386 CGO_ENABLED=1 CC=i686-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_win32 -v -i -o build/$(COLLECTOR_VERSION)/windows/386/graylog-sidecar.exe
+	$(GOVERSIONINFO_BIN) -product-version="$(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)" -ver-major="$(COLLECTOR_VERSION_MAJOR)" -product-ver-minor="$(COLLECTOR_VERSION_MINOR)" -product-ver-patch="$(COLLECTOR_VERSION_PATCH)" -product-ver-build="$(COLLECTOR_REVISION)" -file-version="$(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)" -ver-major="$(COLLECTOR_VERSION_MAJOR)" -ver-minor="$(COLLECTOR_VERSION_MINOR)" -ver-patch="$(COLLECTOR_VERSION_PATCH)" -ver-build="$(COLLECTOR_REVISION)" -o resource_windows.syso
+	GOOS=windows GOARCH=386 CGO_ENABLED=1 CC=i686-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_win32 -v -o build/$(COLLECTOR_VERSION)/windows/386/graylog-sidecar.exe
 
 ## Adds version info to Windows executable
 install-goversioninfo:

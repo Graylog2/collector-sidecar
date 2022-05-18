@@ -23,6 +23,7 @@ _testmain.go
 *.test
 *.prof
 *.iml
+*.swp
 
 /.idea/
 /config/
@@ -44,4 +45,4 @@ dist/collectors/
 .filebeat
 
 /sidecar.yml
-resource.syso
+resource_windows.syso
