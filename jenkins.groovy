@@ -7,7 +7,6 @@ pipeline
       buildDiscarder logRotator(artifactDaysToKeepStr: '30', artifactNumToKeepStr: '10', daysToKeepStr: '30', numToKeepStr: '10')
       timestamps()
       withAWS(region:'eu-west-1', credentials:'aws-key-releases')
-      skipDefaultCheckout(true)
    }
 
    tools
@@ -21,6 +20,14 @@ pipeline
      GO15VENDOREXPERIMENT=1
    }
 
+   post
+   {
+     always
+     {
+       cleanWs()
+     }
+   }
+
    stages
    {
       stage('Build')
@@ -31,13 +38,6 @@ pipeline
           }
           steps
           {
-             script
-             {
-               env.SIDECAR_BRANCH = env.CHANGE_ID ? "${CHANGE_BRANCH}" : "${BRANCH_NAME}"
-             }
-             echo "Checking out $SIDECAR_BRANCH..."
-             checkout([$class: 'GitSCM', branches: [[name: "*/${SIDECAR_BRANCH}"]], extensions: [[$class: 'WipeWorkspace']], userRemoteConfigs: [[url: 'https://github.com/Graylog2/collector-sidecar.git']]])
-
              sh 'go version'
              sh 'go mod vendor'
              sh "make test"
@@ -60,12 +60,6 @@ pipeline
 
          steps
          {
-            script
-            {
-              env.SIDECAR_BRANCH = env.CHANGE_ID ? "${CHANGE_BRANCH}" : "${BRANCH_NAME}"
-            }
-            echo "Checking out $SIDECAR_BRANCH..."
-            checkout([$class: 'GitSCM', branches: [[name: "*/${SIDECAR_BRANCH}"]], extensions: [[$class: 'WipeWorkspace']], userRemoteConfigs: [[url: 'https://github.com/Graylog2/collector-sidecar.git']]])
             unstash 'build artifacts'
             sh 'make package-all'
 
