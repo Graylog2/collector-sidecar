@@ -71,7 +71,6 @@ pipeline
             success
             {
                archiveArtifacts 'dist/pkg/*'
-               cleanWs()
             }
 
             cleanup
