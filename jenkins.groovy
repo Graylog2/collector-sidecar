@@ -80,6 +80,43 @@ pipeline
          }
       }
 
+      stage('Build')
+      {
+        when
+        {
+          buildingTag()
+        }
+
+        agent
+        {
+          label 'linux'
+        }
+
+        steps
+        {
+          // Provide access to "dist/pkg", the previous cleanups removed the files
+          unstash 'package artifacts'
+
+          echo "==> Package checksums:"
+          sh "sha256sum dist/pkg/*"
+
+          s3Upload(
+            workingDir: '.',
+            bucket: 'graylog2-releases',
+            path: "graylog-collector-sidecar/${env.TAG_NAME}/",
+            file: "dist/pkg"
+          )
+        }
+
+        post
+        {
+          cleanup
+          {
+            cleanWs()
+          }
+        }
+      }
+
       stage('Release to Package Repository')
       {
          when
