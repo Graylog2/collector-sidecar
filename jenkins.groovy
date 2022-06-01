@@ -39,7 +39,7 @@ pipeline
 
           post
           {
-            always
+            cleanup
             {
               cleanWs()
             }
@@ -71,9 +71,10 @@ pipeline
             success
             {
                archiveArtifacts 'dist/pkg/*'
+               cleanWs()
             }
 
-            always
+            cleanup
             {
               cleanWs()
             }
