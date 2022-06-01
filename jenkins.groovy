@@ -20,14 +20,6 @@ pipeline
      GO15VENDOREXPERIMENT=1
    }
 
-   post
-   {
-     always
-     {
-       cleanWs()
-     }
-   }
-
    stages
    {
       stage('Build')
@@ -43,6 +35,14 @@ pipeline
              sh "make test"
              sh 'make build-all'
              stash name: 'build artifacts', includes: 'build/**'
+          }
+
+          post
+          {
+            always
+            {
+              cleanWs()
+            }
           }
        }
 
@@ -71,6 +71,11 @@ pipeline
             success
             {
                archiveArtifacts 'dist/pkg/*'
+            }
+
+            always
+            {
+              cleanWs()
             }
          }
       }
