@@ -97,7 +97,7 @@ pipeline
           // Provide access to "dist/pkg", the previous cleanups removed the files
           unstash 'package artifacts'
 
-          echo "==> Package checksums:"
+          echo "==> Artifact checksums:"
           sh "sha256sum dist/pkg/*"
 
           s3Upload(
