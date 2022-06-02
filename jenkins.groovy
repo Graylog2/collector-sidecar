@@ -80,7 +80,7 @@ pipeline
          }
       }
 
-      stage('Build')
+      stage('Upload')
       {
         when
         {
@@ -115,43 +115,6 @@ pipeline
             cleanWs()
           }
         }
-      }
-
-      stage('Release to Package Repository')
-      {
-         when
-         {
-             buildingTag()
-         }
-
-         agent
-         {
-           label 'packages'
-         }
-
-         steps
-         {
-           script
-           {
-             // Build release branch name from release tag name
-             def (_, major, minor) = (env.TAG_NAME =~ /^(\d+)\.(\d+)\.\d+(?:-.*)?/)[0]
-
-             env.SIDECAR_RELEASE_VERSION = "${major}.${minor}"
-           }
-
-           echo "Checking out fpm-recipes branch: ${SIDECAR_RELEASE_VERSION}"
-           checkout poll: false, scm: [$class: 'GitSCM', branches: [[name: "*/${SIDECAR_RELEASE_VERSION}"]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'WipeWorkspace']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'github-access-token2', url: 'https://github.com/Graylog2/fpm-recipes.git']]]
-
-           sh "gl2-build-pkg-sidecar ${SIDECAR_RELEASE_VERSION}"
-         }
-
-         post
-         {
-           cleanup
-           {
-             cleanWs()
-           }
-         }
       }
    }
 }
