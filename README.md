@@ -10,15 +10,15 @@ The master branch is tracking the development version of the Sidecar.
 
 ## Documentation
 
-Please check our official [documentation](http://docs.graylog.org/en/latest/pages/sidecar.html) for more information.
+Please check our official [documentation](https://docs.graylog.org/docs/sidecar) for more information.
 
 ## Installation
 
-Please check our [installation documentation](http://docs.graylog.org/en/latest/pages/sidecar.html#installation) for more information.
+Please check our [installation documentation](https://docs.graylog.org/docs/sidecar#installation) for more information.
 
 
 ## Compile
 
-  * Clone the repository into your `$GOPATH` under `src/github.com/Graylog2/collector-sidecar`
-  * run `make` to install the dependencies and build the binary for the local platform
-  * run `make help` to see more targets
+  * Clone the repository
+  * Run `make` to install the dependencies and build the binary for the local platform
+  * Run `make help` to see more targets
