@@ -1,120 +1,149 @@
 pipeline
 {
-   agent none
+  agent none
 
-   options
-   {
-      buildDiscarder logRotator(artifactDaysToKeepStr: '30', artifactNumToKeepStr: '10', daysToKeepStr: '30', numToKeepStr: '10')
-      timestamps()
-      withAWS(region:'eu-west-1', credentials:'aws-key-releases')
-   }
+  options
+  {
+    buildDiscarder logRotator(artifactDaysToKeepStr: '30', artifactNumToKeepStr: '10', daysToKeepStr: '30', numToKeepStr: '10')
+    timestamps()
+    withAWS(region:'eu-west-1', credentials:'aws-key-releases')
+  }
 
-   tools
-   {
-     go 'Go'
-   }
+  tools
+  {
+    go 'Go'
+  }
 
-   environment
-   {
-     GOPATH = '/home/jenkins/go'
-     GO15VENDOREXPERIMENT=1
-   }
+  environment
+  {
+    GOPATH = '/home/jenkins/go'
+    GO15VENDOREXPERIMENT=1
+    CHOCO_API_KEY = credentials('chocolatey-api-key')
+  }
 
-   stages
-   {
-      stage('Build')
+  stages
+  {
+    stage('Build')
+    {
+      agent
       {
-          agent
-          {
-            label 'linux'
-          }
+        // Select the node for all nested stages.
+        label 'linux'
+      }
+
+      // All nested stages run on the same node because the nested stages
+      // don't have an agent label selector.
+      // That ensures we share the workspace between the different stages.
+      stages
+      {
+        stage('Compile')
+        {
           steps
           {
-             sh 'go version'
-             sh 'go mod vendor'
-             sh "make test"
-             sh 'make build-all'
-             stash name: 'build artifacts', includes: 'build/**'
+            sh 'go version'
+            sh 'go mod vendor'
+            sh "make test"
+            sh 'make build-all'
           }
+        }
 
-          post
+        stage('Package')
+        {
+          agent
           {
-            cleanup
+            docker
             {
-              cleanWs()
+              image 'torch/jenkins-fpm-cook:latest'
+              args '-u jenkins:docker'
+              reuseNode true
             }
           }
-       }
 
-      stage('Package')
-      {
-         agent
-         {
-           docker
-           {
-             label 'linux'
-             image 'torch/jenkins-fpm-cook:latest'
-             args '-u jenkins:docker'
-           }
-         }
-
-         steps
-         {
-            unstash 'build artifacts'
+          steps
+          {
             sh 'make package-all'
-
-            stash name: 'package artifacts', includes: 'dist/pkg/**'
-         }
-
-         post
-         {
-            success
-            {
-               archiveArtifacts 'dist/pkg/*'
-            }
-
-            cleanup
-            {
-              cleanWs()
-            }
-         }
-      }
-
-      stage('Upload')
-      {
-        when
-        {
-          buildingTag()
+          }
         }
 
-        agent
+        stage('Chocolatey Pack')
         {
-          label 'linux'
-        }
-
-        steps
-        {
-          // Provide access to "dist/pkg", the previous cleanups removed the files
-          unstash 'package artifacts'
-
-          echo "==> Artifact checksums:"
-          sh "sha256sum dist/pkg/*"
-
-          s3Upload(
-            workingDir: '.',
-            bucket: 'graylog2-releases',
-            path: "graylog-collector-sidecar/${env.TAG_NAME}/",
-            file: "dist/pkg"
-          )
-        }
-
-        post
-        {
-          cleanup
+          agent
           {
-            cleanWs()
+            dockerfile
+            {
+              label 'linux'
+              filename 'Dockerfile.chocolatey'
+              dir 'docker'
+              additionalBuildArgs '-t local/sidecar-chocolatey'
+              reuseNode true
+            }
+          }
+
+          steps
+          {
+            sh 'make package-chocolatey'
+          }
+        }
+
+        stage('Chocolatey Push')
+        {
+          when
+          {
+            buildingTag()
+          }
+
+          agent
+          {
+            dockerfile
+            {
+              label 'linux'
+              filename 'Dockerfile.chocolatey'
+              dir 'docker'
+              additionalBuildArgs '-t local/sidecar-chocolatey'
+              reuseNode true
+            }
+          }
+
+          steps
+          {
+            sh 'make push-chocolatey'
+          }
+        }
+
+        stage('Upload')
+        {
+          when
+          {
+            buildingTag()
+          }
+
+          steps
+          {
+            echo "==> Artifact checksums:"
+            sh "sha256sum dist/pkg/*"
+
+            s3Upload(
+              workingDir: '.',
+              bucket: 'graylog2-releases',
+              path: "graylog-collector-sidecar/${env.TAG_NAME}/",
+              file: "dist/pkg"
+            )
           }
         }
       }
-   }
+
+      post
+      {
+        success
+        {
+          archiveArtifacts 'dist/pkg/*'
+        }
+
+        cleanup
+        {
+          cleanWs()
+        }
+      }
+    }
+  }
 }

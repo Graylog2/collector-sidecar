@@ -11,7 +11,12 @@ else
   COLLECTOR_CHECKSUM=$(sha256sum dist/pkg/graylog_sidecar_installer_${COLLECTOR_VERSION}-${COLLECTOR_REVISION}.exe | cut -d" " -f1)
 fi
 
-sed -i "s/checksum      = '.*'/checksum      = '$COLLECTOR_CHECKSUM'/" dist/chocolatey/tools/chocolateyinstall.ps1
-sed -i "s/url           = '.*'/url           = 'https:\/\/downloads.graylog.org\/releases\/graylog-collector-sidecar\/${COLLECTOR_VERSION}\/graylog_sidecar_installer_${COLLECTOR_VERSION}-${COLLECTOR_REVISION}.exe'/" dist/chocolatey/tools/chocolateyinstall.ps1
+root_url="https://downloads.graylog.org/releases/graylog-collector-sidecar"
+version_url="${root_url}/${COLLECTOR_VERSION}/graylog_sidecar_installer_${COLLECTOR_VERSION}-${COLLECTOR_REVISION}.exe"
+
+sed -e "s,%%CHECKSUM%%,$COLLECTOR_CHECKSUM,g" \
+	-e "s,%%URL%%,$version_url,g" \
+	"dist/chocolatey/tools/chocolateyinstall.ps1.template" \
+	> "dist/chocolatey/tools/chocolateyinstall.ps1"
 
 find dist/pkg -name "graylog_sidecar_installer*.exe" -exec /bin/bash -c "sha256sum {} | cut -d' ' -f1 > {}.sha256.txt" \;

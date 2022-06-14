@@ -1,0 +1,9 @@
+FROM chocolatey/choco:v1.1.0
+
+# The choco binary wants to write to /opt/chocolatey and Jenkins is running
+# the container as non-root user.
+RUN chmod 777 /opt/chocolatey
+
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y make \
+    && apt-get clean

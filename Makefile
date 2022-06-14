@@ -9,7 +9,7 @@ ifeq ($(strip $(COLLECTOR_VERSION)),)
 $(error COLLECTOR_VERSION is not set)
 endif
 
-targets = graylog-sidecar sidecar-collector build dist/cache dist/tmp-build dist/tmp-dest dist/pkg dist/collectors resource_windows.syso
+targets = graylog-sidecar sidecar-collector build dist/cache dist/tmp-build dist/tmp-dest dist/pkg dist/collectors resource_windows.syso dist/chocolatey/tools/chocolateyinstall.ps1
 dist_targets = vendor
 
 GIT_REV=$(shell git rev-parse --short HEAD)
@@ -111,7 +111,16 @@ package-linux32: ## Create Linux i386 system package
 package-windows: prepare-package ## Create Windows installer
 	@mkdir -p dist/pkg
 	makensis -DVERSION=$(COLLECTOR_VERSION) -DVERSION_SUFFIX=$(COLLECTOR_VERSION_SUFFIX) -DREVISION=$(COLLECTOR_REVISION) dist/recipe.nsi
+
+package-chocolatey: ## Create Chocolatey .nupkg file
+	# This needs to run in a Docker container based on the Dockerfile.chocolatey image!
 	dist/chocolatey/gensha.sh $(COLLECTOR_VERSION) $(COLLECTOR_REVISION) $(COLLECTOR_VERSION_SUFFIX)
+	cd dist/chocolatey && choco pack graylog-sidecar.nuspec --version $(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX) --out ../pkg
+
+push-chocolatey: ## Push Chocolatey .nupkg file
+	# This needs to run in a Docker container based on the Dockerfile.chocolatey image!
+	# Escape the CHOCO_API_KEY to avoid printing it in the logs!
+	choco push dist/pkg/graylog-sidecar.$(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX).nupkg -k=$$CHOCO_API_KEY
 
 package-tar: ## Create tar archive for all platforms
 	@mkdir -p dist/pkg
