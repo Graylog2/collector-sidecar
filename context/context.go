@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/Graylog2/collector-sidecar/cfgfile"
 	"github.com/Graylog2/collector-sidecar/common"
@@ -99,6 +100,15 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 	// log_path
 	if ctx.UserConfig.LogPath == "" {
 		log.Fatal("No log directory was configured.")
+	}
+
+	// collector_validation_timeout
+	if ctx.UserConfig.CollectorValidationTimeoutString == "" {
+		log.Fatal("No collector validation timeout was configured.")
+	}
+	ctx.UserConfig.CollectorValidationTimeout, err = time.ParseDuration(ctx.UserConfig.CollectorValidationTimeoutString)
+	if err != nil {
+		log.Fatal("Cannot parse validation timeout duration: ", err)
 	}
 
 	// collector_configuration_directory

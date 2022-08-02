@@ -168,12 +168,12 @@ func (b *Backend) ValidateConfigurationFile(context *context.Ctx) (error, string
 	}()
 
 	select {
-	case <-time.After(time.Duration(30) * time.Second):
+	case <-time.After(context.UserConfig.CollectorValidationTimeout):
 		if err := cmd.Process.Kill(); err != nil {
 			err = fmt.Errorf("Failed to kill validation process: %s", err)
 			return err, ""
 		}
-		return fmt.Errorf("Unable to validate configuration, timeout reached."), ""
+		return fmt.Errorf("Unable to validate configuration, timeout <%v> reached", context.UserConfig.CollectorValidationTimeout), ""
 	case err := <-done:
 		if err != nil {
 			close(done)
