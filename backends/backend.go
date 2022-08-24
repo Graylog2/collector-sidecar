@@ -46,26 +46,26 @@ type Backend struct {
 	backendStatus        system.VerboseStatus
 }
 
-func BackendFromResponse(response graylog.ResponseCollectorBackend, ctx *context.Ctx) *Backend {
+func BackendFromResponse(response graylog.ResponseCollectorBackend, configId string, ctx *context.Ctx) *Backend {
 	return &Backend{
 		Enabled:              common.NewTrue(),
 		Id:                   response.Id,
-		Name:                 response.Name,
+		Name:                 response.Name + "-" + configId,
 		ServiceType:          response.ServiceType,
 		OperatingSystem:      response.OperatingSystem,
 		ExecutablePath:       response.ExecutablePath,
-		ConfigurationPath:    BuildConfigurationPath(response, ctx),
+		ConfigurationPath:    BuildConfigurationPath(response, configId, ctx),
 		ExecuteParameters:    response.ExecuteParameters,
 		ValidationParameters: response.ValidationParameters,
 		backendStatus:        system.VerboseStatus{},
 	}
 }
 
-func BuildConfigurationPath(response graylog.ResponseCollectorBackend, ctx *context.Ctx) string {
+func BuildConfigurationPath(response graylog.ResponseCollectorBackend, configId string, ctx *context.Ctx) string {
 	if response.ConfigurationFileName != "" {
 		return filepath.Join(ctx.UserConfig.CollectorConfigurationDirectory, response.ConfigurationFileName)
 	} else {
-		return filepath.Join(ctx.UserConfig.CollectorConfigurationDirectory, response.Name+".conf")
+		return filepath.Join(ctx.UserConfig.CollectorConfigurationDirectory, configId, response.Name+".conf")
 	}
 }
 

@@ -18,10 +18,9 @@ package backends
 import (
 	"bytes"
 	"fmt"
+	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
 	"io/ioutil"
-
-	"github.com/Graylog2/collector-sidecar/common"
 )
 
 func (b *Backend) render() []byte {

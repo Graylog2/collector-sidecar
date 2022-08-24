@@ -41,6 +41,7 @@ func StartPeriodicals(context *context.Ctx) {
 		configChecksums := make(map[string]string)
 		backendChecksum := ""
 		assignmentChecksum := ""
+		var collectorBackends []graylog.ResponseCollectorBackend
 		logOnce := true
 		for {
 			time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
@@ -56,10 +57,23 @@ func StartPeriodicals(context *context.Ctx) {
 			if err != nil {
 				continue
 			}
-			backendChecksum = backendResponse.Checksum
+			if !backendResponse.NotModified {
+				collectorBackends = backendResponse.Backends
+				backendChecksum = backendResponse.Checksum
+			}
 
 			if !regResponse.NotModified || !backendResponse.NotModified {
 				modified := assignments.Store.Update(regResponse.Assignments)
+
+				backendList := []backends.Backend{}
+				for _, backendEntry := range collectorBackends {
+					configId := assignments.Store.GetAssignment(backendEntry.Id)
+					if configId != "" {
+						backendList = append(backendList, *backends.BackendFromResponse(backendEntry, configId, context))
+					}
+				}
+				backends.Store.Update(backendList)
+
 				// regResponse.NotModified is always false, because graylog does not implement caching yet.
 				// Thus we need to double check.
 				if modified || !backendResponse.NotModified {
@@ -95,17 +109,6 @@ func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx
 		log.Error("Can't fetch collector list from Graylog API: ", err)
 		return response, err
 	}
-	if response.NotModified {
-		// etag match, skipping all other actions
-		return response, nil
-	}
-
-	backendList := []backends.Backend{}
-	for _, backendEntry := range response.Backends {
-		backendList = append(backendList, *backends.BackendFromResponse(backendEntry, ctx))
-	}
-	backends.Store.Update(backendList)
-
 	return response, nil
 }
 
