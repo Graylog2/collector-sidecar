@@ -276,14 +276,12 @@ func NewStatusRequest() graylog.StatusRequest {
 		}
 	}
 
-	switch {
-	default:
-		combinedStatus = backends.StatusRunning
-	case stoppedCount != 0:
-		combinedStatus = backends.StatusStopped
-		fallthrough
-	case errorCount != 0:
+	if errorCount != 0 {
 		combinedStatus = backends.StatusError
+	} else if stoppedCount != 0 {
+		combinedStatus = backends.StatusStopped
+	} else {
+		combinedStatus = backends.StatusRunning
 	}
 
 	statusMessage := strconv.Itoa(runningCount) + " running / " +
