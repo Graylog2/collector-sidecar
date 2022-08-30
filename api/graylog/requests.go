@@ -30,6 +30,7 @@ type NodeDetailsRequest struct {
 	LogFileList     []common.File   `json:"log_file_list,omitempty"`
 	Metrics         *MetricsRequest `json:"metrics,omitempty"`
 	Status          *StatusRequest  `json:"status,omitempty"`
+	Tags            []string        `json:"tags,omitempty"`
 }
 
 type StatusRequestBackend struct {
