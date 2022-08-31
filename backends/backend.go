@@ -35,6 +35,7 @@ import (
 type Backend struct {
 	Enabled              *bool
 	Id                   string
+	ConfigId             string
 	Name                 string
 	ServiceType          string
 	OperatingSystem      string
@@ -49,7 +50,8 @@ type Backend struct {
 func BackendFromResponse(response graylog.ResponseCollectorBackend, configId string, ctx *context.Ctx) *Backend {
 	return &Backend{
 		Enabled:              common.NewTrue(),
-		Id:                   response.Id,
+		Id:                   response.Id + "-" + configId,
+		ConfigId:             configId,
 		Name:                 response.Name + "-" + configId,
 		ServiceType:          response.ServiceType,
 		OperatingSystem:      response.OperatingSystem,

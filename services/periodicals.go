@@ -42,6 +42,7 @@ func StartPeriodicals(context *context.Ctx) {
 		backendChecksum := ""
 		assignmentChecksum := ""
 		var collectorBackends []graylog.ResponseCollectorBackend
+		var lastRegResponse graylog.ResponseCollectorRegistration
 		logOnce := true
 		for {
 			time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
@@ -51,7 +52,11 @@ func StartPeriodicals(context *context.Ctx) {
 			if err != nil {
 				continue
 			}
-			assignmentChecksum = regResponse.Checksum
+			if !regResponse.NotModified {
+				lastRegResponse = regResponse
+				assignmentChecksum = regResponse.Checksum
+			}
+
 			// backend list is needed before configuration assignments are updated
 			backendResponse, err := fetchBackendList(httpClient, backendChecksum, context)
 			if err != nil {
@@ -63,19 +68,22 @@ func StartPeriodicals(context *context.Ctx) {
 			}
 
 			if !regResponse.NotModified || !backendResponse.NotModified {
-				modified := assignments.Store.Update(regResponse.Assignments)
+				modified := assignments.Store.Update(lastRegResponse.Assignments)
 
 				backendList := []backends.Backend{}
-				for _, backendEntry := range collectorBackends {
-					configId := assignments.Store.GetAssignment(backendEntry.Id)
-					if configId != "" {
-						backendList = append(backendList, *backends.BackendFromResponse(backendEntry, configId, context))
+				for _, assignment := range lastRegResponse.Assignments {
+					for _, configId := range assignment.GetConfigIdsFromAssignment() {
+						for _, backend := range collectorBackends {
+							if backend.Id == assignment.BackendId {
+								backendList = append(backendList, *backends.BackendFromResponse(backend, configId, context))
+							}
+						}
 					}
 				}
 				backends.Store.Update(backendList)
 
 				// regResponse.NotModified is always false, because graylog does not implement caching yet.
-				// Thus we need to double check.
+				// Thus, we need to double-check.
 				if modified || !backendResponse.NotModified {
 					configChecksums = make(map[string]string)
 				}
@@ -92,6 +100,9 @@ func StartPeriodicals(context *context.Ctx) {
 					logOnce = true
 				}
 			}
+			log.Debugf("backend store %v", *backends.Store)
+			log.Debugf("assignments store %v", assignments.Store.GetAll())
+			log.Debugf("runner store %v", daemon.Daemon.Runner)
 			checkForUpdateAndRestart(httpClient, configChecksums, context)
 		}
 	}()

@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	// global store of configuration assignments, [backendId]ConfigurationId
+	// global store of configuration assignments, [backendId-configurationID]ConfigurationId
 	Store = &assignmentStore{make(map[string]string)}
 )
 
@@ -30,13 +30,22 @@ type assignmentStore struct {
 }
 
 type ConfigurationAssignment struct {
-	BackendId       string `json:"collector_id"`
-	ConfigurationId string `json:"configuration_id"`
+	BackendId        string   `json:"collector_id"`
+	ConfigurationId  string   `json:"configuration_id,omitempty"`
+	ConfigurationIds []string `json:"configuration_ids,omitempty"`
 }
 
-func (as *assignmentStore) SetAssignment(assignment *ConfigurationAssignment) {
-	if as.assignments[assignment.BackendId] != assignment.ConfigurationId {
-		as.assignments[assignment.BackendId] = assignment.ConfigurationId
+// Old servers support only one configuration per collector
+func (ca *ConfigurationAssignment) GetConfigIdsFromAssignment() []string {
+	if ca.ConfigurationIds == nil && ca.ConfigurationId != "" {
+		return []string{ca.ConfigurationId}
+	}
+	return ca.ConfigurationIds
+}
+
+func (as *assignmentStore) SetAssignment(backendId string, configId string) {
+	if as.assignments[backendId] != configId {
+		as.assignments[backendId] = configId
 	}
 }
 
@@ -60,16 +69,29 @@ func (as *assignmentStore) AssignedBackendIds() []string {
 	return result
 }
 
+func expandAssignments(assignments []ConfigurationAssignment) map[string]string {
+	expandedAssignments := make(map[string]string)
+
+	for _, assignment := range assignments {
+		for _, configId := range assignment.GetConfigIdsFromAssignment() {
+			expandedAssignments[assignment.BackendId+"-"+configId] = configId
+		}
+	}
+	return expandedAssignments
+}
+
 func (as *assignmentStore) Update(assignments []ConfigurationAssignment) bool {
+	expandedAssignments := expandAssignments(assignments)
+
 	beforeUpdate := make(map[string]string)
 	for k, v := range as.assignments {
 		beforeUpdate[k] = v
 	}
-	if len(assignments) != 0 {
+	if len(expandedAssignments) != 0 {
 		var activeIds []string
-		for _, assignment := range assignments {
-			Store.SetAssignment(&assignment)
-			activeIds = append(activeIds, assignment.BackendId)
+		for backendId, assignment := range expandedAssignments {
+			Store.SetAssignment(backendId, assignment)
+			activeIds = append(activeIds, backendId)
 		}
 		Store.cleanup(activeIds)
 	} else {
