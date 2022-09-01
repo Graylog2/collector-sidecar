@@ -39,41 +39,38 @@ func StartPeriodicals(context *context.Ctx) {
 
 	go func() {
 		configChecksums := make(map[string]string)
-		backendChecksum := ""
-		assignmentChecksum := ""
-		var collectorBackends []graylog.ResponseCollectorBackend
+		var lastBackendResponse graylog.ResponseBackendList
 		var lastRegResponse graylog.ResponseCollectorRegistration
 		logOnce := true
 		for {
 			time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
 
 			// registration regResponse contains configuration assignments
-			regResponse, err := updateCollectorRegistration(httpClient, assignmentChecksum, context)
+			regResponse, err := updateCollectorRegistration(httpClient, lastRegResponse.Checksum, context)
 			if err != nil {
 				continue
 			}
 			if !regResponse.NotModified {
 				lastRegResponse = regResponse
-				assignmentChecksum = regResponse.Checksum
 			}
 
 			// backend list is needed before configuration assignments are updated
-			backendResponse, err := fetchBackendList(httpClient, backendChecksum, context)
+			backendResponse, err := fetchBackendList(httpClient, lastBackendResponse.Checksum, context)
 			if err != nil {
 				continue
 			}
 			if !backendResponse.NotModified {
-				collectorBackends = backendResponse.Backends
-				backendChecksum = backendResponse.Checksum
+				lastBackendResponse = backendResponse
 			}
 
 			if !regResponse.NotModified || !backendResponse.NotModified {
 				modified := assignments.Store.Update(lastRegResponse.Assignments)
 
 				backendList := []backends.Backend{}
+				// TODO this is inefficient
 				for _, assignment := range lastRegResponse.Assignments {
 					for _, configId := range assignment.GetConfigIdsFromAssignment() {
-						for _, backend := range collectorBackends {
+						for _, backend := range lastBackendResponse.Backends {
 							if backend.Id == assignment.BackendId {
 								backendList = append(backendList, *backends.BackendFromResponse(backend, configId, context))
 							}
