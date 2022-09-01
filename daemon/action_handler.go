@@ -23,7 +23,7 @@ import (
 
 func HandleCollectorActions(actions []graylog.ResponseCollectorAction) {
 	for _, action := range actions {
-		backend := backends.Store.GetBackendById(action.BackendId)
+		backend := backends.Store.GetBackend(action.BackendId)
 		if backend == nil {
 			log.Errorf("Got action for non-existing collector: %s", action.BackendId)
 			continue
