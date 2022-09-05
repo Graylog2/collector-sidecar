@@ -154,6 +154,7 @@ func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.C
 		registration.NodeDetails.IP = common.GetHostIP()
 		registration.NodeDetails.Status = status
 		registration.NodeDetails.Metrics = metrics
+		registration.NodeDetails.CollectorConfigurationDirectory = ctx.UserConfig.CollectorConfigurationDirectory
 		if len(ctx.UserConfig.ListLogFiles) > 0 {
 			fileList := common.ListFiles(ctx.UserConfig.ListLogFiles)
 			buf := new(bytes.Buffer)

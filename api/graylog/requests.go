@@ -25,11 +25,12 @@ type RegistrationRequest struct {
 }
 
 type NodeDetailsRequest struct {
-	OperatingSystem string          `json:"operating_system"`
-	IP              string          `json:"ip,omitempty"`
-	LogFileList     []common.File   `json:"log_file_list,omitempty"`
-	Metrics         *MetricsRequest `json:"metrics,omitempty"`
-	Status          *StatusRequest  `json:"status,omitempty"`
+	OperatingSystem                 string          `json:"operating_system"`
+	IP                              string          `json:"ip,omitempty"`
+	LogFileList                     []common.File   `json:"log_file_list,omitempty"`
+	Metrics                         *MetricsRequest `json:"metrics,omitempty"`
+	Status                          *StatusRequest  `json:"status,omitempty"`
+	CollectorConfigurationDirectory string          `json:"collector_configuration_directory"`
 }
 
 type StatusRequestBackend struct {
