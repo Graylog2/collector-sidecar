@@ -69,11 +69,10 @@ func StartPeriodicals(context *context.Ctx) {
 				backendList := []backends.Backend{}
 				// TODO this is inefficient
 				for _, assignment := range lastRegResponse.Assignments {
-					for _, configId := range assignment.GetConfigIdsFromAssignment() {
-						for _, backend := range lastBackendResponse.Backends {
-							if backend.Id == assignment.BackendId {
-								backendList = append(backendList, *backends.BackendFromResponse(backend, configId, context))
-							}
+					configId := assignment.ConfigurationId
+					for _, backend := range lastBackendResponse.Backends {
+						if backend.Id == assignment.BackendId {
+							backendList = append(backendList, *backends.BackendFromResponse(backend, configId, context))
 						}
 					}
 				}

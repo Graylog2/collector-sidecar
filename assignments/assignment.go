@@ -30,17 +30,8 @@ type assignmentStore struct {
 }
 
 type ConfigurationAssignment struct {
-	BackendId        string   `json:"collector_id"`
-	ConfigurationId  string   `json:"configuration_id,omitempty"`
-	ConfigurationIds []string `json:"configuration_ids,omitempty"`
-}
-
-// Old servers support only one configuration per collector
-func (ca *ConfigurationAssignment) GetConfigIdsFromAssignment() []string {
-	if ca.ConfigurationIds == nil && ca.ConfigurationId != "" {
-		return []string{ca.ConfigurationId}
-	}
-	return ca.ConfigurationIds
+	BackendId       string `json:"collector_id"`
+	ConfigurationId string `json:"configuration_id"`
 }
 
 func (as *assignmentStore) SetAssignment(backendId string, configId string) {
@@ -73,9 +64,8 @@ func expandAssignments(assignments []ConfigurationAssignment) map[string]string 
 	expandedAssignments := make(map[string]string)
 
 	for _, assignment := range assignments {
-		for _, configId := range assignment.GetConfigIdsFromAssignment() {
-			expandedAssignments[assignment.BackendId+"-"+configId] = configId
-		}
+		configId := assignment.ConfigurationId
+		expandedAssignments[assignment.BackendId+"-"+configId] = configId
 	}
 	return expandedAssignments
 }
