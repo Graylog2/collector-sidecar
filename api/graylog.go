@@ -33,7 +33,6 @@ import (
 	"github.com/Graylog2/collector-sidecar/daemon"
 	"github.com/Graylog2/collector-sidecar/logger"
 	"github.com/Graylog2/collector-sidecar/system"
-	"github.com/hashicorp/go-version"
 )
 
 var (
@@ -41,9 +40,9 @@ var (
 	configurationOverride = false
 )
 
-func GetServerVersion(httpClient *http.Client, ctx *context.Ctx) (*version.Version, error) {
+func GetServerVersion(httpClient *http.Client, ctx *context.Ctx) (*rest.Version, error) {
 	// In case of an error just assume 4.0.0
-	fallbackVersion, _ := version.NewVersion("4.0.0")
+	fallbackVersion, _ := rest.NewVersion("4.0.0")
 
 	c := rest.NewClient(httpClient, ctx)
 	c.BaseURL = ctx.ServerUrl
@@ -58,7 +57,7 @@ func GetServerVersion(httpClient *http.Client, ctx *context.Ctx) (*version.Versi
 		log.Errorf("Error fetching server version %v", err)
 		return fallbackVersion, err
 	}
-	return version.NewVersion(versionResponse.Version)
+	return rest.NewVersion(versionResponse.Version)
 }
 
 func RequestBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx) (graylog.ResponseBackendList, error) {
@@ -158,7 +157,7 @@ func RequestConfiguration(
 	return configurationResponse, nil
 }
 
-func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.Ctx, serverVersion *version.Version, status *graylog.StatusRequest) (graylog.ResponseCollectorRegistration, error) {
+func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.Ctx, serverVersion *rest.Version, status *graylog.StatusRequest) (graylog.ResponseCollectorRegistration, error) {
 	c := rest.NewClient(httpClient, ctx)
 	c.BaseURL = ctx.ServerUrl
 
@@ -175,8 +174,7 @@ func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.C
 		registration.NodeDetails.IP = common.GetHostIP()
 		registration.NodeDetails.Status = status
 		registration.NodeDetails.Metrics = metrics
-		minVersion, _ := version.NewVersion("4.4.0")
-		if serverVersion.GreaterThanOrEqual(minVersion) {
+		if serverVersion.SupportsExtendedNodeDetails() {
 			registration.NodeDetails.CollectorConfigurationDirectory = ctx.UserConfig.CollectorConfigurationDirectory
 		}
 		if len(ctx.UserConfig.ListLogFiles) > 0 {
@@ -278,12 +276,15 @@ func GetTlsConfig(ctx *context.Ctx) *tls.Config {
 	return tlsConfig
 }
 
-func NewStatusRequest() graylog.StatusRequest {
+func NewStatusRequest(serverVersion *rest.Version) graylog.StatusRequest {
 	statusRequest := graylog.StatusRequest{Backends: make([]graylog.StatusRequestBackend, 0)}
 	combinedStatus := backends.StatusUnknown
 	runningCount, stoppedCount, errorCount := 0, 0, 0
 
 	for id, runner := range daemon.Daemon.Runner {
+		if !serverVersion.SupportsMultipleBackends() {
+			id = strings.Split(id, "-")[0]
+		}
 		backendStatus := runner.GetBackend().Status()
 		statusRequest.Backends = append(statusRequest.Backends, graylog.StatusRequestBackend{
 			Id:             id,

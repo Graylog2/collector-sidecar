@@ -69,7 +69,7 @@ func startHeartbeat(ctx *context.Ctx, done chan bool, metrics chan time.Duration
 			return
 		default:
 			time.Sleep(time.Duration(ctx.UserConfig.UpdateInterval) * time.Second)
-			statusRequest := api.NewStatusRequest()
+			statusRequest := api.NewStatusRequest(nil)
 			t := time.Now()
 			response, err := api.UpdateRegistration(httpClient, "nochecksum", ctx, nil, &statusRequest)
 			if err != nil {
