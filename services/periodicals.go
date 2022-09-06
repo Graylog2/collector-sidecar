@@ -16,6 +16,7 @@
 package services
 
 import (
+	"github.com/hashicorp/go-version"
 	"net/http"
 	"time"
 
@@ -45,8 +46,10 @@ func StartPeriodicals(context *context.Ctx) {
 		for {
 			time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
 
+			serverVersion, _ := api.GetServerVersion(httpClient, context)
+
 			// registration regResponse contains configuration assignments
-			regResponse, err := updateCollectorRegistration(httpClient, lastRegResponse.Checksum, context)
+			regResponse, err := updateCollectorRegistration(httpClient, lastRegResponse.Checksum, context, serverVersion)
 			if err != nil {
 				continue
 			}
@@ -105,9 +108,9 @@ func StartPeriodicals(context *context.Ctx) {
 }
 
 // report collector status to Graylog server and receive assignments
-func updateCollectorRegistration(httpClient *http.Client, checksum string, context *context.Ctx) (graylog.ResponseCollectorRegistration, error) {
+func updateCollectorRegistration(httpClient *http.Client, checksum string, context *context.Ctx, serverVersion *version.Version) (graylog.ResponseCollectorRegistration, error) {
 	statusRequest := api.NewStatusRequest()
-	return api.UpdateRegistration(httpClient, checksum, context, &statusRequest)
+	return api.UpdateRegistration(httpClient, checksum, context, serverVersion, &statusRequest)
 }
 
 func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx) (graylog.ResponseBackendList, error) {

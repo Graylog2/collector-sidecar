@@ -42,6 +42,12 @@ type ResponseBackendList struct {
 	NotModified bool
 }
 
+type ServerVersionResponse struct {
+	ClusterId string `json:"cluster_id"`
+	NodeId    string `json:"node_id"`
+	Version   string `json:"version"`
+}
+
 type ResponseCollectorBackend struct {
 	Id                    string `json:"id"`
 	Name                  string `json:"name"`

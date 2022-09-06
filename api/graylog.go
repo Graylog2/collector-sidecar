@@ -33,12 +33,33 @@ import (
 	"github.com/Graylog2/collector-sidecar/daemon"
 	"github.com/Graylog2/collector-sidecar/logger"
 	"github.com/Graylog2/collector-sidecar/system"
+	"github.com/hashicorp/go-version"
 )
 
 var (
 	log                   = logger.Log()
 	configurationOverride = false
 )
+
+func GetServerVersion(httpClient *http.Client, ctx *context.Ctx) (*version.Version, error) {
+	// In case of an error just assume 4.0.0
+	fallbackVersion, _ := version.NewVersion("4.0.0")
+
+	c := rest.NewClient(httpClient, ctx)
+	c.BaseURL = ctx.ServerUrl
+	r, err := c.NewRequest("GET", "/", nil, nil)
+	if err != nil {
+		log.Errorf("Cannot retrieve server version %v", err)
+		return fallbackVersion, err
+	}
+	versionResponse := graylog.ServerVersionResponse{}
+	resp, err := c.Do(r, &versionResponse)
+	if err != nil || resp == nil {
+		log.Errorf("Error fetching server version %v", err)
+		return fallbackVersion, err
+	}
+	return version.NewVersion(versionResponse.Version)
+}
 
 func RequestBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx) (graylog.ResponseBackendList, error) {
 	c := rest.NewClient(httpClient, ctx)
@@ -137,7 +158,7 @@ func RequestConfiguration(
 	return configurationResponse, nil
 }
 
-func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.Ctx, status *graylog.StatusRequest) (graylog.ResponseCollectorRegistration, error) {
+func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.Ctx, serverVersion *version.Version, status *graylog.StatusRequest) (graylog.ResponseCollectorRegistration, error) {
 	c := rest.NewClient(httpClient, ctx)
 	c.BaseURL = ctx.ServerUrl
 
@@ -154,7 +175,10 @@ func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.C
 		registration.NodeDetails.IP = common.GetHostIP()
 		registration.NodeDetails.Status = status
 		registration.NodeDetails.Metrics = metrics
-		registration.NodeDetails.CollectorConfigurationDirectory = ctx.UserConfig.CollectorConfigurationDirectory
+		minVersion, _ := version.NewVersion("4.4.0")
+		if serverVersion.GreaterThanOrEqual(minVersion) {
+			registration.NodeDetails.CollectorConfigurationDirectory = ctx.UserConfig.CollectorConfigurationDirectory
+		}
 		if len(ctx.UserConfig.ListLogFiles) > 0 {
 			fileList := common.ListFiles(ctx.UserConfig.ListLogFiles)
 			buf := new(bytes.Buffer)

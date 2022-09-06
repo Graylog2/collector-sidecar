@@ -30,7 +30,7 @@ type NodeDetailsRequest struct {
 	LogFileList                     []common.File   `json:"log_file_list,omitempty"`
 	Metrics                         *MetricsRequest `json:"metrics,omitempty"`
 	Status                          *StatusRequest  `json:"status,omitempty"`
-	CollectorConfigurationDirectory string          `json:"collector_configuration_directory"`
+	CollectorConfigurationDirectory string          `json:"collector_configuration_directory,omitempty"`
 }
 
 type StatusRequestBackend struct {
