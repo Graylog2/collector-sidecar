@@ -42,8 +42,12 @@ func StartPeriodicals(context *context.Ctx) {
 		var lastBackendResponse graylog.ResponseBackendList
 		var lastRegResponse graylog.ResponseCollectorRegistration
 		logOnce := true
+		firstRun := true
 		for {
-			time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
+			if !firstRun {
+				time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
+			}
+			firstRun = false
 
 			serverVersion, _ := api.GetServerVersion(httpClient, context)
 
