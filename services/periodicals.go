@@ -107,7 +107,7 @@ func StartPeriodicals(context *context.Ctx) {
 }
 
 // report collector status to Graylog server and receive assignments
-func updateCollectorRegistration(httpClient *http.Client, checksum string, context *context.Ctx, serverVersion *rest.Version) (graylog.ResponseCollectorRegistration, error) {
+func updateCollectorRegistration(httpClient *http.Client, checksum string, context *context.Ctx, serverVersion *api.GraylogVersion) (graylog.ResponseCollectorRegistration, error) {
 	statusRequest := api.NewStatusRequest(serverVersion)
 	return api.UpdateRegistration(httpClient, checksum, context, serverVersion, &statusRequest)
 }

@@ -40,9 +40,9 @@ var (
 	configurationOverride = false
 )
 
-func GetServerVersion(httpClient *http.Client, ctx *context.Ctx) (*rest.Version, error) {
+func GetServerVersion(httpClient *http.Client, ctx *context.Ctx) (*GraylogVersion, error) {
 	// In case of an error just assume 4.0.0
-	fallbackVersion, _ := rest.NewVersion("4.0.0")
+	fallbackVersion, _ := NewGraylogVersion("4.0.0")
 
 	c := rest.NewClient(httpClient, ctx)
 	c.BaseURL = ctx.ServerUrl
@@ -57,7 +57,7 @@ func GetServerVersion(httpClient *http.Client, ctx *context.Ctx) (*rest.Version,
 		log.Errorf("Error fetching server version %v", err)
 		return fallbackVersion, err
 	}
-	return rest.NewVersion(versionResponse.Version)
+	return NewGraylogVersion(versionResponse.Version)
 }
 
 func RequestBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx) (graylog.ResponseBackendList, error) {
@@ -157,7 +157,7 @@ func RequestConfiguration(
 	return configurationResponse, nil
 }
 
-func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.Ctx, serverVersion *rest.Version, status *graylog.StatusRequest) (graylog.ResponseCollectorRegistration, error) {
+func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.Ctx, serverVersion *GraylogVersion, status *graylog.StatusRequest) (graylog.ResponseCollectorRegistration, error) {
 	c := rest.NewClient(httpClient, ctx)
 	c.BaseURL = ctx.ServerUrl
 
@@ -276,7 +276,7 @@ func GetTlsConfig(ctx *context.Ctx) *tls.Config {
 	return tlsConfig
 }
 
-func NewStatusRequest(serverVersion *rest.Version) graylog.StatusRequest {
+func NewStatusRequest(serverVersion *GraylogVersion) graylog.StatusRequest {
 	statusRequest := graylog.StatusRequest{Backends: make([]graylog.StatusRequestBackend, 0)}
 	combinedStatus := backends.StatusUnknown
 	runningCount, stoppedCount, errorCount := 0, 0, 0
