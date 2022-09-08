@@ -36,6 +36,7 @@ type SidecarConfig struct {
 	ListLogFiles                     []string      `config:"list_log_files"`
 	CollectorBinariesWhitelist       []string      `config:"collector_binaries_whitelist"`
 	CollectorBinariesAccesslist      []string      `config:"collector_binaries_accesslist"`
+	Tags                             []string      `config:"tags"`
 }
 
 // Default Sidecar configuration
@@ -68,6 +69,7 @@ collector_binaries_accesslist:
   - "/usr/share/journalbeat/bin/journalbeat"
   - "/usr/bin/nxlog"
   - "/opt/nxlog/bin/nxlog"
+tags: []
 `
 
 // Windows specific options. Gets merged over `CommonDefaults`

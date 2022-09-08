@@ -62,6 +62,13 @@ server_api_token: ""
 # Directory where the sidecar generates configurations for collectors.
 #collector_configuration_directory: "/var/lib/graylog-sidecar/generated"
 
+# A list of tags to assign to this sidecar. Collector configuration matching any of these tags will automatically be
+# applied to the sidecar.
+# Example:
+#    tags:
+#    - apache-logs
+#    - dns-logs
+
 # A list of binaries which are allowed to be executed by the Sidecar. An empty list disables the access list feature.
 # Wildcards can be used, for a full pattern description see https://golang.org/pkg/path/filepath/#Match
 # Example:

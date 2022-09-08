@@ -145,6 +145,8 @@ func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.C
 
 	registration.NodeName = ctx.UserConfig.NodeName
 	registration.NodeDetails.OperatingSystem = common.GetSystemName()
+	registration.NodeDetails.Tags = ctx.UserConfig.Tags
+
 	if ctx.UserConfig.SendStatus {
 		metrics := &graylog.MetricsRequest{
 			Disks75: common.GetFileSystemList75(),
