@@ -165,6 +165,7 @@ func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.C
 
 	registration.NodeName = ctx.UserConfig.NodeName
 	registration.NodeDetails.OperatingSystem = common.GetSystemName()
+
 	if ctx.UserConfig.SendStatus {
 		metrics := &graylog.MetricsRequest{
 			Disks75: common.GetFileSystemList75(),
@@ -176,6 +177,7 @@ func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.C
 		registration.NodeDetails.Metrics = metrics
 		if serverVersion.SupportsExtendedNodeDetails() {
 			registration.NodeDetails.CollectorConfigurationDirectory = ctx.UserConfig.CollectorConfigurationDirectory
+			registration.NodeDetails.Tags = ctx.UserConfig.Tags
 		}
 		if len(ctx.UserConfig.ListLogFiles) > 0 {
 			fileList := common.ListFiles(ctx.UserConfig.ListLogFiles)
@@ -302,14 +304,12 @@ func NewStatusRequest(serverVersion *GraylogVersion) graylog.StatusRequest {
 		}
 	}
 
-	switch {
-	default:
-		combinedStatus = backends.StatusRunning
-	case stoppedCount != 0:
-		combinedStatus = backends.StatusStopped
-		fallthrough
-	case errorCount != 0:
+	if errorCount != 0 {
 		combinedStatus = backends.StatusError
+	} else if stoppedCount != 0 {
+		combinedStatus = backends.StatusStopped
+	} else {
+		combinedStatus = backends.StatusRunning
 	}
 
 	statusMessage := strconv.Itoa(runningCount) + " running / " +

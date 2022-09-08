@@ -31,6 +31,7 @@ type NodeDetailsRequest struct {
 	Metrics                         *MetricsRequest `json:"metrics,omitempty"`
 	Status                          *StatusRequest  `json:"status,omitempty"`
 	CollectorConfigurationDirectory string          `json:"collector_configuration_directory,omitempty"`
+	Tags                            []string        `json:"tags,omitempty"`
 }
 
 type StatusRequestBackend struct {
