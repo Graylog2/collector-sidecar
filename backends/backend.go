@@ -64,11 +64,7 @@ func BackendFromResponse(response graylog.ResponseCollectorBackend, configId str
 }
 
 func BuildConfigurationPath(response graylog.ResponseCollectorBackend, configId string, ctx *context.Ctx) string {
-	if response.ConfigurationFileName != "" {
-		return filepath.Join(ctx.UserConfig.CollectorConfigurationDirectory, response.ConfigurationFileName)
-	} else {
-		return filepath.Join(ctx.UserConfig.CollectorConfigurationDirectory, configId, response.Name+".conf")
-	}
+	return filepath.Join(ctx.UserConfig.CollectorConfigurationDirectory, configId, response.Name+".conf")
 }
 
 func (b *Backend) Equals(a *Backend) bool {
