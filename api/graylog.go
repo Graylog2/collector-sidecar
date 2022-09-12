@@ -175,10 +175,6 @@ func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.C
 		registration.NodeDetails.IP = common.GetHostIP()
 		registration.NodeDetails.Status = status
 		registration.NodeDetails.Metrics = metrics
-		if serverVersion.SupportsExtendedNodeDetails() {
-			registration.NodeDetails.CollectorConfigurationDirectory = ctx.UserConfig.CollectorConfigurationDirectory
-			registration.NodeDetails.Tags = ctx.UserConfig.Tags
-		}
 		if len(ctx.UserConfig.ListLogFiles) > 0 {
 			fileList := common.ListFiles(ctx.UserConfig.ListLogFiles)
 			buf := new(bytes.Buffer)
@@ -195,6 +191,10 @@ func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.C
 					" Adjust list_log_file setting.")
 			}
 		}
+	}
+	if serverVersion.SupportsExtendedNodeDetails() {
+		registration.NodeDetails.CollectorConfigurationDirectory = ctx.UserConfig.CollectorConfigurationDirectory
+		registration.NodeDetails.Tags = ctx.UserConfig.Tags
 	}
 
 	r, err := c.NewRequest("PUT", "/sidecars/"+ctx.NodeId, nil, registration)
