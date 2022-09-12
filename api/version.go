@@ -14,7 +14,7 @@ func NewGraylogVersion(v string) (*GraylogVersion, error) {
 	return &GraylogVersion{newVersion}, nil
 }
 
-func (v GraylogVersion) SupportsMultipleBackends() bool {
+func (v *GraylogVersion) SupportsMultipleBackends() bool {
 	// cannot use version.Constraints because of a bug in comparing pre-releases
 	return v.Version.Segments()[0] >= 4 && v.Version.Segments()[1] >= 4
 }
