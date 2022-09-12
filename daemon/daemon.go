@@ -143,7 +143,7 @@ func (dc *DaemonConfig) SyncWithAssignments(context *context.Ctx) {
 
 		// cleanup backends that should not run anymore
 		if backend == nil || assignments.Store.GetAssignment(backend.Id) == "" {
-			log.Info("Removing process runner: " + backend.Name)
+			log.Info("Removing process runner: " + id)
 			dc.DeleteRunner(id)
 		}
 	}
