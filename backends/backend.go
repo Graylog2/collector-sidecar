@@ -82,6 +82,7 @@ func (b *Backend) EqualSettings(a *Backend) bool {
 	aBackend := &Backend{
 		Enabled:              b.Enabled,
 		Id:                   a.Id,
+		ConfigId:             a.ConfigId,
 		Name:                 a.Name,
 		ServiceType:          a.ServiceType,
 		OperatingSystem:      a.OperatingSystem,
