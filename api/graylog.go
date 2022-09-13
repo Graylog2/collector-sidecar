@@ -284,15 +284,18 @@ func NewStatusRequest(serverVersion *GraylogVersion) graylog.StatusRequest {
 	runningCount, stoppedCount, errorCount := 0, 0, 0
 
 	for id, runner := range daemon.Daemon.Runner {
-		if !serverVersion.SupportsMultipleBackends() {
-			id = strings.Split(id, "-")[0]
+		collectorId := strings.Split(id, "-")[0]
+		configurationId := ""
+		if serverVersion.SupportsMultipleBackends() {
+			configurationId = strings.Split(id, "-")[1]
 		}
 		backendStatus := runner.GetBackend().Status()
 		statusRequest.Backends = append(statusRequest.Backends, graylog.StatusRequestBackend{
-			Id:             id,
-			Status:         backendStatus.Status,
-			Message:        backendStatus.Message,
-			VerboseMessage: backendStatus.VerboseMessage,
+			CollectorId:     collectorId,
+			ConfigurationId: configurationId,
+			Status:          backendStatus.Status,
+			Message:         backendStatus.Message,
+			VerboseMessage:  backendStatus.VerboseMessage,
 		})
 		switch backendStatus.Status {
 		case backends.StatusRunning:

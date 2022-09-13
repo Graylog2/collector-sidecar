@@ -35,10 +35,11 @@ type NodeDetailsRequest struct {
 }
 
 type StatusRequestBackend struct {
-	Id             string `json:"collector_id"`
-	Status         int    `json:"status"`
-	Message        string `json:"message"`
-	VerboseMessage string `json:"verbose_message"`
+	CollectorId     string `json:"collector_id"`
+	ConfigurationId string `json:"configuration_id,omitempty"`
+	Status          int    `json:"status"`
+	Message         string `json:"message"`
+	VerboseMessage  string `json:"verbose_message"`
 }
 
 type StatusRequest struct {
