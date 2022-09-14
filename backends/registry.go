@@ -50,15 +50,6 @@ func (bs *backendStore) GetBackend(id string) *Backend {
 	return bs.backends[id]
 }
 
-func (bs *backendStore) GetBackendById(id string) *Backend {
-	for _, backend := range bs.backends {
-		if backend.Id == id {
-			return backend
-		}
-	}
-	return nil
-}
-
 func (bs *backendStore) Update(backends []Backend) {
 	if len(backends) != 0 {
 		var activeIds []string

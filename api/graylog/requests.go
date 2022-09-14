@@ -25,19 +25,21 @@ type RegistrationRequest struct {
 }
 
 type NodeDetailsRequest struct {
-	OperatingSystem string          `json:"operating_system"`
-	IP              string          `json:"ip,omitempty"`
-	LogFileList     []common.File   `json:"log_file_list,omitempty"`
-	Metrics         *MetricsRequest `json:"metrics,omitempty"`
-	Status          *StatusRequest  `json:"status,omitempty"`
-	Tags            []string        `json:"tags,omitempty"`
+	OperatingSystem                 string          `json:"operating_system"`
+	IP                              string          `json:"ip,omitempty"`
+	LogFileList                     []common.File   `json:"log_file_list,omitempty"`
+	Metrics                         *MetricsRequest `json:"metrics,omitempty"`
+	Status                          *StatusRequest  `json:"status,omitempty"`
+	CollectorConfigurationDirectory string          `json:"collector_configuration_directory,omitempty"`
+	Tags                            []string        `json:"tags,omitempty"`
 }
 
 type StatusRequestBackend struct {
-	Id             string `json:"collector_id"`
-	Status         int    `json:"status"`
-	Message        string `json:"message"`
-	VerboseMessage string `json:"verbose_message"`
+	CollectorId     string `json:"collector_id"`
+	ConfigurationId string `json:"configuration_id,omitempty"`
+	Status          int    `json:"status"`
+	Message         string `json:"message"`
+	VerboseMessage  string `json:"verbose_message"`
 }
 
 type StatusRequest struct {

@@ -39,29 +39,53 @@ func StartPeriodicals(context *context.Ctx) {
 
 	go func() {
 		configChecksums := make(map[string]string)
-		backendChecksum := ""
-		assignmentChecksum := ""
+		var lastBackendResponse graylog.ResponseBackendList
+		var lastRegResponse graylog.ResponseCollectorRegistration
 		logOnce := true
+		firstRun := true
 		for {
-			time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
+			if !firstRun {
+				time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
+			}
+			firstRun = false
+
+			serverVersion, _ := api.GetServerVersion(httpClient, context)
 
 			// registration regResponse contains configuration assignments
-			regResponse, err := updateCollectorRegistration(httpClient, assignmentChecksum, context)
+			regResponse, err := updateCollectorRegistration(httpClient, lastRegResponse.Checksum, context, serverVersion)
 			if err != nil {
 				continue
 			}
-			assignmentChecksum = regResponse.Checksum
+			if !regResponse.NotModified {
+				lastRegResponse = regResponse
+			}
+
 			// backend list is needed before configuration assignments are updated
-			backendResponse, err := fetchBackendList(httpClient, backendChecksum, context)
+			backendResponse, err := fetchBackendList(httpClient, lastBackendResponse.Checksum, context)
 			if err != nil {
 				continue
 			}
-			backendChecksum = backendResponse.Checksum
+			if !backendResponse.NotModified {
+				lastBackendResponse = backendResponse
+			}
 
 			if !regResponse.NotModified || !backendResponse.NotModified {
-				modified := assignments.Store.Update(regResponse.Assignments)
+				modified := assignments.Store.Update(lastRegResponse.Assignments)
+
+				backendList := []backends.Backend{}
+				// TODO this is inefficient
+				for _, assignment := range lastRegResponse.Assignments {
+					configId := assignment.ConfigurationId
+					for _, backend := range lastBackendResponse.Backends {
+						if backend.Id == assignment.BackendId {
+							backendList = append(backendList, *backends.BackendFromResponse(backend, configId, context))
+						}
+					}
+				}
+				backends.Store.Update(backendList)
+
 				// regResponse.NotModified is always false, because graylog does not implement caching yet.
-				// Thus we need to double check.
+				// Thus, we need to double-check.
 				if modified || !backendResponse.NotModified {
 					configChecksums = make(map[string]string)
 				}
@@ -78,15 +102,18 @@ func StartPeriodicals(context *context.Ctx) {
 					logOnce = true
 				}
 			}
+			log.Debugf("backend store %v", *backends.Store)
+			log.Debugf("assignments store %v", assignments.Store.GetAll())
+			log.Debugf("runner store %v", daemon.Daemon.Runner)
 			checkForUpdateAndRestart(httpClient, configChecksums, context)
 		}
 	}()
 }
 
 // report collector status to Graylog server and receive assignments
-func updateCollectorRegistration(httpClient *http.Client, checksum string, context *context.Ctx) (graylog.ResponseCollectorRegistration, error) {
-	statusRequest := api.NewStatusRequest()
-	return api.UpdateRegistration(httpClient, checksum, context, &statusRequest)
+func updateCollectorRegistration(httpClient *http.Client, checksum string, context *context.Ctx, serverVersion *api.GraylogVersion) (graylog.ResponseCollectorRegistration, error) {
+	statusRequest := api.NewStatusRequest(serverVersion)
+	return api.UpdateRegistration(httpClient, checksum, context, serverVersion, &statusRequest)
 }
 
 func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx) (graylog.ResponseBackendList, error) {
@@ -95,17 +122,6 @@ func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx
 		log.Error("Can't fetch collector list from Graylog API: ", err)
 		return response, err
 	}
-	if response.NotModified {
-		// etag match, skipping all other actions
-		return response, nil
-	}
-
-	backendList := []backends.Backend{}
-	for _, backendEntry := range response.Backends {
-		backendList = append(backendList, *backends.BackendFromResponse(backendEntry, ctx))
-	}
-	backends.Store.Update(backendList)
-
 	return response, nil
 }
 
