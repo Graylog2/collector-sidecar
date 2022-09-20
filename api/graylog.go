@@ -40,6 +40,26 @@ var (
 	configurationOverride = false
 )
 
+func GetServerVersion(httpClient *http.Client, ctx *context.Ctx) (*GraylogVersion, error) {
+	// In case of an error just assume 4.0.0
+	fallbackVersion, _ := NewGraylogVersion("4.0.0")
+
+	c := rest.NewClient(httpClient, ctx)
+	c.BaseURL = ctx.ServerUrl
+	r, err := c.NewRequest("GET", "/", nil, nil)
+	if err != nil {
+		log.Errorf("Cannot retrieve server version %v", err)
+		return fallbackVersion, err
+	}
+	versionResponse := graylog.ServerVersionResponse{}
+	resp, err := c.Do(r, &versionResponse)
+	if err != nil || resp == nil {
+		log.Errorf("Error fetching server version %v", err)
+		return fallbackVersion, err
+	}
+	return NewGraylogVersion(versionResponse.Version)
+}
+
 func RequestBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx) (graylog.ResponseBackendList, error) {
 	c := rest.NewClient(httpClient, ctx)
 	c.BaseURL = ctx.ServerUrl
@@ -137,7 +157,7 @@ func RequestConfiguration(
 	return configurationResponse, nil
 }
 
-func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.Ctx, status *graylog.StatusRequest) (graylog.ResponseCollectorRegistration, error) {
+func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.Ctx, serverVersion *GraylogVersion, status *graylog.StatusRequest) (graylog.ResponseCollectorRegistration, error) {
 	c := rest.NewClient(httpClient, ctx)
 	c.BaseURL = ctx.ServerUrl
 
@@ -145,6 +165,7 @@ func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.C
 
 	registration.NodeName = ctx.UserConfig.NodeName
 	registration.NodeDetails.OperatingSystem = common.GetSystemName()
+
 	if ctx.UserConfig.SendStatus {
 		metrics := &graylog.MetricsRequest{
 			Disks75: common.GetFileSystemList75(),
@@ -170,6 +191,10 @@ func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.C
 					" Adjust list_log_file setting.")
 			}
 		}
+	}
+	if serverVersion.SupportsExtendedNodeDetails() {
+		registration.NodeDetails.CollectorConfigurationDirectory = ctx.UserConfig.CollectorConfigurationDirectory
+		registration.NodeDetails.Tags = ctx.UserConfig.Tags
 	}
 
 	r, err := c.NewRequest("PUT", "/sidecars/"+ctx.NodeId, nil, registration)
@@ -253,18 +278,24 @@ func GetTlsConfig(ctx *context.Ctx) *tls.Config {
 	return tlsConfig
 }
 
-func NewStatusRequest() graylog.StatusRequest {
+func NewStatusRequest(serverVersion *GraylogVersion) graylog.StatusRequest {
 	statusRequest := graylog.StatusRequest{Backends: make([]graylog.StatusRequestBackend, 0)}
 	combinedStatus := backends.StatusUnknown
 	runningCount, stoppedCount, errorCount := 0, 0, 0
 
 	for id, runner := range daemon.Daemon.Runner {
+		collectorId := strings.Split(id, "-")[0]
+		configurationId := ""
+		if serverVersion.SupportsMultipleBackends() {
+			configurationId = strings.Split(id, "-")[1]
+		}
 		backendStatus := runner.GetBackend().Status()
 		statusRequest.Backends = append(statusRequest.Backends, graylog.StatusRequestBackend{
-			Id:             id,
-			Status:         backendStatus.Status,
-			Message:        backendStatus.Message,
-			VerboseMessage: backendStatus.VerboseMessage,
+			CollectorId:     collectorId,
+			ConfigurationId: configurationId,
+			Status:          backendStatus.Status,
+			Message:         backendStatus.Message,
+			VerboseMessage:  backendStatus.VerboseMessage,
 		})
 		switch backendStatus.Status {
 		case backends.StatusRunning:
@@ -276,14 +307,12 @@ func NewStatusRequest() graylog.StatusRequest {
 		}
 	}
 
-	switch {
-	default:
-		combinedStatus = backends.StatusRunning
-	case stoppedCount != 0:
-		combinedStatus = backends.StatusStopped
-		fallthrough
-	case errorCount != 0:
+	if errorCount != 0 {
 		combinedStatus = backends.StatusError
+	} else if stoppedCount != 0 {
+		combinedStatus = backends.StatusStopped
+	} else {
+		combinedStatus = backends.StatusRunning
 	}
 
 	statusMessage := strconv.Itoa(runningCount) + " running / " +

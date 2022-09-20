@@ -69,9 +69,10 @@ func startHeartbeat(ctx *context.Ctx, done chan bool, metrics chan time.Duration
 			return
 		default:
 			time.Sleep(time.Duration(ctx.UserConfig.UpdateInterval) * time.Second)
-			statusRequest := api.NewStatusRequest()
+			version, _ := api.NewGraylogVersion("4.0.0")
+			statusRequest := api.NewStatusRequest(version)
 			t := time.Now()
-			response, err := api.UpdateRegistration(httpClient, "nochecksum", ctx, &statusRequest)
+			response, err := api.UpdateRegistration(httpClient, "nochecksum", ctx, version, &statusRequest)
 			if err != nil {
 				fmt.Printf("[%s] can't register sidecar: %v\n", ctx.UserConfig.NodeId, err)
 				return

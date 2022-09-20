@@ -56,8 +56,18 @@ server_api_token: ""
 # The maximum number of old log files to retain.
 #log_rotate_keep_files: 10
 
+# How long to wait for the config validation command.
+#collector_validation_timeout: "1m"
+
 # Directory where the sidecar generates configurations for collectors.
 #collector_configuration_directory: "/var/lib/graylog-sidecar/generated"
+
+# A list of tags to assign to this sidecar. Collector configuration matching any of these tags will automatically be
+# applied to the sidecar.
+# Example:
+#    tags:
+#    - apache-logs
+#    - dns-logs
 
 # A list of binaries which are allowed to be executed by the Sidecar. An empty list disables the access list feature.
 # Wildcards can be used, for a full pattern description see https://golang.org/pkg/path/filepath/#Match

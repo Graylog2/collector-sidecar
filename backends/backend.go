@@ -35,6 +35,7 @@ import (
 type Backend struct {
 	Enabled              *bool
 	Id                   string
+	ConfigId             string
 	Name                 string
 	ServiceType          string
 	OperatingSystem      string
@@ -46,27 +47,24 @@ type Backend struct {
 	backendStatus        system.VerboseStatus
 }
 
-func BackendFromResponse(response graylog.ResponseCollectorBackend, ctx *context.Ctx) *Backend {
+func BackendFromResponse(response graylog.ResponseCollectorBackend, configId string, ctx *context.Ctx) *Backend {
 	return &Backend{
 		Enabled:              common.NewTrue(),
-		Id:                   response.Id,
-		Name:                 response.Name,
+		Id:                   response.Id + "-" + configId,
+		ConfigId:             configId,
+		Name:                 response.Name + "-" + configId,
 		ServiceType:          response.ServiceType,
 		OperatingSystem:      response.OperatingSystem,
 		ExecutablePath:       response.ExecutablePath,
-		ConfigurationPath:    BuildConfigurationPath(response, ctx),
+		ConfigurationPath:    BuildConfigurationPath(response, configId, ctx),
 		ExecuteParameters:    response.ExecuteParameters,
 		ValidationParameters: response.ValidationParameters,
 		backendStatus:        system.VerboseStatus{},
 	}
 }
 
-func BuildConfigurationPath(response graylog.ResponseCollectorBackend, ctx *context.Ctx) string {
-	if response.ConfigurationFileName != "" {
-		return filepath.Join(ctx.UserConfig.CollectorConfigurationDirectory, response.ConfigurationFileName)
-	} else {
-		return filepath.Join(ctx.UserConfig.CollectorConfigurationDirectory, response.Name+".conf")
-	}
+func BuildConfigurationPath(response graylog.ResponseCollectorBackend, configId string, ctx *context.Ctx) string {
+	return filepath.Join(ctx.UserConfig.CollectorConfigurationDirectory, configId, response.Name+".conf")
 }
 
 func (b *Backend) Equals(a *Backend) bool {
@@ -84,6 +82,7 @@ func (b *Backend) EqualSettings(a *Backend) bool {
 	aBackend := &Backend{
 		Enabled:              b.Enabled,
 		Id:                   a.Id,
+		ConfigId:             a.ConfigId,
 		Name:                 a.Name,
 		ServiceType:          a.ServiceType,
 		OperatingSystem:      a.OperatingSystem,
@@ -168,12 +167,12 @@ func (b *Backend) ValidateConfigurationFile(context *context.Ctx) (error, string
 	}()
 
 	select {
-	case <-time.After(time.Duration(30) * time.Second):
+	case <-time.After(context.UserConfig.CollectorValidationTimeout):
 		if err := cmd.Process.Kill(); err != nil {
 			err = fmt.Errorf("Failed to kill validation process: %s", err)
 			return err, ""
 		}
-		return fmt.Errorf("Unable to validate configuration, timeout reached."), ""
+		return fmt.Errorf("Unable to validate configuration, timeout <%v> reached", context.UserConfig.CollectorValidationTimeout), ""
 	case err := <-done:
 		if err != nil {
 			close(done)

@@ -142,14 +142,14 @@ func (dc *DaemonConfig) SyncWithAssignments(context *context.Ctx) {
 		}
 
 		// cleanup backends that should not run anymore
-		if backend == nil || assignments.Store.GetAll()[backend.Id] == "" {
-			log.Info("Removing process runner: " + backend.Name)
+		if backend == nil || assignments.Store.GetAssignment(backend.Id) == "" {
+			log.Info("Removing process runner: " + id)
 			dc.DeleteRunner(id)
 		}
 	}
 	assignedBackends := []*backends.Backend{}
 	for backendId := range assignments.Store.GetAll() {
-		backend := backends.Store.GetBackendById(backendId)
+		backend := backends.Store.GetBackend(backendId)
 		if backend != nil {
 			assignedBackends = append(assignedBackends, backend)
 		}

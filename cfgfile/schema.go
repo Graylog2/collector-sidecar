@@ -15,23 +15,28 @@
 
 package cfgfile
 
+import "time"
+
 type SidecarConfig struct {
-	ServerUrl                       string   `config:"server_url"`
-	ServerApiToken                  string   `config:"server_api_token"`
-	TlsSkipVerify                   bool     `config:"tls_skip_verify"`
-	NodeName                        string   `config:"node_name"`
-	NodeId                          string   `config:"node_id"`
-	CachePath                       string   `config:"cache_path"`
-	LogPath                         string   `config:"log_path"`
-	CollectorConfigurationDirectory string   `config:"collector_configuration_directory"`
-	LogRotateMaxFileSizeString      string   `config:"log_rotate_max_file_size"`
-	LogRotateMaxFileSize            int64    // set from LogRotateMaxFileSizeString
-	LogRotateKeepFiles              int      `config:"log_rotate_keep_files"`
-	UpdateInterval                  int      `config:"update_interval"`
-	SendStatus                      bool     `config:"send_status"`
-	ListLogFiles                    []string `config:"list_log_files"`
-	CollectorBinariesWhitelist      []string `config:"collector_binaries_whitelist"`
-	CollectorBinariesAccesslist     []string `config:"collector_binaries_accesslist"`
+	ServerUrl                        string        `config:"server_url"`
+	ServerApiToken                   string        `config:"server_api_token"`
+	TlsSkipVerify                    bool          `config:"tls_skip_verify"`
+	NodeName                         string        `config:"node_name"`
+	NodeId                           string        `config:"node_id"`
+	CachePath                        string        `config:"cache_path"`
+	LogPath                          string        `config:"log_path"`
+	CollectorValidationTimeoutString string        `config:"collector_validation_timeout"`
+	CollectorValidationTimeout       time.Duration // set from CollectorValidationTimeoutString
+	CollectorConfigurationDirectory  string        `config:"collector_configuration_directory"`
+	LogRotateMaxFileSizeString       string        `config:"log_rotate_max_file_size"`
+	LogRotateMaxFileSize             int64         // set from LogRotateMaxFileSizeString
+	LogRotateKeepFiles               int           `config:"log_rotate_keep_files"`
+	UpdateInterval                   int           `config:"update_interval"`
+	SendStatus                       bool          `config:"send_status"`
+	ListLogFiles                     []string      `config:"list_log_files"`
+	CollectorBinariesWhitelist       []string      `config:"collector_binaries_whitelist"`
+	CollectorBinariesAccesslist      []string      `config:"collector_binaries_accesslist"`
+	Tags                             []string      `config:"tags"`
 }
 
 // Default Sidecar configuration
@@ -47,6 +52,7 @@ cache_path: "/var/cache/graylog-sidecar"
 log_path: "/var/log/graylog-sidecar"
 log_rotate_max_file_size: "10MiB"
 log_rotate_keep_files: 10
+collector_validation_timeout: "1m"
 collector_configuration_directory: "/var/lib/graylog-sidecar/generated"
 collector_binaries_accesslist:
   - "/usr/bin/filebeat"
@@ -63,6 +69,7 @@ collector_binaries_accesslist:
   - "/usr/share/journalbeat/bin/journalbeat"
   - "/usr/bin/nxlog"
   - "/opt/nxlog/bin/nxlog"
+tags: []
 `
 
 // Windows specific options. Gets merged over `CommonDefaults`

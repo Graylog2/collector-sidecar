@@ -42,15 +42,20 @@ type ResponseBackendList struct {
 	NotModified bool
 }
 
+type ServerVersionResponse struct {
+	ClusterId string `json:"cluster_id"`
+	NodeId    string `json:"node_id"`
+	Version   string `json:"version"`
+}
+
 type ResponseCollectorBackend struct {
-	Id                    string `json:"id"`
-	Name                  string `json:"name"`
-	ServiceType           string `json:"service_type"`
-	OperatingSystem       string `json:"node_operating_system"`
-	ExecutablePath        string `json:"executable_path"`
-	ConfigurationFileName string `json:"configuration_file_name"`
-	ExecuteParameters     string `json:"execute_parameters"`
-	ValidationParameters  string `json:"validation_parameters"`
+	Id                   string `json:"id"`
+	Name                 string `json:"name"`
+	ServiceType          string `json:"service_type"`
+	OperatingSystem      string `json:"node_operating_system"`
+	ExecutablePath       string `json:"executable_path"`
+	ExecuteParameters    string `json:"execute_parameters"`
+	ValidationParameters string `json:"validation_parameters"`
 }
 
 type ResponseCollectorConfiguration struct {
