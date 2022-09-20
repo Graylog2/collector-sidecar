@@ -23,21 +23,22 @@ import (
 
 func HandleCollectorActions(actions []graylog.ResponseCollectorAction) {
 	for _, action := range actions {
-		backend := backends.Store.GetBackend(action.BackendId)
-		if backend == nil {
+		backends := backends.Store.GetBackendsForCollectorId(action.BackendId)
+		if backends == nil {
 			log.Errorf("Got action for non-existing collector: %s", action.BackendId)
 			continue
 		}
-
-		switch {
-		case action.Properties["start"] == true:
-			startAction(backend)
-		case action.Properties["restart"] == true:
-			restartAction(backend)
-		case action.Properties["stop"] == true:
-			stopAction(backend)
-		default:
-			log.Infof("Got unsupported collector command: %s", common.Inspect(action.Properties))
+		for _, backend := range backends {
+			switch {
+			case action.Properties["start"] == true:
+				startAction(backend)
+			case action.Properties["restart"] == true:
+				restartAction(backend)
+			case action.Properties["stop"] == true:
+				stopAction(backend)
+			default:
+				log.Infof("Got unsupported collector command: %s", common.Inspect(action.Properties))
+			}
 		}
 	}
 }
