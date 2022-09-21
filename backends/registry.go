@@ -46,6 +46,16 @@ func (bs *backendStore) SetBackend(backend Backend) {
 	bs.backends[backend.Id].ValidationParameters = validationParameters
 }
 
+func (bs *backendStore) GetBackendsForCollectorId(collectorId string) []*Backend {
+	var backends []*Backend
+	for _, backend := range bs.backends {
+		if backend.CollectorId == collectorId {
+			backends = append(backends, backend)
+		}
+	}
+	return backends
+}
+
 func (bs *backendStore) GetBackend(id string) *Backend {
 	return bs.backends[id]
 }

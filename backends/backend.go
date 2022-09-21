@@ -36,6 +36,7 @@ type Backend struct {
 	Enabled              *bool
 	Id                   string
 	ConfigId             string
+	CollectorId          string
 	Name                 string
 	ServiceType          string
 	OperatingSystem      string
@@ -51,6 +52,7 @@ func BackendFromResponse(response graylog.ResponseCollectorBackend, configId str
 	return &Backend{
 		Enabled:              common.NewTrue(),
 		Id:                   response.Id + "-" + configId,
+		CollectorId:          response.Id,
 		ConfigId:             configId,
 		Name:                 response.Name + "-" + configId,
 		ServiceType:          response.ServiceType,
@@ -83,6 +85,7 @@ func (b *Backend) EqualSettings(a *Backend) bool {
 		Enabled:              b.Enabled,
 		Id:                   a.Id,
 		ConfigId:             a.ConfigId,
+		CollectorId:          a.CollectorId,
 		Name:                 a.Name,
 		ServiceType:          a.ServiceType,
 		OperatingSystem:      a.OperatingSystem,
