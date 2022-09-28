@@ -31,8 +31,8 @@
   !searchreplace SUFFIX '${VERSION_SUFFIX}' "-" "."
   OutFile "pkg/graylog_sidecar_installer_${VERSION}-${REVISION}${SUFFIX}.exe"
   RequestExecutionLevel admin ;Require admin rights
-  ShowInstDetails "nevershow"
-  ShowUninstDetails "nevershow"
+  ShowInstDetails "show"
+  ShowUninstDetails "show"
 
   ; Variables
   Var Params
@@ -54,12 +54,19 @@
   Var Dialog
   Var Label
   Var GraylogDir
+  Var IsUpgrade
+  Var LogFile
 
 
 ;--------------------------------
 ;Modern UI Configuration  
   
   !define MUI_ICON "graylog.ico"  
+  !define MUI_WELCOMEPAGE_TITLE "Graylog Sidecar ${VERSION}-${REVISION}${SUFFIX} Installation / Upgrade"
+  !define MUI_WELCOMEPAGE_TEXT  "This setup is gonna guide you through the installation / upgrade of the Graylog Sidecar.\r\n\r\n \
+		  If an already configured Sidecar is detected ('sidecar.yml' present), it will perform an upgrade.\r\n \r\n\
+		  Click Next to continue."
+
   !insertmacro MUI_PAGE_WELCOME
   !insertmacro MUI_PAGE_LICENSE  "../LICENSE"
   !insertmacro MUI_UNPAGE_WELCOME
@@ -83,6 +90,12 @@
   !insertmacro WordFind
   !insertmacro WordFind2X
 
+  !macro _LogWrite text
+    FileWrite $LogFile '${text}$\r$\n'
+  !macroend
+  !define LogWrite "!insertmacro _LogWrite"
+
+
   !macro Check_X64
     ${If} ${RunningX64}
       SetRegView 64
@@ -92,7 +105,19 @@
       Strcpy $GraylogDir "$PROGRAMFILES32\Graylog"
     ${EndIf}
     Strcpy $INSTDIR "$GraylogDir\sidecar"
+    CreateDirectory $INSTDIR
   !macroend
+
+  !macro Check_Upgrade
+    ${If} ${FileExists} "$INSTDIR\sidecar.yml"
+      Strcpy $IsUpgrade "true"
+      ${LogWrite} "Existing installation detected. Performing upgrade."
+    ${Else}
+      Strcpy $IsUpgrade "false"
+      ${LogWrite} "No previous installation detected. Running installation mode."
+    ${EndIf}
+  !macroend
+
 
 ;--------------------------------
 ;Data
@@ -109,14 +134,6 @@ Section "Install"
   CreateDirectory "$INSTDIR\module"
   SetOutPath "$INSTDIR"
  
-  ${If} ${RunningX64}
-    File "collectors/winlogbeat/windows/x86_64/winlogbeat.exe"
-    File "collectors/filebeat/windows/x86_64/filebeat.exe"
-  ${Else}
-    File "collectors/winlogbeat/windows/x86/winlogbeat.exe"
-    File "collectors/filebeat/windows/x86/filebeat.exe"
-  ${EndIf}
-
   SetOverwrite off
   File /oname=sidecar.yml "../sidecar-windows-example.yml"
   SetOverwrite on
@@ -128,7 +145,8 @@ Section "Install"
   !insertmacro _IfKeyExists HKLM "SYSTEM\CurrentControlSet\Services" "graylog-sidecar"
   Pop $R0
   ${If} $R0 = 1
-    ExecWait '"$INSTDIR\graylog-sidecar.exe" -service stop'
+    ExecWait '"$INSTDIR\graylog-sidecar.exe" -service stop' $0
+    ${LogWrite} "Stopping existing Sidecar Service: $0"
   ${EndIf}
 
   ${If} ${RunningX64}
@@ -137,9 +155,26 @@ Section "Install"
     File /oname=graylog-sidecar.exe "../build/${VERSION}/windows/386/graylog-sidecar.exe"
   ${EndIf}
 
+  ; Install beats collectors
+  ${If} ${RunningX64}
+    File "collectors/winlogbeat/windows/x86_64/winlogbeat.exe"
+    File "collectors/filebeat/windows/x86_64/filebeat.exe"
+  ${Else}
+    File "collectors/winlogbeat/windows/x86/winlogbeat.exe"
+    File "collectors/filebeat/windows/x86/filebeat.exe"
+  ${EndIf}
+
   ;When we stop the Sidecar service we also turn it on again
   ${If} $R0 = 1
-    ExecWait '"$INSTDIR\graylog-sidecar.exe" -service start'
+    ExecWait '"$INSTDIR\graylog-sidecar.exe" -service start' $0
+    ${LogWrite} "Starting existing Sidecar Service: $0"
+  ${EndIf}
+
+  ${If} $IsUpgrade != 'true'
+    ExecWait '"$INSTDIR\graylog-sidecar.exe" -service install'
+    ${LogWrite} "Installing new Sidecar Service: $0"
+    ExecWait '"$INSTDIR\graylog-sidecar.exe" -service start' $0
+    ${LogWrite} "Starting new Sidecar Service: $0"
   ${EndIf}
 
   WriteUninstaller "$INSTDIR\uninstall.exe"
@@ -226,6 +261,7 @@ Section "Post"
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<SENDSTATUS>" $SendStatus
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<APITOKEN>" $ApiToken
 
+  FileClose $LogFile
 SectionEnd
  
 ;--------------------------------    
@@ -254,13 +290,17 @@ SectionEnd
 ;Functions
 
 Function .onInit
+  !insertmacro Check_X64
+
+  FileOpen $LogFile "$INSTDIR\installerlog.txt" w
+
   ; check admin rights
   Call CheckAdmin
   
   ; check concurrent un/installations
   Call CheckConcurrent
     
-  !insertmacro Check_X64
+  !insertmacro Check_Upgrade
 FunctionEnd
 
 Function un.oninit
@@ -276,6 +316,10 @@ FunctionEnd
  
 
 Function nsDialogsPage
+  ${If} $IsUpgrade == 'true'
+    Abort
+  ${EndIf}
+
   nsDialogs::Create 1018
 
   
