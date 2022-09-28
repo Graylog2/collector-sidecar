@@ -50,6 +50,8 @@
   Var TlsSkipVerify
   Var ParamSendStatus
   Var ParamApiToken
+  Var ParamNodeId
+  Var NodeId
   Var SendStatus
   Var Dialog
   Var Label
@@ -220,6 +222,7 @@ Section "Post"
   ${GetOptions} $Params " -TLS_SKIP_VERIFY=" $ParamTlsSkipVerify
   ${GetOptions} $Params " -SEND_STATUS=" $ParamSendStatus
   ${GetOptions} $Params " -APITOKEN=" $ParamApiToken
+  ${GetOptions} $Params " -NODEID=" $ParamNodeId
 
   ${If} $ParamServerUrl != ""
     StrCpy $ServerUrl $ParamServerUrl
@@ -239,6 +242,9 @@ Section "Post"
   ${If} $ParamApiToken != ""
     StrCpy $ApiToken $ParamApiToken
   ${EndIf}
+  ${If} $ParamNodeId != ""
+    StrCpy $NodeId $ParamNodeId
+  ${EndIf}
 
   ; set defaults
   ${If} $ServerUrl == ""
@@ -253,6 +259,10 @@ Section "Post"
   ${If} $SendStatus == ""
     StrCpy $SendStatus "true"
   ${EndIf}
+  ${If} $NodeId == ""
+    ;sidecar.yml needs double escapes
+    ${WordReplace} "file:$INSTDIR\node-id" "\" "\\" "+" $NodeId
+  ${EndIf}
 
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<SERVERURL>" $ServerUrl
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<NODENAME>" $NodeName
@@ -260,6 +270,7 @@ Section "Post"
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<TLSSKIPVERIFY>" $TlsSkipVerify
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<SENDSTATUS>" $SendStatus
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<APITOKEN>" $ApiToken
+  !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<NODEID>" $NodeId
 
   FileClose $LogFile
 SectionEnd
