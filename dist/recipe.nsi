@@ -58,6 +58,7 @@
   Var GraylogDir
   Var IsUpgrade
   Var LogFile
+  Var LogMsgText
 
 
 ;--------------------------------
@@ -91,9 +92,15 @@
   !insertmacro MUI_LANGUAGE "English"
   !insertmacro WordFind
   !insertmacro WordFind2X
+  !insertmacro GetTime
 
   !macro _LogWrite text
-    FileWrite $LogFile '${text}$\r$\n'
+    StrCpy $LogMsgText "${text}"
+    ${GetTime} "" "L" $0 $1 $2 $3 $4 $5 $6
+    FileWrite $LogFile '$2$1$0$4$5$6: $LogMsgText$\r$\n'
+    System::Call 'kernel32::GetStdHandle(i -11)i.r9'
+    System::Call 'kernel32::AttachConsole(i -1)'
+    FileWrite $9 "$LogMsgText$\r$\n"
   !macroend
   !define LogWrite "!insertmacro _LogWrite"
 
@@ -282,6 +289,7 @@ Section "Post"
     ${LogWrite} "Starting new Sidecar Service: [exit $0] Stdout: $1"
   ${EndIf}
 
+  ${LogWrite} "Installer/Upgrader finished."
   FileClose $LogFile
 SectionEnd
  
@@ -314,6 +322,9 @@ Function .onInit
   !insertmacro Check_X64
 
   FileOpen $LogFile "$INSTDIR\installerlog.txt" w
+
+  ${LogWrite} "$\r$\n" ;Powershell seems to swallow the first line
+  ${LogWrite} "Starting Sidecar ${VERSION}-${REVISION}${SUFFIX} installer/upgrader."
 
   ; check admin rights
   Call CheckAdmin
