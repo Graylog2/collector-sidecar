@@ -147,8 +147,10 @@ Section "Install"
   !insertmacro _IfKeyExists HKLM "SYSTEM\CurrentControlSet\Services" "graylog-sidecar"
   Pop $R0
   ${If} $R0 = 1
-    ExecWait '"$INSTDIR\graylog-sidecar.exe" -service stop' $0
-    ${LogWrite} "Stopping existing Sidecar Service: $0"
+    nsExec::ExecToStack '"$INSTDIR\graylog-sidecar.exe" -service stop'
+    Pop $0
+    Pop $1
+    ${LogWrite} "Stopping existing Sidecar Service: [exit $0] Stdout: $1"
   ${EndIf}
 
   ${If} ${RunningX64}
@@ -168,15 +170,10 @@ Section "Install"
 
   ;When we stop the Sidecar service we also turn it on again
   ${If} $R0 = 1
-    ExecWait '"$INSTDIR\graylog-sidecar.exe" -service start' $0
-    ${LogWrite} "Starting existing Sidecar Service: $0"
-  ${EndIf}
-
-  ${If} $IsUpgrade != 'true'
-    ExecWait '"$INSTDIR\graylog-sidecar.exe" -service install'
-    ${LogWrite} "Installing new Sidecar Service: $0"
-    ExecWait '"$INSTDIR\graylog-sidecar.exe" -service start' $0
-    ${LogWrite} "Starting new Sidecar Service: $0"
+    nsExec::ExecToStack '"$INSTDIR\graylog-sidecar.exe" -service start'
+    Pop $0
+    Pop $1
+    ${LogWrite} "Restarting existing Sidecar Service: [exit $0] Stdout: $1"
   ${EndIf}
 
   WriteUninstaller "$INSTDIR\uninstall.exe"
@@ -271,6 +268,19 @@ Section "Post"
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<SENDSTATUS>" $SendStatus
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<APITOKEN>" $ApiToken
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<NODEID>" $NodeId
+
+  ;Install sidecar service
+  ${If} $IsUpgrade == 'false'
+    nsExec::ExecToStack '"$INSTDIR\graylog-sidecar.exe" -service install'
+    Pop $0
+    Pop $1
+    ${LogWrite} "Installing new Sidecar Service: [exit $0] Stdout: $1"
+
+    nsExec::ExecToStack '"$INSTDIR\graylog-sidecar.exe" -service start'
+    Pop $0
+    Pop $1
+    ${LogWrite} "Starting new Sidecar Service: [exit $0] Stdout: $1"
+  ${EndIf}
 
   FileClose $LogFile
 SectionEnd
