@@ -209,8 +209,11 @@ func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.C
 	respBody := new(graylog.ResponseCollectorRegistration)
 	resp, err := c.Do(r, &respBody)
 	if resp != nil && resp.StatusCode == 400 && strings.Contains(err.Error(), "Unable to map property") {
-		log.Error("[UpdateRegistration] Sending collector status failed. Disabling `send_status` as fallback! ", err)
-		ctx.UserConfig.SendStatus = false
+		log.Error("[UpdateRegistration] Sending collector status failed. ", err)
+		if ctx.UserConfig.SendStatus {
+			log.Error("[UpdateRegistration] Disabling `send_status` as fallback.")
+			ctx.UserConfig.SendStatus = false
+		}
 	} else if resp != nil && resp.StatusCode == 304 {
 		log.Debug("[UpdateRegistration] No update available.")
 		respBody.NotModified = true
