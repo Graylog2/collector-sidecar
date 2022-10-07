@@ -100,12 +100,12 @@ func GetCpuIdle() float64 {
 	return cpu.LastCpuTimes.IdlePercent * 100
 }
 
-func GetFileSystemList75() []string {
+func GetFileSystemList75(windowsDriveRange string) []string {
 	result := []string{}
 	volumes := []sigar.FileSystem{}
 
 	if runtime.GOOS == "windows" {
-		volumes = getWindowsDrives()
+		volumes = getWindowsDrives(windowsDriveRange)
 	} else {
 		fslist := sigar.FileSystemList{}
 		fslist.Get()
@@ -138,8 +138,8 @@ func GetLoad1() float64 {
 	return avg.One
 }
 
-func getWindowsDrives() (drives []sigar.FileSystem) {
-	for _, drive := range "CDEFGHIJKLMNOPQRSTUVWXYZ" {
+func getWindowsDrives(windowsDriveRange string) (drives []sigar.FileSystem) {
+	for _, drive := range windowsDriveRange {
 		dirName := string(drive) + ":\\"
 		dirHandle, err := os.Open(dirName)
 		defer dirHandle.Close()

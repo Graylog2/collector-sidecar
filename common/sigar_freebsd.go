@@ -19,7 +19,7 @@ func GetCpuIdle() float64 {
 	return -1
 }
 
-func GetFileSystemList75() []string {
+func GetFileSystemList75(string) []string {
 	return []string{}
 }
 

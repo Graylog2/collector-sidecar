@@ -168,7 +168,7 @@ func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.C
 
 	if ctx.UserConfig.SendStatus {
 		metrics := &graylog.MetricsRequest{
-			Disks75: common.GetFileSystemList75(),
+			Disks75: common.GetFileSystemList75(ctx.UserConfig.WindowsDriveRange),
 			CpuIdle: common.GetCpuIdle(),
 			Load1:   common.GetLoad1(),
 		}
