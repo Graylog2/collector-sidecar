@@ -16,7 +16,7 @@ server_api_token: "<APITOKEN>"
 # ATTENTION: Every sidecar instance needs a unique ID!
 #
 # Default: "file:C:\\Program Files\\Graylog\\sidecar\\node-id"
-node_id: "file:C:\\Program Files\\Graylog\\sidecar\\node-id"
+node_id: "<NODEID>"
 
 # The node name of the sidecar. If this is empty, the sidecar will use the
 # hostname of the host it is running on.

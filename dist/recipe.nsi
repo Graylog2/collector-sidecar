@@ -31,8 +31,8 @@
   !searchreplace SUFFIX '${VERSION_SUFFIX}' "-" "."
   OutFile "pkg/graylog_sidecar_installer_${VERSION}-${REVISION}${SUFFIX}.exe"
   RequestExecutionLevel admin ;Require admin rights
-  ShowInstDetails "nevershow"
-  ShowUninstDetails "nevershow"
+  ShowInstDetails "show"
+  ShowUninstDetails "show"
 
   ; Variables
   Var Params
@@ -50,16 +50,26 @@
   Var TlsSkipVerify
   Var ParamSendStatus
   Var ParamApiToken
+  Var ParamNodeId
+  Var NodeId
   Var SendStatus
   Var Dialog
   Var Label
   Var GraylogDir
+  Var IsUpgrade
+  Var LogFile
+  Var LogMsgText
 
 
 ;--------------------------------
 ;Modern UI Configuration  
   
   !define MUI_ICON "graylog.ico"  
+  !define MUI_WELCOMEPAGE_TITLE "Graylog Sidecar ${VERSION}-${REVISION}${SUFFIX} Installation / Upgrade"
+  !define MUI_WELCOMEPAGE_TEXT  "This setup is gonna guide you through the installation / upgrade of the Graylog Sidecar.\r\n\r\n \
+		  If an already configured Sidecar is detected ('sidecar.yml' present), it will perform an upgrade.\r\n \r\n\
+		  Click Next to continue."
+
   !insertmacro MUI_PAGE_WELCOME
   !insertmacro MUI_PAGE_LICENSE  "../LICENSE"
   !insertmacro MUI_UNPAGE_WELCOME
@@ -82,6 +92,18 @@
   !insertmacro MUI_LANGUAGE "English"
   !insertmacro WordFind
   !insertmacro WordFind2X
+  !insertmacro GetTime
+
+  !macro _LogWrite text
+    StrCpy $LogMsgText "${text}"
+    ${GetTime} "" "L" $0 $1 $2 $3 $4 $5 $6
+    FileWrite $LogFile '$2$1$0$4$5$6: $LogMsgText$\r$\n'
+    System::Call 'kernel32::GetStdHandle(i -11)i.r9'
+    System::Call 'kernel32::AttachConsole(i -1)'
+    FileWrite $9 "$LogMsgText$\r$\n"
+  !macroend
+  !define LogWrite "!insertmacro _LogWrite"
+
 
   !macro Check_X64
     ${If} ${RunningX64}
@@ -92,7 +114,19 @@
       Strcpy $GraylogDir "$PROGRAMFILES32\Graylog"
     ${EndIf}
     Strcpy $INSTDIR "$GraylogDir\sidecar"
+    CreateDirectory $INSTDIR
   !macroend
+
+  !macro Check_Upgrade
+    ${If} ${FileExists} "$INSTDIR\sidecar.yml"
+      Strcpy $IsUpgrade "true"
+      ${LogWrite} "Existing installation detected. Performing upgrade."
+    ${Else}
+      Strcpy $IsUpgrade "false"
+      ${LogWrite} "No previous installation detected. Running installation mode."
+    ${EndIf}
+  !macroend
+
 
 ;--------------------------------
 ;Data
@@ -109,14 +143,6 @@ Section "Install"
   CreateDirectory "$INSTDIR\module"
   SetOutPath "$INSTDIR"
  
-  ${If} ${RunningX64}
-    File "collectors/winlogbeat/windows/x86_64/winlogbeat.exe"
-    File "collectors/filebeat/windows/x86_64/filebeat.exe"
-  ${Else}
-    File "collectors/winlogbeat/windows/x86/winlogbeat.exe"
-    File "collectors/filebeat/windows/x86/filebeat.exe"
-  ${EndIf}
-
   SetOverwrite off
   File /oname=sidecar.yml "../sidecar-windows-example.yml"
   SetOverwrite on
@@ -128,7 +154,10 @@ Section "Install"
   !insertmacro _IfKeyExists HKLM "SYSTEM\CurrentControlSet\Services" "graylog-sidecar"
   Pop $R0
   ${If} $R0 = 1
-    ExecWait '"$INSTDIR\graylog-sidecar.exe" -service stop'
+    nsExec::ExecToStack '"$INSTDIR\graylog-sidecar.exe" -service stop'
+    Pop $0
+    Pop $1
+    ${LogWrite} "Stopping existing Sidecar Service: [exit $0] Stdout: $1"
   ${EndIf}
 
   ${If} ${RunningX64}
@@ -137,9 +166,21 @@ Section "Install"
     File /oname=graylog-sidecar.exe "../build/${VERSION}/windows/386/graylog-sidecar.exe"
   ${EndIf}
 
+  ; Install beats collectors
+  ${If} ${RunningX64}
+    File "collectors/winlogbeat/windows/x86_64/winlogbeat.exe"
+    File "collectors/filebeat/windows/x86_64/filebeat.exe"
+  ${Else}
+    File "collectors/winlogbeat/windows/x86/winlogbeat.exe"
+    File "collectors/filebeat/windows/x86/filebeat.exe"
+  ${EndIf}
+
   ;When we stop the Sidecar service we also turn it on again
   ${If} $R0 = 1
-    ExecWait '"$INSTDIR\graylog-sidecar.exe" -service start'
+    nsExec::ExecToStack '"$INSTDIR\graylog-sidecar.exe" -service start'
+    Pop $0
+    Pop $1
+    ${LogWrite} "Restarting existing Sidecar Service: [exit $0] Stdout: $1"
   ${EndIf}
 
   WriteUninstaller "$INSTDIR\uninstall.exe"
@@ -185,6 +226,7 @@ Section "Post"
   ${GetOptions} $Params " -TLS_SKIP_VERIFY=" $ParamTlsSkipVerify
   ${GetOptions} $Params " -SEND_STATUS=" $ParamSendStatus
   ${GetOptions} $Params " -APITOKEN=" $ParamApiToken
+  ${GetOptions} $Params " -NODEID=" $ParamNodeId
 
   ${If} $ParamServerUrl != ""
     StrCpy $ServerUrl $ParamServerUrl
@@ -204,6 +246,9 @@ Section "Post"
   ${If} $ParamApiToken != ""
     StrCpy $ApiToken $ParamApiToken
   ${EndIf}
+  ${If} $ParamNodeId != ""
+    StrCpy $NodeId $ParamNodeId
+  ${EndIf}
 
   ; set defaults
   ${If} $ServerUrl == ""
@@ -218,6 +263,10 @@ Section "Post"
   ${If} $SendStatus == ""
     StrCpy $SendStatus "true"
   ${EndIf}
+  ${If} $NodeId == ""
+    ;sidecar.yml needs double escapes
+    ${WordReplace} "file:$INSTDIR\node-id" "\" "\\" "+" $NodeId
+  ${EndIf}
 
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<SERVERURL>" $ServerUrl
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<NODENAME>" $NodeName
@@ -225,7 +274,23 @@ Section "Post"
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<TLSSKIPVERIFY>" $TlsSkipVerify
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<SENDSTATUS>" $SendStatus
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<APITOKEN>" $ApiToken
+  !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<NODEID>" $NodeId
 
+  ;Install sidecar service
+  ${If} $IsUpgrade == 'false'
+    nsExec::ExecToStack '"$INSTDIR\graylog-sidecar.exe" -service install'
+    Pop $0
+    Pop $1
+    ${LogWrite} "Installing new Sidecar Service: [exit $0] Stdout: $1"
+
+    nsExec::ExecToStack '"$INSTDIR\graylog-sidecar.exe" -service start'
+    Pop $0
+    Pop $1
+    ${LogWrite} "Starting new Sidecar Service: [exit $0] Stdout: $1"
+  ${EndIf}
+
+  ${LogWrite} "Installer/Upgrader finished."
+  FileClose $LogFile
 SectionEnd
  
 ;--------------------------------    
@@ -254,13 +319,20 @@ SectionEnd
 ;Functions
 
 Function .onInit
+  !insertmacro Check_X64
+
+  FileOpen $LogFile "$INSTDIR\installerlog.txt" w
+
+  ${LogWrite} "$\r$\n" ;Powershell seems to swallow the first line
+  ${LogWrite} "Starting Sidecar ${VERSION}-${REVISION}${SUFFIX} installer/upgrader."
+
   ; check admin rights
   Call CheckAdmin
   
   ; check concurrent un/installations
   Call CheckConcurrent
     
-  !insertmacro Check_X64
+  !insertmacro Check_Upgrade
 FunctionEnd
 
 Function un.oninit
@@ -276,6 +348,10 @@ FunctionEnd
  
 
 Function nsDialogsPage
+  ${If} $IsUpgrade == 'true'
+    Abort
+  ${EndIf}
+
   nsDialogs::Create 1018
 
   
