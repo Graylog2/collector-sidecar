@@ -37,6 +37,7 @@ type SidecarConfig struct {
 	CollectorBinariesWhitelist       []string      `config:"collector_binaries_whitelist"`
 	CollectorBinariesAccesslist      []string      `config:"collector_binaries_accesslist"`
 	Tags                             []string      `config:"tags"`
+	WindowsDriveRange                string        `config:"windows_drive_range"`
 }
 
 // Default Sidecar configuration
@@ -70,6 +71,7 @@ collector_binaries_accesslist:
   - "/usr/bin/nxlog"
   - "/opt/nxlog/bin/nxlog"
 tags: []
+windows_drive_range: ""
 `
 
 // Windows specific options. Gets merged over `CommonDefaults`
@@ -87,4 +89,5 @@ collector_binaries_accesslist:
   - "C:\\Program Files\\Heartbeat\\heartbeat.exe"
   - "C:\\Program Files\\Auditbeat\\auditbeat.exe"
   - "C:\\Program Files (x86)\\nxlog\\nxlog.exe"
+windows_drive_range: "CDEFGHIJKLMNOPQRSTUVWXYZ"
 `

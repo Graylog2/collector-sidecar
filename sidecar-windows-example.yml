@@ -67,6 +67,11 @@ send_status: <SENDSTATUS>
 # Directory where the sidecar generates configurations for collectors.
 #collector_configuration_directory: "C:\\Program Files\\Graylog\\sidecar\\generated"
 
+# Range of windows drives which are checked for disk usage. If their usage extends 75% they will be reported
+# in the sidecar's status report to the Graylog server. Set to "" to disable disk scanning.
+# Default:
+# windows_drive_range: "CDEFGHIJKLMNOPQRSTUVWXYZ"
+
 # A list of binaries which are allowed to be executed by the Sidecar. An empty list disables the access list feature.
 # Wildcards can be used, for a full pattern description see https://golang.org/pkg/path/filepath/#Match
 # Example:

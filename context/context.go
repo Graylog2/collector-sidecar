@@ -20,6 +20,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"time"
 
@@ -164,6 +165,12 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 	if ctx.UserConfig.CollectorBinariesWhitelist != nil {
 		log.Warn("`collector_binaries_whitelist` is deprecated. Migrate your configuration to `collector_binaries_accesslist`.")
 		ctx.UserConfig.CollectorBinariesAccesslist = ctx.UserConfig.CollectorBinariesWhitelist
+	}
+
+	// windows_drive_range
+	driveRangeValid, _ := regexp.MatchString("^[A-Z]*$", ctx.UserConfig.WindowsDriveRange)
+	if !driveRangeValid {
+		log.Fatal("`windows_drive_range` must only contain valid windows drive letters in the range A-Z or left empty.")
 	}
 
 	return nil
