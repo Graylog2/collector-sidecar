@@ -1,0 +1,23 @@
+type = "added"
+message = "Add upgrade support and improve Sidecar installer for Windows"
+
+issues = ["365", "432"]
+pulls = ["447"]
+
+contributors = [""]
+
+details.user = """
+The installer can now upgrade existing sidcar installations.
+It detects this by the presence of an existing sidecar.yml config.
+In upgrade mode it skip the configuration page.
+Additionally the installer will now also register the sidecar
+service automatically. Making this extra command line step obsolete.
+
+The silent installer can now also accept an optional
+`-NODEID` parameter.
+"""
+
+details.ops = """
+Additionally the installer will now also register the sidecar service automatically.
+Making the extra two command line steps obsolete.
+"""

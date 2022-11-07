@@ -1,0 +1,17 @@
+type = "added"
+message = "Add support for multiple configurations on a single collector"
+
+issues = [""]
+pulls = ["441"]
+
+contributors = [""]
+
+details.user = """
+With Graylog 5.0 we removed the restriction of running only one configuration per collector.
+To support this, several changes had to be done to the Sidecar.
+
+The generated sidecar configs under `collector_configuration_directory` are now stored within
+a separate directory named after the configuration id.
+E.g. `/var/lib/graylog-sidecar/generated/filebeat.conf` would now be something like
+`/var/lib/graylog-sidecar/generated/628b8d4056caeb4862c122fb/filebeat.conf` 
+"""
