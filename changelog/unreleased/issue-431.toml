@@ -1,0 +1,13 @@
+type = "changed"
+message = "Make collector validation timeout configurable"
+
+issues = ["431"]
+pulls = ["435"]
+
+contributors = [""]
+
+details.user = """
+Intoduce a new config option: `collector_validation_timeout = 1m`
+Also increase the default timeout from 30s to 1m
+since 30s seems to low for some use cases.
+"""
