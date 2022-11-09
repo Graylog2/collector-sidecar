@@ -9,7 +9,7 @@ contributors = [""]
 details.user = """
 The installer can now upgrade existing sidcar installations.
 It detects this by the presence of an existing sidecar.yml config.
-In upgrade mode it skip the configuration page.
+In upgrade mode it skips the configuration page.
 Additionally the installer will now also register the sidecar
 service automatically. Making this extra command line step obsolete.
 
