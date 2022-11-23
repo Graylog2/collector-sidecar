@@ -1,0 +1,12 @@
+type = "added"
+message = "Add tagging support to sidecars"
+
+issues = [""]
+pulls = ["441"]
+
+contributors = [""]
+
+details.user = """
+With Graylog 5.0 we added support for automatic configuration assignment through tags.
+The `sidecar.yml` has a new configuration option `tags`.
+"""

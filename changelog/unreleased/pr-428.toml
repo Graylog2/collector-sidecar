@@ -1,0 +1,6 @@
+type = "added"
+message = "Add a sidecar build for M1 based Macs"
+
+issues = [""]
+pulls = ["428"]
+
