@@ -64,6 +64,25 @@ pipeline
           }
         }
 
+        stage('Sign')
+        {
+          agent
+          {
+            docker
+            {
+              image 'graylog/internal-codesigntool:latest'
+              args '-u jenkins:jenkins'
+              registryCredentialsId 'docker-hub'
+              alwaysPull true
+            }
+          }
+
+          steps
+          {
+            sh 'make sign-binaries'
+          }
+        }
+
         stage('Chocolatey Pack')
         {
           agent
