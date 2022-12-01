@@ -136,6 +136,46 @@ pipeline
         }
       }
 
+      stage('GitHub Release')
+      {
+        when
+        {
+          buildingTag()
+        }
+
+        environment
+        {
+          GITHUB_CREDS = credentials('github-access-token')
+          REPO_API_URL = 'https://api.github.com/repos/Graylog2/collector-sidecar'
+        }
+
+        steps
+        {
+          echo "Releasing ${env.TAG_NAME} to GitHub..."
+
+          script
+          {
+            def RELEASE_DATA = sh returnStdout: true, script: "curl -s --user \"$GITHUB_CREDS\" --data \'{ \"tag_name\": \"${TAG_NAME}\", \"name\": \"${TAG_NAME}\", \"body\": \"Insert changes here.\", \"draft\": true }\' $REPO_API_URL/releases"
+            def props = readJSON text: RELEASE_DATA
+            env.RELEASE_ID = props.id
+
+            sh '''#!/bin/bash
+              set -xeo pipefail
+
+              for file in dist/pkg/*; do
+                name="$(basename "$file")"
+
+                curl \
+                  -H "Authorization: token $GITHUB_CREDS" \
+                  -H "Content-Type: application/octet-stream" \
+                  --data-binary "@$file" \
+                  "$REPO_API_URL/releases/$RELEASE_ID/assets?name=$name"
+              done
+            '''
+          }
+        }
+      }
+
       post
       {
         success
