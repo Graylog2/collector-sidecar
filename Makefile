@@ -110,6 +110,8 @@ package-linux32: ## Create Linux i386 system package
 
 package-windows: prepare-package ## Create Windows installer
 	@mkdir -p dist/pkg
+	cp build/$(COLLECTOR_VERSION)/windows/amd64/graylog-sidecar.exe dist/pkg/graylog-sidecar-$(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX)-amd64.exe
+	cp build/$(COLLECTOR_VERSION)/windows/386/graylog-sidecar.exe dist/pkg/graylog-sidecar-$(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX)-386.exe
 	makensis -DVERSION=$(COLLECTOR_VERSION) -DVERSION_SUFFIX=$(COLLECTOR_VERSION_SUFFIX) -DREVISION=$(COLLECTOR_REVISION) dist/recipe.nsi
 
 package-chocolatey: ## Create Chocolatey .nupkg file
