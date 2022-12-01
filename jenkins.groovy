@@ -18,7 +18,6 @@ pipeline
   {
     GOPATH = '/home/jenkins/go'
     GO15VENDOREXPERIMENT=1
-    CHOCO_API_KEY = credentials('chocolatey-api-key')
   }
 
   stages
@@ -102,6 +101,11 @@ pipeline
               additionalBuildArgs '-t local/sidecar-chocolatey'
               reuseNode true
             }
+          }
+
+          environment
+          {
+            CHOCO_API_KEY = credentials('chocolatey-api-key')
           }
 
           steps
