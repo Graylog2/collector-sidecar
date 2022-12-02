@@ -60,6 +60,14 @@ pipeline
             }
           }
 
+          environment
+          {
+            CODESIGN_USER = credentials('codesign-user')
+            CODESIGN_PASS = credentials('codesign-pass')
+            CODESIGN_TOTP_SECRET = credentials('codesign-totp-secret')
+            CODESIGN_CREDENTIAL_ID = credentials('codesign-credential-id')
+          }
+
           steps
           {
             sh 'make sign-binaries'
