@@ -46,7 +46,10 @@ pipeline
           }
         }
 
-        stage('Sign')
+        // Sign the Windows binaries before we build the installer .exe to
+        // ensure that the signed graylog-sidecar.exe binaries are included
+        // in the installer.
+        stage('Sign Windows Binaries')
         {
           agent
           {
@@ -89,6 +92,34 @@ pipeline
           steps
           {
             sh 'make package-all'
+          }
+        }
+
+        stage('Sign Windows Installer')
+        {
+          agent
+          {
+            docker
+            {
+              image 'graylog/internal-codesigntool:latest'
+              args '-u jenkins:jenkins'
+              registryCredentialsId 'docker-hub'
+              alwaysPull false // We did that in the previous sign stage
+              reuseNode true
+            }
+          }
+
+          environment
+          {
+            CODESIGN_USER = credentials('codesign-user')
+            CODESIGN_PASS = credentials('codesign-pass')
+            CODESIGN_TOTP_SECRET = credentials('codesign-totp-secret')
+            CODESIGN_CREDENTIAL_ID = credentials('codesign-credential-id')
+          }
+
+          steps
+          {
+            sh 'make sign-windows-installer'
           }
         }
 

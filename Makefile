@@ -18,6 +18,8 @@ BUILD_OPTS = -ldflags "-s -X github.com/Graylog2/collector-sidecar/common.GitRev
 TEST_SUITE = \
 	github.com/Graylog2/collector-sidecar/common
 
+WINDOWS_INSTALLER_VERSION = $(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)$(subst -,.,$(COLLECTOR_VERSION_SUFFIX))
+
 all: build
 
 fmt: ## Run gofmt
@@ -84,16 +86,12 @@ build-windows32: install-goversioninfo ## Build sidecar binary for Windows 32bit
 sign-binaries: sign-binary-windows-amd64 sign-binary-windows-386
 
 sign-binary-windows-amd64:
-	mv build/$(COLLECTOR_VERSION)/windows/amd64 build/$(COLLECTOR_VERSION)/windows/unsigned-amd64
-	mkdir -p build/$(COLLECTOR_VERSION)/windows/amd64
 	# This needs to run in a Docker container with the graylog/internal-codesigntool image
-	codesigntool sign build/$(COLLECTOR_VERSION)/windows/unsigned-amd64/graylog-sidecar.exe build/$(COLLECTOR_VERSION)/windows/amd64
+	codesigntool sign build/$(COLLECTOR_VERSION)/windows/amd64/graylog-sidecar.exe
 
 sign-binary-windows-386:
-	mv build/$(COLLECTOR_VERSION)/windows/386 build/$(COLLECTOR_VERSION)/windows/unsigned-386
-	mkdir -p build/$(COLLECTOR_VERSION)/windows/386
 	# This needs to run in a Docker container with the graylog/internal-codesigntool image
-	codesigntool sign build/$(COLLECTOR_VERSION)/windows/unsigned-386/graylog-sidecar.exe build/$(COLLECTOR_VERSION)/windows/386
+	codesigntool sign build/$(COLLECTOR_VERSION)/windows/386/graylog-sidecar.exe
 
 ## Adds version info to Windows executable
 install-goversioninfo:
@@ -127,6 +125,10 @@ package-windows: prepare-package ## Create Windows installer
 	cp build/$(COLLECTOR_VERSION)/windows/amd64/graylog-sidecar.exe dist/pkg/graylog-sidecar-$(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX)-amd64.exe
 	cp build/$(COLLECTOR_VERSION)/windows/386/graylog-sidecar.exe dist/pkg/graylog-sidecar-$(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX)-386.exe
 	makensis -DVERSION=$(COLLECTOR_VERSION) -DVERSION_SUFFIX=$(COLLECTOR_VERSION_SUFFIX) -DREVISION=$(COLLECTOR_REVISION) dist/recipe.nsi
+
+sign-windows-installer:
+	# This needs to run in a Docker container with the graylog/internal-codesigntool image
+	codesigntool sign dist/pkg/graylog_sidecar_installer_$(WINDOWS_INSTALLER_VERSION).exe
 
 package-chocolatey: ## Create Chocolatey .nupkg file
 	# This needs to run in a Docker container based on the Dockerfile.chocolatey image!
