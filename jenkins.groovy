@@ -56,6 +56,7 @@ pipeline
               args '-u jenkins:jenkins'
               registryCredentialsId 'docker-hub'
               alwaysPull true
+              reuseNode true
             }
           }
 
