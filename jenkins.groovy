@@ -143,6 +143,17 @@ pipeline
           }
         }
 
+        stage('Create Checksums')
+        {
+          steps
+          {
+            dir('dist/pkg')
+            {
+              sh 'sha256sum * | tee CHECKSUMS-SHA256.txt'
+            }
+          }
+        }
+
         stage('Chocolatey Push')
         {
           when
