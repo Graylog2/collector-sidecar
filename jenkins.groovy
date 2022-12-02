@@ -46,24 +46,6 @@ pipeline
           }
         }
 
-        stage('Package')
-        {
-          agent
-          {
-            docker
-            {
-              image 'torch/jenkins-fpm-cook:latest'
-              args '-u jenkins:docker'
-              reuseNode true
-            }
-          }
-
-          steps
-          {
-            sh 'make package-all'
-          }
-        }
-
         stage('Sign')
         {
           agent
@@ -80,6 +62,24 @@ pipeline
           steps
           {
             sh 'make sign-binaries'
+          }
+        }
+
+        stage('Package')
+        {
+          agent
+          {
+            docker
+            {
+              image 'torch/jenkins-fpm-cook:latest'
+              args '-u jenkins:docker'
+              reuseNode true
+            }
+          }
+
+          steps
+          {
+            sh 'make package-all'
           }
         }
 
