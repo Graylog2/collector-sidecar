@@ -81,7 +81,7 @@ build-windows32: install-goversioninfo ## Build sidecar binary for Windows 32bit
 	$(GOVERSIONINFO_BIN) -product-version="$(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)" -ver-major="$(COLLECTOR_VERSION_MAJOR)" -product-ver-minor="$(COLLECTOR_VERSION_MINOR)" -product-ver-patch="$(COLLECTOR_VERSION_PATCH)" -product-ver-build="$(COLLECTOR_REVISION)" -file-version="$(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)" -ver-major="$(COLLECTOR_VERSION_MAJOR)" -ver-minor="$(COLLECTOR_VERSION_MINOR)" -ver-patch="$(COLLECTOR_VERSION_PATCH)" -ver-build="$(COLLECTOR_REVISION)" -o resource_windows.syso
 	GOOS=windows GOARCH=386 CGO_ENABLED=1 CC=i686-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_win32 -v -o build/$(COLLECTOR_VERSION)/windows/386/graylog-sidecar.exe
 
-sign-binaries: sign-windows-amd64 sign-windows-i386
+sign-binaries: sign-binary-windows-amd64 sign-binary-windows-i386
 
 sign-binary-windows-amd64:
 	mv build/$(COLLECTOR_VERSION)/windows/amd64 build/$(COLLECTOR_VERSION)/windows/unsigned-amd64
