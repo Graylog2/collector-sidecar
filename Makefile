@@ -83,13 +83,13 @@ build-windows32: install-goversioninfo ## Build sidecar binary for Windows 32bit
 
 sign-binaries: sign-binary-windows-amd64 sign-binary-windows-386
 
-sign-binary-windows-amd64: build-windows
+sign-binary-windows-amd64:
 	mv build/$(COLLECTOR_VERSION)/windows/amd64 build/$(COLLECTOR_VERSION)/windows/unsigned-amd64
 	mkdir -p build/$(COLLECTOR_VERSION)/windows/amd64
 	# This needs to run in a Docker container with the graylog/internal-codesigntool image
 	codesigntool sign build/$(COLLECTOR_VERSION)/windows/unsigned-amd64/graylog-sidecar.exe build/$(COLLECTOR_VERSION)/windows/amd64
 
-sign-binary-windows-386: build-windows32
+sign-binary-windows-386:
 	mv build/$(COLLECTOR_VERSION)/windows/386 build/$(COLLECTOR_VERSION)/windows/unsigned-386
 	mkdir -p build/$(COLLECTOR_VERSION)/windows/386
 	# This needs to run in a Docker container with the graylog/internal-codesigntool image
