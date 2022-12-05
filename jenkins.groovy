@@ -216,6 +216,7 @@ pipeline
           {
             GITHUB_CREDS = credentials('github-access-token')
             REPO_API_URL = 'https://api.github.com/repos/Graylog2/collector-sidecar'
+            UPLOAD_API_URL = 'https://uploads.github.com/repos/Graylog2/collector-sidecar'
           }
 
           steps
@@ -238,7 +239,7 @@ pipeline
                     -H "Authorization: token $GITHUB_CREDS" \
                     -H "Content-Type: application/octet-stream" \
                     --data-binary "@$file" \
-                    "$REPO_API_URL/releases/$RELEASE_ID/assets?name=$name"
+                    "$UPLOAD_API_URL/releases/$RELEASE_ID/assets?name=$name"
                 done
               '''
             }
