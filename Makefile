@@ -19,6 +19,8 @@ TEST_SUITE = \
 	github.com/Graylog2/collector-sidecar/common
 
 WINDOWS_INSTALLER_VERSION = $(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)$(subst -,.,$(COLLECTOR_VERSION_SUFFIX))
+# Removing the dot to comply with NuGet versioning (beta.1 -> beta2)
+CHOCOLATEY_VERSION = $(COLLECTOR_VERSION).$(COLLECTOR_REVISION)$(subst .,,$(COLLECTOR_VERSION_SUFFIX))
 
 all: build
 
@@ -135,12 +137,12 @@ package-chocolatey: ## Create Chocolatey .nupkg file
 	dist/chocolatey/gensha.sh $(COLLECTOR_VERSION) $(COLLECTOR_REVISION) $(COLLECTOR_VERSION_SUFFIX)
 	# The fourth number in Chocolatey (NuGet) is the revision.
 	# See: https://learn.microsoft.com/en-us/nuget/concepts/package-versioning#where-nugetversion-diverges-from-semantic-versioning
-	cd dist/chocolatey && choco pack graylog-sidecar.nuspec --version $(COLLECTOR_VERSION).$(COLLECTOR_REVISION)$(subst .,,$(COLLECTOR_VERSION_SUFFIX)) --out ../pkg
+	cd dist/chocolatey && choco pack graylog-sidecar.nuspec --version $(CHOCOLATEY_VERSION) --out ../pkg
 
 push-chocolatey: ## Push Chocolatey .nupkg file
 	# This needs to run in a Docker container based on the Dockerfile.chocolatey image!
 	# Escape the CHOCO_API_KEY to avoid printing it in the logs!
-	choco push dist/pkg/graylog-sidecar.$(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX).nupkg -k=$$CHOCO_API_KEY
+	choco push dist/pkg/graylog-sidecar.$(CHOCOLATEY_VERSION).nupkg -k=$$CHOCO_API_KEY
 
 package-tar: ## Create tar archive for all platforms
 	@mkdir -p dist/pkg
