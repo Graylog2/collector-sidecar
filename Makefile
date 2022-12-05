@@ -134,7 +134,7 @@ sign-windows-installer:
 
 package-chocolatey: ## Create Chocolatey .nupkg file
 	# This needs to run in a Docker container based on the Dockerfile.chocolatey image!
-	dist/chocolatey/gensha.sh $(COLLECTOR_VERSION) $(WINDOWS_INSTALLER_VERSION)
+	dist/chocolatey/gensha.sh $(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX) $(WINDOWS_INSTALLER_VERSION)
 	# The fourth number in Chocolatey (NuGet) is the revision.
 	# See: https://learn.microsoft.com/en-us/nuget/concepts/package-versioning#where-nugetversion-diverges-from-semantic-versioning
 	cd dist/chocolatey && choco pack graylog-sidecar.nuspec --version $(CHOCOLATEY_VERSION) --out ../pkg
