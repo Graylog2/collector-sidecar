@@ -224,7 +224,7 @@ pipeline
 
             script
             {
-              def RELEASE_DATA = sh returnStdout: true, script: "curl -s --user \"$GITHUB_CREDS\" --data \'{ \"tag_name\": \"${TAG_NAME}\", \"name\": \"${TAG_NAME}\", \"body\": \"Insert changes here.\", \"draft\": true }\' $REPO_API_URL/releases"
+              def RELEASE_DATA = sh returnStdout: true, script: "curl -fsSL --user \"$GITHUB_CREDS\" --data \'{ \"tag_name\": \"${TAG_NAME}\", \"name\": \"${TAG_NAME}\", \"body\": \"Insert changes here.\", \"draft\": true }\' $REPO_API_URL/releases"
               def props = readJSON text: RELEASE_DATA
               env.RELEASE_ID = props.id
 
@@ -234,7 +234,7 @@ pipeline
                 for file in dist/pkg/*; do
                   name="$(basename "$file")"
 
-                  curl \
+                  curl -fsSL \
                     -H "Authorization: token $GITHUB_CREDS" \
                     -H "Content-Type: application/octet-stream" \
                     --data-binary "@$file" \
