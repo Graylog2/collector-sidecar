@@ -18,6 +18,8 @@ BUILD_OPTS = -ldflags "-s -X github.com/Graylog2/collector-sidecar/common.GitRev
 TEST_SUITE = \
 	github.com/Graylog2/collector-sidecar/common
 
+WINDOWS_INSTALLER_VERSION = $(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)$(subst -,.,$(COLLECTOR_VERSION_SUFFIX))
+
 all: build
 
 fmt: ## Run gofmt
@@ -81,6 +83,16 @@ build-windows32: install-goversioninfo ## Build sidecar binary for Windows 32bit
 	$(GOVERSIONINFO_BIN) -product-version="$(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)" -ver-major="$(COLLECTOR_VERSION_MAJOR)" -product-ver-minor="$(COLLECTOR_VERSION_MINOR)" -product-ver-patch="$(COLLECTOR_VERSION_PATCH)" -product-ver-build="$(COLLECTOR_REVISION)" -file-version="$(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)" -ver-major="$(COLLECTOR_VERSION_MAJOR)" -ver-minor="$(COLLECTOR_VERSION_MINOR)" -ver-patch="$(COLLECTOR_VERSION_PATCH)" -ver-build="$(COLLECTOR_REVISION)" -o resource_windows.syso
 	GOOS=windows GOARCH=386 CGO_ENABLED=1 CC=i686-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_win32 -v -o build/$(COLLECTOR_VERSION)/windows/386/graylog-sidecar.exe
 
+sign-binaries: sign-binary-windows-amd64 sign-binary-windows-386
+
+sign-binary-windows-amd64:
+	# This needs to run in a Docker container with the graylog/internal-codesigntool image
+	codesigntool sign build/$(COLLECTOR_VERSION)/windows/amd64/graylog-sidecar.exe
+
+sign-binary-windows-386:
+	# This needs to run in a Docker container with the graylog/internal-codesigntool image
+	codesigntool sign build/$(COLLECTOR_VERSION)/windows/386/graylog-sidecar.exe
+
 ## Adds version info to Windows executable
 install-goversioninfo:
 	go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
@@ -110,12 +122,20 @@ package-linux32: ## Create Linux i386 system package
 
 package-windows: prepare-package ## Create Windows installer
 	@mkdir -p dist/pkg
+	cp build/$(COLLECTOR_VERSION)/windows/amd64/graylog-sidecar.exe dist/pkg/graylog-sidecar-$(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX)-amd64.exe
+	cp build/$(COLLECTOR_VERSION)/windows/386/graylog-sidecar.exe dist/pkg/graylog-sidecar-$(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX)-386.exe
 	makensis -DVERSION=$(COLLECTOR_VERSION) -DVERSION_SUFFIX=$(COLLECTOR_VERSION_SUFFIX) -DREVISION=$(COLLECTOR_REVISION) dist/recipe.nsi
+
+sign-windows-installer:
+	# This needs to run in a Docker container with the graylog/internal-codesigntool image
+	codesigntool sign dist/pkg/graylog_sidecar_installer_$(WINDOWS_INSTALLER_VERSION).exe
 
 package-chocolatey: ## Create Chocolatey .nupkg file
 	# This needs to run in a Docker container based on the Dockerfile.chocolatey image!
 	dist/chocolatey/gensha.sh $(COLLECTOR_VERSION) $(COLLECTOR_REVISION) $(COLLECTOR_VERSION_SUFFIX)
-	cd dist/chocolatey && choco pack graylog-sidecar.nuspec --version $(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX) --out ../pkg
+	# The fourth number in Chocolatey (NuGet) is the revision.
+	# See: https://learn.microsoft.com/en-us/nuget/concepts/package-versioning#where-nugetversion-diverges-from-semantic-versioning
+	cd dist/chocolatey && choco pack graylog-sidecar.nuspec --version $(COLLECTOR_VERSION).$(COLLECTOR_REVISION)$(subst .,,$(COLLECTOR_VERSION_SUFFIX)) --out ../pkg
 
 push-chocolatey: ## Push Chocolatey .nupkg file
 	# This needs to run in a Docker container based on the Dockerfile.chocolatey image!

@@ -1,4 +1,4 @@
-FROM chocolatey/choco:v1.1.0
+FROM chocolatey/choco:v1.2.0
 
 # The choco binary wants to write to /opt/chocolatey and Jenkins is running
 # the container as non-root user.

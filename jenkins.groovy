@@ -18,7 +18,6 @@ pipeline
   {
     GOPATH = '/home/jenkins/go'
     GO15VENDOREXPERIMENT=1
-    CHOCO_API_KEY = credentials('chocolatey-api-key')
   }
 
   stages
@@ -47,6 +46,37 @@ pipeline
           }
         }
 
+        // Sign the Windows binaries before we build the installer .exe to
+        // ensure that the signed graylog-sidecar.exe binaries are included
+        // in the installer.
+        stage('Sign Windows Binaries')
+        {
+          agent
+          {
+            docker
+            {
+              image 'graylog/internal-codesigntool:latest'
+              args '-u jenkins:jenkins'
+              registryCredentialsId 'docker-hub'
+              alwaysPull true
+              reuseNode true
+            }
+          }
+
+          environment
+          {
+            CODESIGN_USER = credentials('codesign-user')
+            CODESIGN_PASS = credentials('codesign-pass')
+            CODESIGN_TOTP_SECRET = credentials('codesign-totp-secret')
+            CODESIGN_CREDENTIAL_ID = credentials('codesign-credential-id')
+          }
+
+          steps
+          {
+            sh 'make sign-binaries'
+          }
+        }
+
         stage('Package')
         {
           agent
@@ -62,6 +92,34 @@ pipeline
           steps
           {
             sh 'make package-all'
+          }
+        }
+
+        stage('Sign Windows Installer')
+        {
+          agent
+          {
+            docker
+            {
+              image 'graylog/internal-codesigntool:latest'
+              args '-u jenkins:jenkins'
+              registryCredentialsId 'docker-hub'
+              alwaysPull false // We did that in the previous sign stage
+              reuseNode true
+            }
+          }
+
+          environment
+          {
+            CODESIGN_USER = credentials('codesign-user')
+            CODESIGN_PASS = credentials('codesign-pass')
+            CODESIGN_TOTP_SECRET = credentials('codesign-totp-secret')
+            CODESIGN_CREDENTIAL_ID = credentials('codesign-credential-id')
+          }
+
+          steps
+          {
+            sh 'make sign-windows-installer'
           }
         }
 
@@ -85,6 +143,17 @@ pipeline
           }
         }
 
+        stage('Create Checksums')
+        {
+          steps
+          {
+            dir('dist/pkg')
+            {
+              sh 'sha256sum * | tee CHECKSUMS-SHA256.txt'
+            }
+          }
+        }
+
         stage('Chocolatey Push')
         {
           when
@@ -102,6 +171,11 @@ pipeline
               additionalBuildArgs '-t local/sidecar-chocolatey'
               reuseNode true
             }
+          }
+
+          environment
+          {
+            CHOCO_API_KEY = credentials('chocolatey-api-key')
           }
 
           steps
@@ -128,6 +202,46 @@ pipeline
               path: "graylog-collector-sidecar/${env.TAG_NAME}/",
               file: "dist/pkg"
             )
+          }
+        }
+
+        stage('GitHub Release')
+        {
+          when
+          {
+            buildingTag()
+          }
+
+          environment
+          {
+            GITHUB_CREDS = credentials('github-access-token')
+            REPO_API_URL = 'https://api.github.com/repos/Graylog2/collector-sidecar'
+          }
+
+          steps
+          {
+            echo "Releasing ${env.TAG_NAME} to GitHub..."
+
+            script
+            {
+              def RELEASE_DATA = sh returnStdout: true, script: "curl -fsSL --user \"$GITHUB_CREDS\" --data \'{ \"tag_name\": \"${TAG_NAME}\", \"name\": \"${TAG_NAME}\", \"body\": \"Insert changes here.\", \"draft\": true }\' $REPO_API_URL/releases"
+              def props = readJSON text: RELEASE_DATA
+              env.RELEASE_ID = props.id
+
+              sh '''#!/bin/bash
+                set -xeo pipefail
+
+                for file in dist/pkg/*; do
+                  name="$(basename "$file")"
+
+                  curl -fsSL \
+                    -H "Authorization: token $GITHUB_CREDS" \
+                    -H "Content-Type: application/octet-stream" \
+                    --data-binary "@$file" \
+                    "$REPO_API_URL/releases/$RELEASE_ID/assets?name=$name"
+                done
+              '''
+            }
           }
         }
       }

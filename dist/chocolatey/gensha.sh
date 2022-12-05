@@ -18,5 +18,3 @@ sed -e "s,%%CHECKSUM%%,$COLLECTOR_CHECKSUM,g" \
 	-e "s,%%URL%%,$version_url,g" \
 	"dist/chocolatey/tools/chocolateyinstall.ps1.template" \
 	> "dist/chocolatey/tools/chocolateyinstall.ps1"
-
-find dist/pkg -name "graylog_sidecar_installer*.exe" -exec /bin/bash -c "sha256sum {} | cut -d' ' -f1 > {}.sha256.txt" \;
