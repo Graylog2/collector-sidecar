@@ -208,6 +208,7 @@ func (r *ExecRunner) start() error {
 	r.cmd = exec.Command(r.exec, quotedArgs...)
 	r.cmd.Dir = r.daemon.Dir
 	r.cmd.Env = append(os.Environ(), r.daemon.Env...)
+	r.cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	// start the actual process and don't block
 	r.startTime = time.Now()
@@ -240,11 +241,18 @@ func (r *ExecRunner) stop() error {
 	}
 
 	// in doubt kill the process
-	if r.Running() {
-		log.Debugf("[%s] SIGHUP ignored, killing process", r.Name())
-		err := r.cmd.Process.Kill()
+	if r.Running() && runtime.GOOS != "windows" {
+		log.Debugf("[%s] PID SIGHUP ignored, sending SIGHUP to process group", r.Name())
+		err := syscall.Kill(-r.cmd.Process.Pid, syscall.SIGHUP)
 		if err != nil {
-			log.Debugf("[%s] Failed to kill process %s", r.Name(), err)
+			log.Debugf("[%s] Failed to HUP process group %s", r.Name(), err)
+		}
+		time.Sleep(2 * time.Second)
+	}
+	if r.Running() {
+		err := syscall.Kill(-r.cmd.Process.Pid, syscall.SIGKILL)
+		if err != nil {
+			log.Debugf("[%s] Failed to kill process group %s", r.Name(), err)
 		}
 	}
 
@@ -307,7 +315,10 @@ func (r *ExecRunner) run() {
 	// wait for process exit in the background. Ensure single cmd.Wait() call
 	go func() {
 		r.setRunning(true)
-		r.cmd.Wait()
+		err := r.cmd.Wait()
+		if err != nil {
+			log.Warnf("[%s] Wait() error %s", r.name, err)
+		}
 		r.setRunning(false)
 	}()
 }
