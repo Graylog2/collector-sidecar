@@ -307,7 +307,7 @@ func (r *ExecRunner) run() {
 		r.setRunning(true)
 		err := r.cmd.Wait()
 		if err != nil {
-			log.Warnf("[%s] Wait() error %s", r.name, err)
+			log.Debugf("[%s] Wait() error %s", r.name, err)
 		}
 		r.setRunning(false)
 	}()
