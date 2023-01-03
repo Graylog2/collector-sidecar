@@ -18,6 +18,7 @@ package backends
 import (
 	"bytes"
 	"fmt"
+	"github.com/Graylog2/collector-sidecar/helpers"
 	"os/exec"
 	"path/filepath"
 	"reflect"
@@ -27,7 +28,6 @@ import (
 	"github.com/flynn-archive/go-shlex"
 
 	"github.com/Graylog2/collector-sidecar/api/graylog"
-	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/system"
 )
@@ -50,7 +50,7 @@ type Backend struct {
 
 func BackendFromResponse(response graylog.ResponseCollectorBackend, configId string, ctx *context.Ctx) *Backend {
 	return &Backend{
-		Enabled:              common.NewTrue(),
+		Enabled:              helpers.NewTrue(),
 		Id:                   response.Id + "-" + configId,
 		CollectorId:          response.Id,
 		ConfigId:             configId,
@@ -74,10 +74,10 @@ func (b *Backend) Equals(a *Backend) bool {
 }
 
 func (b *Backend) EqualSettings(a *Backend) bool {
-	executeParameters, _ := common.Sprintf(
+	executeParameters, _ := helpers.Sprintf(
 		a.ExecuteParameters,
 		a.ConfigurationPath)
-	validationParameters, _ := common.Sprintf(
+	validationParameters, _ := helpers.Sprintf(
 		a.ValidationParameters,
 		a.ConfigurationPath)
 
@@ -104,7 +104,7 @@ func (b *Backend) CheckExecutableAgainstAccesslist(context *context.Ctx) error {
 	if len(context.UserConfig.CollectorBinariesAccesslist) <= 0 {
 		return nil
 	}
-	isListed, err := common.PathMatch(b.ExecutablePath, context.UserConfig.CollectorBinariesAccesslist)
+	isListed, err := helpers.PathMatch(b.ExecutablePath, context.UserConfig.CollectorBinariesAccesslist)
 	if err != nil {
 		return fmt.Errorf("Can not validate binary path: %s", err)
 	}
@@ -121,7 +121,7 @@ func (b *Backend) CheckExecutableAgainstAccesslist(context *context.Ctx) error {
 }
 
 func (b *Backend) CheckConfigPathAgainstAccesslist(context *context.Ctx) bool {
-	configuration, err := common.PathMatch(b.ConfigurationPath, context.UserConfig.CollectorBinariesAccesslist)
+	configuration, err := helpers.PathMatch(b.ConfigurationPath, context.UserConfig.CollectorBinariesAccesslist)
 	if err != nil {
 		log.Errorf("Can not validate configuration path: %s", err)
 		return false
@@ -145,7 +145,7 @@ func (b *Backend) ValidateConfigurationFile(context *context.Ctx) (error, string
 	var err error
 	var quotedArgs []string
 	if runtime.GOOS == "windows" {
-		quotedArgs = common.CommandLineToArgv(b.ValidationParameters)
+		quotedArgs = helpers.CommandLineToArgv(b.ValidationParameters)
 	} else {
 		quotedArgs, err = shlex.Split(b.ValidationParameters)
 	}

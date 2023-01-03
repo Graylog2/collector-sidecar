@@ -13,12 +13,32 @@
 // along with this program. If not, see
 // <http://www.mongodb.com/licensing/server-side-public-license>.
 
+//go:build !windows
 // +build !windows
 
-package common
+package daemon
 
-// Dummy function. Only used on Windows
-func CommandLineToArgv(cmd string) []string {
-	panic("not implemented on this platform")
-	return []string{}
+import (
+	"os"
+	"os/exec"
+	"syscall"
+	"time"
+)
+
+func Setpgid(cmd *exec.Cmd) {
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+}
+func KillProcess(r *ExecRunner, proc *os.Process) {
+	log.Debugf("[%s] PID SIGHUP ignored, sending SIGHUP to process group", r.Name())
+	err := syscall.Kill(-proc.Pid, syscall.SIGHUP)
+	if err != nil {
+		log.Debugf("[%s] Failed to HUP process group %s", r.Name(), err)
+	}
+	time.Sleep(2 * time.Second)
+	if r.Running() {
+		err := syscall.Kill(-proc.Pid, syscall.SIGKILL)
+		if err != nil {
+			log.Debugf("[%s] Failed to kill process group %s", r.Name(), err)
+		}
+	}
 }

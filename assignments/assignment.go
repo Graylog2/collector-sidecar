@@ -16,7 +16,7 @@
 package assignments
 
 import (
-	"github.com/Graylog2/collector-sidecar/common"
+	"github.com/Graylog2/collector-sidecar/helpers"
 	"reflect"
 )
 
@@ -92,7 +92,7 @@ func (as *assignmentStore) Update(assignments []ConfigurationAssignment) bool {
 
 func (as *assignmentStore) cleanup(validBackendIds []string) {
 	for backendId := range as.assignments {
-		if !common.IsInList(backendId, validBackendIds) {
+		if !helpers.IsInList(backendId, validBackendIds) {
 			delete(as.assignments, backendId)
 		}
 	}

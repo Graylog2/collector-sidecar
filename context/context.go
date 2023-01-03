@@ -16,6 +16,8 @@
 package context
 
 import (
+	"github.com/Graylog2/collector-sidecar/common"
+	"github.com/Graylog2/collector-sidecar/helpers"
 	"github.com/docker/go-units"
 	"net/url"
 	"os"
@@ -25,7 +27,6 @@ import (
 	"time"
 
 	"github.com/Graylog2/collector-sidecar/cfgfile"
-	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/logger"
 	"github.com/Graylog2/collector-sidecar/system"
 )
@@ -71,7 +72,7 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 	if ctx.UserConfig.NodeId == "" {
 		log.Fatal("No node ID was configured.")
 	}
-	ctx.NodeId = common.GetCollectorId(ctx.UserConfig.NodeId)
+	ctx.NodeId = helpers.GetCollectorId(ctx.UserConfig.NodeId)
 	if ctx.NodeId == "" {
 		log.Fatal("Empty node-id, exiting! Make sure a valid id is configured.")
 	}
@@ -79,7 +80,7 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 	// node_name
 	if ctx.UserConfig.NodeName == "" {
 		log.Info("No node name was configured, falling back to hostname")
-		ctx.UserConfig.NodeName, err = common.GetHostname()
+		ctx.UserConfig.NodeName, err = helpers.GetHostname()
 		if err != nil {
 			log.Fatal("No node name configured and not able to obtain hostname as alternative.")
 		}

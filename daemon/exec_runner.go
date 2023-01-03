@@ -17,6 +17,7 @@ package daemon
 
 import (
 	"errors"
+	"github.com/Graylog2/collector-sidecar/helpers"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -198,7 +199,7 @@ func (r *ExecRunner) start() error {
 	var err error
 	var quotedArgs []string
 	if runtime.GOOS == "windows" {
-		quotedArgs = common.CommandLineToArgv(r.args)
+		quotedArgs = helpers.CommandLineToArgv(r.args)
 	} else {
 		quotedArgs, err = shlex.Split(r.args)
 	}
@@ -208,7 +209,9 @@ func (r *ExecRunner) start() error {
 	r.cmd = exec.Command(r.exec, quotedArgs...)
 	r.cmd.Dir = r.daemon.Dir
 	r.cmd.Env = append(os.Environ(), r.daemon.Env...)
-	r.cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	if runtime.GOOS != "windows" {
+		Setpgid(r.cmd)
+	}
 
 	// start the actual process and don't block
 	r.startTime = time.Now()
@@ -241,20 +244,7 @@ func (r *ExecRunner) stop() error {
 	}
 
 	// in doubt kill the process
-	if r.Running() && runtime.GOOS != "windows" {
-		log.Debugf("[%s] PID SIGHUP ignored, sending SIGHUP to process group", r.Name())
-		err := syscall.Kill(-r.cmd.Process.Pid, syscall.SIGHUP)
-		if err != nil {
-			log.Debugf("[%s] Failed to HUP process group %s", r.Name(), err)
-		}
-		time.Sleep(2 * time.Second)
-	}
-	if r.Running() {
-		err := syscall.Kill(-r.cmd.Process.Pid, syscall.SIGKILL)
-		if err != nil {
-			log.Debugf("[%s] Failed to kill process group %s", r.Name(), err)
-		}
-	}
+	KillProcess(r, r.cmd.Process)
 
 	r.backend.SetStatus(backends.StatusStopped, "Stopped", "")
 

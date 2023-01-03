@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
+	"github.com/Graylog2/collector-sidecar/helpers"
 	"io"
 	"net/http"
 	"strconv"
@@ -164,7 +165,7 @@ func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.C
 	registration := graylog.RegistrationRequest{}
 
 	registration.NodeName = ctx.UserConfig.NodeName
-	registration.NodeDetails.OperatingSystem = common.GetSystemName()
+	registration.NodeDetails.OperatingSystem = helpers.GetSystemName()
 
 	if ctx.UserConfig.SendStatus {
 		metrics := &graylog.MetricsRequest{
@@ -172,7 +173,7 @@ func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.C
 			CpuIdle: common.GetCpuIdle(),
 			Load1:   common.GetLoad1(),
 		}
-		registration.NodeDetails.IP = common.GetHostIP()
+		registration.NodeDetails.IP = helpers.GetHostIP()
 		registration.NodeDetails.Status = status
 		registration.NodeDetails.Metrics = metrics
 		if len(ctx.UserConfig.ListLogFiles) > 0 {

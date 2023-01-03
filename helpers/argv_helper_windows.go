@@ -43,9 +43,8 @@
 
 // extracted from github.com/golang/go/blob/master/src/os/exec_windows.go
 
-package common
+package helpers
 
-// appendBSBytes appends n '\\' bytes to b and returns the resulting slice.
 func appendBSBytes(b []byte, n int) []byte {
 	for ; n > 0; n-- {
 		b = append(b, '\\')
