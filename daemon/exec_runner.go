@@ -46,6 +46,7 @@ type ExecRunner struct {
 	startTime      time.Time
 	cmd            *exec.Cmd
 	signals        chan string
+	terminate      chan error
 }
 
 func init() {
@@ -67,6 +68,7 @@ func NewExecRunner(backend backends.Backend, context *context.Ctx) Runner {
 		signals:      make(chan string),
 		stderr:       filepath.Join(context.UserConfig.LogPath, backend.Name+"_stderr.log"),
 		stdout:       filepath.Join(context.UserConfig.LogPath, backend.Name+"_stdout.log"),
+		terminate:    make(chan error),
 	}
 
 	// set default state
@@ -213,6 +215,7 @@ func (r *ExecRunner) start() error {
 		Setpgid(r.cmd)
 	}
 
+	r.terminate = make(chan error)
 	// start the actual process and don't block
 	r.startTime = time.Now()
 	r.run()
@@ -246,7 +249,11 @@ func (r *ExecRunner) stop() error {
 	// in doubt kill the process
 	KillProcess(r, r.cmd.Process)
 
-	r.backend.SetStatus(backends.StatusStopped, "Stopped", "")
+	if !r.Running() {
+		r.backend.SetStatus(backends.StatusStopped, "Stopped", "")
+	} else {
+		r.backend.SetStatus(backends.StatusError, "Failed to be stopped", "")
+	}
 
 	return nil
 }
@@ -259,15 +266,25 @@ func (r *ExecRunner) Restart() error {
 func (r *ExecRunner) restart() error {
 	if r.Running() {
 		r.stop()
-		for timeout := 0; r.Running() || timeout >= 5; timeout++ {
-			log.Debugf("[%s] waiting for process to finish...", r.Name())
+		limit := 10
+		for timeout := 0; r.Running() && timeout < limit; timeout++ {
+			log.Debugf("[%s] waiting %ds/%ds for process to finish...", r.Name(), timeout, limit)
 			time.Sleep(1 * time.Second)
 		}
 	}
+	if r.Running() {
+		// skip the hanging r.cmd.Wait() goroutine
+		r.terminate <- errors.New("timeout")
+		<-r.terminate // wait for termination
+	}
+
 	// wipe collector log files after each try
 	os.Truncate(r.stderr, 0)
 	os.Truncate(r.stdout, 0)
-	r.start()
+	err := r.start()
+	if err != nil {
+		log.Errorf("[%s] got start error: %s", r.Name(), err)
+	}
 
 	return nil
 }
@@ -282,7 +299,6 @@ func (r *ExecRunner) run() {
 		}
 
 		f := logger.GetRotatedLog(r.stderr, r.context.UserConfig.LogRotateMaxFileSize, r.context.UserConfig.LogRotateKeepFiles)
-		defer f.Close()
 		r.cmd.Stderr = f
 	}
 	if r.stdout != "" {
@@ -292,7 +308,6 @@ func (r *ExecRunner) run() {
 		}
 
 		f := logger.GetRotatedLog(r.stdout, r.context.UserConfig.LogRotateMaxFileSize, r.context.UserConfig.LogRotateKeepFiles)
-		defer f.Close()
 		r.cmd.Stdout = f
 	}
 
@@ -303,13 +318,21 @@ func (r *ExecRunner) run() {
 	}
 
 	// wait for process exit in the background. Ensure single cmd.Wait() call
+	// to deal with hanging processes, provide a termination channel
 	go func() {
 		r.setRunning(true)
-		err := r.cmd.Wait()
+		go func(terminate chan error) {
+			err := r.cmd.Wait()
+			terminate <- err
+		}(r.terminate)
+
+		err := <-r.terminate
 		if err != nil {
 			log.Debugf("[%s] Wait() error %s", r.name, err)
 		}
 		r.setRunning(false)
+		r.backend.SetStatus(backends.StatusStopped, "Stopped", "")
+		r.terminate <- nil //confirm termination
 	}()
 }
 
