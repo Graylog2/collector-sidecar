@@ -58,7 +58,7 @@ func (dist *Distributor) Stop(s service.Service) error {
 	for _, runner := range Daemon.Runner {
 		limit := 100
 		for timeout := 0; runner.Running() && timeout < limit; timeout++ {
-			time.Sleep(300 * time.Millisecond)
+			time.Sleep(100 * time.Millisecond)
 		}
 		if runner.Running() {
 			log.Warnf("[%s] collector failed to exit", runner.Name())

@@ -34,7 +34,7 @@ func KillProcess(r *ExecRunner, proc *os.Process) {
 	if err != nil {
 		log.Debugf("[%s] Failed to HUP process group %s", r.Name(), err)
 	}
-	time.Sleep(2 * time.Second)
+	time.Sleep(5 * time.Second)
 	if r.Running() {
 		err := syscall.Kill(-proc.Pid, syscall.SIGKILL)
 		if err != nil {

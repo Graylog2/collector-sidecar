@@ -51,7 +51,7 @@ import (
 )
 
 func Setpgid(cmd *exec.Cmd) {
-	panic("not implemented on this platform")
+	// nop on windows
 }
 func KillProcess(r *ExecRunner, proc *os.Process) {
 	err := proc.Kill()

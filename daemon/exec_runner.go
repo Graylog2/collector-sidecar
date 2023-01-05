@@ -211,9 +211,7 @@ func (r *ExecRunner) start() error {
 	r.cmd = exec.Command(r.exec, quotedArgs...)
 	r.cmd.Dir = r.daemon.Dir
 	r.cmd.Env = append(os.Environ(), r.daemon.Env...)
-	if runtime.GOOS != "windows" {
-		Setpgid(r.cmd)
-	}
+	Setpgid(r.cmd) // run with a new process group (unix only)
 
 	r.terminate = make(chan error)
 	// start the actual process and don't block
@@ -266,7 +264,7 @@ func (r *ExecRunner) Restart() error {
 func (r *ExecRunner) restart() error {
 	if r.Running() {
 		r.stop()
-		limit := 10
+		limit := 5
 		for timeout := 0; r.Running() && timeout < limit; timeout++ {
 			log.Debugf("[%s] waiting %ds/%ds for process to finish...", r.Name(), timeout, limit)
 			time.Sleep(1 * time.Second)
