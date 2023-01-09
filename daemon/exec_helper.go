@@ -61,5 +61,6 @@ func KillProcess(r *ExecRunner, timeout time.Duration) {
 		if err != nil {
 			log.Debugf("[%s] Failed to SIGKILL process group %s", r.Name(), err)
 		}
+		time.Sleep(100 * time.Millisecond)
 	}
 }
