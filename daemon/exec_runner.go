@@ -242,6 +242,7 @@ func (r *ExecRunner) stop() error {
 	if !r.Running() {
 		r.backend.SetStatus(backends.StatusStopped, "Stopped", "")
 	} else {
+		log.Warnf("[%s] Failed to be stopped", r.Name())
 		r.backend.SetStatus(backends.StatusError, "Failed to be stopped", "")
 	}
 
