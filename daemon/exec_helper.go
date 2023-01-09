@@ -19,7 +19,6 @@
 package daemon
 
 import (
-	"os"
 	"os/exec"
 	"syscall"
 	"time"
@@ -28,17 +27,39 @@ import (
 func Setpgid(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 }
-func KillProcess(r *ExecRunner, proc *os.Process) {
-	log.Debugf("[%s] PID SIGHUP ignored, sending SIGHUP to process group", r.Name())
-	err := syscall.Kill(-proc.Pid, syscall.SIGHUP)
-	if err != nil {
-		log.Debugf("[%s] Failed to HUP process group %s", r.Name(), err)
+
+func KillProcess(r *ExecRunner, timeout time.Duration) {
+	pid := r.cmd.Process.Pid
+
+	if pid == -1 {
+		log.Debugf("[%s] Process already released", r.Name())
+		return
 	}
-	time.Sleep(5 * time.Second)
+	if pid == 0 {
+		log.Debugf("[%s] Process not initialized", r.Name())
+		return
+	}
+
+	// Signal the process group (-pid) instead of just the process. Otherwise, forked child processes
+	// can keep running and cause cmd.Wait to hang.
+	log.Infof("[%s] SIGTERM process group", r.Name())
+	err := syscall.Kill(-pid, syscall.SIGTERM)
+	if err != nil {
+		log.Infof("[%s] Failed to SIGTERM process group %s", r.Name(), err)
+	}
+
+	limit := timeout.Milliseconds()
+	tick := 100 * time.Millisecond
+	for t := tick.Milliseconds(); r.Running() && t < limit; t += tick.Milliseconds() {
+		log.Infof("[%s] Waiting for process group to finish (%vms / %vms)", r.Name(), t, limit)
+		time.Sleep(tick)
+	}
+
 	if r.Running() {
-		err := syscall.Kill(-proc.Pid, syscall.SIGKILL)
+		log.Infof("[%s] SIGKILL process group", r.Name())
+		err := syscall.Kill(-pid, syscall.SIGKILL)
 		if err != nil {
-			log.Debugf("[%s] Failed to kill process group %s", r.Name(), err)
+			log.Debugf("[%s] Failed to SIGKILL process group %s", r.Name(), err)
 		}
 	}
 }

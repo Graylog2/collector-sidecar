@@ -46,15 +46,14 @@
 package daemon
 
 import (
-	"os"
 	"os/exec"
 )
 
 func Setpgid(cmd *exec.Cmd) {
 	// nop on windows
 }
-func KillProcess(r *ExecRunner, proc *os.Process) {
-	err := proc.Kill()
+func KillProcess(r *ExecRunner, _ time.Duration) {
+	err := r.cmd.Process.Kill()
 	if err != nil {
 		log.Debugf("[%s] Failed to kill process %s", r.Name(), err)
 	}

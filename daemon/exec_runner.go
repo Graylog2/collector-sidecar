@@ -24,7 +24,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	"github.com/flynn-archive/go-shlex"
@@ -238,14 +237,7 @@ func (r *ExecRunner) stop() error {
 
 	log.Infof("[%s] Stopping", r.name)
 
-	// give the chance to cleanup resources
-	if r.cmd.Process != nil && runtime.GOOS != "windows" {
-		r.cmd.Process.Signal(syscall.SIGHUP)
-		time.Sleep(2 * time.Second)
-	}
-
-	// in doubt kill the process
-	KillProcess(r, r.cmd.Process)
+	KillProcess(r, 5*time.Second)
 
 	if !r.Running() {
 		r.backend.SetStatus(backends.StatusStopped, "Stopped", "")
