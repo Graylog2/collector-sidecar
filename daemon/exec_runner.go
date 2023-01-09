@@ -307,6 +307,7 @@ func (r *ExecRunner) run() {
 		go func(terminate chan error) {
 			err := r.cmd.Wait()
 			terminate <- err
+			<-terminate // read acknowledgement
 		}(r.terminate)
 
 		err := <-r.terminate
