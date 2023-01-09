@@ -244,6 +244,9 @@ func (r *ExecRunner) stop() error {
 	} else {
 		log.Warnf("[%s] Failed to be stopped", r.Name())
 		r.backend.SetStatus(backends.StatusError, "Failed to be stopped", "")
+		// skip the hanging r.cmd.Wait() goroutine
+		r.terminate <- errors.New("timeout")
+		<-r.terminate // wait for termination
 	}
 
 	return nil
@@ -257,11 +260,6 @@ func (r *ExecRunner) Restart() error {
 func (r *ExecRunner) restart() error {
 	if r.Running() {
 		r.stop()
-	}
-	if r.Running() {
-		// skip the hanging r.cmd.Wait() goroutine
-		r.terminate <- errors.New("timeout")
-		<-r.terminate // wait for termination
 	}
 
 	// wipe collector log files after each try
