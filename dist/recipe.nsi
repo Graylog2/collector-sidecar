@@ -51,6 +51,8 @@
   Var ParamSendStatus
   Var ParamApiToken
   Var ParamNodeId
+  Var ParamTags
+  Var Tags
   Var NodeId
   Var SendStatus
   Var Dialog
@@ -227,6 +229,7 @@ Section "Post"
   ${GetOptions} $Params " -SEND_STATUS=" $ParamSendStatus
   ${GetOptions} $Params " -APITOKEN=" $ParamApiToken
   ${GetOptions} $Params " -NODEID=" $ParamNodeId
+  ${GetOptions} $Params " -TAGS=" $ParamTags
 
   ${If} $ParamServerUrl != ""
     StrCpy $ServerUrl $ParamServerUrl
@@ -249,6 +252,9 @@ Section "Post"
   ${If} $ParamNodeId != ""
     StrCpy $NodeId $ParamNodeId
   ${EndIf}
+  ${If} $ParamTags != ""
+    StrCpy $Tags $ParamTags
+  ${EndIf}
 
   ; set defaults
   ${If} $ServerUrl == ""
@@ -267,6 +273,9 @@ Section "Post"
     ;sidecar.yml needs double escapes
     ${WordReplace} "file:$INSTDIR\node-id" "\" "\\" "+" $NodeId
   ${EndIf}
+  ${If} $Tags == ""
+    StrCpy $Tags "[]"
+  ${EndIf}
 
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<SERVERURL>" $ServerUrl
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<NODENAME>" $NodeName
@@ -275,6 +284,7 @@ Section "Post"
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<SENDSTATUS>" $SendStatus
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<APITOKEN>" $ApiToken
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<NODEID>" $NodeId
+  !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<TAGS>" $Tags
 
   ;Install sidecar service
   ${If} $IsUpgrade == 'false'

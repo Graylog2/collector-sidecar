@@ -20,6 +20,11 @@
       To properly configure the sidecar, you'll need to pass in your **server url** and your **api token**.
 
           choco install graylog-sidecar --install-arguments="'-SERVERURL=http://10.0.2.2:9000/api -APITOKEN=yourapitoken'"
+
+      Other optional example parameters are:
+
+          -TAGS=["example","foo"] -NODENAME=mynodename -NODEID=1234 -SENDSTATUS=false -TLSSKIPVERIFY=true -UPDATEINTERVAL=10s
+
     </description>
     <releaseNotes></releaseNotes>
   </metadata>
