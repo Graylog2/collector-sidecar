@@ -1,0 +1,6 @@
+type = "fixed"
+message = "Make collector shutdown handling more resilient to hanging child processes"
+
+issues = ["463"]
+pulls = ["462"]
+
