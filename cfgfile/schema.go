@@ -28,6 +28,8 @@ type SidecarConfig struct {
 	CollectorValidationTimeoutString string        `config:"collector_validation_timeout"`
 	CollectorValidationTimeout       time.Duration // set from CollectorValidationTimeoutString
 	CollectorConfigurationDirectory  string        `config:"collector_configuration_directory"`
+	CollectorShutdownTimeoutString   string        `config:"collector_shutdown_timeout"`
+	CollectorShutdownTimeout         time.Duration // set from CollectorShutdownTimeoutString
 	LogRotateMaxFileSizeString       string        `config:"log_rotate_max_file_size"`
 	LogRotateMaxFileSize             int64         // set from LogRotateMaxFileSizeString
 	LogRotateKeepFiles               int           `config:"log_rotate_keep_files"`
@@ -54,6 +56,7 @@ log_path: "/var/log/graylog-sidecar"
 log_rotate_max_file_size: "10MiB"
 log_rotate_keep_files: 10
 collector_validation_timeout: "1m"
+collector_shutdown_timeout: "10s"
 collector_configuration_directory: "/var/lib/graylog-sidecar/generated"
 collector_binaries_accesslist:
   - "/usr/bin/filebeat"

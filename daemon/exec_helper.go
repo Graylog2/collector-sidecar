@@ -28,7 +28,7 @@ func Setpgid(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 }
 
-func KillProcess(r *ExecRunner, timeout time.Duration) {
+func KillProcess(r *ExecRunner) {
 	pid := r.cmd.Process.Pid
 
 	if pid == -1 {
@@ -48,7 +48,7 @@ func KillProcess(r *ExecRunner, timeout time.Duration) {
 		log.Infof("[%s] Failed to SIGTERM process group %s", r.Name(), err)
 	}
 
-	limit := timeout.Milliseconds()
+	limit := r.context.UserConfig.CollectorShutdownTimeout.Milliseconds()
 	tick := 100 * time.Millisecond
 	for t := tick.Milliseconds(); r.Running() && t < limit; t += tick.Milliseconds() {
 		log.Debugf("[%s] Waiting for process group to finish (%vms / %vms)", r.Name(), t, limit)

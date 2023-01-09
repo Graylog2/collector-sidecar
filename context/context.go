@@ -112,6 +112,10 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 	if err != nil {
 		log.Fatal("Cannot parse validation timeout duration: ", err)
 	}
+	ctx.UserConfig.CollectorShutdownTimeout, err = time.ParseDuration(ctx.UserConfig.CollectorShutdownTimeoutString)
+	if err != nil {
+		log.Fatal("Cannot parse shutdown timeout duration: ", err)
+	}
 
 	// collector_configuration_directory
 	if ctx.UserConfig.CollectorConfigurationDirectory == "" {

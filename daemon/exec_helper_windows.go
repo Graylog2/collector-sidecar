@@ -52,7 +52,7 @@ import (
 func Setpgid(cmd *exec.Cmd) {
 	// nop on windows
 }
-func KillProcess(r *ExecRunner, _ time.Duration) {
+func KillProcess(r *ExecRunner) {
 	err := r.cmd.Process.Kill()
 	if err != nil {
 		log.Debugf("[%s] Failed to kill process %s", r.Name(), err)

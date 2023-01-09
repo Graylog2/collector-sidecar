@@ -237,7 +237,7 @@ func (r *ExecRunner) stop() error {
 
 	log.Infof("[%s] Stopping", r.name)
 
-	KillProcess(r, 5*time.Second)
+	KillProcess(r)
 
 	if !r.Running() {
 		r.backend.SetStatus(backends.StatusStopped, "Stopped", "")
