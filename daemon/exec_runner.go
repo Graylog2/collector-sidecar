@@ -243,7 +243,6 @@ func (r *ExecRunner) stop() error {
 		r.backend.SetStatus(backends.StatusStopped, "Stopped", "")
 	} else {
 		log.Warnf("[%s] Failed to be stopped", r.Name())
-		r.backend.SetStatus(backends.StatusError, "Failed to be stopped", "")
 		// skip the hanging r.cmd.Wait() goroutine
 		r.terminate <- errors.New("timeout")
 		<-r.terminate // wait for termination
@@ -313,9 +312,13 @@ func (r *ExecRunner) run() {
 		err := <-r.terminate
 		if err != nil {
 			log.Debugf("[%s] Wait() error %s", r.name, err)
+			if err.Error() == "timeout" {
+				r.backend.SetStatus(backends.StatusError, "Failed to be stopped", "")
+			} else {
+				r.backend.SetStatus(backends.StatusStopped, "Stopped", "")
+			}
 		}
 		r.setRunning(false)
-		r.backend.SetStatus(backends.StatusStopped, "Stopped", "")
 		r.terminate <- nil //confirm termination
 	}()
 }
