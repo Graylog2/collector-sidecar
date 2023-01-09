@@ -42,7 +42,7 @@ func KillProcess(r *ExecRunner, timeout time.Duration) {
 
 	// Signal the process group (-pid) instead of just the process. Otherwise, forked child processes
 	// can keep running and cause cmd.Wait to hang.
-	log.Infof("[%s] SIGTERM process group", r.Name())
+	log.Debugf("[%s] SIGTERM process group", r.Name())
 	err := syscall.Kill(-pid, syscall.SIGTERM)
 	if err != nil {
 		log.Infof("[%s] Failed to SIGTERM process group %s", r.Name(), err)
@@ -51,12 +51,12 @@ func KillProcess(r *ExecRunner, timeout time.Duration) {
 	limit := timeout.Milliseconds()
 	tick := 100 * time.Millisecond
 	for t := tick.Milliseconds(); r.Running() && t < limit; t += tick.Milliseconds() {
-		log.Infof("[%s] Waiting for process group to finish (%vms / %vms)", r.Name(), t, limit)
+		log.Debugf("[%s] Waiting for process group to finish (%vms / %vms)", r.Name(), t, limit)
 		time.Sleep(tick)
 	}
 
 	if r.Running() {
-		log.Infof("[%s] SIGKILL process group", r.Name())
+		log.Infof("[%s] Still running after SIGTERM. Sending SIGKILL to the process group", r.Name())
 		err := syscall.Kill(-pid, syscall.SIGKILL)
 		if err != nil {
 			log.Debugf("[%s] Failed to SIGKILL process group %s", r.Name(), err)
