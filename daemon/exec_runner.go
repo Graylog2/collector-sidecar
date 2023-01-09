@@ -257,11 +257,6 @@ func (r *ExecRunner) Restart() error {
 func (r *ExecRunner) restart() error {
 	if r.Running() {
 		r.stop()
-		limit := 5
-		for timeout := 0; r.Running() && timeout < limit; timeout++ {
-			log.Debugf("[%s] waiting %ds/%ds for process to finish...", r.Name(), timeout, limit)
-			time.Sleep(1 * time.Second)
-		}
 	}
 	if r.Running() {
 		// skip the hanging r.cmd.Wait() goroutine
