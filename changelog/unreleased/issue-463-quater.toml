@@ -1,5 +1,5 @@
 type = "added"
-message = "Provide a new configuration option `collector_shutdown_timeout:10s` to determine how long to wait before sending a SIGKILL when shutting down collector processes"
+message = "Provide a new configuration option `collector_shutdown_timeout:10s` to determine how long to wait before sending a SIGKILL when shutting down collector processes."
 
 issues = ["463"]
 pulls = ["462"]
