@@ -16,9 +16,9 @@
 package logger
 
 import (
-	"github.com/Sirupsen/logrus"
 	"github.com/docker/go-units"
 	"github.com/natefinch/lumberjack"
+	"github.com/sirupsen/logrus"
 	"io"
 )
 

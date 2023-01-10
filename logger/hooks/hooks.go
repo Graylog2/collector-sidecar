@@ -19,8 +19,8 @@ import (
 	"github.com/Graylog2/collector-sidecar/logger"
 	"path/filepath"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/rifflock/lfshook"
+	"github.com/sirupsen/logrus"
 
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
@@ -43,5 +43,5 @@ func filesystemHook(context *context.Ctx, log *logrus.Logger) {
 		logrus.WarnLevel:  writer,
 		logrus.InfoLevel:  writer,
 		logrus.DebugLevel: writer,
-	}))
+	}, nil))
 }
