@@ -49,19 +49,16 @@ func (dist *Distributor) Start(s service.Service) error {
 	return nil
 }
 
-// stop all backend runner parallel and wait till they are finished
+// stop all backend runners in parallel and wait until they are finished
 func (dist *Distributor) Stop(s service.Service) error {
 	log.Info("Stopping signal distributor")
 	for _, runner := range Daemon.Runner {
 		runner.Shutdown()
 	}
 	for _, runner := range Daemon.Runner {
-		limit := 100
-		for timeout := 0; runner.Running() && timeout < limit; timeout++ {
+		for runner.Running() {
+			log.Debugf("[%s] Waiting for runner to finish", runner.Name())
 			time.Sleep(100 * time.Millisecond)
-		}
-		if runner.Running() {
-			log.Warnf("[%s] collector failed to exit", runner.Name())
 		}
 	}
 	dist.Running = false
