@@ -45,7 +45,7 @@ func KillProcess(r *ExecRunner) {
 	log.Debugf("[%s] SIGTERM process group", r.Name())
 	err := syscall.Kill(-pid, syscall.SIGTERM)
 	if err != nil {
-		log.Warnf("[%s] Failed to SIGTERM process group %s", r.Name(), err)
+		log.Warnf("[%s] Failed to SIGTERM process group: %s", r.Name(), err)
 	}
 
 	limit := r.context.UserConfig.CollectorShutdownTimeout.Milliseconds()
@@ -59,7 +59,7 @@ func KillProcess(r *ExecRunner) {
 		log.Infof("[%s] Still running after SIGTERM. Sending SIGKILL to the process group", r.Name())
 		err := syscall.Kill(-pid, syscall.SIGKILL)
 		if err != nil {
-			log.Warnf("[%s] Failed to SIGKILL process group %s", r.Name(), err)
+			log.Warnf("[%s] Failed to SIGKILL process group: %s", r.Name(), err)
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
