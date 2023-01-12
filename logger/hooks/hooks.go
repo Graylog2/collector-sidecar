@@ -16,13 +16,13 @@
 package hooks
 
 import (
+	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/logger"
 	"path/filepath"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/rifflock/lfshook"
 
-	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
 )
 

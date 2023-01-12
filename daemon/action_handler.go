@@ -18,7 +18,7 @@ package daemon
 import (
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/backends"
-	"github.com/Graylog2/collector-sidecar/common"
+	"github.com/Graylog2/collector-sidecar/helpers"
 )
 
 func HandleCollectorActions(actions []graylog.ResponseCollectorAction) {
@@ -37,7 +37,7 @@ func HandleCollectorActions(actions []graylog.ResponseCollectorAction) {
 			case action.Properties["stop"] == true:
 				stopAction(backend)
 			default:
-				log.Infof("Got unsupported collector command: %s", common.Inspect(action.Properties))
+				log.Infof("Got unsupported collector command: %s", helpers.Inspect(action.Properties))
 			}
 		}
 	}

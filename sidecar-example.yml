@@ -59,6 +59,10 @@ server_api_token: ""
 # How long to wait for the config validation command.
 #collector_validation_timeout: "1m"
 
+# How long to wait for the collector to gracefully shutdown.
+# After this timeout the sidecar tries to terminate the collector with SIGKILL
+#collector_shutdown_timeout: "10s"
+
 # Directory where the sidecar generates configurations for collectors.
 #collector_configuration_directory: "/var/lib/graylog-sidecar/generated"
 

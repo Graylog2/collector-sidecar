@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
+	"github.com/Graylog2/collector-sidecar/helpers"
 	"io/ioutil"
 )
 
@@ -27,7 +28,7 @@ func (b *Backend) render() []byte {
 	var result bytes.Buffer
 	result.WriteString(b.Template)
 
-	return common.ConvertLineBreak(result.Bytes())
+	return helpers.ConvertLineBreak(result.Bytes())
 }
 
 func (b *Backend) renderToFile(context *context.Ctx) error {

@@ -16,7 +16,7 @@
 package backends
 
 import (
-	"github.com/Graylog2/collector-sidecar/common"
+	"github.com/Graylog2/collector-sidecar/helpers"
 	"github.com/Graylog2/collector-sidecar/logger"
 )
 
@@ -32,13 +32,13 @@ type backendStore struct {
 
 func (bs *backendStore) SetBackend(backend Backend) {
 	bs.backends[backend.Id] = &backend
-	executeParameters, err := common.Sprintf(backend.ExecuteParameters, backend.ConfigurationPath)
+	executeParameters, err := helpers.Sprintf(backend.ExecuteParameters, backend.ConfigurationPath)
 	if err != nil {
 		log.Errorf("Invalid execute parameters, skip adding backend: %s", backend.Name)
 		return
 	}
 	bs.backends[backend.Id].ExecuteParameters = executeParameters
-	validationParameters, err := common.Sprintf(backend.ValidationParameters, backend.ConfigurationPath)
+	validationParameters, err := helpers.Sprintf(backend.ValidationParameters, backend.ConfigurationPath)
 	if err != nil {
 		log.Errorf("Invalid validation parameters, skip adding backend: %s", backend.Name)
 		return
@@ -84,7 +84,7 @@ func (bs *backendStore) Update(backends []Backend) {
 
 func (bs *backendStore) Cleanup(validBackendIds []string) {
 	for _, backend := range bs.backends {
-		if !common.IsInList(backend.Id, validBackendIds) {
+		if !helpers.IsInList(backend.Id, validBackendIds) {
 			log.Debug("Cleaning up backend: " + backend.Name)
 			delete(bs.backends, backend.Id)
 		}

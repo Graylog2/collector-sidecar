@@ -1,0 +1,6 @@
+type = "changed"
+message = "Terminate collector processes with SIGTERM instead of SIGHUP."
+
+issues = ["463"]
+pulls = ["462"]
+

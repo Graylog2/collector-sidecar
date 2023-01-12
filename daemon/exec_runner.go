@@ -17,13 +17,13 @@ package daemon
 
 import (
 	"errors"
+	"github.com/Graylog2/collector-sidecar/helpers"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	"github.com/flynn-archive/go-shlex"
@@ -45,6 +45,7 @@ type ExecRunner struct {
 	startTime      time.Time
 	cmd            *exec.Cmd
 	signals        chan string
+	terminate      chan error
 }
 
 func init() {
@@ -66,6 +67,7 @@ func NewExecRunner(backend backends.Backend, context *context.Ctx) Runner {
 		signals:      make(chan string),
 		stderr:       filepath.Join(context.UserConfig.LogPath, backend.Name+"_stderr.log"),
 		stdout:       filepath.Join(context.UserConfig.LogPath, backend.Name+"_stdout.log"),
+		terminate:    make(chan error),
 	}
 
 	// set default state
@@ -198,7 +200,7 @@ func (r *ExecRunner) start() error {
 	var err error
 	var quotedArgs []string
 	if runtime.GOOS == "windows" {
-		quotedArgs = common.CommandLineToArgv(r.args)
+		quotedArgs = helpers.CommandLineToArgv(r.args)
 	} else {
 		quotedArgs, err = shlex.Split(r.args)
 	}
@@ -208,7 +210,9 @@ func (r *ExecRunner) start() error {
 	r.cmd = exec.Command(r.exec, quotedArgs...)
 	r.cmd.Dir = r.daemon.Dir
 	r.cmd.Env = append(os.Environ(), r.daemon.Env...)
+	Setpgid(r.cmd) // run with a new process group (unix only)
 
+	r.terminate = make(chan error)
 	// start the actual process and don't block
 	r.startTime = time.Now()
 	r.run()
@@ -233,22 +237,16 @@ func (r *ExecRunner) stop() error {
 
 	log.Infof("[%s] Stopping", r.name)
 
-	// give the chance to cleanup resources
-	if r.cmd.Process != nil && runtime.GOOS != "windows" {
-		r.cmd.Process.Signal(syscall.SIGHUP)
-		time.Sleep(2 * time.Second)
-	}
+	KillProcess(r)
 
-	// in doubt kill the process
-	if r.Running() {
-		log.Debugf("[%s] SIGHUP ignored, killing process", r.Name())
-		err := r.cmd.Process.Kill()
-		if err != nil {
-			log.Debugf("[%s] Failed to kill process %s", r.Name(), err)
-		}
+	if !r.Running() {
+		r.backend.SetStatus(backends.StatusStopped, "Stopped", "")
+	} else {
+		log.Warnf("[%s] Failed to be stopped", r.Name())
+		// skip the hanging r.cmd.Wait() goroutine
+		r.terminate <- errors.New("timeout")
+		<-r.terminate // wait for termination
 	}
-
-	r.backend.SetStatus(backends.StatusStopped, "Stopped", "")
 
 	return nil
 }
@@ -261,15 +259,15 @@ func (r *ExecRunner) Restart() error {
 func (r *ExecRunner) restart() error {
 	if r.Running() {
 		r.stop()
-		for timeout := 0; r.Running() || timeout >= 5; timeout++ {
-			log.Debugf("[%s] waiting for process to finish...", r.Name())
-			time.Sleep(1 * time.Second)
-		}
 	}
+
 	// wipe collector log files after each try
 	os.Truncate(r.stderr, 0)
 	os.Truncate(r.stdout, 0)
-	r.start()
+	err := r.start()
+	if err != nil {
+		log.Errorf("[%s] got start error: %s", r.Name(), err)
+	}
 
 	return nil
 }
@@ -284,7 +282,6 @@ func (r *ExecRunner) run() {
 		}
 
 		f := logger.GetRotatedLog(r.stderr, r.context.UserConfig.LogRotateMaxFileSize, r.context.UserConfig.LogRotateKeepFiles)
-		defer f.Close()
 		r.cmd.Stderr = f
 	}
 	if r.stdout != "" {
@@ -294,7 +291,6 @@ func (r *ExecRunner) run() {
 		}
 
 		f := logger.GetRotatedLog(r.stdout, r.context.UserConfig.LogRotateMaxFileSize, r.context.UserConfig.LogRotateKeepFiles)
-		defer f.Close()
 		r.cmd.Stdout = f
 	}
 
@@ -305,10 +301,26 @@ func (r *ExecRunner) run() {
 	}
 
 	// wait for process exit in the background. Ensure single cmd.Wait() call
+	// to deal with hanging processes, provide a termination channel
 	go func() {
 		r.setRunning(true)
-		r.cmd.Wait()
+		go func(terminate chan error) {
+			err := r.cmd.Wait()
+			terminate <- err
+			<-terminate // read acknowledgement
+		}(r.terminate)
+
+		err := <-r.terminate
+		if err != nil {
+			log.Debugf("[%s] Wait() error %s", r.name, err)
+			if err.Error() == "timeout" {
+				r.backend.SetStatus(backends.StatusError, "Failed to be stopped", "")
+			} else {
+				r.backend.SetStatus(backends.StatusStopped, "Stopped", "")
+			}
+		}
 		r.setRunning(false)
+		r.terminate <- nil //confirm termination
 	}()
 }
 

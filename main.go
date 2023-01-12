@@ -120,9 +120,6 @@ func main() {
 	}
 	hooks.AddLogHooks(ctx, log)
 
-	// initialize backends
-	//backendSetup(ctx)
-
 	// start main loop
 	services.StartPeriodicals(ctx)
 	err = s.Run()
@@ -150,19 +147,3 @@ func commandLineSetup() error {
 
 	return nil
 }
-
-//func backendSetup(context *context.Ctx) {
-//	for _, collector := range context.UserConfig.Backends {
-//		backendCreator, err := backends.GetCreator(collector.Name)
-//		if err != nil {
-//			log.Error("Unsupported collector backend found in configuration: " + collector.Name)
-//			continue
-//		}
-//		backend := backendCreator(context)
-//		backends.Store.AddRunner(backend)
-//		if *collector.Enabled == true && backend.ValidatePreconditions() {
-//			log.Debug("Add collector backend: " + backend.Name())
-//			daemon.Daemon.AddRunner(backend, context)
-//		}
-//	}
-//}

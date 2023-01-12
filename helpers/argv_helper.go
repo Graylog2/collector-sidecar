@@ -13,9 +13,10 @@
 // along with this program. If not, see
 // <http://www.mongodb.com/licensing/server-side-public-license>.
 
+//go:build !windows
 // +build !windows
 
-package common
+package helpers
 
 // Dummy function. Only used on Windows
 func CommandLineToArgv(cmd string) []string {

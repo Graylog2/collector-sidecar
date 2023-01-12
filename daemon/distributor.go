@@ -49,7 +49,7 @@ func (dist *Distributor) Start(s service.Service) error {
 	return nil
 }
 
-// stop all backend runner parallel and wait till they are finished
+// stop all backend runners in parallel and wait until they are finished
 func (dist *Distributor) Stop(s service.Service) error {
 	log.Info("Stopping signal distributor")
 	for _, runner := range Daemon.Runner {
@@ -57,7 +57,8 @@ func (dist *Distributor) Stop(s service.Service) error {
 	}
 	for _, runner := range Daemon.Runner {
 		for runner.Running() {
-			time.Sleep(300 * time.Millisecond)
+			log.Debugf("[%s] Waiting for runner to finish", runner.Name())
+			time.Sleep(100 * time.Millisecond)
 		}
 	}
 	dist.Running = false

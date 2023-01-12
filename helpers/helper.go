@@ -13,13 +13,15 @@
 // along with this program. If not, see
 // <http://www.mongodb.com/licensing/server-side-public-license>.
 
-package common
+package helpers
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/Graylog2/collector-sidecar/cfgfile"
+	"github.com/Graylog2/collector-sidecar/common"
+	"github.com/Graylog2/collector-sidecar/logger"
 	"github.com/pborman/uuid"
 	"io/ioutil"
 	"net"
@@ -30,6 +32,8 @@ import (
 	"strings"
 	"unicode"
 )
+
+var log = logger.Log()
 
 func GetRootPath() (string, error) {
 	return filepath.Abs("/")
@@ -90,10 +94,10 @@ func GetCollectorId(collectorId string) string {
 }
 
 func idFromFile(filePath string) string {
-	err := FileExists(filePath)
+	err := common.FileExists(filePath)
 	if err != nil {
 		log.Info("node-id file doesn't exist, generating a new one")
-		err = CreatePathToFile(filePath)
+		err = common.CreatePathToFile(filePath)
 		if err == nil {
 			err = ioutil.WriteFile(filePath, []byte(RandomUuid()), 0644)
 			if err != nil {
