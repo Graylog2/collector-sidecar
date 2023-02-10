@@ -212,7 +212,14 @@ func PathMatch(path string, patternList []string) (PathMatchResult, error) {
 	}
 
 	for _, pattern := range patternList {
-		match, err := filepath.Match(pattern, result.Path)
+		var match bool
+		var err error
+		if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
+			// ignore case on windows and MacOS. Both have usually case-insensitive filesystems.
+			match, err = filepath.Match(strings.ToLower(pattern), strings.ToLower(result.Path))
+		} else {
+			match, err = filepath.Match(pattern, result.Path)
+		}
 		if err != nil {
 			result.Match = false
 			return result, err
