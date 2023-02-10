@@ -1,0 +1,6 @@
+type = "fixed"
+message = "Match collector_binaries_accesslist case insensitive on Windows and MacOS."
+
+issues = ["364"]
+pulls = ["467"]
+
