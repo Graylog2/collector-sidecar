@@ -23,8 +23,8 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/kardianos/service"
+	"github.com/sirupsen/logrus"
 
 	"github.com/Graylog2/collector-sidecar/cfgfile"
 	"github.com/Graylog2/collector-sidecar/common"
