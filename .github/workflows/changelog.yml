@@ -1,0 +1,25 @@
+name: "Changelog"
+
+on:
+  pull_request:
+    types:
+      - "opened"
+      - "synchronize"
+      - "reopened"
+      - "edited"
+
+jobs:
+  check:
+    name: "Check"
+    runs-on: "ubuntu-latest"
+
+    steps:
+      - uses: "actions/checkout@v3"
+        with:
+          repository: "Graylog2/internal-actions"
+          path: ".github/internal-actions"
+          token: "${{ secrets.GH_PAT }}"
+
+      - uses: "./.github/internal-actions/changelog-check"
+        with:
+          gh-token: "${{ secrets.GITHUB_TOKEN }}"
