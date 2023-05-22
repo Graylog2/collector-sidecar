@@ -3,6 +3,7 @@
 ARCHS=( x86 x86_64 )
 FILEBEAT_VERSION=7.11.1
 WINLOGBEAT_VERSION=7.11.1
+AUDITBEAT_VERSION=7.11.1
 
 # $1: beat name
 # $2: beat operating system
@@ -40,7 +41,9 @@ download_beat()
 
 for ARCH in "${ARCHS[@]}"
 do
+  download_beat "filebeat" "linux" ${FILEBEAT_VERSION} ${ARCH}
   download_beat "filebeat" "windows" ${FILEBEAT_VERSION} ${ARCH}
   download_beat "winlogbeat" "windows" ${WINLOGBEAT_VERSION} ${ARCH}
+  download_beat "auditbeat" "linux" ${AUDITBEAT_VERSION} ${ARCH}
 done
 

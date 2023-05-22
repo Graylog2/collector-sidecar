@@ -68,10 +68,8 @@ server_api_token: ""
 
 # A list of tags to assign to this sidecar. Collector configuration matching any of these tags will automatically be
 # applied to the sidecar.
-# Example:
-#    tags:
-#    - apache-logs
-#    - dns-logs
+tags:
+  - default
 
 # A list of binaries which are allowed to be executed by the Sidecar. An empty list disables the access list feature.
 # Wildcards can be used, for a full pattern description see https://golang.org/pkg/path/filepath/#Match
@@ -91,6 +89,8 @@ server_api_token: ""
 #  - "/usr/bin/heartbeat"
 #  - "/usr/bin/auditbeat"
 #  - "/usr/bin/journalbeat"
+#  - "/usr/lib/graylog-sidecar/filebeat"
+#  - "/usr/lib/graylog-sidecar/auditbeat"
 #  - "/usr/share/filebeat/bin/filebeat"
 #  - "/usr/share/packetbeat/bin/packetbeat"
 #  - "/usr/share/metricbeat/bin/metricbeat"
