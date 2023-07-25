@@ -1,8 +1,8 @@
 #!/bin/bash
 
 ARCHS=( x86 x86_64 )
-FILEBEAT_VERSION=7.11.1
-WINLOGBEAT_VERSION=7.11.1
+FILEBEAT_VERSION=8.8.2
+WINLOGBEAT_VERSION=8.8.2
 
 # $1: beat name
 # $2: beat operating system
