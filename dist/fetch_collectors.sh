@@ -1,10 +1,11 @@
 #!/bin/bash
 
-ARCHS=( x86 x86_64 )
 FILEBEAT_VERSION=8.9.0
 FILEBEAT_VERSION_32=7.17.12
 WINLOGBEAT_VERSION=8.9.0
 WINLOGBEAT_VERSION_32=7.17.12
+AUDITBEAT_VERSION=8.9.0
+AUDITBEAT_VERSION_32=7.17.12
 
 # $1: beat name
 # $2: beat operating system
@@ -40,14 +41,15 @@ download_beat()
   esac
 }
 
-for ARCH in "${ARCHS[@]}"
-do
-  #download_beat "filebeat" "linux" ${FILEBEAT_VERSION} ${ARCH}
-  :
-done
+download_beat "filebeat" "linux" ${FILEBEAT_VERSION} x86_64
+download_beat "filebeat" "linux" ${FILEBEAT_VERSION_32} x86
+
+download_beat "auditbeat" "linux" ${FILEBEAT_VERSION} x86_64
+download_beat "auditbeat" "linux" ${AUDITBEAT_VERSION_32} x86
 
 download_beat "filebeat" "windows" ${FILEBEAT_VERSION} x86_64
 download_beat "filebeat" "windows" ${FILEBEAT_VERSION_32} x86
 
 download_beat "winlogbeat" "windows" ${WINLOGBEAT_VERSION} x86_64
 download_beat "winlogbeat" "windows" ${WINLOGBEAT_VERSION_32} x86
+

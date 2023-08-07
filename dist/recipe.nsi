@@ -1,12 +1,12 @@
 ; -------------------------------
 ; Start
- 
+
   Name "Graylog Sidecar"
   !define MUI_FILE "savefile"
   !define MUI_BRANDINGTEXT "Graylog Sidecar v${VERSION}${VERSION_SUFFIX}"
   CRCCheck On
   SetCompressor "bzip2"
- 
+
   !include "${NSISDIR}\Contrib\Modern UI\System.nsh"
   !include nsDialogs.nsh
   !include LogicLib.nsh
@@ -24,7 +24,7 @@
   VIAddVersionKey "ProductName" "Graylog Sidecar"
   VIAddVersionKey "ProductVersion" "${VERSION}${VERSION_SUFFIX}"
   VIAddVersionKey "LegalCopyright" "Graylog, Inc."
- 
+
 ;---------------------------------
 ;General
 
@@ -64,9 +64,9 @@
 
 
 ;--------------------------------
-;Modern UI Configuration  
-  
-  !define MUI_ICON "graylog.ico"  
+;Modern UI Configuration
+
+  !define MUI_ICON "graylog.ico"
   !define MUI_WELCOMEPAGE_TITLE "Graylog Sidecar ${VERSION}-${REVISION}${SUFFIX} Installation / Upgrade"
   !define MUI_WELCOMEPAGE_TEXT  "This setup is gonna guide you through the installation / upgrade of the Graylog Sidecar.\r\n\r\n \
 		  If an already configured Sidecar is detected ('sidecar.yml' present), it will perform an upgrade.\r\n \r\n\
@@ -78,7 +78,7 @@
   !insertmacro MUI_UNPAGE_CONFIRM
   !insertmacro MUI_UNPAGE_INSTFILES
 
-  
+
   ; Custom Pages
   Page custom nsDialogsPage nsDialogsPageLeave
   Page instfiles
@@ -87,10 +87,10 @@
   !insertmacro MUI_UNPAGE_FINISH
   !define MUI_DIRECTORYPAGE
   !define MUI_ABORTWARNING
- 
+
 ;--------------------------------
 ;Macros
- 
+
   !insertmacro MUI_LANGUAGE "English"
   !insertmacro WordFind
   !insertmacro WordFind2X
@@ -132,11 +132,11 @@
 
 ;--------------------------------
 ;Data
- 
+
   LicenseData "../LICENSE"
 
-;-------------------------------- 
-;Installer Sections     
+;--------------------------------
+;Installer Sections
 Section "Install"
 
   ;These folders are needed at runtime
@@ -144,13 +144,13 @@ Section "Install"
   CreateDirectory "$INSTDIR\logs"
   CreateDirectory "$INSTDIR\module"
   SetOutPath "$INSTDIR"
- 
+
   SetOverwrite off
   File /oname=sidecar.yml "../sidecar-windows-example.yml"
   SetOverwrite on
   File /oname=sidecar.yml.dist "../sidecar-windows-example.yml"
   File "../LICENSE"
-  File "graylog.ico"  
+  File "graylog.ico"
 
   ;Stop service to allow binary upgrade
   !insertmacro _IfKeyExists HKLM "SYSTEM\CurrentControlSet\Services" "graylog-sidecar"
@@ -192,9 +192,9 @@ Section "Install"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
                  "UninstallString" "$\"$INSTDIR\uninstall.exe$\""
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
-                 "DisplayIcon" "$\"$INSTDIR\graylog.ico$\""				 
+                 "DisplayIcon" "$\"$INSTDIR\graylog.ico$\""
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
-                 "QuietUninstallString" "$\"$INSTDIR\uninstall.exe$\" /S"				 
+                 "QuietUninstallString" "$\"$INSTDIR\uninstall.exe$\" /S"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
                  "DisplayVersion" "${VERSION}${VERSION_SUFFIX}"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
@@ -205,17 +205,17 @@ Section "Install"
                  "Publisher" "Graylog, Inc."
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
                  "HelpLink" "https://www.graylog.org"
-				 
+
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
                  "NoModify" "1"
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
-                 "NoRepair" "1"				 
+                 "NoRepair" "1"
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
                  "EstimatedSize" "25000"
 
 
 SectionEnd
- 
+
 Section "Post"
 
   ; Parse command line options
@@ -274,7 +274,7 @@ Section "Post"
     ${WordReplace} "file:$INSTDIR\node-id" "\" "\\" "+" $NodeId
   ${EndIf}
   ${If} $Tags == ""
-    StrCpy $Tags "[]"
+    StrCpy $Tags "[ default ]"
   ${EndIf}
 
   !insertmacro _ReplaceInFile "$INSTDIR\sidecar.yml" "<SERVERURL>" $ServerUrl
@@ -302,30 +302,30 @@ Section "Post"
   ${LogWrite} "Installer/Upgrader finished."
   FileClose $LogFile
 SectionEnd
- 
-;--------------------------------    
-;Uninstaller Section  
+
+;--------------------------------
+;Uninstaller Section
 Section "Uninstall"
 
   ;Uninstall system service
   ExecWait '"$INSTDIR\graylog-sidecar.exe" -service stop'
   ExecWait '"$INSTDIR\graylog-sidecar.exe" -service uninstall'
- 
+
   ;Delete Files
-  RMDir /r "$INSTDIR\*.*"    
- 
+  RMDir /r "$INSTDIR\*.*"
+
   ;Remove the installation directory
   SetOutPath $TEMP
   RMDir "$INSTDIR"
   RMDir $GraylogDir
- 
-  ;Remove uninstall entries in the registry 
+
+  ;Remove uninstall entries in the registry
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar"
 
 SectionEnd
- 
- 
-;--------------------------------    
+
+
+;--------------------------------
 ;Functions
 
 Function .onInit
@@ -338,24 +338,24 @@ Function .onInit
 
   ; check admin rights
   Call CheckAdmin
-  
+
   ; check concurrent un/installations
   Call CheckConcurrent
-    
+
   !insertmacro Check_Upgrade
 FunctionEnd
 
 Function un.oninit
   ; check admin rights
   Call un.CheckAdmin
-  
+
   ; check concurrent un/installations
   Call un.CheckConcurrent
 
   !insertmacro Check_X64
 FunctionEnd
 
- 
+
 
 Function nsDialogsPage
   ${If} $IsUpgrade == 'true'
@@ -364,10 +364,10 @@ Function nsDialogsPage
 
   nsDialogs::Create 1018
 
-  
+
   !insertmacro MUI_HEADER_TEXT "${MUI_BRANDINGTEXT} Configuration" "Here you can check and modify the configuration of this agent"
-  
-  
+
+
   Pop $Dialog
 
   ${If} $Dialog == error

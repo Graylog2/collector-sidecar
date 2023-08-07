@@ -24,6 +24,8 @@ class GraylogSidecar < FPM::Cookery::Recipe
 
   def install
     bin.install 'graylog-sidecar'
+    lib('graylog-sidecar').install '../../collectors/filebeat/linux/x86_64/filebeat'
+    lib('graylog-sidecar').install '../../collectors/auditbeat/linux/x86_64/auditbeat'
     etc('graylog/sidecar').install '../../../sidecar-example.yml', 'sidecar.yml'
     var('lib/graylog-sidecar/generated').mkdir
     var('log/graylog-sidecar').mkdir

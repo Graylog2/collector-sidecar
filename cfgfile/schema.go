@@ -65,6 +65,8 @@ collector_binaries_accesslist:
   - "/usr/bin/heartbeat"
   - "/usr/bin/auditbeat"
   - "/usr/bin/journalbeat"
+  - "/usr/lib/graylog-sidecar/filebeat"
+  - "/usr/lib/graylog-sidecar/auditbeat"
   - "/usr/share/filebeat/bin/filebeat"
   - "/usr/share/packetbeat/bin/packetbeat"
   - "/usr/share/metricbeat/bin/metricbeat"
