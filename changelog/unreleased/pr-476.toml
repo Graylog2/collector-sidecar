@@ -1,0 +1,6 @@
+type = "c"
+message = "Update shipped beats collectors to verion 8.9.0"
+
+issues = ["426", "437"]
+pulls = ["476"]
+
