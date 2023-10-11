@@ -43,9 +43,11 @@ download_beat()
 
 download_beat "filebeat" "linux" ${FILEBEAT_VERSION} x86_64
 download_beat "filebeat" "linux" ${FILEBEAT_VERSION_32} x86
+download_beat "filebeat" "linux" ${FILEBEAT_VERSION_32} arm64
 
 download_beat "auditbeat" "linux" ${FILEBEAT_VERSION} x86_64
 download_beat "auditbeat" "linux" ${AUDITBEAT_VERSION_32} x86
+download_beat "auditbeat" "linux" ${AUDITBEAT_VERSION_32} arm64
 
 download_beat "filebeat" "windows" ${FILEBEAT_VERSION} x86_64
 download_beat "filebeat" "windows" ${FILEBEAT_VERSION_32} x86
