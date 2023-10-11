@@ -154,7 +154,7 @@ push-chocolatey: ## Push Chocolatey .nupkg file
 
 package-tar: ## Create tar archive for all platforms
 	@mkdir -p dist/pkg
-	@tar --transform="s|/build|/graylog-sidecar|" --transform="s|/dist||" \
+	@tar --transform="s|/build|/graylog-sidecar|" --transform="s|/dist|/graylog-sidecar|" \
 		-Pczf dist/pkg/graylog-sidecar-$(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX).tar.gz \
 		./build \
 		./dist/collectors/auditbeat/linux/arm64/auditbeat \
