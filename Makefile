@@ -39,7 +39,7 @@ test: ## Run tests
 build: ## Build sidecar binary for local target system
 	$(GO) build $(BUILD_OPTS) -v -o graylog-sidecar
 
-build-all: build-linux-armv7 build-linux build-linux32 build-windows build-windows32 build-darwin build-darwin-arm64 build-freebsd
+build-all: build-linux-armv7 build-linux-arm64 build-linux build-linux32 build-windows build-windows32 build-darwin build-darwin-arm64 build-freebsd
 
 build-linux: ## Build sidecar binary for Linux
 	@mkdir -p build/$(COLLECTOR_VERSION)/linux/amd64
@@ -54,6 +54,10 @@ solaris-sigar-patch:
 build-linux-armv7: ## Build sidecar binary for linux-armv7
 	@mkdir -p build/$(COLLECTOR_VERSION)/linux/armv7
 	GOOS=linux GOARCH=arm GOARM=7 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_linux-armv7  -v -o build/$(COLLECTOR_VERSION)/linux/armv7/graylog-sidecar
+
+build-linux-arm64: ## Build sidecar binary for linux-arm64
+	@mkdir -p build/$(COLLECTOR_VERSION)/linux/arm64
+	GOOS=linux GOARCH=arm64 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_linux-arm64  -v -o build/$(COLLECTOR_VERSION)/linux/arm64/graylog-sidecar
 
 build-solaris: solaris-sigar-patch ## Build sidecar binary for Solaris/OmniOS/Illumos
 	@mkdir -p build/$(COLLECTOR_VERSION)/solaris/amd64
@@ -99,7 +103,7 @@ sign-binary-windows-386:
 install-goversioninfo:
 	go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
 
-package-all: prepare-package package-linux-armv7 package-linux package-linux32 package-windows package-tar
+package-all: prepare-package package-linux-armv7 package-linux-arm64 package-linux package-linux32 package-windows package-tar
 
 prepare-package:
 	dist/fetch_collectors.sh
@@ -109,6 +113,12 @@ package-linux-armv7: ## Create Linux ARMv7 system package
 	rm -rf dist/cache dist/tmp-build dist/tmp-dest
 	fpm-cook -t deb package dist/recipearmv7.rb
 	fpm-cook -t rpm package dist/recipearmv7.rb
+
+package-linux-arm64: ## Create Linux ARM64 system package
+	fpm-cook clean dist/recipearm64.rb
+	rm -rf dist/cache dist/tmp-build dist/tmp-dest
+	fpm-cook -t deb package dist/recipearm64.rb
+	fpm-cook -t rpm package dist/recipearm64.rb
 
 package-linux: ## Create Linux amd64 system package
 	fpm-cook clean dist/recipe.rb
