@@ -154,7 +154,15 @@ push-chocolatey: ## Push Chocolatey .nupkg file
 
 package-tar: ## Create tar archive for all platforms
 	@mkdir -p dist/pkg
-	@tar --transform="s|/build|/graylog-sidecar|" -Pczf dist/pkg/graylog-sidecar-$(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX).tar.gz ./build ./sidecar-example.yml ./sidecar-windows-example.yml
+	@tar --transform="s|/build|/graylog-sidecar|" --transform="s|/dist||" \
+		-Pczf dist/pkg/graylog-sidecar-$(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX).tar.gz \
+		./build \
+		./dist/collectors/auditbeat/linux/arm64/auditbeat \
+		./dist/collectors/auditbeat/linux/x86_64/auditbeat \
+		./dist/collectors/filebeat/linux/arm64/filebeat \
+		./dist/collectors/filebeat/linux/x86_64/filebeat \
+		./sidecar-example.yml \
+		./sidecar-windows-example.yml
 
 help:
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | $(AWK) 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
