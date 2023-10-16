@@ -94,5 +94,6 @@ collector_binaries_accesslist:
   - "C:\\Program Files\\Heartbeat\\heartbeat.exe"
   - "C:\\Program Files\\Auditbeat\\auditbeat.exe"
   - "C:\\Program Files (x86)\\nxlog\\nxlog.exe"
+  - "C:\\Program Files\\nxlog\\nxlog.exe"
 windows_drive_range: "CDEFGHIJKLMNOPQRSTUVWXYZ"
 `
