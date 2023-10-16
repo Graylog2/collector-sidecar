@@ -149,12 +149,9 @@ func CheckResponse(r *http.Response) error {
 	}
 
 	errorResponse := &ErrorResponse{Response: r}
-	data, err := ioutil.ReadAll(r.Body)
+	data, err := io.ReadAll(io.LimitReader(r.Body, 2048))
 	if err == nil && len(data) > 0 {
-		err := json.Unmarshal(data, errorResponse)
-		if err != nil {
-			return err
-		}
+		errorResponse.Message = string(data)
 	}
 
 	return errorResponse

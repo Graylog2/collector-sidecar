@@ -42,22 +42,20 @@ var (
 )
 
 func GetServerVersion(httpClient *http.Client, ctx *context.Ctx) (*GraylogVersion, error) {
-	// In case of an error just assume 4.0.0
-	fallbackVersion, _ := NewGraylogVersion("4.0.0")
-
 	c := rest.NewClient(httpClient, ctx)
 	c.BaseURL = ctx.ServerUrl
 	r, err := c.NewRequest("GET", "/", nil, nil)
 	if err != nil {
 		log.Errorf("Cannot retrieve server version %v", err)
-		return fallbackVersion, err
+		return nil, err
 	}
 	versionResponse := graylog.ServerVersionResponse{}
 	resp, err := c.Do(r, &versionResponse)
 	if err != nil || resp == nil {
 		log.Errorf("Error fetching server version %v", err)
-		return fallbackVersion, err
+		return nil, err
 	}
+	log.Debugf("Graylog server version %v", versionResponse.Version)
 	return NewGraylogVersion(versionResponse.Version)
 }
 

@@ -1,0 +1,11 @@
+# PLEASE REMOVE COMMENTS AND OPTIONAL FIELDS! THANKS!
+
+# Entry type according to https://keepachangelog.com/en/1.0.0/
+# One of: a(dded), c(hanged), d(eprecated), r(emoved), f(ixed), s(ecurity)
+type = "fixed"
+message = "Avoid stopping collectors if a Graylog cluster behind load balancers is partly shut down."
+
+issues = ["481"]
+pulls = ["482"]
+
+contributors = [""]

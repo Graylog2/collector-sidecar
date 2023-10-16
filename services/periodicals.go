@@ -49,7 +49,10 @@ func StartPeriodicals(context *context.Ctx) {
 			}
 			firstRun = false
 
-			serverVersion, _ := api.GetServerVersion(httpClient, context)
+			serverVersion, err := api.GetServerVersion(httpClient, context)
+			if err != nil {
+				continue
+			}
 
 			// registration regResponse contains configuration assignments
 			regResponse, err := updateCollectorRegistration(httpClient, lastRegResponse.Checksum, context, serverVersion)
