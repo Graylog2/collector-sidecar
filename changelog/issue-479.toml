@@ -1,0 +1,6 @@
+type = "fixed"
+message = "Re-create HTTP connection to Graylog every 60 request loops to detect DNS changes."
+
+issues = ["479"]
+pulls = [""]
+

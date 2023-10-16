@@ -29,25 +29,30 @@ import (
 	"github.com/Graylog2/collector-sidecar/logger"
 )
 
+const reCreateHttpConnEvery = 60
+
 var log = logger.Log()
-var httpClient *http.Client
 
 func StartPeriodicals(context *context.Ctx) {
-	if httpClient == nil {
-		httpClient = rest.NewHTTPClient(api.GetTlsConfig(context))
-	}
 
 	go func() {
+		var httpClient *http.Client
+
 		configChecksums := make(map[string]string)
 		var lastBackendResponse graylog.ResponseBackendList
 		var lastRegResponse graylog.ResponseCollectorRegistration
 		logOnce := true
-		firstRun := true
+		iteration := 0
+
 		for {
-			if !firstRun {
+			if iteration > 0 {
 				time.Sleep(time.Duration(context.UserConfig.UpdateInterval) * time.Second)
 			}
-			firstRun = false
+			// Re-create HTTP connection every X loops: https://github.com/Graylog2/collector-sidecar/issues/479
+			if iteration%reCreateHttpConnEvery == 0 {
+				httpClient = rest.NewHTTPClient(api.GetTlsConfig(context))
+			}
+			iteration++
 
 			serverVersion, err := api.GetServerVersion(httpClient, context)
 			if err != nil {
