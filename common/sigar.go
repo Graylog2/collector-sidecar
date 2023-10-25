@@ -13,7 +13,7 @@
 // along with this program. If not, see
 // <http://www.mongodb.com/licensing/server-side-public-license>.
 
-// +build !freebsd,!darwin
+// +build !freebsd,!darwin,!solaris
 
 package common
 
