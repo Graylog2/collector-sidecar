@@ -13,14 +13,16 @@
 // along with this program. If not, see
 // <http://www.mongodb.com/licensing/server-side-public-license>.
 
-//go:build !windows
+package common
 
-package daemon
+func GetCpuIdle() float64 {
+	return -1
+}
 
-import (
-	"github.com/Graylog2/collector-sidecar/backends"
-)
+func GetFileSystemList75(string) []string {
+	return []string{}
+}
 
-// Dummy function. Only used on Windows
-func CleanOldServices(assignedBackends []*backends.Backend) {
+func GetLoad1() float64 {
+	return -1
 }
