@@ -1,4 +1,4 @@
 type = "a"
-message = "Add operating system packages for ARM64."
+message = "Add operating system packages for Linux ARM64."
 
 pulls = ["480"]
