@@ -12,13 +12,13 @@ require (
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/pborman/uuid v1.2.1
 	github.com/rifflock/lfshook v0.0.0-20180920164130-b9218ef580f5
-	github.com/sirupsen/logrus v1.9.0
-	golang.org/x/sys v0.4.0
+	github.com/sirupsen/logrus v1.9.3
+	golang.org/x/sys v0.13.0
 )
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
-	github.com/google/uuid v1.3.0 // indirect
+	github.com/google/uuid v1.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b // indirect
