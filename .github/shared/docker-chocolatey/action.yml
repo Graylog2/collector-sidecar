@@ -1,4 +1,3 @@
-
 name: 'Docker chocolatey action'
 description: 'Runs commands in a slightly modified chocolatey container'
 
@@ -6,15 +5,9 @@ inputs:
   command:
     description: 'The command to exec'
     required: true
-  jsonEnv:
-    description: 'Environment to pass to docker run as json string'
-    required: false
-    default: "{}"
 
 runs:
   using: 'docker'
   image: 'Dockerfile'
-  env: ${{ fromJSON(inputs.jsonEnv) }}
   args:
     - ${{ inputs.command }}
-
