@@ -65,9 +65,9 @@ jobs:
           CODESIGN_CREDENTIAL_ID: ${{ secrets.CODESIGN_CREDENTIAL_ID }}
 
       - name: Chocolatey Pack
-        run: >
-          docker build -f docker/Dockerfile.chocolatey docker/ -t local/chocolatey &&
-          docker run --rm -v $(pwd):/root local/chocolatey make package-chocolatey
+        uses: ./.github/shared/docker-chocolatey
+        with:
+          command: make package-chocolatey
 
       - name: Create checksums
         run: cd dist/pkg && sha256sum * | tee CHECKSUMS-SHA256.txt

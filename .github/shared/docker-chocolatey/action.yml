@@ -1,0 +1,15 @@
+
+name: 'Docker chocolatey action'
+description: 'Runs commands in a slightly modified chocolatey container'
+
+inputs:
+  command:
+    description: 'The command to exec'
+    required: true
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.command }}
+
