@@ -77,7 +77,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: sidecar-artifacts
-          retention-days: 14
+          retention-days: 7
           path: |
             dist/pkg
 
