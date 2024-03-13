@@ -1,0 +1,4 @@
+type = "f"
+message = "Fix default permissions on `/etc/graylog/sidecar/sidecar.yml` file."
+
+pulls = ["491"]
