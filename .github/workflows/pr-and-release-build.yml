@@ -1,0 +1,108 @@
+on: push
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: "Sidecar Build"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sidecar project
+        uses: actions/checkout@v4
+
+      - name: Setup Go environment
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: "compile"
+        run: |
+          go version
+          go mod vendor
+          make test
+          make build-all
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Sign Windows binaries
+        run: >
+          docker run --rm
+          -e "CODESIGN_USER=$CODESIGN_USER"
+          -e "CODESIGN_PASS=$CODESIGN_PASS"
+          -e "CODESIGN_TOTP_SECRET=$CODESIGN_TOTP_SECRET"
+          -e "CODESIGN_CREDENTIAL_ID=$CODESIGN_CREDENTIAL_ID"
+          -v $(pwd):/home/jenkins
+          graylog/internal-codesigntool:latest
+          make sign-binaries
+        env:
+          CODESIGN_USER: ${{ secrets.CODESIGN_USER }}
+          CODESIGN_PASS: ${{ secrets.CODESIGN_PASS }}
+          CODESIGN_TOTP_SECRET: ${{ secrets.CODESIGN_TOTP_SECRET }}
+          CODESIGN_CREDENTIAL_ID: ${{ secrets.CODESIGN_CREDENTIAL_ID }}
+
+      - name: Build packages
+        run: mkdir dist/pkg && docker run --rm -v $(pwd):/home torch/jenkins-fpm-cook-root:latest sh -c "cd /home && make package-all"
+
+      - name: Sign Windows Installer
+        run: >
+          docker run --rm
+          -e "CODESIGN_USER=$CODESIGN_USER"
+          -e "CODESIGN_PASS=$CODESIGN_PASS"
+          -e "CODESIGN_TOTP_SECRET=$CODESIGN_TOTP_SECRET"
+          -e "CODESIGN_CREDENTIAL_ID=$CODESIGN_CREDENTIAL_ID"
+          -v $(pwd):/home/jenkins
+          graylog/internal-codesigntool:latest
+          make sign-windows-installer
+        env:
+          CODESIGN_USER: ${{ secrets.CODESIGN_USER }}
+          CODESIGN_PASS: ${{ secrets.CODESIGN_PASS }}
+          CODESIGN_TOTP_SECRET: ${{ secrets.CODESIGN_TOTP_SECRET }}
+          CODESIGN_CREDENTIAL_ID: ${{ secrets.CODESIGN_CREDENTIAL_ID }}
+
+      - name: Chocolatey Pack
+        uses: ./.github/shared/docker-chocolatey
+        with:
+          command: make package-chocolatey
+
+      - name: Create checksums
+        run: cd dist/pkg && sha256sum * | tee CHECKSUMS-SHA256.txt
+
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: sidecar-artifacts
+          retention-days: 7
+          path: |
+            dist/pkg
+
+      - name: Chocolatey Push
+        if: startsWith(github.ref, 'refs/tags/') # if tags are pushed, build and publish release
+        uses: ./.github/shared/docker-chocolatey
+        with:
+          command: make push-chocolatey
+        env:
+          CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
+
+      - name: "Upload sidecar artifacts to S3"
+        if: startsWith(github.ref, 'refs/tags/') # if tags are pushed, build and publish release
+        env:
+          AWS_DEFAULT_REGION: "eu-west-1"
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_SIDECAR_RELEASES_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SIDECAR_RELEASES_SECRET_KEY }}
+        run: |
+          aws s3 cp --no-progress --recursive dist/pkg s3://graylog2-releases/graylog-collector-sidecar/${{ github.ref_name }}/
+
+      - name: "Render changelog"
+        if: startsWith(github.ref, 'refs/tags/') # if tags are pushed, build and publish release
+        run: graylog-project changelog render --skip-header changelog/${{ github.ref_name }} > ${{ runner.temp }}/changelog.md
+
+      - name: "Releasing to Github"
+        if: startsWith(github.ref, 'refs/tags/') # if tags are pushed, build and publish release
+        run: |
+          gh release create ${{ github.ref_name }} --draft -F ${{ runner.temp }}/changelog.md dist/pkg/*
