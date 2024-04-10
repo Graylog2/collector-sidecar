@@ -51,6 +51,11 @@ pipeline
         // in the installer.
         stage('Sign Windows Binaries')
         {
+          when
+          {
+            buildingTag()
+          }
+
           agent
           {
             docker
@@ -97,6 +102,11 @@ pipeline
 
         stage('Sign Windows Installer')
         {
+          when
+          {
+            buildingTag()
+          }
+
           agent
           {
             docker
