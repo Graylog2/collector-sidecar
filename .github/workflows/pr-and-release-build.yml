@@ -30,40 +30,40 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Sign Windows binaries
-        run: >
-          docker run --rm
-          -e "CODESIGN_USER=$CODESIGN_USER"
-          -e "CODESIGN_PASS=$CODESIGN_PASS"
-          -e "CODESIGN_TOTP_SECRET=$CODESIGN_TOTP_SECRET"
-          -e "CODESIGN_CREDENTIAL_ID=$CODESIGN_CREDENTIAL_ID"
-          -v $(pwd):/home/jenkins
-          graylog/internal-codesigntool:latest
-          make sign-binaries
-        env:
-          CODESIGN_USER: ${{ secrets.CODESIGN_USER }}
-          CODESIGN_PASS: ${{ secrets.CODESIGN_PASS }}
-          CODESIGN_TOTP_SECRET: ${{ secrets.CODESIGN_TOTP_SECRET }}
-          CODESIGN_CREDENTIAL_ID: ${{ secrets.CODESIGN_CREDENTIAL_ID }}
+      #- name: Sign Windows binaries
+      #  run: >
+      #    docker run --rm
+      #    -e "CODESIGN_USER=$CODESIGN_USER"
+      #    -e "CODESIGN_PASS=$CODESIGN_PASS"
+      #    -e "CODESIGN_TOTP_SECRET=$CODESIGN_TOTP_SECRET"
+      #    -e "CODESIGN_CREDENTIAL_ID=$CODESIGN_CREDENTIAL_ID"
+      #    -v $(pwd):/home/jenkins
+      #    graylog/internal-codesigntool:latest
+      #    make sign-binaries
+      #  env:
+      #    CODESIGN_USER: ${{ secrets.CODESIGN_USER }}
+      #    CODESIGN_PASS: ${{ secrets.CODESIGN_PASS }}
+      #    CODESIGN_TOTP_SECRET: ${{ secrets.CODESIGN_TOTP_SECRET }}
+      #    CODESIGN_CREDENTIAL_ID: ${{ secrets.CODESIGN_CREDENTIAL_ID }}
 
       - name: Build packages
         run: mkdir dist/pkg && docker run --rm -v $(pwd):/home torch/jenkins-fpm-cook-root:latest sh -c "cd /home && make package-all"
 
-      - name: Sign Windows Installer
-        run: >
-          docker run --rm
-          -e "CODESIGN_USER=$CODESIGN_USER"
-          -e "CODESIGN_PASS=$CODESIGN_PASS"
-          -e "CODESIGN_TOTP_SECRET=$CODESIGN_TOTP_SECRET"
-          -e "CODESIGN_CREDENTIAL_ID=$CODESIGN_CREDENTIAL_ID"
-          -v $(pwd):/home/jenkins
-          graylog/internal-codesigntool:latest
-          make sign-windows-installer
-        env:
-          CODESIGN_USER: ${{ secrets.CODESIGN_USER }}
-          CODESIGN_PASS: ${{ secrets.CODESIGN_PASS }}
-          CODESIGN_TOTP_SECRET: ${{ secrets.CODESIGN_TOTP_SECRET }}
-          CODESIGN_CREDENTIAL_ID: ${{ secrets.CODESIGN_CREDENTIAL_ID }}
+      #- name: Sign Windows Installer
+      #  run: >
+      #    docker run --rm
+      #    -e "CODESIGN_USER=$CODESIGN_USER"
+      #    -e "CODESIGN_PASS=$CODESIGN_PASS"
+      #    -e "CODESIGN_TOTP_SECRET=$CODESIGN_TOTP_SECRET"
+      #    -e "CODESIGN_CREDENTIAL_ID=$CODESIGN_CREDENTIAL_ID"
+      #    -v $(pwd):/home/jenkins
+      #    graylog/internal-codesigntool:latest
+      #    make sign-windows-installer
+      #  env:
+      #    CODESIGN_USER: ${{ secrets.CODESIGN_USER }}
+      #    CODESIGN_PASS: ${{ secrets.CODESIGN_PASS }}
+      #    CODESIGN_TOTP_SECRET: ${{ secrets.CODESIGN_TOTP_SECRET }}
+      #    CODESIGN_CREDENTIAL_ID: ${{ secrets.CODESIGN_CREDENTIAL_ID }}
 
       - name: Chocolatey Pack
         uses: ./.github/shared/docker-chocolatey
