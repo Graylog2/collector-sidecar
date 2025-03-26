@@ -172,6 +172,8 @@ package-windows-msi-amd64: prepare-package ## Create Windows MSI package
 		-D Version=$(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX) \
 		-D SidecarEXEPath=build/$(COLLECTOR_VERSION)/windows/amd64/graylog-sidecar.exe \
 		-D SidecarConfigPath=sidecar-windows-msi-example.yml \
+		-D FilebeatEXEPath=dist/collectors/filebeat/windows/x86_64/filebeat.exe \
+		-D WinlogbeatEXEPath=dist/collectors/winlogbeat/windows/x86_64/winlogbeat.exe \
 		-o dist/pkg/graylog-sidecar-$(WINDOWS_INSTALLER_VERSION).msi \
 		dist/installer.wxs
 
