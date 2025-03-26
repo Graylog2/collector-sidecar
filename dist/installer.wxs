@@ -1,0 +1,49 @@
+<?xml version='1.0' encoding='windows-1252'?>
+<Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
+  <Product Name='Graylog Sidecar'
+    Id='DC8CA278-14C6-4033-8646-137CF3815627'
+    UpgradeCode='716878B0-190F-42A5-A31A-793621AB888E'
+    Language='1033'
+    Codepage='1252'
+    Version='$(var.Version)'
+    Manufacturer='Graylog, Inc.'>
+
+    <Package Id='*' Keywords='Installer' Description="Graylog Sidecar $(var.Version) Installer"
+      Comments='Graylog Sidecar version $(var.Version) installer.' Manufacturer='Graylog, Inc.'
+      InstallerVersion='100' Languages='1033' Compressed='yes' SummaryCodepage='1252' />
+
+    <Media Id='1' Cabinet='GraylogSidecar.cab' EmbedCab='yes' />
+
+    <Directory Id='TARGETDIR' Name='SourceDir'>
+      <Directory Id='ProgramFilesFolder'>
+        <Directory Id='Graylog' Name='Graylog'>
+          <Directory Id='INSTALLDIR' Name='sidecar'>
+            <Component Id='SidecarExecutable' Guid='7D731672-C35C-4718-BD74-268F496F939E'>
+              <File Id='SidecarEXE' Name='graylog-sidecar.exe' Source='$(var.SidecarEXEPath)' KeyPath='yes' />
+            </Component>
+            <Component Id='SidecarConfig' Guid='FECCBAFB-C7A7-4570-9A28-172FDB5B0DE1'>
+              <File Id='SidecarConfigExample' Name='graylog-sidecar.yml' Source='$(var.SidecarConfigPath)' KeyPath='yes' />
+            </Component>
+            <!-- TODO: Add beats binaries -->
+          </Directory>
+        </Directory>
+      </Directory>
+    </Directory>
+
+    <Feature Id='Executable' Level='1'>
+      <ComponentRef Id='SidecarExecutable' />
+      <ComponentRef Id='SidecarConfig' />
+    </Feature>
+
+    <CustomAction Id='InstallSidecarService' FileKey='SidecarEXE' ExeCommand='-service install' Return='asyncNoWait' />
+    <CustomAction Id='UninstallSidecarService' FileKey='SidecarEXE' ExeCommand='-service uninstall' Return='asyncNoWait' />
+
+    <InstallExecuteSequence>
+      <Custom Action='InstallSidecarService' After='InstallFinalize'>
+        NOT Installed
+      </Custom>
+      <Custom Action='UninstallSidecarService' Before='RemoveFiles' />
+    </InstallExecuteSequence>
+  </Product>
+</Wix>
+

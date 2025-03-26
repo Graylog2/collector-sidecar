@@ -164,6 +164,17 @@ package-windows-amd64: prepare-package ## Create Windows installer
 	@mkdir -p dist/pkg
 	makensis -DVERSION=$(COLLECTOR_VERSION) -DVERSION_SUFFIX=$(COLLECTOR_VERSION_SUFFIX) -DREVISION=$(COLLECTOR_REVISION) dist/recipe.nsi
 
+
+.PHONY: package-windows-msi-amd64
+package-windows-msi-amd64: prepare-package ## Create Windows MSI package
+	@mkdir -p dist/pkg
+	wixl -v \
+		-D Version=$(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX) \
+		-D SidecarEXEPath=build/$(COLLECTOR_VERSION)/windows/amd64/graylog-sidecar.exe \
+		-D SidecarConfigPath=sidecar-windows-msi-example.yml \
+		-o dist/pkg/graylog-sidecar-$(WINDOWS_INSTALLER_VERSION).msi \
+		dist/installer.wxs
+
 .PHONY: sign-windows-installer
 sign-windows-installer:
 	# This needs to run in a Docker container with the graylog/internal-codesigntool image
