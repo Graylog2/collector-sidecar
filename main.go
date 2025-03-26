@@ -49,7 +49,7 @@ var (
 func init() {
 	var configurationPath string
 	if runtime.GOOS == "windows" {
-		configurationPath = filepath.Join(os.Getenv("SystemDrive")+"\\", "Program Files", "graylog", "sidecar", "sidecar.yml")
+		configurationPath = filepath.Join(filepath.Dir(os.Args[0]), "sidecar.yml")
 	} else {
 		configurationPath = filepath.Join("/etc", "graylog", "sidecar", "sidecar.yml")
 	}
