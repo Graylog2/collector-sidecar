@@ -181,6 +181,7 @@ package-windows-msi-amd64: prepare-package ## Create Windows MSI package
 sign-windows-installer:
 	# This needs to run in a Docker container with the graylog/internal-codesigntool image
 	codesigntool sign dist/pkg/graylog_sidecar_installer_$(WINDOWS_INSTALLER_VERSION).exe
+	codesigntool sign dist/pkg/graylog-sidecar-$(WINDOWS_INSTALLER_VERSION).msi
 
 .PHONY: package-chocolatey
 package-chocolatey: ## Create Chocolatey .nupkg file
