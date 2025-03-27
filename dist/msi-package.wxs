@@ -1,8 +1,13 @@
 <?xml version='1.0' encoding='windows-1252'?>
+
+<!-- The Product ID and Upgrade Code MUST not change! -->
+<?define ProductId = 'DC8CA278-14C6-4033-8646-137CF3815627'?>
+<?define UpgradeCode = '716878B0-190F-42A5-A31A-793621AB888E'?>
+
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
   <Product Name='Graylog Sidecar'
-    Id='DC8CA278-14C6-4033-8646-137CF3815627'
-    UpgradeCode='716878B0-190F-42A5-A31A-793621AB888E'
+    Id='$(var.ProductId)'
+    UpgradeCode='$(var.UpgradeCode)'
     Language='1033'
     Codepage='1252'
     Version='$(var.Version)'
@@ -13,7 +18,7 @@
       Description='Graylog Sidecar $(var.Version) Installer'
       Comments='Graylog Sidecar version $(var.Version) installer.'
       Manufacturer='Graylog, Inc.'
-      InstallerVersion='100'
+      InstallerVersion='500'
       Languages='1033'
       Compressed='yes'
       SummaryCodepage='1252' />
