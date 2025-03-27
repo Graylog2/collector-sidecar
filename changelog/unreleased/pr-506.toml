@@ -1,0 +1,4 @@
+type = "fixed"
+message = "Don't hardcode default config file location on Windows."
+
+pulls = ["506"]
