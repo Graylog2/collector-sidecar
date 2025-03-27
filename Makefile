@@ -124,7 +124,7 @@ install-goversioninfo:
 .PHONY: package-all
 package-all: prepare-package
 package-all: package-linux-armv7 package-linux-arm64 package-linux-amd64 package-linux32
-package-all: package-windows-amd64
+package-all: package-windows-exe-amd64 package-windows-msi-amd64
 package-all: package-tar
 
 .PHONY: prepare-package
@@ -159,15 +159,30 @@ package-linux32: ## Create Linux i386 system package
 	fpm-cook -t deb package dist/recipe32.rb
 	fpm-cook -t rpm package dist/recipe32.rb
 
-.PHONY: package-windows-amd64
-package-windows-amd64: prepare-package ## Create Windows installer
+.PHONY: package-windows-exe-amd64
+package-windows-exe-amd64: prepare-package ## Create Windows installer
 	@mkdir -p dist/pkg
 	makensis -DVERSION=$(COLLECTOR_VERSION) -DVERSION_SUFFIX=$(COLLECTOR_VERSION_SUFFIX) -DREVISION=$(COLLECTOR_REVISION) dist/recipe.nsi
+
+
+.PHONY: package-windows-msi-amd64
+package-windows-msi-amd64: prepare-package ## Create Windows MSI package (requires packages: msitools, wixl)
+	@mkdir -p dist/pkg
+	wixl -v -a x64 \
+		-D Version=$(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX) \
+		-D LicensePath=LICENSE \
+		-D SidecarEXEPath=build/$(COLLECTOR_VERSION)/windows/amd64/graylog-sidecar.exe \
+		-D SidecarConfigPath=sidecar-windows-msi-example.yml \
+		-D FilebeatEXEPath=dist/collectors/filebeat/windows/x86_64/filebeat.exe \
+		-D WinlogbeatEXEPath=dist/collectors/winlogbeat/windows/x86_64/winlogbeat.exe \
+		-o dist/pkg/graylog-sidecar-$(WINDOWS_INSTALLER_VERSION).msi \
+		dist/msi-package.wxs
 
 .PHONY: sign-windows-installer
 sign-windows-installer:
 	# This needs to run in a Docker container with the graylog/internal-codesigntool image
 	codesigntool sign dist/pkg/graylog_sidecar_installer_$(WINDOWS_INSTALLER_VERSION).exe
+	codesigntool sign dist/pkg/graylog-sidecar-$(WINDOWS_INSTALLER_VERSION).msi
 
 .PHONY: package-chocolatey
 package-chocolatey: ## Create Chocolatey .nupkg file
