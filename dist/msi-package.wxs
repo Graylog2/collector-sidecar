@@ -1,0 +1,81 @@
+<?xml version='1.0' encoding='windows-1252'?>
+
+<!-- The Product ID and Upgrade Code MUST not change! -->
+<?define ProductId = 'DC8CA278-14C6-4033-8646-137CF3815627'?>
+<?define UpgradeCode = '716878B0-190F-42A5-A31A-793621AB888E'?>
+
+<Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
+  <Product Name='Graylog Sidecar'
+    Id='$(var.ProductId)'
+    UpgradeCode='$(var.UpgradeCode)'
+    Language='1033'
+    Codepage='1252'
+    Version='$(var.Version)'
+    Manufacturer='Graylog, Inc.'>
+
+    <Package Id='*'
+      Keywords='Installer'
+      Description='Graylog Sidecar $(var.Version) Installer'
+      Comments='Graylog Sidecar version $(var.Version) installer.'
+      Manufacturer='Graylog, Inc.'
+      InstallerVersion='500'
+      Languages='1033'
+      Compressed='yes'
+      SummaryCodepage='1252' />
+
+    <Media Id='1' Cabinet='GraylogSidecar.cab' EmbedCab='yes' />
+
+    <Icon Id='graylog-sidecar.exe' SourceFile='$(var.SidecarEXEPath)' />
+
+    <Property Id='ARPHELPLINK' Value='https://docs.graylog.org/' />
+    <Property Id='ARPNOMODIFY' Value='1' />
+    <Property Id='ARPNOREPAIR' Value='1' />
+    <Property Id='ARPPRODUCTICON' Value='graylog-sidecar.exe' />
+    <Property Id='ARPURLINFOABOUT' Value='https://docs.graylog.org/' />
+
+    <Directory Id='TARGETDIR' Name='SourceDir'>
+      <Directory Id='ProgramFiles64Folder'>
+        <Directory Id='Graylog' Name='Graylog'>
+          <Directory Id='INSTALLDIR' Name='sidecar'>
+            <Component Id='SidecarExecutable' Guid='7D731672-C35C-4718-BD74-268F496F939E'>
+              <File Id='SidecarEXE'
+                Name='graylog-sidecar.exe'
+                Source='$(var.SidecarEXEPath)'
+                KeyPath='yes' />
+              <File Id='SidecarLicense'
+                Name='LICENSE'
+                Source='$(var.LicensePath)' />
+            </Component>
+            <Component Id='SidecarConfig' Guid='FECCBAFB-C7A7-4570-9A28-172FDB5B0DE1'>
+              <!-- We don't install a sidecar.yml file so we don't remove the file when uninstalling the package. -->
+              <File Id='SidecarConfigExample'
+                Name='sidecar-example.yml'
+                Source='$(var.SidecarConfigPath)'
+                KeyPath='yes' />
+            </Component>
+            <Component Id='FilebeatExecutable' Guid='A4B4356F-0F20-4ACC-B371-F2E5F761181B'>
+              <File Id='FilebeatEXE'
+                Name='filebeat.exe'
+                Source='$(var.FilebeatEXEPath)'
+                KeyPath='yes' />
+            </Component>
+            <Component Id='WinlogbeatExecutable' Guid='15A8BBB2-C371-41D9-B682-3F55C1DF3A36'>
+              <File Id='WinlogbeatEXE'
+                Name='winlogbeat.exe'
+                Source='$(var.WinlogbeatEXEPath)'
+                KeyPath='yes' />
+            </Component>
+          </Directory>
+        </Directory>
+      </Directory>
+    </Directory>
+
+    <Feature Id='Executable' Level='1'>
+      <ComponentRef Id='SidecarExecutable' />
+      <ComponentRef Id='SidecarConfig' />
+      <ComponentRef Id='FilebeatExecutable' />
+      <ComponentRef Id='WinlogbeatExecutable' />
+    </Feature>
+  </Product>
+</Wix>
+
