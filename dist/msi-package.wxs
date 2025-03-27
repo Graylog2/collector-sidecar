@@ -25,9 +25,12 @@
 
     <Media Id='1' Cabinet='GraylogSidecar.cab' EmbedCab='yes' />
 
+    <Icon Id="graylog-sidecar.exe" SourceFile="$(var.SidecarEXEPath)" />
+
     <Property Id='ARPHELPLINK' Value='https://docs.graylog.org/' />
     <Property Id='ARPNOMODIFY' Value='1' />
     <Property Id='ARPNOREPAIR' Value='1' />
+    <Property Id='ARPPRODUCTICON' Value='graylog-sidecar.exe' />
     <Property Id='ARPURLINFOABOUT' Value='https://docs.graylog.org/' />
 
     <Directory Id='TARGETDIR' Name='SourceDir'>
