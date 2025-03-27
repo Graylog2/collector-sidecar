@@ -88,8 +88,9 @@ pipeline
           {
             docker
             {
-              image 'torch/jenkins-fpm-cook:latest'
-              args '-u jenkins:docker'
+              image 'graylog/internal-sidecar-packaging:latest'
+              args '-u jenkins:jenkins'
+              registryCredentialsId 'docker-hub'
               reuseNode true
             }
           }
