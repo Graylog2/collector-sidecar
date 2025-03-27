@@ -124,7 +124,7 @@ install-goversioninfo:
 .PHONY: package-all
 package-all: prepare-package
 package-all: package-linux-armv7 package-linux-arm64 package-linux-amd64 package-linux32
-package-all: package-windows-amd64
+package-all: package-windows-exe-amd64
 package-all: package-tar
 
 .PHONY: prepare-package
@@ -159,8 +159,8 @@ package-linux32: ## Create Linux i386 system package
 	fpm-cook -t deb package dist/recipe32.rb
 	fpm-cook -t rpm package dist/recipe32.rb
 
-.PHONY: package-windows-amd64
-package-windows-amd64: prepare-package ## Create Windows installer
+.PHONY: package-windows-exe-amd64
+package-windows-exe-amd64: prepare-package ## Create Windows installer
 	@mkdir -p dist/pkg
 	makensis -DVERSION=$(COLLECTOR_VERSION) -DVERSION_SUFFIX=$(COLLECTOR_VERSION_SUFFIX) -DREVISION=$(COLLECTOR_REVISION) dist/recipe.nsi
 
