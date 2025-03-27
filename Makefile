@@ -170,6 +170,7 @@ package-windows-msi-amd64: prepare-package ## Create Windows MSI package (requir
 	@mkdir -p dist/pkg
 	wixl -v -a x64 \
 		-D Version=$(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX) \
+		-D LicensePath=LICENSE \
 		-D SidecarEXEPath=build/$(COLLECTOR_VERSION)/windows/amd64/graylog-sidecar.exe \
 		-D SidecarConfigPath=sidecar-windows-msi-example.yml \
 		-D FilebeatEXEPath=dist/collectors/filebeat/windows/x86_64/filebeat.exe \
