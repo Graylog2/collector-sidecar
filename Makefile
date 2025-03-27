@@ -124,7 +124,7 @@ install-goversioninfo:
 .PHONY: package-all
 package-all: prepare-package
 package-all: package-linux-armv7 package-linux-arm64 package-linux-amd64 package-linux32
-package-all: package-windows-exe-amd64
+package-all: package-windows-exe-amd64 package-windows-msi-amd64
 package-all: package-tar
 
 .PHONY: prepare-package
