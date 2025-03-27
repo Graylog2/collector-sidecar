@@ -166,7 +166,7 @@ package-windows-amd64: prepare-package ## Create Windows installer
 
 
 .PHONY: package-windows-msi-amd64
-package-windows-msi-amd64: prepare-package ## Create Windows MSI package
+package-windows-msi-amd64: prepare-package ## Create Windows MSI package (requires packages: msitools, wixl)
 	@mkdir -p dist/pkg
 	wixl -v \
 		-D Version=$(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX) \
@@ -175,7 +175,7 @@ package-windows-msi-amd64: prepare-package ## Create Windows MSI package
 		-D FilebeatEXEPath=dist/collectors/filebeat/windows/x86_64/filebeat.exe \
 		-D WinlogbeatEXEPath=dist/collectors/winlogbeat/windows/x86_64/winlogbeat.exe \
 		-o dist/pkg/graylog-sidecar-$(WINDOWS_INSTALLER_VERSION).msi \
-		dist/installer.wxs
+		dist/msi-package.wxs
 
 .PHONY: sign-windows-installer
 sign-windows-installer:
