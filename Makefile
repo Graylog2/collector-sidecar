@@ -168,7 +168,7 @@ package-windows-exe-amd64: prepare-package ## Create Windows installer
 .PHONY: package-windows-msi-amd64
 package-windows-msi-amd64: prepare-package ## Create Windows MSI package (requires packages: msitools, wixl)
 	@mkdir -p dist/pkg
-	wixl -v \
+	wixl -v -a x64 \
 		-D Version=$(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX) \
 		-D SidecarEXEPath=build/$(COLLECTOR_VERSION)/windows/amd64/graylog-sidecar.exe \
 		-D SidecarConfigPath=sidecar-windows-msi-example.yml \
