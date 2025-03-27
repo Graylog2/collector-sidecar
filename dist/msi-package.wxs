@@ -41,8 +41,9 @@
                 KeyPath='yes' />
             </Component>
             <Component Id='SidecarConfig' Guid='FECCBAFB-C7A7-4570-9A28-172FDB5B0DE1'>
+              <!-- We don't install a sidecar.yml file so we don't remove the file when uninstalling the package. -->
               <File Id='SidecarConfigExample'
-                Name='sidecar.yml'
+                Name='sidecar-example.yml'
                 Source='$(var.SidecarConfigPath)'
                 KeyPath='yes' />
             </Component>
