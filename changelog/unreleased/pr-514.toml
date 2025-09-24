@@ -1,0 +1,5 @@
+type = "c"
+message = "Update filebeat/winlogbeat/auditbeat versions."
+
+issues = ["502"]
+pulls = ["514"]
