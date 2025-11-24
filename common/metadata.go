@@ -15,8 +15,23 @@
 
 package common
 
+import (
+	"fmt"
+	"strings"
+)
+
 var (
 	CollectorVersion       string
 	CollectorVersionSuffix string
 	GitRevision            string
+	VendorName             string = "Graylog"
+	ProductName            string = "Sidecar"
 )
+
+func LowerFullName() string {
+	return fmt.Sprintf("%s-%s", strings.ToLower(VendorName), strings.ToLower(ProductName))
+}
+
+func DisplayFullName() string {
+	return fmt.Sprintf("%s %s", VendorName, ProductName)
+}
