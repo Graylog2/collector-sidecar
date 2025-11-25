@@ -31,7 +31,9 @@ import (
 	"github.com/Graylog2/collector-sidecar/context"
 )
 
-var serviceNamePrefix = fmt.Sprintf("%s-collector-", strings.ToLower(common.VendorName))
+func ServiceNamePrefix() string {
+	return fmt.Sprintf("%s-collector-", strings.ToLower(common.VendorName))
+}
 
 type SvcRunner struct {
 	RunnerCommon
@@ -59,7 +61,7 @@ func NewSvcRunner(backend backends.Backend, context *context.Ctx) Runner {
 		exec:        backend.ExecutablePath,
 		args:        backend.ExecuteParameters,
 		signals:     make(chan string),
-		serviceName: serviceNamePrefix + backend.Name,
+		serviceName: ServiceNamePrefix() + backend.Name,
 	}
 
 	// set default state
@@ -117,7 +119,7 @@ func (r *SvcRunner) GetBackend() *backends.Backend {
 func (r *SvcRunner) SetBackend(b backends.Backend) {
 	r.backend = b
 	r.name = b.Name
-	r.serviceName = serviceNamePrefix + b.Name
+	r.serviceName = ServiceNamePrefix() + b.Name
 	r.exec = b.ExecutablePath
 	r.args = b.ExecuteParameters
 }
