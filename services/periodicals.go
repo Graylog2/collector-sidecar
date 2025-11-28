@@ -24,7 +24,6 @@ import (
 	"github.com/Graylog2/collector-sidecar/api/rest"
 	"github.com/Graylog2/collector-sidecar/assignments"
 	"github.com/Graylog2/collector-sidecar/backends"
-	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/daemon"
 	"github.com/Graylog2/collector-sidecar/logger"
@@ -128,7 +127,7 @@ func updateCollectorRegistration(httpClient *http.Client, checksum string, conte
 func fetchBackendList(httpClient *http.Client, checksum string, ctx *context.Ctx) (graylog.ResponseBackendList, error) {
 	response, err := api.RequestBackendList(httpClient, checksum, ctx)
 	if err != nil {
-		log.Errorf("Can't fetch collector list from %s API: %v", common.VendorName, err)
+		log.Errorf("Can't fetch collector list from API: %v", err)
 		return response, err
 	}
 	return response, nil
@@ -145,7 +144,7 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksums map[string]stri
 		backend := runner.GetBackend()
 		response, err := api.RequestConfiguration(httpClient, configurationId, checksums[backendId], context)
 		if err != nil {
-			log.Errorf("Can't fetch configuration from %s API: %v", common.VendorName, err)
+			log.Errorf("Can't fetch configuration from API: %v", err)
 			return
 		}
 

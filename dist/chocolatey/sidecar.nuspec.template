@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>%%BRAND_PRODUCT_LOWER%%</id>
+    <version>$version$</version>
+    <packageSourceUrl>%%BRAND_GITHUB_URL%%</packageSourceUrl>
+    <title>%%BRAND_PRODUCT_DISPLAY%%</title>
+    <authors>%%BRAND_VENDOR_NAME%%</authors>
+    <projectUrl>%%BRAND_GITHUB_URL%%</projectUrl>
+    <iconUrl>%%BRAND_ICON_URL%%</iconUrl>
+    <licenseUrl>%%BRAND_GITHUB_URL%%/blob/master/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <projectSourceUrl>%%BRAND_GITHUB_URL%%</projectSourceUrl>
+    <docsUrl>%%BRAND_DOCS_URL%%</docsUrl>
+    <bugTrackerUrl>%%BRAND_GITHUB_URL%%/issues</bugTrackerUrl>
+    <tags>%%BRAND_VENDOR_NAME%% %%BRAND_PRODUCT_LOWER%% log</tags>
+    <summary>Manage log collectors through %%BRAND_VENDOR_NAME%%</summary>
+    <description>The %%BRAND_PRODUCT_DISPLAY%% is a supervisor process for 3rd party log collectors like NXLog and filebeat. The Sidecar program is able to fetch and validate configuration files from a %%BRAND_VENDOR_NAME%% server for various log collectors. You can think of it like a centralized configuration and process management system for your log collectors.
+
+      To properly configure the sidecar, you'll need to pass in your **server url** and your **api token**.
+
+          choco install %%BRAND_PRODUCT_LOWER%% --install-arguments="'-SERVERURL=http://10.0.2.2:9000/api -APITOKEN=yourapitoken'"
+
+      Other optional example parameters are:
+
+          -TAGS=["example","foo"] -NODENAME=mynodename -NODEID=1234 -SENDSTATUS=false -TLSSKIPVERIFY=true -UPDATEINTERVAL=10s
+
+    </description>
+    <releaseNotes></releaseNotes>
+  </metadata>
+  <files>
+    <file src="tools/*.ps1" target="tools" />
+  </files>
+</package>

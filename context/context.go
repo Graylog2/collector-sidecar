@@ -16,13 +16,10 @@
 package context
 
 import (
-	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
-	"strings"
 	"time"
 
 	"github.com/Graylog2/collector-sidecar/common"
@@ -51,7 +48,8 @@ func NewContext() *Ctx {
 }
 
 func (ctx *Ctx) LoadConfig(path *string) error {
-	err := cfgfile.Read(&ctx.UserConfig, *path)
+	ctx.UserConfig = &cfgfile.SidecarConfig{}
+	err := cfgfile.Read(ctx.UserConfig, *path)
 	if err != nil {
 		return err
 	}
@@ -92,16 +90,8 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 
 	// cache_path
 	if ctx.UserConfig.CachePath == "" {
-		var cachePath string
-		if runtime.GOOS == "windows" {
-			cachePath = filepath.Join(os.Getenv("SystemDrive")+"\\", "Program Files",
-				strings.ToLower(common.VendorName), strings.ToLower(common.ProductName), "cache")
-		} else {
-			cachePath = filepath.Join("/var", "cache",
-				fmt.Sprintf("%s-%s", strings.ToLower(common.VendorName), strings.ToLower(common.ProductName)))
-		}
-		ctx.UserConfig.CachePath = cachePath
-		log.Errorf("No cache directory was configured. Using default: %s", cachePath)
+		ctx.UserConfig.CachePath = common.CachePath()
+		log.Errorf("No cache directory was configured. Using default: %s", ctx.UserConfig.CachePath)
 	}
 
 	// log_path

@@ -20,7 +20,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"runtime"
 
 	"github.com/kardianos/service"
@@ -47,20 +46,13 @@ var (
 )
 
 func init() {
-	var configurationPath string
-	if runtime.GOOS == "windows" {
-		configurationPath = filepath.Join(os.Getenv("SystemDrive")+"\\", "Program Files", "graylog", "sidecar", "sidecar.yml")
-	} else {
-		configurationPath = filepath.Join("/etc", "graylog", "sidecar", "sidecar.yml")
-	}
-
 	serviceParam = flag.String("service", "", "Control the system service [start stop restart install uninstall]")
-	configurationFile = flag.String("c", configurationPath, "Configuration file")
+	configurationFile = flag.String("c", common.ConfigFilePath(), "Configuration file")
 	printVersion = flag.Bool("version", false, "Print version and exit")
 	debug = flag.Bool("debug", false, "Set log level to debug")
 
 	flag.Usage = func() {
-		fmt.Fprint(os.Stderr, "Usage: graylog-sidecar -c [CONFIGURATION FILE]\n")
+		_, _ = fmt.Fprintln(os.Stderr, fmt.Sprintf("Usage: %s -c [CONFIGURATION FILE]", common.LowerFullName()))
 		flag.PrintDefaults()
 	}
 
@@ -132,7 +124,9 @@ func commandLineSetup() error {
 	flag.Parse()
 
 	if *printVersion {
-		fmt.Printf("Graylog Collector Sidecar version %s%s (%s) [%s/%s]\n",
+		fmt.Printf("%s Collector %s version %s%s (%s) [%s/%s]\n",
+			common.VendorName,
+			common.ProductName,
 			common.CollectorVersion,
 			common.CollectorVersionSuffix,
 			common.GitRevision,
