@@ -11,7 +11,7 @@ class GraylogSidecar < FPM::Cookery::Recipe
 
   source   "file:../../build/#{version}/linux/arm64/graylog-sidecar"
 
-  maintainer 'Graylog, Inc. <hello@graylog.org>'
+  maintainer 'Graylog, Inc. <packages@graylog.com>'
   vendor     'graylog'
   license    'SSPL'
 
