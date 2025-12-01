@@ -20,7 +20,7 @@ BRAND_GITHUB_URL ?= https://github.com/Graylog2/collector-sidecar
 BRAND_ICON_URL ?= https://rawcdn.githack.com/Graylog2/collector-sidecar/c32a05ba052815ebbdeb8588395451dd5b2c1378/images/graylog-icon.png
 
 # File names
-BRAND_ICON_FILE ?= graylog.ico
+BRAND_ICON_FILE ?= dist/graylog.ico
 BRAND_BINARY_NAME ?= $(BRAND_PRODUCT_LOWER)
 
 # Paths (Unix)
@@ -32,7 +32,7 @@ BRAND_LOG_DIR_UNIX ?= /var/log/$(BRAND_PRODUCT_LOWER)
 BRAND_CACHE_DIR_UNIX ?= /var/cache/$(BRAND_PRODUCT_LOWER)
 BRAND_VAR_LIB_DIR_UNIX ?= /var/lib/$(BRAND_PRODUCT_LOWER)
 BRAND_VAR_RUN_DIR_UNIX ?= /var/run/$(BRAND_PRODUCT_LOWER)
-BRAND_ICON_FILE_ABS ?= $(readlink -f $(BRAND_ICON_FILE))
+BRAND_ICON_FILE_ABS ?= $(realpath $(BRAND_ICON_FILE))
 
 # Paths (Windows) - use consistent naming
 BRAND_WIN_VENDOR_DIR ?= $(BRAND_VENDOR_NAME)
