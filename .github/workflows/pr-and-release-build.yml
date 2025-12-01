@@ -23,6 +23,3 @@ jobs:
 
       - name: Run tests
         run: make test
-
-      - name: Build cross-platform packages
-        run: make package-all
