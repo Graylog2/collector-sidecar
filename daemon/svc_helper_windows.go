@@ -17,12 +17,13 @@ package daemon
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/Graylog2/collector-sidecar/backends"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/eventlog"
 	"golang.org/x/sys/windows/svc/mgr"
-	"strings"
-	"time"
 )
 
 func CleanOldServices(assignedBackends []*backends.Backend) {
@@ -32,7 +33,7 @@ func CleanOldServices(assignedBackends []*backends.Backend) {
 		return
 	}
 	for _, service := range registeredServices {
-		if strings.Contains(service, ServiceNamePrefix) {
+		if strings.Contains(service, ServiceNamePrefix()) {
 			log.Debugf("Found graylog service %s", service)
 			if !serviceIsAssigned(assignedBackends, service) {
 				log.Infof("Removing stale graylog service %s", service)
@@ -57,7 +58,7 @@ func getRegisteredServices() ([]string, error) {
 
 func serviceIsAssigned(assignedBackends []*backends.Backend, serviceName string) bool {
 	for _, backend := range assignedBackends {
-		if backend.ServiceType == "svc" && ServiceNamePrefix+backend.Name == serviceName {
+		if backend.ServiceType == "svc" && ServiceNamePrefix()+backend.Name == serviceName {
 			return true
 		}
 	}

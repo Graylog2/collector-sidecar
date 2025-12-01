@@ -1,21 +1,22 @@
 require_relative 'tools'
+require_relative 'branding'
 
 class GraylogSidecar < FPM::Cookery::Recipe
-  description 'Graylog collector sidecar'
+  description "#{Branding.vendor_name} collector sidecar"
 
-  name     'graylog-sidecar'
+  name     Branding.product_lower
   version  data.version
   revision data.revision
-  homepage 'https://graylog.org'
+  homepage Branding.homepage_url
   arch     'amd64'
 
   source   "file:../../build/#{version}/linux/amd64/graylog-sidecar"
 
-  maintainer 'Graylog, Inc. <packages@graylog.com>'
-  vendor     'graylog'
-  license    'SSPL'
+  maintainer Branding.maintainer
+  vendor     Branding.vendor_lower
+  license    Branding.license
 
-  config_files '/etc/graylog/sidecar/sidecar.yml'
+  config_files "#{Branding.config_dir}/sidecar.yml"
 
   fpm_attributes rpm_os: 'linux'
 
@@ -23,13 +24,13 @@ class GraylogSidecar < FPM::Cookery::Recipe
   end
 
   def install
-    bin.install 'graylog-sidecar'
-    lib('graylog-sidecar').install '../../collectors/filebeat/linux/x86_64/filebeat'
-    lib('graylog-sidecar').install '../../collectors/auditbeat/linux/x86_64/auditbeat'
-    etc('graylog/sidecar').install '../../../sidecar-example.yml', 'sidecar.yml'
-    etc('graylog/sidecar/sidecar.yml').chmod(0600)
-    var('lib/graylog-sidecar/generated').mkdir
-    var('log/graylog-sidecar').mkdir
-    var('run/graylog-sidecar').mkdir
+    bin.install 'graylog-sidecar', Branding.product_lower
+    lib(Branding.product_lower).install '../../collectors/filebeat/linux/x86_64/filebeat'
+    lib(Branding.product_lower).install '../../collectors/auditbeat/linux/x86_64/auditbeat'
+    etc(Branding.etc_path).install '../../../sidecar-example.yml', 'sidecar.yml'
+    etc("#{Branding.etc_path}/sidecar.yml").chmod(0600)
+    var("lib/#{Branding.product_lower}/generated").mkdir
+    var("log/#{Branding.product_lower}").mkdir
+    var("run/#{Branding.product_lower}").mkdir
   end
 end

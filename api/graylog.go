@@ -19,11 +19,13 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
-	"github.com/Graylog2/collector-sidecar/helpers"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/Graylog2/collector-sidecar/helpers"
 
 	"github.com/Graylog2/collector-sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/api/rest"
@@ -55,7 +57,7 @@ func GetServerVersion(httpClient *http.Client, ctx *context.Ctx) (*GraylogVersio
 		log.Errorf("Error fetching server version %v", err)
 		return nil, err
 	}
-	log.Debugf("Graylog server version %v", versionResponse.Version)
+	log.Debugf("server version %v", versionResponse.Version)
 	return NewGraylogVersion(versionResponse.Version)
 }
 
@@ -145,8 +147,8 @@ func RequestConfiguration(
 			log.Debug("[RequestConfiguration] No update available, skipping update.")
 			configurationResponse.NotModified = true
 		case resp.StatusCode != 200:
-			msg := "Bad response status from Graylog server"
-			system.GlobalStatus.Set(backends.StatusError, msg+": "+err.Error())
+			msg := fmt.Sprintf("Bad response status from server")
+			system.GlobalStatus.Set(backends.StatusError, fmt.Sprintf("%s: %v", msg, err))
 			log.Errorf("[RequestConfiguration] %s: %s", msg, resp.Status)
 			return graylog.ResponseCollectorConfiguration{}, err
 		}
@@ -217,7 +219,7 @@ func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.C
 		log.Debug("[UpdateRegistration] No update available.")
 		respBody.NotModified = true
 	} else if resp != nil && resp.StatusCode != 202 {
-		log.Error("[UpdateRegistration] Bad response from Graylog server: ", resp.Status)
+		log.Errorf("[UpdateRegistration] Bad response from server: %v", resp.Status)
 		return graylog.ResponseCollectorRegistration{}, err
 	} else if err != nil && err != io.EOF { // err is nil for GL 2.2 and EOF for 2.1 and earlier
 		log.Error("[UpdateRegistration] Failed to report collector status to server: ", err)
