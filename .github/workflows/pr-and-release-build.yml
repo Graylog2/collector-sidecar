@@ -22,7 +22,7 @@ jobs:
         run: make build
 
       - name: Run tests
-        run: make tests
+        run: make test
 
       - name: Build cross-platform packages
         run: make packages
