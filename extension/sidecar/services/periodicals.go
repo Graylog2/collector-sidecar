@@ -24,7 +24,7 @@ import (
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/api/rest"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/assignments"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/backends"
-	"github.com/Graylog2/collector-sidecar/extension/sidecar/ctxt"
+	"github.com/Graylog2/collector-sidecar/extension/sidecar/cfg"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/daemon"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/logger"
 )
@@ -33,7 +33,7 @@ const reCreateHttpConnEvery = 60
 
 var log = logger.Log()
 
-func StartPeriodicals(context *ctxt.Ctx) {
+func StartPeriodicals(context *cfg.Config) {
 
 	go func() {
 		var httpClient *http.Client
@@ -119,12 +119,12 @@ func StartPeriodicals(context *ctxt.Ctx) {
 }
 
 // report collector status to Graylog server and receive assignments
-func updateCollectorRegistration(httpClient *http.Client, checksum string, context *ctxt.Ctx, serverVersion *api.GraylogVersion) (graylog.ResponseCollectorRegistration, error) {
+func updateCollectorRegistration(httpClient *http.Client, checksum string, context *cfg.Config, serverVersion *api.GraylogVersion) (graylog.ResponseCollectorRegistration, error) {
 	statusRequest := api.NewStatusRequest(serverVersion)
 	return api.UpdateRegistration(httpClient, checksum, context, serverVersion, &statusRequest)
 }
 
-func fetchBackendList(httpClient *http.Client, checksum string, ctx *ctxt.Ctx) (graylog.ResponseBackendList, error) {
+func fetchBackendList(httpClient *http.Client, checksum string, ctx *cfg.Config) (graylog.ResponseBackendList, error) {
 	response, err := api.RequestBackendList(httpClient, checksum, ctx)
 	if err != nil {
 		log.Error("Can't fetch collector list from Graylog API: ", err)
@@ -134,7 +134,7 @@ func fetchBackendList(httpClient *http.Client, checksum string, ctx *ctxt.Ctx) (
 }
 
 // fetch configuration periodically
-func checkForUpdateAndRestart(httpClient *http.Client, checksums map[string]string, context *ctxt.Ctx) {
+func checkForUpdateAndRestart(httpClient *http.Client, checksums map[string]string, context *cfg.Config) {
 	for backendId, configurationId := range assignments.Store.GetAll() {
 		runner := daemon.Daemon.GetRunnerByBackendId(backendId)
 		if runner == nil {

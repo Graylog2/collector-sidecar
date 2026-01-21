@@ -17,7 +17,6 @@ package daemon
 
 import (
 	"errors"
-	"github.com/Graylog2/collector-sidecar/extension/sidecar/helpers"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -26,11 +25,13 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Graylog2/collector-sidecar/extension/sidecar/helpers"
+
 	"github.com/flynn-archive/go-shlex"
 
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/backends"
+	"github.com/Graylog2/collector-sidecar/extension/sidecar/cfg"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/common"
-	"github.com/Graylog2/collector-sidecar/extension/sidecar/ctxt"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/logger"
 )
 
@@ -54,7 +55,7 @@ func init() {
 	}
 }
 
-func NewExecRunner(backend backends.Backend, context *ctxt.Ctx) Runner {
+func NewExecRunner(backend backends.Backend, context *cfg.Config) Runner {
 	r := &ExecRunner{
 		RunnerCommon: RunnerCommon{
 			name:    backend.Name,

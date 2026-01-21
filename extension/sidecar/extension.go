@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Graylog2/collector-sidecar/extension/sidecar/cfg"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/cfgfile"
-	"github.com/Graylog2/collector-sidecar/extension/sidecar/ctxt"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/daemon"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/logger/hooks"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/services"
@@ -53,8 +53,8 @@ func (sce *sidecarExtension) Start(ctx context.Context, host component.Host) err
 	configurationFile = &sce.config.Path
 
 	// initialize application context
-	configCtxt := ctxt.NewContext()
-	err = configCtxt.LoadConfig(configurationFile)
+	config := cfg.NewConfig()
+	err = config.LoadConfig(configurationFile)
 	if err != nil {
 		return fmt.Errorf("loading configuration file: %w", err)
 	} else {
@@ -74,10 +74,10 @@ func (sce *sidecarExtension) Start(ctx context.Context, host component.Host) err
 	} else {
 		log.Level = logrus.InfoLevel
 	}
-	hooks.AddLogHooks(configCtxt, log)
+	hooks.AddLogHooks(config, log)
 
 	// start main loop
-	services.StartPeriodicals(configCtxt)
+	services.StartPeriodicals(config)
 	if err = s.Start(); err != nil {
 		return fmt.Errorf("starting sidecar service: %w", err)
 	}

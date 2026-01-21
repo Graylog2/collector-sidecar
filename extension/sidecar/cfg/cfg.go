@@ -13,7 +13,7 @@
 // along with this program. If not, see
 // <http://www.mongodb.com/licensing/server-side-public-license>.
 
-package ctxt
+package cfg
 
 import (
 	"net/url"
@@ -34,7 +34,7 @@ import (
 
 var log = logger.Log()
 
-type Ctx struct {
+type Config struct {
 	ServerUrl  *url.URL
 	NodeId     string
 	NodeName   string
@@ -42,13 +42,13 @@ type Ctx struct {
 	Inventory  *system.Inventory
 }
 
-func NewContext() *Ctx {
-	return &Ctx{
+func NewConfig() *Config {
+	return &Config{
 		Inventory: system.NewInventory(),
 	}
 }
 
-func (ctx *Ctx) LoadConfig(path *string) error {
+func (ctx *Config) LoadConfig(path *string) error {
 	err := cfgfile.Read(&ctx.UserConfig, *path)
 	if err != nil {
 		return err

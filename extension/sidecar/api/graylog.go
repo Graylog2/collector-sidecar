@@ -19,18 +19,19 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
-	"github.com/Graylog2/collector-sidecar/extension/sidecar/helpers"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"github.com/Graylog2/collector-sidecar/extension/sidecar/helpers"
+
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/api/rest"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/backends"
+	"github.com/Graylog2/collector-sidecar/extension/sidecar/cfg"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/cfgfile"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/common"
-	"github.com/Graylog2/collector-sidecar/extension/sidecar/ctxt"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/daemon"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/logger"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/system"
@@ -41,7 +42,7 @@ var (
 	configurationOverride = false
 )
 
-func GetServerVersion(httpClient *http.Client, ctx *ctxt.Ctx) (*GraylogVersion, error) {
+func GetServerVersion(httpClient *http.Client, ctx *cfg.Config) (*GraylogVersion, error) {
 	c := rest.NewClient(httpClient, ctx)
 	c.BaseURL = ctx.ServerUrl
 	r, err := c.NewRequest("GET", "/", nil, nil)
@@ -59,7 +60,7 @@ func GetServerVersion(httpClient *http.Client, ctx *ctxt.Ctx) (*GraylogVersion, 
 	return NewGraylogVersion(versionResponse.Version)
 }
 
-func RequestBackendList(httpClient *http.Client, checksum string, ctx *ctxt.Ctx) (graylog.ResponseBackendList, error) {
+func RequestBackendList(httpClient *http.Client, checksum string, ctx *cfg.Config) (graylog.ResponseBackendList, error) {
 	c := rest.NewClient(httpClient, ctx)
 	c.BaseURL = ctx.ServerUrl
 
@@ -107,7 +108,7 @@ func RequestConfiguration(
 	httpClient *http.Client,
 	configurationId string,
 	checksum string,
-	ctx *ctxt.Ctx) (graylog.ResponseCollectorConfiguration, error) {
+	ctx *cfg.Config) (graylog.ResponseCollectorConfiguration, error) {
 	c := rest.NewClient(httpClient, ctx)
 	c.BaseURL = ctx.ServerUrl
 
@@ -156,7 +157,7 @@ func RequestConfiguration(
 	return configurationResponse, nil
 }
 
-func UpdateRegistration(httpClient *http.Client, checksum string, ctx *ctxt.Ctx, serverVersion *GraylogVersion, status *graylog.StatusRequest) (graylog.ResponseCollectorRegistration, error) {
+func UpdateRegistration(httpClient *http.Client, checksum string, ctx *cfg.Config, serverVersion *GraylogVersion, status *graylog.StatusRequest) (graylog.ResponseCollectorRegistration, error) {
 	c := rest.NewClient(httpClient, ctx)
 	c.BaseURL = ctx.ServerUrl
 
@@ -238,7 +239,7 @@ func UpdateRegistration(httpClient *http.Client, checksum string, ctx *ctxt.Ctx,
 	return *respBody, nil
 }
 
-func updateRuntimeConfiguration(respBody *graylog.ResponseCollectorRegistration, ctx *ctxt.Ctx) error {
+func updateRuntimeConfiguration(respBody *graylog.ResponseCollectorRegistration, ctx *cfg.Config) error {
 	// API query interval
 	if ctx.UserConfig.UpdateInterval != respBody.Configuration.UpdateInterval &&
 		respBody.Configuration.UpdateInterval > 0 &&
@@ -272,7 +273,7 @@ func updateRuntimeConfiguration(respBody *graylog.ResponseCollectorRegistration,
 	return nil
 }
 
-func GetTlsConfig(ctx *ctxt.Ctx) *tls.Config {
+func GetTlsConfig(ctx *cfg.Config) *tls.Config {
 	var tlsConfig *tls.Config
 	if ctx.UserConfig.TlsSkipVerify {
 		tlsConfig = &tls.Config{InsecureSkipVerify: true}

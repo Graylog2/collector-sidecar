@@ -25,7 +25,7 @@ import (
 	"golang.org/x/sys/windows/svc/mgr"
 
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/backends"
-	"github.com/Graylog2/collector-sidecar/extension/sidecar/ctxt"
+	"github.com/Graylog2/collector-sidecar/extension/sidecar/cfg"
 )
 
 const ServiceNamePrefix = "graylog-collector-"
@@ -46,7 +46,7 @@ func init() {
 	}
 }
 
-func NewSvcRunner(backend backends.Backend, context *ctxt.Ctx) Runner {
+func NewSvcRunner(backend backends.Backend, context *cfg.Config) Runner {
 	r := &SvcRunner{
 		RunnerCommon: RunnerCommon{
 			name:    backend.Name,

@@ -28,8 +28,8 @@ import (
 	"path"
 	"time"
 
+	"github.com/Graylog2/collector-sidecar/extension/sidecar/cfg"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/common"
-	"github.com/Graylog2/collector-sidecar/extension/sidecar/ctxt"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/logger"
 )
 
@@ -87,7 +87,7 @@ func NewHTTPClient(tlsConfig *tls.Config) *http.Client {
 	}
 }
 
-func NewClient(httpClient *http.Client, ctx *ctxt.Ctx) *Client {
+func NewClient(httpClient *http.Client, ctx *cfg.Config) *Client {
 	if httpClient == nil {
 		log.Fatal("http client must not be nil")
 	}

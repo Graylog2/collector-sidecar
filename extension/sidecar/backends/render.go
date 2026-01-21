@@ -18,10 +18,11 @@ package backends
 import (
 	"bytes"
 	"fmt"
-	"github.com/Graylog2/collector-sidecar/extension/sidecar/common"
-	"github.com/Graylog2/collector-sidecar/extension/sidecar/ctxt"
-	"github.com/Graylog2/collector-sidecar/extension/sidecar/helpers"
 	"io/ioutil"
+
+	"github.com/Graylog2/collector-sidecar/extension/sidecar/cfg"
+	"github.com/Graylog2/collector-sidecar/extension/sidecar/common"
+	"github.com/Graylog2/collector-sidecar/extension/sidecar/helpers"
 )
 
 func (b *Backend) render() []byte {
@@ -31,7 +32,7 @@ func (b *Backend) render() []byte {
 	return helpers.ConvertLineBreak(result.Bytes())
 }
 
-func (b *Backend) renderToFile(context *ctxt.Ctx) error {
+func (b *Backend) renderToFile(context *cfg.Config) error {
 	if !b.CheckConfigPathAgainstAccesslist(context) {
 		err := fmt.Errorf("Configuration path violates `collector_binaries_accesslist' config option.")
 		b.SetStatusLogErrorf(err.Error())
@@ -46,7 +47,7 @@ func (b *Backend) renderToFile(context *ctxt.Ctx) error {
 	return err
 }
 
-func (b *Backend) RenderOnChange(changedBackend Backend, context *ctxt.Ctx) bool {
+func (b *Backend) RenderOnChange(changedBackend Backend, context *cfg.Config) bool {
 	if b.Template != changedBackend.Template {
 		log.Infof("[%s] Configuration change detected, rewriting configuration file.", b.Name)
 		b.Template = changedBackend.Template

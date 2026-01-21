@@ -18,7 +18,7 @@ package daemon
 import (
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/assignments"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/backends"
-	"github.com/Graylog2/collector-sidecar/extension/sidecar/ctxt"
+	"github.com/Graylog2/collector-sidecar/extension/sidecar/cfg"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/helpers"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/logger"
 )
@@ -71,7 +71,7 @@ func RegisterBackendRunner(name string, c RunnerCreator) error {
 	return nil
 }
 
-func (dc *DaemonConfig) AddRunner(backend backends.Backend, context *ctxt.Ctx) {
+func (dc *DaemonConfig) AddRunner(backend backends.Backend, context *cfg.Config) {
 	var runner Runner
 	if runnerRegistry[backend.ServiceType] == nil {
 		backend.SetStatusLogErrorf("Execution driver %s is not supported on this platform", backend.ServiceType)
@@ -111,7 +111,7 @@ func (dc *DaemonConfig) GetRunnerByBackendId(id string) Runner {
 	return nil
 }
 
-func (dc *DaemonConfig) SyncWithAssignments(context *ctxt.Ctx) {
+func (dc *DaemonConfig) SyncWithAssignments(context *cfg.Config) {
 	if dc.Runner == nil {
 		return
 	}

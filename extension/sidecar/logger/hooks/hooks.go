@@ -24,14 +24,14 @@ import (
 	"github.com/rifflock/lfshook"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Graylog2/collector-sidecar/extension/sidecar/ctxt"
+	"github.com/Graylog2/collector-sidecar/extension/sidecar/cfg"
 )
 
-func AddLogHooks(context *ctxt.Ctx, log *logrus.Logger) {
+func AddLogHooks(context *cfg.Config, log *logrus.Logger) {
 	filesystemHook(context, log)
 }
 
-func filesystemHook(context *ctxt.Ctx, log *logrus.Logger) {
+func filesystemHook(context *cfg.Config, log *logrus.Logger) {
 	logfile := filepath.Join(context.UserConfig.LogPath, "sidecar.log")
 	err := common.CreatePathToFile(logfile)
 	if err != nil {

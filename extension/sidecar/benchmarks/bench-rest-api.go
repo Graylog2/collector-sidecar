@@ -22,11 +22,6 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
-	"github.com/Graylog2/collector-sidecar/extension/sidecar/api"
-	"github.com/Graylog2/collector-sidecar/extension/sidecar/api/rest"
-	"github.com/Graylog2/collector-sidecar/extension/sidecar/cfgfile"
-	"github.com/Graylog2/collector-sidecar/extension/sidecar/common"
-	"github.com/Graylog2/collector-sidecar/extension/sidecar/ctxt"
 	"log"
 	"net/url"
 	"os"
@@ -35,6 +30,12 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/Graylog2/collector-sidecar/extension/sidecar/api"
+	"github.com/Graylog2/collector-sidecar/extension/sidecar/api/rest"
+	"github.com/Graylog2/collector-sidecar/extension/sidecar/cfg"
+	"github.com/Graylog2/collector-sidecar/extension/sidecar/cfgfile"
+	"github.com/Graylog2/collector-sidecar/extension/sidecar/common"
 )
 
 var flagNum int
@@ -59,7 +60,7 @@ func init() {
 // DisableKeepAlives, MaxIdleConnections, DefaultMaxIdleConnsPerHost
 var httpClient = rest.NewHTTPClient(&tls.Config{})
 
-func startHeartbeat(ctx *ctxt.Ctx, done chan bool, metrics chan time.Duration, wg *sync.WaitGroup) {
+func startHeartbeat(ctx *cfg.Config, done chan bool, metrics chan time.Duration, wg *sync.WaitGroup) {
 	fmt.Printf("[%s] starting heartbeat\n", ctx.UserConfig.NodeId)
 	defer wg.Done()
 	for i := 1; i <= flagIterations; i++ {
@@ -93,7 +94,7 @@ func startHeartbeat(ctx *ctxt.Ctx, done chan bool, metrics chan time.Duration, w
 	}
 }
 
-func startBackendUpdater(ctx *ctxt.Ctx, done chan bool, metrics chan time.Duration, wg *sync.WaitGroup) {
+func startBackendUpdater(ctx *cfg.Config, done chan bool, metrics chan time.Duration, wg *sync.WaitGroup) {
 	fmt.Printf("[%s] starting backend updater\n", ctx.UserConfig.NodeId)
 	defer wg.Done()
 	for i := 1; i <= flagIterations; i++ {

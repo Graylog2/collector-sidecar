@@ -17,7 +17,7 @@ package daemon
 
 import (
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/backends"
-	"github.com/Graylog2/collector-sidecar/extension/sidecar/ctxt"
+	"github.com/Graylog2/collector-sidecar/extension/sidecar/cfg"
 )
 
 type Runner interface {
@@ -33,9 +33,9 @@ type Runner interface {
 
 type RunnerCommon struct {
 	name    string
-	context *ctxt.Ctx
+	context *cfg.Config
 	backend backends.Backend
 	daemon  *DaemonConfig
 }
 
-type RunnerCreator func(backends.Backend, *ctxt.Ctx) Runner
+type RunnerCreator func(backends.Backend, *cfg.Config) Runner

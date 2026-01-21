@@ -29,7 +29,7 @@ import (
 	"github.com/flynn-archive/go-shlex"
 
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/api/graylog"
-	"github.com/Graylog2/collector-sidecar/extension/sidecar/ctxt"
+	"github.com/Graylog2/collector-sidecar/extension/sidecar/cfg"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/system"
 )
 
@@ -49,7 +49,7 @@ type Backend struct {
 	backendStatus        system.VerboseStatus
 }
 
-func BackendFromResponse(response graylog.ResponseCollectorBackend, configId string, ctx *ctxt.Ctx) *Backend {
+func BackendFromResponse(response graylog.ResponseCollectorBackend, configId string, ctx *cfg.Config) *Backend {
 	return &Backend{
 		Enabled:              helpers.NewTrue(),
 		Id:                   response.Id + "-" + configId,
@@ -66,7 +66,7 @@ func BackendFromResponse(response graylog.ResponseCollectorBackend, configId str
 	}
 }
 
-func BuildConfigurationPath(response graylog.ResponseCollectorBackend, configId string, ctx *ctxt.Ctx) string {
+func BuildConfigurationPath(response graylog.ResponseCollectorBackend, configId string, ctx *cfg.Config) string {
 	return filepath.Join(ctx.UserConfig.CollectorConfigurationDirectory, configId, response.Name+".conf")
 }
 
@@ -101,7 +101,7 @@ func (b *Backend) EqualSettings(a *Backend) bool {
 	return b.Equals(aBackend)
 }
 
-func (b *Backend) CheckExecutableAgainstAccesslist(context *ctxt.Ctx) error {
+func (b *Backend) CheckExecutableAgainstAccesslist(context *cfg.Config) error {
 	if len(context.UserConfig.CollectorBinariesAccesslist) <= 0 {
 		return nil
 	}
@@ -121,7 +121,7 @@ func (b *Backend) CheckExecutableAgainstAccesslist(context *ctxt.Ctx) error {
 	return nil
 }
 
-func (b *Backend) CheckConfigPathAgainstAccesslist(context *ctxt.Ctx) bool {
+func (b *Backend) CheckConfigPathAgainstAccesslist(context *cfg.Config) bool {
 	configuration, err := helpers.PathMatch(b.ConfigurationPath, context.UserConfig.CollectorBinariesAccesslist)
 	if err != nil {
 		log.Errorf("Can not validate configuration path: %s", err)
@@ -134,7 +134,7 @@ func (b *Backend) CheckConfigPathAgainstAccesslist(context *ctxt.Ctx) bool {
 	return true
 }
 
-func (b *Backend) ValidateConfigurationFile(context *ctxt.Ctx) (error, string) {
+func (b *Backend) ValidateConfigurationFile(context *cfg.Config) (error, string) {
 	if b.ValidationParameters == "" {
 		log.Warnf("[%s] Skipping configuration test. No validation command configured.", b.Name)
 		return nil, ""
