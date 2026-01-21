@@ -215,4 +215,13 @@ package-tar: ## Create tar archive for all platforms
 help:
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | $(AWK) 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
+.PHONY: v2
+v2:
+	go generate .
+	(cd builder && go build -o ../graylog-collector .)
+
+.PHONY: v2test
+v2test:
+	(cd builder/mod && go test -v .)
+
 .DEFAULT_GOAL := all
