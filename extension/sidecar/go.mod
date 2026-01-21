@@ -15,6 +15,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	go.opentelemetry.io/collector/component v1.50.0
 	go.opentelemetry.io/collector/extension v1.50.0
+	go.uber.org/zap v1.27.1
 	golang.org/x/sys v0.38.0
 )
 
@@ -33,7 +34,6 @@ require (
 	go.opentelemetry.io/otel/metric v1.39.0 // indirect
 	go.opentelemetry.io/otel/trace v1.39.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	go.uber.org/zap v1.27.1 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
