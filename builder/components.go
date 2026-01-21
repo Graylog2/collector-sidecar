@@ -3,18 +3,18 @@
 package main
 
 import (
+	sidecar "github.com/Graylog2/collector-sidecar/extension/sidecar"
+	journaldreceiver "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/connector"
 	"go.opentelemetry.io/collector/exporter"
+	debugexporter "go.opentelemetry.io/collector/exporter/debugexporter"
 	"go.opentelemetry.io/collector/extension"
 	"go.opentelemetry.io/collector/otelcol"
 	"go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/collector/receiver"
-	"go.opentelemetry.io/collector/service/telemetry/otelconftelemetry"
-	debugexporter "go.opentelemetry.io/collector/exporter/debugexporter"
-	sidecar "github.com/Graylog2/collector-sidecar/extension/sidecar"
 	otlpreceiver "go.opentelemetry.io/collector/receiver/otlpreceiver"
-	journaldreceiver "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver"
+	"go.opentelemetry.io/collector/service/telemetry/otelconftelemetry"
 )
 
 type aliasProvider interface{ DeprecatedAlias() component.Type }
@@ -55,7 +55,7 @@ func components() (otelcol.Factories, error) {
 		return otelcol.Factories{}, err
 	}
 	factories.ReceiverModules = makeModulesMap(factories.Receivers, map[component.Type]string{
-		otlpreceiver.NewFactory().Type(): "go.opentelemetry.io/collector/receiver/otlpreceiver v0.144.0",
+		otlpreceiver.NewFactory().Type():     "go.opentelemetry.io/collector/receiver/otlpreceiver v0.144.0",
 		journaldreceiver.NewFactory().Type(): "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver v0.144.0",
 	})
 
@@ -69,21 +69,17 @@ func components() (otelcol.Factories, error) {
 		debugexporter.NewFactory().Type(): "go.opentelemetry.io/collector/exporter/debugexporter v0.144.0",
 	})
 
-	factories.Processors, err = otelcol.MakeFactoryMap[processor.Factory](
-	)
+	factories.Processors, err = otelcol.MakeFactoryMap[processor.Factory]()
 	if err != nil {
 		return otelcol.Factories{}, err
 	}
-	factories.ProcessorModules = makeModulesMap(factories.Processors, map[component.Type]string{
-	})
+	factories.ProcessorModules = makeModulesMap(factories.Processors, map[component.Type]string{})
 
-	factories.Connectors, err = otelcol.MakeFactoryMap[connector.Factory](
-	)
+	factories.Connectors, err = otelcol.MakeFactoryMap[connector.Factory]()
 	if err != nil {
 		return otelcol.Factories{}, err
 	}
-	factories.ConnectorModules = makeModulesMap(factories.Connectors, map[component.Type]string{
-	})
+	factories.ConnectorModules = makeModulesMap(factories.Connectors, map[component.Type]string{})
 
 	return factories, nil
 }

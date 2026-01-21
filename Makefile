@@ -2,7 +2,7 @@ GO ?= go
 GOFMT ?= gofmt
 AWK ?= awk
 
-GOVERSIONINFO_BIN = $(shell go env GOPATH)/bin/goversioninfo
+GOVERSIONINFO_BIN = $(shell $(GO) env GOPATH)/bin/goversioninfo
 
 include version.mk
 ifeq ($(strip $(COLLECTOR_VERSION)),)
@@ -22,12 +22,15 @@ WINDOWS_INSTALLER_VERSION = $(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)$(subst -,
 # Removing the dot to comply with NuGet versioning (beta.1 -> beta2)
 CHOCOLATEY_VERSION = $(COLLECTOR_VERSION).$(COLLECTOR_REVISION)$(subst .,,$(COLLECTOR_VERSION_SUFFIX))
 
+FMT_ARGS = -f .license.template -ignore '{.github,.idea,changelog}/**' -ignore '**/*.{yml,yaml}' .
+
 .PHONY: all
 all: build
 
 .PHONY: fmt
 fmt: ## Run gofmt
-	@GOFMT=$(GOFMT) sh ./format.sh
+	$(GOFMT) -w -s -l .
+	$(GO) tool github.com/google/addlicense $(FMT_ARGS)
 
 .PHONY: clean
 clean: ## Remove binaries
@@ -119,7 +122,7 @@ sign-binary-windows-386:
 ## Adds version info to Windows executable
 .PHONY: install-goversioninfo
 install-goversioninfo:
-	go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
+	$(GO) install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
 
 .PHONY: package-all
 package-all: prepare-package
@@ -217,11 +220,12 @@ help:
 
 .PHONY: v2
 v2:
-	go generate .
-	(cd builder && go build -o ../graylog-collector .)
+	$(GO) generate .
+	$(GO) tool github.com/google/addlicense -check $(FMT_ARGS)
+	(cd builder && $(GO) build -o ../graylog-collector .)
 
 .PHONY: v2test
 v2test:
-	(cd builder/mod && go test -v .)
+	(cd builder/mod && $(GO) test -v .)
 
 .DEFAULT_GOAL := all
