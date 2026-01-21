@@ -17,6 +17,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/extension"
+	"go.uber.org/zap"
 )
 
 var _ extension.Extension = (*sidecarExtension)(nil)
@@ -39,9 +40,9 @@ func init() {
 	//
 }
 
-// SidecarExtension is an OpenTelemetry Collector extension that integrates Graylog Config functionality.
 type sidecarExtension struct {
 	config *Config
+	logger *zap.Logger
 	svc    service.Service
 }
 
@@ -104,7 +105,7 @@ func (sce *sidecarExtension) Start(ctx context.Context, host component.Host) err
 	//} else {
 	log.Level = logrus.InfoLevel
 	//}
-	hooks.AddLogHooks(config, log)
+	hooks.AddLogHooks(config, log, sce.logger)
 
 	// start main loop
 	services.StartPeriodicals(config)

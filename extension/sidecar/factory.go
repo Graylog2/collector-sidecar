@@ -20,7 +20,7 @@ func createConfig() component.Config {
 	return &Config{}
 }
 
-func createExtension(_ context.Context, _ extension.Settings, cfg component.Config) (extension.Extension, error) {
+func createExtension(_ context.Context, settings extension.Settings, cfg component.Config) (extension.Extension, error) {
 	extensionConfig := cfg.(*Config)
-	return &sidecarExtension{config: extensionConfig}, nil
+	return &sidecarExtension{config: extensionConfig, logger: settings.Logger}, nil
 }

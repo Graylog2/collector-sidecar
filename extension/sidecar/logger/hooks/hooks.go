@@ -20,6 +20,7 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/common"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/logger"
+	"go.uber.org/zap"
 
 	"github.com/rifflock/lfshook"
 	"github.com/sirupsen/logrus"
@@ -27,8 +28,11 @@ import (
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/cfg"
 )
 
-func AddLogHooks(context *cfg.Config, log *logrus.Logger) {
+func AddLogHooks(context *cfg.Config, log *logrus.Logger, zapLogger *zap.Logger) {
 	filesystemHook(context, log)
+
+	// Log everything to the OTel Collector logs via zap in addition to other hooks
+	log.Hooks.Add(NewZapHook(zapLogger))
 }
 
 func filesystemHook(context *cfg.Config, log *logrus.Logger) {
