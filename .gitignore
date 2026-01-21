@@ -44,5 +44,8 @@ dist/collectors/
 
 .filebeat
 
+/collector-config.yaml
+/collector-config.yml
+/graylog-collector
 /sidecar.yml
 resource_windows.syso

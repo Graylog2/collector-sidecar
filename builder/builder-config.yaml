@@ -1,0 +1,24 @@
+dist:
+  name: graylog-collector
+  description: Graylog Collector
+  version: 2.0.0-alpha.0
+  output_path: ./builder
+  cgo_enabled: false
+
+extensions:
+  - gomod: github.com/Graylog2/collector-sidecar/extension/sidecar v1.5.0
+
+exporters:
+  - gomod: go.opentelemetry.io/collector/exporter/debugexporter v0.144.0
+
+receivers:
+  - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.144.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver v0.144.0
+
+providers:
+  - gomod: go.opentelemetry.io/collector/confmap/provider/envprovider v1.50.0
+  - gomod: go.opentelemetry.io/collector/confmap/provider/fileprovider v1.50.0
+  - gomod: go.opentelemetry.io/collector/confmap/provider/yamlprovider v1.50.0
+
+replaces:
+  - github.com/Graylog2/collector-sidecar/extension/sidecar => ../extension/sidecar

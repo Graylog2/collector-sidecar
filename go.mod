@@ -1,28 +1,33 @@
 module github.com/Graylog2/collector-sidecar
 
-go 1.19
+go 1.25.0
 
-require (
-	github.com/docker/go-units v0.5.0
-	github.com/elastic/go-ucfg v0.8.6
-	github.com/elastic/gosigar v0.14.2
-	github.com/flynn-archive/go-shlex v0.0.0-20150515145356-3f9db97f8568
-	github.com/hashicorp/go-version v1.6.0
-	github.com/kardianos/service v1.2.2
-	github.com/natefinch/lumberjack v2.0.0+incompatible
-	github.com/pborman/uuid v1.2.1
-	github.com/rifflock/lfshook v0.0.0-20180920164130-b9218ef580f5
-	github.com/sirupsen/logrus v1.9.3
-	golang.org/x/sys v0.13.0
+tool (
+	github.com/google/addlicense
+	go.opentelemetry.io/collector/cmd/builder
 )
 
 require (
-	github.com/BurntSushi/toml v0.3.1 // indirect
-	github.com/google/uuid v1.3.1 // indirect
-	github.com/kr/text v0.2.0 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
-	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b // indirect
-	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0 // indirect
+	github.com/bmatcuk/doublestar/v4 v4.9.2 // indirect
+	github.com/fsnotify/fsnotify v1.9.0 // indirect
+	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
+	github.com/google/addlicense v1.2.0 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+	github.com/knadh/koanf/maps v0.1.2 // indirect
+	github.com/knadh/koanf/parsers/yaml v1.1.0 // indirect
+	github.com/knadh/koanf/providers/env/v2 v2.0.0 // indirect
+	github.com/knadh/koanf/providers/file v1.2.1 // indirect
+	github.com/knadh/koanf/providers/fs v1.0.0 // indirect
+	github.com/knadh/koanf/v2 v2.3.0 // indirect
+	github.com/mitchellh/copystructure v1.2.0 // indirect
+	github.com/mitchellh/reflectwalk v1.0.2 // indirect
+	github.com/spf13/cobra v1.10.2 // indirect
+	github.com/spf13/pflag v1.0.10 // indirect
+	go.opentelemetry.io/collector/cmd/builder v0.144.0 // indirect
+	go.uber.org/multierr v1.11.0 // indirect
+	go.uber.org/zap v1.27.1 // indirect
+	go.yaml.in/yaml/v3 v3.0.4 // indirect
+	golang.org/x/mod v0.32.0 // indirect
+	golang.org/x/sync v0.19.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
 )
