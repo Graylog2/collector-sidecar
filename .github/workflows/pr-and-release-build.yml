@@ -1,5 +1,7 @@
 name: pr-and-release-build.yml
-on: push
+on:
+  push:
+    branches: [master]
 
 defaults:
   run:
