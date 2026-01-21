@@ -28,9 +28,11 @@ import (
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/cfg"
 )
 
-func AddLogHooks(context *cfg.Config, log *logrus.Logger, zapLogger *zap.Logger) {
+func AddLogHooks(context *cfg.Config, log *logrus.Logger) {
 	filesystemHook(context, log)
+}
 
+func AddZapHook(log *logrus.Logger, zapLogger *zap.Logger) {
 	// Log everything to the OTel Collector logs via zap in addition to other hooks
 	log.Hooks.Add(NewZapHook(zapLogger))
 }

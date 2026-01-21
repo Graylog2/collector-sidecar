@@ -16,13 +16,20 @@
 package logger
 
 import (
+	"io"
+
 	"github.com/docker/go-units"
 	"github.com/natefinch/lumberjack"
 	"github.com/sirupsen/logrus"
-	"io"
 )
 
-var log = logrus.New()
+var log *logrus.Logger
+
+func init() {
+	log = logrus.New()
+	// We write to the Collector's zap logger and to a sidecar.log file via hooks. No need to write to stdout.
+	log.SetOutput(io.Discard)
+}
 
 func Log() *logrus.Logger {
 	return log

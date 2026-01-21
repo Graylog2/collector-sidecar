@@ -105,7 +105,7 @@ func (sce *sidecarExtension) Start(ctx context.Context, host component.Host) err
 	//} else {
 	log.Level = logrus.InfoLevel
 	//}
-	hooks.AddLogHooks(config, log, sce.logger)
+	hooks.AddLogHooks(config, log)
 
 	// start main loop
 	services.StartPeriodicals(config)
