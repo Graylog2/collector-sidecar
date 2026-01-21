@@ -34,23 +34,25 @@ func main() {
 			},
 		},
 		ProviderModules: map[string]string{
-			envprovider.NewFactory().Create(confmap.ProviderSettings{}).Scheme(): "go.opentelemetry.io/collector/confmap/provider/envprovider v1.50.0",
+			envprovider.NewFactory().Create(confmap.ProviderSettings{}).Scheme():  "go.opentelemetry.io/collector/confmap/provider/envprovider v1.50.0",
 			fileprovider.NewFactory().Create(confmap.ProviderSettings{}).Scheme(): "go.opentelemetry.io/collector/confmap/provider/fileprovider v1.50.0",
 			yamlprovider.NewFactory().Create(confmap.ProviderSettings{}).Scheme(): "go.opentelemetry.io/collector/confmap/provider/yamlprovider v1.50.0",
-    	},
-		ConverterModules: []string{
 		},
+		ConverterModules: []string{},
 	}
 
 	if err := run(set); err != nil {
-	 // The error message is logged by cobra, so we intentionally
-    // avoid logging it again here to prevent duplicate output.
+		// The error message is logged by cobra, so we intentionally
+		// avoid logging it again here to prevent duplicate output.
 		os.Exit(1)
 	}
 }
 
 func runInteractive(params otelcol.CollectorSettings) error {
+	// Added by builder/mod to allow customization of the collector settings and cobra command.
+	customizeSettings(&params)
 	cmd := otelcol.NewCommand(params)
+	customizeCommand(&params, cmd)
 	if err := cmd.Execute(); err != nil {
 		return err
 	}

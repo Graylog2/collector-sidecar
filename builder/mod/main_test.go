@@ -1,0 +1,166 @@
+package main
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+// Sample source code that mimics the generated OTel Collector main.go structure
+const validMainGo = `package main
+
+import (
+	"go.opentelemetry.io/collector/otelcol"
+)
+
+func runInteractive(params otelcol.CollectorSettings) error {
+	cmd := otelcol.NewCommand(params)
+	return cmd.Execute()
+}
+`
+
+// Source without runInteractive function
+const mainGoWithoutRunInteractive = `package main
+
+func main() {
+	println("hello")
+}
+`
+
+// Source with runInteractive but without cmd assignment
+const mainGoWithoutCmdAssignment = `package main
+
+func runInteractive(params int) error {
+	result := doSomething(params)
+	return result
+}
+`
+
+func TestAddCustomizationCalls(t *testing.T) {
+	dir := t.TempDir()
+	mainPath := filepath.Join(dir, "main.go")
+	if err := os.WriteFile(mainPath, []byte(validMainGo), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := addCustomizationCalls(mainPath); err != nil {
+		t.Fatalf("addCustomizationCalls failed: %v", err)
+	}
+
+	content, err := os.ReadFile(mainPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that the callbacks were inserted
+	if !strings.Contains(string(content), "customizeSettings(params)") {
+		t.Errorf("expected customizeSettings(params) call to be inserted")
+	}
+	if !strings.Contains(string(content), "customizeCommand(params, cmd)") {
+		t.Errorf("expected customizeCommand(params, cmd) call to be inserted")
+	}
+
+	// Check that the order is correct: customizeSettings before cmd, customizeCommand after
+	settingsIdx := strings.Index(string(content), "customizeSettings(params)")
+	cmdIdx := strings.Index(string(content), "cmd := otelcol.NewCommand(params)")
+	commandIdx := strings.Index(string(content), "customizeCommand(params, cmd)")
+
+	if settingsIdx == -1 || cmdIdx == -1 || commandIdx == -1 {
+		t.Fatal("could not find expected statements in modified file")
+	}
+
+	if settingsIdx >= cmdIdx {
+		t.Errorf("customizeSettings should appear before cmd assignment")
+	}
+	if commandIdx <= cmdIdx {
+		t.Errorf("customizeCommand should appear after cmd assignment")
+	}
+}
+
+func TestAddCustomizationCallsIdempotent(t *testing.T) {
+	dir := t.TempDir()
+	mainPath := filepath.Join(dir, "main.go")
+	if err := os.WriteFile(mainPath, []byte(validMainGo), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Run twice
+	if err := addCustomizationCalls(mainPath); err != nil {
+		t.Fatalf("first addCustomizationCalls failed: %v", err)
+	}
+	if err := addCustomizationCalls(mainPath); err != nil {
+		t.Fatalf("second addCustomizationCalls failed: %v", err)
+	}
+
+	content, err := os.ReadFile(mainPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Count occurrences - should only appear once each
+	settingsCount := strings.Count(string(content), "customizeSettings(params)")
+	commandCount := strings.Count(string(content), "customizeCommand(params, cmd)")
+
+	if settingsCount != 1 {
+		t.Errorf("expected exactly 1 customizeSettings call, found %d", settingsCount)
+	}
+	if commandCount != 1 {
+		t.Errorf("expected exactly 1 customizeCommand call, found %d", commandCount)
+	}
+}
+
+func TestAddCustomizationCallsMissingRunInteractive(t *testing.T) {
+	dir := t.TempDir()
+	mainPath := filepath.Join(dir, "main.go")
+	if err := os.WriteFile(mainPath, []byte(mainGoWithoutRunInteractive), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	err := addCustomizationCalls(mainPath)
+	if err == nil {
+		t.Fatal("expected error when runInteractive function is missing")
+	}
+	if !strings.Contains(err.Error(), "could not find cmd assignment") {
+		t.Errorf("unexpected error message: %v", err)
+	}
+}
+
+func TestAddCustomizationCallsMissingCmdAssignment(t *testing.T) {
+	dir := t.TempDir()
+	mainPath := filepath.Join(dir, "main.go")
+	if err := os.WriteFile(mainPath, []byte(mainGoWithoutCmdAssignment), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	err := addCustomizationCalls(mainPath)
+	if err == nil {
+		t.Fatal("expected error when cmd assignment is missing")
+	}
+	if !strings.Contains(err.Error(), "could not find cmd assignment") {
+		t.Errorf("unexpected error message: %v", err)
+	}
+}
+
+func TestAddCustomizationCallsNonExistentFile(t *testing.T) {
+	err := addCustomizationCalls("/nonexistent/path/main.go")
+	if err == nil {
+		t.Fatal("expected error for non-existent file")
+	}
+}
+
+func TestAddCustomizationCallsInvalidGoFile(t *testing.T) {
+	dir := t.TempDir()
+	mainPath := filepath.Join(dir, "main.go")
+	if err := os.WriteFile(mainPath, []byte("this is not valid go code {{{{"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	err := addCustomizationCalls(mainPath)
+	if err == nil {
+		t.Fatal("expected error for invalid Go file")
+	}
+	if !strings.Contains(err.Error(), "failed to parse file") {
+		t.Errorf("unexpected error message: %v", err)
+	}
+}

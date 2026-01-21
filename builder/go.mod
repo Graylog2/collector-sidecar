@@ -7,6 +7,7 @@ go 1.24.0
 require (
 	github.com/Graylog2/collector-sidecar/extension/sidecar v1.5.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver v0.144.0
+	github.com/spf13/cobra v1.10.2
 	go.opentelemetry.io/collector/component v1.50.0
 	go.opentelemetry.io/collector/confmap v1.50.0
 	go.opentelemetry.io/collector/confmap/provider/envprovider v1.50.0
@@ -86,7 +87,6 @@ require (
 	github.com/rs/cors v1.11.1 // indirect
 	github.com/shirou/gopsutil/v4 v4.25.12 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
-	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.16 // indirect
