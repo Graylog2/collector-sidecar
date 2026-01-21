@@ -10,6 +10,7 @@ import (
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/cfg"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/cfgfile"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/daemon"
+	"github.com/Graylog2/collector-sidecar/extension/sidecar/logger"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/logger/hooks"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/services"
 	"github.com/kardianos/service"
@@ -19,6 +20,24 @@ import (
 )
 
 var _ extension.Extension = (*sidecarExtension)(nil)
+
+var (
+	log = logger.Log()
+)
+
+func init() {
+	// TODO: We need to add the Sidecar flags to the OTel Collector flags to ensure backward compatibility (if we want that)
+	//	serviceParam = flag.String("service", "", "Control the system service [start stop restart install uninstall]")
+	//	configurationFile = flag.String("c", configurationPath, "Configuration file")
+	//	printVersion = flag.Bool("version", false, "Print version and exit")
+	//	debug = flag.Bool("debug", false, "Set log level to debug")
+	//
+	//	flag.Usage = func() {
+	//		fmt.Fprint(os.Stderr, "Usage: graylog-sidecar -c [CONFIGURATION FILE]\n")
+	//		flag.PrintDefaults()
+	//	}
+	//
+}
 
 // SidecarExtension is an OpenTelemetry Collector extension that integrates Graylog Config functionality.
 type sidecarExtension struct {
@@ -80,11 +99,11 @@ func (sce *sidecarExtension) Start(ctx context.Context, host component.Host) err
 	//}
 
 	// setup logging
-	if *debug {
-		log.Level = logrus.DebugLevel
-	} else {
-		log.Level = logrus.InfoLevel
-	}
+	//if *debug {
+	//	log.Level = logrus.DebugLevel
+	//} else {
+	log.Level = logrus.InfoLevel
+	//}
 	hooks.AddLogHooks(config, log)
 
 	// start main loop
