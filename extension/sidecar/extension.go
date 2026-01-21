@@ -3,6 +3,9 @@ package sidecar
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
 
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/cfg"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/cfgfile"
@@ -50,16 +53,24 @@ func (sce *sidecarExtension) Start(ctx context.Context, host component.Host) err
 	//	return
 	//}
 
-	configurationFile = &sce.config.Path
+	configurationFile := sce.config.Path
+
+	if configurationFile == "" {
+		if runtime.GOOS == "windows" {
+			configurationFile = filepath.Join(os.Getenv("SystemDrive")+"\\", "Program Files", "graylog", "sidecar", "sidecar.yml")
+		} else {
+			configurationFile = filepath.Join("/etc", "graylog", "sidecar", "sidecar.yml")
+		}
+	}
 
 	// initialize application context
 	config := cfg.NewConfig()
-	err = config.LoadConfig(configurationFile)
+	err = config.LoadConfig(&configurationFile)
 	if err != nil {
 		return fmt.Errorf("loading configuration file: %w", err)
 	} else {
 		// Persist path for later reloads
-		cfgfile.SetConfigPath(*configurationFile)
+		cfgfile.SetConfigPath(configurationFile)
 	}
 	// TODO
 	//if cfgfile.ValidateConfig() {
