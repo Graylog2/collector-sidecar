@@ -54,17 +54,17 @@ func TestAddCustomizationCalls(t *testing.T) {
 	}
 
 	// Check that the callbacks were inserted
-	if !strings.Contains(string(content), "customizeSettings(params)") {
-		t.Errorf("expected customizeSettings(params) call to be inserted")
+	if !strings.Contains(string(content), "customizeSettings(&params)") {
+		t.Errorf("expected customizeSettings(&params) call to be inserted")
 	}
-	if !strings.Contains(string(content), "customizeCommand(params, cmd)") {
-		t.Errorf("expected customizeCommand(params, cmd) call to be inserted")
+	if !strings.Contains(string(content), "customizeCommand(&params, cmd)") {
+		t.Errorf("expected customizeCommand(&params, cmd) call to be inserted")
 	}
 
 	// Check that the order is correct: customizeSettings before cmd, customizeCommand after
-	settingsIdx := strings.Index(string(content), "customizeSettings(params)")
+	settingsIdx := strings.Index(string(content), "customizeSettings(&params)")
 	cmdIdx := strings.Index(string(content), "cmd := otelcol.NewCommand(params)")
-	commandIdx := strings.Index(string(content), "customizeCommand(params, cmd)")
+	commandIdx := strings.Index(string(content), "customizeCommand(&params, cmd)")
 
 	if settingsIdx == -1 || cmdIdx == -1 || commandIdx == -1 {
 		t.Fatal("could not find expected statements in modified file")
@@ -99,8 +99,8 @@ func TestAddCustomizationCallsIdempotent(t *testing.T) {
 	}
 
 	// Count occurrences - should only appear once each
-	settingsCount := strings.Count(string(content), "customizeSettings(params)")
-	commandCount := strings.Count(string(content), "customizeCommand(params, cmd)")
+	settingsCount := strings.Count(string(content), "customizeSettings(&params)")
+	commandCount := strings.Count(string(content), "customizeCommand(&params, cmd)")
 
 	if settingsCount != 1 {
 		t.Errorf("expected exactly 1 customizeSettings call, found %d", settingsCount)
