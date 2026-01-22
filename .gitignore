@@ -50,3 +50,4 @@ dist/collectors/
 /sidecar.yml
 /data
 resource_windows.syso
+.claude/

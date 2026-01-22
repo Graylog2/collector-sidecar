@@ -1,0 +1,12 @@
+receivers:
+  journald:
+
+exporters:
+  debug:
+    verbosity: detailed
+
+service:
+  pipelines:
+    logs:
+      receivers: [journald]
+      exporters: [debug]
