@@ -131,8 +131,9 @@ func buildConfig(cmd *cobra.Command) (*config.Supervisor, error) {
 			ReportsOwnTraces:  false,
 			ReportsHealth:     true,
 			//ReportsRemoteConfig:        false,
-			ReportsRemoteConfig:        true,
-			ReportsAvailableComponents: false,
+			ReportsRemoteConfig: true,
+			//ReportsAvailableComponents: false,
+			ReportsAvailableComponents: true,
 			ReportsHeartbeat:           true,
 		},
 		Storage: config.Storage{
@@ -235,6 +236,7 @@ func writeConfigFile(data string, path string) error {
 func writeCommonConfig(commonConfigPath string) error {
 	// Common collector config:
 	// - We don't want a Prometheus listener on localhost:8888
+	// TODO: Make configurable? Do we need it to report collector metrics upstream? Can we use a unix socket?
 	content := fmt.Sprintf(`---
 service:
   telemetry:
