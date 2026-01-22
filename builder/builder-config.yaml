@@ -7,6 +7,7 @@ dist:
 
 extensions:
   - gomod: github.com/Graylog2/collector-sidecar/extension/sidecar v1.5.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampextension v0.144.0
 
 exporters:
   - gomod: go.opentelemetry.io/collector/exporter/debugexporter v0.144.0
@@ -22,3 +23,4 @@ providers:
 
 replaces:
   - github.com/Graylog2/collector-sidecar/extension/sidecar => ../extension/sidecar
+  - github.com/Graylog2/collector-sidecar/supervisor => ../supervisor

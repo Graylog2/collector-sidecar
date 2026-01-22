@@ -48,4 +48,5 @@ dist/collectors/
 /collector-config.yml
 /graylog-collector
 /sidecar.yml
+/data
 resource_windows.syso

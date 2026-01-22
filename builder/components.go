@@ -4,6 +4,7 @@ package main
 
 import (
 	sidecar "github.com/Graylog2/collector-sidecar/extension/sidecar"
+	opampextension "github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampextension"
 	journaldreceiver "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/connector"
@@ -39,12 +40,14 @@ func components() (otelcol.Factories, error) {
 
 	factories.Extensions, err = otelcol.MakeFactoryMap[extension.Factory](
 		sidecar.NewFactory(),
+		opampextension.NewFactory(),
 	)
 	if err != nil {
 		return otelcol.Factories{}, err
 	}
 	factories.ExtensionModules = makeModulesMap(factories.Extensions, map[component.Type]string{
-		sidecar.NewFactory().Type(): "github.com/Graylog2/collector-sidecar/extension/sidecar v1.5.0",
+		sidecar.NewFactory().Type():        "github.com/Graylog2/collector-sidecar/extension/sidecar v1.5.0",
+		opampextension.NewFactory().Type(): "github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampextension v0.144.0",
 	})
 
 	factories.Receivers, err = otelcol.MakeFactoryMap[receiver.Factory](
