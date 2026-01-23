@@ -1,0 +1,24 @@
+server:
+  endpoint: wss://opamp.example.com/v1/opamp
+  transport: websocket
+  headers:
+    X-Custom-Header: test-value
+
+auth:
+  enrollment_token: "${ENROLLMENT_JWT}"
+  token_file: /var/lib/supervisor/auth/agent_token.yaml
+
+agent:
+  executable: /usr/local/bin/otelcol
+  args: ["--config", "{{.ConfigPath}}"]
+  config:
+    merge_strategy: deep
+    local_overrides:
+      - /etc/supervisor/compliance.yaml
+
+persistence:
+  dir: /var/lib/supervisor
+
+logging:
+  format: json
+  level: info

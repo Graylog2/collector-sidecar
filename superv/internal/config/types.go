@@ -1,0 +1,239 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package config
+
+import (
+	"crypto/tls"
+	"net/http"
+	"time"
+)
+
+// Config is the top-level supervisor configuration.
+type Config struct {
+	Server      ServerConfig      `koanf:"server"`
+	Bootstrap   BootstrapConfig   `koanf:"bootstrap"`
+	Auth        AuthConfig        `koanf:"auth"`
+	LocalOpAMP  LocalOpAMPConfig  `koanf:"local_opamp"`
+	Agent       AgentConfig       `koanf:"agent"`
+	Packages    PackagesConfig    `koanf:"packages"`
+	Persistence PersistenceConfig `koanf:"persistence"`
+	Logging     LoggingConfig     `koanf:"logging"`
+}
+
+// ServerConfig configures the upstream OpAMP server connection.
+type ServerConfig struct {
+	Endpoint   string            `koanf:"endpoint"`
+	Transport  string            `koanf:"transport"` // websocket | http | auto
+	Headers    map[string]string `koanf:"headers"`
+	TLS        TLSConfig         `koanf:"tls"`
+	Connection ConnectionConfig  `koanf:"connection"`
+}
+
+// TLSConfig configures TLS for server connection.
+type TLSConfig struct {
+	Insecure   bool   `koanf:"insecure"`
+	CACert     string `koanf:"ca_cert"`
+	ClientCert string `koanf:"client_cert"`
+	ClientKey  string `koanf:"client_key"`
+	MinVersion string `koanf:"min_version"`
+}
+
+// ConnectionConfig configures connection retry behavior.
+type ConnectionConfig struct {
+	RetryBackoff BackoffConfig `koanf:"retry_backoff"`
+}
+
+// BackoffConfig configures exponential backoff.
+type BackoffConfig struct {
+	Initial    time.Duration `koanf:"initial"`
+	Max        time.Duration `koanf:"max"`
+	Multiplier float64       `koanf:"multiplier"`
+}
+
+// BootstrapConfig configures trust bootstrap.
+type BootstrapConfig struct {
+	Mode   string `koanf:"mode"` // fingerprint | ca_verified
+	CACert string `koanf:"ca_cert"`
+}
+
+// AuthConfig configures authentication.
+type AuthConfig struct {
+	EnrollmentToken string `koanf:"enrollment_token"`
+	TokenFile       string `koanf:"token_file"`
+}
+
+// LocalOpAMPConfig configures the local OpAMP server for the collector.
+type LocalOpAMPConfig struct {
+	Endpoint string `koanf:"endpoint"`
+}
+
+// AgentConfig configures the managed collector agent.
+type AgentConfig struct {
+	Executable         string            `koanf:"executable"`
+	Args               []string          `koanf:"args"`
+	Env                map[string]string `koanf:"env"`
+	ConfigApplyTimeout time.Duration     `koanf:"config_apply_timeout"`
+	BootstrapTimeout   time.Duration     `koanf:"bootstrap_timeout"`
+	PassthroughLogs    bool              `koanf:"passthrough_logs"`
+	Config             AgentConfigMerge  `koanf:"config"`
+	Health             HealthConfig      `koanf:"health"`
+	Reload             ReloadConfig      `koanf:"reload"`
+	Restart            RestartConfig     `koanf:"restart"`
+	Shutdown           ShutdownConfig    `koanf:"shutdown"`
+}
+
+// AgentConfigMerge configures how agent configs are merged.
+type AgentConfigMerge struct {
+	MergeStrategy  string   `koanf:"merge_strategy"` // deep
+	LocalOverrides []string `koanf:"local_overrides"`
+}
+
+// HealthConfig configures health monitoring.
+type HealthConfig struct {
+	Endpoint string        `koanf:"endpoint"`
+	Interval time.Duration `koanf:"interval"`
+	Timeout  time.Duration `koanf:"timeout"`
+}
+
+// ReloadConfig configures config reload behavior.
+type ReloadConfig struct {
+	Method                 string `koanf:"method"` // auto | signal | restart
+	WindowsReloadEvent     string `koanf:"windows_reload_event"`
+	RestartOnReloadFailure bool   `koanf:"restart_on_reload_failure"`
+}
+
+// RestartConfig configures crash recovery.
+type RestartConfig struct {
+	MaxRetries int             `koanf:"max_retries"`
+	Backoff    []time.Duration `koanf:"backoff"`
+}
+
+// ShutdownConfig configures graceful shutdown.
+type ShutdownConfig struct {
+	GracefulTimeout time.Duration `koanf:"graceful_timeout"`
+}
+
+// PackagesConfig configures package management.
+type PackagesConfig struct {
+	StorageDir   string             `koanf:"storage_dir"`
+	KeepVersions int                `koanf:"keep_versions"`
+	Verification VerificationConfig `koanf:"verification"`
+}
+
+// VerificationConfig configures package verification.
+type VerificationConfig struct {
+	PublisherSignature PublisherSignatureConfig `koanf:"publisher_signature"`
+}
+
+// PublisherSignatureConfig configures publisher signature verification.
+type PublisherSignatureConfig struct {
+	Enabled     bool     `koanf:"enabled"`
+	Format      string   `koanf:"format"` // cosign | gpg | minisign
+	TrustedKeys []string `koanf:"trusted_keys"`
+}
+
+// PersistenceConfig configures state persistence.
+type PersistenceConfig struct {
+	Dir string `koanf:"dir"`
+}
+
+// LoggingConfig configures logging.
+type LoggingConfig struct {
+	Format string `koanf:"format"` // json | text
+	Level  string `koanf:"level"`  // debug | info | warn | error
+}
+
+// DefaultConfig returns a Config with sensible defaults.
+func DefaultConfig() Config {
+	return Config{
+		Server: ServerConfig{
+			Endpoint:  "ws://localhost:4320/v1/opamp",
+			Transport: "auto",
+			Connection: ConnectionConfig{
+				RetryBackoff: BackoffConfig{
+					Initial:    1 * time.Second,
+					Max:        5 * time.Minute,
+					Multiplier: 2.0,
+				},
+			},
+		},
+		Bootstrap: BootstrapConfig{
+			Mode: "fingerprint",
+		},
+		Auth: AuthConfig{
+			TokenFile: "/var/lib/supervisor/auth/agent_token.yaml",
+		},
+		LocalOpAMP: LocalOpAMPConfig{
+			Endpoint: "localhost:4321",
+		},
+		Agent: AgentConfig{
+			ConfigApplyTimeout: 5 * time.Second,
+			BootstrapTimeout:   3 * time.Second,
+			PassthroughLogs:    false,
+			Config: AgentConfigMerge{
+				MergeStrategy: "deep",
+			},
+			Health: HealthConfig{
+				Endpoint: "http://localhost:13133/health",
+				Interval: 10 * time.Second,
+				Timeout:  5 * time.Second,
+			},
+			Reload: ReloadConfig{
+				Method:                 "auto",
+				RestartOnReloadFailure: true,
+			},
+			Restart: RestartConfig{
+				MaxRetries: 5,
+				Backoff: []time.Duration{
+					1 * time.Second,
+					2 * time.Second,
+					4 * time.Second,
+					8 * time.Second,
+					16 * time.Second,
+				},
+			},
+			Shutdown: ShutdownConfig{
+				GracefulTimeout: 30 * time.Second,
+			},
+		},
+		Packages: PackagesConfig{
+			StorageDir:   "/var/lib/supervisor/packages",
+			KeepVersions: 2,
+			Verification: VerificationConfig{
+				PublisherSignature: PublisherSignatureConfig{
+					Enabled: false,
+					Format:  "cosign",
+				},
+			},
+		},
+		Persistence: PersistenceConfig{
+			Dir: "/var/lib/supervisor",
+		},
+		Logging: LoggingConfig{
+			Format: "json",
+			Level:  "info",
+		},
+	}
+}
+
+// ToHTTPHeaders converts config headers to http.Header.
+func (s ServerConfig) ToHTTPHeaders() http.Header {
+	h := make(http.Header)
+	for k, v := range s.Headers {
+		h.Set(k, v)
+	}
+	return h
+}
+
+// ToTLSConfig converts TLSConfig to *tls.Config.
+// Returns nil if TLS is not configured.
+func (t TLSConfig) ToTLSConfig() (*tls.Config, error) {
+	if t.Insecure {
+		return nil, nil
+	}
+	// TODO: Implement full TLS config loading
+	return &tls.Config{
+		MinVersion: tls.VersionTLS12,
+	}, nil
+}
