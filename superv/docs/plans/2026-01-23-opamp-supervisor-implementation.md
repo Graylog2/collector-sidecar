@@ -20,7 +20,7 @@
 - Create: `go.mod`
 - Create: `go.sum`
 - Create: `cmd/supervisor/main.go`
-- Create: `internal/version/version.go`
+- Create: `version/version.go`
 
 **Step 1: Initialize Go module**
 
@@ -40,7 +40,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Graylog2/collector-sidecar/superv/internal/version"
+	"github.com/Graylog2/collector-sidecar/superv/version"
 )
 
 func main() {
@@ -54,7 +54,7 @@ func main() {
 
 **Step 3: Create version package**
 
-Create `internal/version/version.go`:
+Create `version/version.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -84,7 +84,7 @@ Expected: `0.1.0-dev (unknown)`
 **Step 6: Commit**
 
 ```bash
-git add go.mod cmd/ internal/
+git add .
 git commit -m "feat: initialize Go module with main entry point"
 ```
 
@@ -144,12 +144,12 @@ git commit -m "feat: add core dependencies (opamp-go, zap, koanf, testify)"
 ### Task 2.1: Define Configuration Types
 
 **Files:**
-- Create: `internal/config/types.go`
-- Create: `internal/config/types_test.go`
+- Create: `config/types.go`
+- Create: `config/types_test.go`
 
 **Step 1: Write test for config struct existence**
 
-Create `internal/config/types_test.go`:
+Create `config/types_test.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -182,12 +182,12 @@ func TestAgentConfigDefaults(t *testing.T) {
 
 **Step 2: Run test to verify it fails**
 
-Run: `go test ./internal/config/... -v`
+Run: `go test ./config/... -v`
 Expected: FAIL with "package not found" or similar
 
 **Step 3: Create config types**
 
-Create `internal/config/types.go`:
+Create `config/types.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -432,13 +432,13 @@ func (t TLSConfig) ToTLSConfig() (*tls.Config, error) {
 
 **Step 4: Run tests to verify they pass**
 
-Run: `go test ./internal/config/... -v`
+Run: `go test ./config/... -v`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add internal/config/
+git add config/
 git commit -m "feat(config): add configuration types with defaults"
 ```
 
@@ -447,13 +447,13 @@ git commit -m "feat(config): add configuration types with defaults"
 ### Task 2.2: Implement Configuration Loading
 
 **Files:**
-- Create: `internal/config/loader.go`
-- Create: `internal/config/loader_test.go`
+- Create: `config/loader.go`
+- Create: `config/loader_test.go`
 - Create: `testdata/config/valid.yaml`
 
 **Step 1: Write test for config loading**
 
-Create `internal/config/loader_test.go`:
+Create `config/loader_test.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -554,12 +554,12 @@ logging:
 
 **Step 3: Run test to verify it fails**
 
-Run: `go test ./internal/config/... -v -run TestLoad`
+Run: `go test ./config/... -v -run TestLoad`
 Expected: FAIL (Load function not defined)
 
 **Step 4: Implement config loader**
 
-Create `internal/config/loader.go`:
+Create `config/loader.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -663,13 +663,13 @@ func expandEnvVars(cfg *Config) {
 
 **Step 5: Run tests to verify they pass**
 
-Run: `go test ./internal/config/... -v`
+Run: `go test ./config/... -v`
 Expected: PASS
 
 **Step 6: Commit**
 
 ```bash
-git add internal/config/loader.go internal/config/loader_test.go testdata/
+git add config/loader.go config/loader_test.go testdata/
 git commit -m "feat(config): implement configuration loading with env expansion"
 ```
 
@@ -678,12 +678,12 @@ git commit -m "feat(config): implement configuration loading with env expansion"
 ### Task 2.3: Add Configuration Validation
 
 **Files:**
-- Create: `internal/config/validate.go`
-- Create: `internal/config/validate_test.go`
+- Create: `config/validate.go`
+- Create: `config/validate_test.go`
 
 **Step 1: Write validation tests**
 
-Create `internal/config/validate_test.go`:
+Create `config/validate_test.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -796,12 +796,12 @@ func TestValidateLoggingLevel(t *testing.T) {
 
 **Step 2: Run test to verify it fails**
 
-Run: `go test ./internal/config/... -v -run TestValidate`
+Run: `go test ./config/... -v -run TestValidate`
 Expected: FAIL (Validate method not defined)
 
 **Step 3: Implement validation**
 
-Create `internal/config/validate.go`:
+Create `config/validate.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -904,13 +904,13 @@ func (l LoggingConfig) Validate() error {
 
 **Step 4: Run tests to verify they pass**
 
-Run: `go test ./internal/config/... -v`
+Run: `go test ./config/... -v`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add internal/config/validate.go internal/config/validate_test.go
+git add config/validate.go config/validate_test.go
 git commit -m "feat(config): add configuration validation"
 ```
 
@@ -921,12 +921,12 @@ git commit -m "feat(config): add configuration validation"
 ### Task 3.1: Implement Instance UID Persistence
 
 **Files:**
-- Create: `internal/persistence/instance.go`
-- Create: `internal/persistence/instance_test.go`
+- Create: `persistence/instance.go`
+- Create: `persistence/instance_test.go`
 
 **Step 1: Write tests for instance UID**
 
-Create `internal/persistence/instance_test.go`:
+Create `persistence/instance_test.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -1009,12 +1009,12 @@ func TestLoadOrCreateInstanceUID_PreservesCreatedAt(t *testing.T) {
 
 **Step 2: Run test to verify it fails**
 
-Run: `go test ./internal/persistence/... -v`
+Run: `go test ./persistence/... -v`
 Expected: FAIL (package not found)
 
 **Step 3: Implement instance UID persistence**
 
-Create `internal/persistence/instance.go`:
+Create `persistence/instance.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -1104,13 +1104,13 @@ Expected: Downloads yaml.v3
 
 **Step 5: Run tests to verify they pass**
 
-Run: `go test ./internal/persistence/... -v`
+Run: `go test ./persistence/... -v`
 Expected: PASS
 
 **Step 6: Commit**
 
 ```bash
-git add internal/persistence/ go.mod go.sum
+git add persistence/ go.mod go.sum
 git commit -m "feat(persistence): implement instance UID persistence"
 ```
 
@@ -1119,12 +1119,12 @@ git commit -m "feat(persistence): implement instance UID persistence"
 ### Task 3.2: Implement Agent Token Persistence
 
 **Files:**
-- Create: `internal/persistence/token.go`
-- Create: `internal/persistence/token_test.go`
+- Create: `persistence/token.go`
+- Create: `persistence/token_test.go`
 
 **Step 1: Write tests for token persistence**
 
-Create `internal/persistence/token_test.go`:
+Create `persistence/token_test.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -1216,12 +1216,12 @@ func TestAgentToken_IsExpiringSoon(t *testing.T) {
 
 **Step 2: Run test to verify it fails**
 
-Run: `go test ./internal/persistence/... -v -run TestSaveAndLoadAgentToken`
+Run: `go test ./persistence/... -v -run TestSaveAndLoadAgentToken`
 Expected: FAIL (AgentToken not defined)
 
 **Step 3: Implement token persistence**
 
-Create `internal/persistence/token.go`:
+Create `persistence/token.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -1300,7 +1300,7 @@ func DeleteAgentToken(authDir string) error {
 
 **Step 4: Add missing import to test file**
 
-Update `internal/persistence/token_test.go` to add errors import:
+Update `persistence/token_test.go` to add errors import:
 ```go
 import (
 	"errors"
@@ -1311,13 +1311,13 @@ import (
 
 **Step 5: Run tests to verify they pass**
 
-Run: `go test ./internal/persistence/... -v`
+Run: `go test ./persistence/... -v`
 Expected: PASS
 
 **Step 6: Commit**
 
 ```bash
-git add internal/persistence/
+git add persistence/
 git commit -m "feat(persistence): implement agent token persistence with secure permissions"
 ```
 
@@ -1326,12 +1326,12 @@ git commit -m "feat(persistence): implement agent token persistence with secure 
 ### Task 3.3: Implement Connection State Persistence
 
 **Files:**
-- Create: `internal/persistence/connection.go`
-- Create: `internal/persistence/connection_test.go`
+- Create: `persistence/connection.go`
+- Create: `persistence/connection_test.go`
 
 **Step 1: Write tests for connection state**
 
-Create `internal/persistence/connection_test.go`:
+Create `persistence/connection_test.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -1401,12 +1401,12 @@ func TestConnectionState_FilePermissions(t *testing.T) {
 
 **Step 2: Run test to verify it fails**
 
-Run: `go test ./internal/persistence/... -v -run TestSaveAndLoadConnectionState`
+Run: `go test ./persistence/... -v -run TestSaveAndLoadConnectionState`
 Expected: FAIL
 
 **Step 3: Implement connection state persistence**
 
-Create `internal/persistence/connection.go`:
+Create `persistence/connection.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -1479,7 +1479,7 @@ func LoadConnectionState(dir string) (*ConnectionState, error) {
 
 **Step 4: Add missing import to test**
 
-Update `internal/persistence/connection_test.go` to add os import:
+Update `persistence/connection_test.go` to add os import:
 ```go
 import (
 	"os"
@@ -1490,13 +1490,13 @@ import (
 
 **Step 5: Run tests to verify they pass**
 
-Run: `go test ./internal/persistence/... -v`
+Run: `go test ./persistence/... -v`
 Expected: PASS
 
 **Step 6: Commit**
 
 ```bash
-git add internal/persistence/
+git add persistence/
 git commit -m "feat(persistence): implement connection state persistence"
 ```
 
@@ -1507,14 +1507,14 @@ git commit -m "feat(persistence): implement connection state persistence"
 ### Task 4.1: Implement Commander Keen (Process Controller)
 
 **Files:**
-- Create: `internal/keen/keen.go`
-- Create: `internal/keen/keen_test.go`
-- Create: `internal/keen/signals_unix.go`
-- Create: `internal/keen/signals_windows.go`
+- Create: `keen/keen.go`
+- Create: `keen/keen_test.go`
+- Create: `keen/signals_unix.go`
+- Create: `keen/signals_windows.go`
 
 **Step 1: Write tests for commander**
 
-Create `internal/keen/keen_test.go`:
+Create `keen/keen_test.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -1659,12 +1659,12 @@ func TestCommander_Restart(t *testing.T) {
 
 **Step 2: Run test to verify it fails**
 
-Run: `go test ./internal/keen/... -v`
+Run: `go test ./keen/... -v`
 Expected: FAIL (package not found)
 
 **Step 3: Create commander implementation**
 
-Create `internal/keen/keen.go`:
+Create `keen/keen.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -1935,7 +1935,7 @@ func (c *Commander) IsRunning() bool {
 
 **Step 4: Create Unix signal handling**
 
-Create `internal/keen/signals_unix.go`:
+Create `keen/signals_unix.go`:
 ```go
 //go:build !windows
 
@@ -1966,7 +1966,7 @@ func sendReloadSignal(process *os.Process) error {
 
 **Step 5: Create Windows signal handling**
 
-Create `internal/keen/signals_windows.go`:
+Create `keen/signals_windows.go`:
 ```go
 //go:build windows
 
@@ -2000,13 +2000,13 @@ func sendReloadSignal(process *os.Process) error {
 
 **Step 6: Run tests to verify they pass**
 
-Run: `go test ./internal/keen/... -v`
+Run: `go test ./keen/... -v`
 Expected: PASS (some tests may be skipped on Windows)
 
 **Step 7: Commit**
 
 ```bash
-git add internal/keen/
+git add keen/
 git commit -m "feat(keen): implement Commander Keen process management with platform-specific signals"
 ```
 
@@ -2017,13 +2017,13 @@ git commit -m "feat(keen): implement Commander Keen process management with plat
 ### Task 5.1: Implement OpAMP Client Wrapper
 
 **Files:**
-- Create: `internal/opamp/client.go`
-- Create: `internal/opamp/client_test.go`
-- Create: `internal/opamp/callbacks.go`
+- Create: `opamp/client.go`
+- Create: `opamp/client_test.go`
+- Create: `opamp/callbacks.go`
 
 **Step 1: Write tests for OpAMP client**
 
-Create `internal/opamp/client_test.go`:
+Create `opamp/client_test.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -2118,12 +2118,12 @@ func TestCapabilitiesToProto(t *testing.T) {
 
 **Step 2: Run test to verify it fails**
 
-Run: `go test ./internal/opamp/... -v`
+Run: `go test ./opamp/... -v`
 Expected: FAIL (package not found)
 
 **Step 3: Implement callbacks**
 
-Create `internal/opamp/callbacks.go`:
+Create `opamp/callbacks.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -2202,7 +2202,7 @@ func (c *Callbacks) GetEffectiveConfigFunc(ctx context.Context) (*protobufs.Effe
 
 **Step 4: Implement OpAMP client wrapper**
 
-Create `internal/opamp/client.go`:
+Create `opamp/client.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -2398,13 +2398,13 @@ func (c *Client) SetRemoteConfigStatus(status *protobufs.RemoteConfigStatus) err
 
 **Step 5: Run tests to verify they pass**
 
-Run: `go test ./internal/opamp/... -v`
+Run: `go test ./opamp/... -v`
 Expected: PASS
 
 **Step 6: Commit**
 
 ```bash
-git add internal/opamp/
+git add opamp/
 git commit -m "feat(opamp): implement OpAMP client wrapper with callbacks"
 ```
 
@@ -2413,12 +2413,12 @@ git commit -m "feat(opamp): implement OpAMP client wrapper with callbacks"
 ### Task 5.2: Implement Local OpAMP Server
 
 **Files:**
-- Create: `internal/opamp/server.go`
-- Create: `internal/opamp/server_test.go`
+- Create: `opamp/server.go`
+- Create: `opamp/server_test.go`
 
 **Step 1: Write tests for local OpAMP server**
 
-Create `internal/opamp/server_test.go`:
+Create `opamp/server_test.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -2499,12 +2499,12 @@ func TestServerConfig_Validate(t *testing.T) {
 
 **Step 2: Run test to verify it fails**
 
-Run: `go test ./internal/opamp/... -v -run TestNewServer`
+Run: `go test ./opamp/... -v -run TestNewServer`
 Expected: FAIL
 
 **Step 3: Implement local OpAMP server**
 
-Create `internal/opamp/server.go`:
+Create `opamp/server.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -2671,13 +2671,13 @@ var _ server.Callbacks = (*Server)(nil)
 
 **Step 4: Run tests to verify they pass**
 
-Run: `go test ./internal/opamp/... -v`
+Run: `go test ./opamp/... -v`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add internal/opamp/server.go internal/opamp/server_test.go
+git add opamp/server.go opamp/server_test.go
 git commit -m "feat(opamp): implement local OpAMP server for collector communication"
 ```
 
@@ -2688,12 +2688,12 @@ git commit -m "feat(opamp): implement local OpAMP server for collector communica
 ### Task 6.1: Implement Supervisor Core
 
 **Files:**
-- Create: `internal/supervisor/supervisor.go`
-- Create: `internal/supervisor/supervisor_test.go`
+- Create: `supervisor/supervisor.go`
+- Create: `supervisor/supervisor_test.go`
 
 **Step 1: Write tests for supervisor**
 
-Create `internal/supervisor/supervisor_test.go`:
+Create `supervisor/supervisor_test.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -2706,7 +2706,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 
-	"github.com/Graylog2/collector-sidecar/superv/internal/config"
+	"github.com/Graylog2/collector-sidecar/superv/config"
 )
 
 func TestNewSupervisor(t *testing.T) {
@@ -2742,12 +2742,12 @@ func TestSupervisor_GetInstanceUID(t *testing.T) {
 
 **Step 2: Run test to verify it fails**
 
-Run: `go test ./internal/supervisor/... -v`
+Run: `go test ./supervisor/... -v`
 Expected: FAIL (package not found)
 
 **Step 3: Implement supervisor core**
 
-Create `internal/supervisor/supervisor.go`:
+Create `supervisor/supervisor.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -2760,10 +2760,10 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/Graylog2/collector-sidecar/superv/internal/keen"
-	"github.com/Graylog2/collector-sidecar/superv/internal/config"
-	"github.com/Graylog2/collector-sidecar/superv/internal/opamp"
-	"github.com/Graylog2/collector-sidecar/superv/internal/persistence"
+	"github.com/Graylog2/collector-sidecar/superv/keen"
+	"github.com/Graylog2/collector-sidecar/superv/config"
+	"github.com/Graylog2/collector-sidecar/superv/opamp"
+	"github.com/Graylog2/collector-sidecar/superv/persistence"
 )
 
 // Supervisor coordinates the management of an OpenTelemetry Collector.
@@ -2949,13 +2949,13 @@ func (s *Supervisor) IsRunning() bool {
 
 **Step 4: Run tests to verify they pass**
 
-Run: `go test ./internal/supervisor/... -v`
+Run: `go test ./supervisor/... -v`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add internal/supervisor/
+git add supervisor/
 git commit -m "feat(supervisor): implement core supervisor engine"
 ```
 
@@ -2986,9 +2986,9 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/Graylog2/collector-sidecar/superv/internal/config"
-	"github.com/Graylog2/collector-sidecar/superv/internal/supervisor"
-	"github.com/Graylog2/collector-sidecar/superv/internal/version"
+	"github.com/Graylog2/collector-sidecar/superv/config"
+	"github.com/Graylog2/collector-sidecar/superv/supervisor"
+	"github.com/Graylog2/collector-sidecar/superv/version"
 )
 
 func main() {
@@ -3115,12 +3115,12 @@ git commit -m "feat(cli): wire up main entry point with full CLI support"
 ### Task 7.1: Implement Configuration Merging
 
 **Files:**
-- Create: `internal/configmerge/merge.go`
-- Create: `internal/configmerge/merge_test.go`
+- Create: `configmerge/merge.go`
+- Create: `configmerge/merge_test.go`
 
 **Step 1: Write tests for config merging**
 
-Create `internal/configmerge/merge_test.go`:
+Create `configmerge/merge_test.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -3216,12 +3216,12 @@ func TestMergeConfigs_EmptyOverride(t *testing.T) {
 
 **Step 2: Run test to verify it fails**
 
-Run: `go test ./internal/configmerge/... -v`
+Run: `go test ./configmerge/... -v`
 Expected: FAIL (package not found)
 
 **Step 3: Implement config merging**
 
-Create `internal/configmerge/merge.go`:
+Create `configmerge/merge.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -3299,13 +3299,13 @@ Expected: Downloads rawbytes provider
 
 **Step 5: Run tests to verify they pass**
 
-Run: `go test ./internal/configmerge/... -v`
+Run: `go test ./configmerge/... -v`
 Expected: PASS
 
 **Step 6: Commit**
 
 ```bash
-git add internal/configmerge/ go.mod go.sum
+git add configmerge/ go.mod go.sum
 git commit -m "feat(configmerge): implement YAML configuration merging"
 ```
 
@@ -3314,12 +3314,12 @@ git commit -m "feat(configmerge): implement YAML configuration merging"
 ### Task 7.2: Implement JWT Token Management
 
 **Files:**
-- Create: `internal/auth/jwt.go`
-- Create: `internal/auth/jwt_test.go`
+- Create: `auth/jwt.go`
+- Create: `auth/jwt_test.go`
 
 **Step 1: Write tests for JWT handling**
 
-Create `internal/auth/jwt_test.go`:
+Create `auth/jwt_test.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -3384,12 +3384,12 @@ func createTestJWT(t *testing.T, claims map[string]interface{}) string {
 
 **Step 2: Run test to verify it fails**
 
-Run: `go test ./internal/auth/... -v`
+Run: `go test ./auth/... -v`
 Expected: FAIL (package not found)
 
 **Step 3: Implement JWT handling**
 
-Create `internal/auth/jwt.go`:
+Create `auth/jwt.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -3521,13 +3521,13 @@ func ExtractAuthorizationHeader(token string) string {
 
 **Step 4: Run tests to verify they pass**
 
-Run: `go test ./internal/auth/... -v`
+Run: `go test ./auth/... -v`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add internal/auth/
+git add auth/
 git commit -m "feat(auth): implement JWT token parsing for enrollment and agent tokens"
 ```
 

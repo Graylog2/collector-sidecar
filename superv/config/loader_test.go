@@ -27,7 +27,7 @@ import (
 )
 
 func TestLoadFromFile(t *testing.T) {
-	cfg, err := Load("../../testdata/config/valid.yaml")
+	cfg, err := Load("../testdata/config/valid.yaml")
 	require.NoError(t, err)
 	require.Equal(t, "wss://opamp.example.com/v1/opamp", cfg.Server.Endpoint)
 	require.Equal(t, "/usr/local/bin/otelcol", cfg.Agent.Executable)

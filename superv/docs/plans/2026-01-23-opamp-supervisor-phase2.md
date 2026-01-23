@@ -26,12 +26,12 @@
 ## Task 2.1: Config Writer
 
 **Files:**
-- Create: `internal/configwriter/writer.go`
-- Create: `internal/configwriter/writer_test.go`
+- Create: `configwriter/writer.go`
+- Create: `configwriter/writer_test.go`
 
 **Step 1: Write tests for config writer**
 
-Create `internal/configwriter/writer_test.go`:
+Create `configwriter/writer_test.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -115,12 +115,12 @@ func TestWriteConfig_PreservesPermissions(t *testing.T) {
 
 **Step 2: Run test to verify it fails**
 
-Run: `go test ./internal/configwriter/... -v`
+Run: `go test ./configwriter/... -v`
 Expected: FAIL (package not found)
 
 **Step 3: Implement config writer**
 
-Create `internal/configwriter/writer.go`:
+Create `configwriter/writer.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -177,13 +177,13 @@ func ConfigExists(path string) bool {
 
 **Step 4: Run tests to verify they pass**
 
-Run: `go test ./internal/configwriter/... -v`
+Run: `go test ./configwriter/... -v`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add internal/configwriter/
+git add configwriter/
 git commit -m "feat(configwriter): implement atomic config file writing"
 ```
 
@@ -192,12 +192,12 @@ git commit -m "feat(configwriter): implement atomic config file writing"
 ## Task 2.2: Supervisor Injections
 
 **Files:**
-- Create: `internal/configmerge/inject.go`
-- Create: `internal/configmerge/inject_test.go`
+- Create: `configmerge/inject.go`
+- Create: `configmerge/inject_test.go`
 
 **Step 1: Write tests for supervisor injections**
 
-Create `internal/configmerge/inject_test.go`:
+Create `configmerge/inject_test.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -273,12 +273,12 @@ func TestInjectOpAMPExtension_EmptyConfig(t *testing.T) {
 
 **Step 2: Run test to verify it fails**
 
-Run: `go test ./internal/configmerge/... -v -run TestInjectOpAMP`
+Run: `go test ./configmerge/... -v -run TestInjectOpAMP`
 Expected: FAIL (undefined: InjectOpAMPExtension)
 
 **Step 3: Implement supervisor injections**
 
-Create `internal/configmerge/inject.go`:
+Create `configmerge/inject.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -328,13 +328,13 @@ func InjectServiceExtension(config []byte) ([]byte, error) {
 
 **Step 4: Run tests to verify they pass**
 
-Run: `go test ./internal/configmerge/... -v`
+Run: `go test ./configmerge/... -v`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add internal/configmerge/inject.go internal/configmerge/inject_test.go
+git add configmerge/inject.go configmerge/inject_test.go
 git commit -m "feat(configmerge): add OpAMP extension injection for collector config"
 ```
 
@@ -343,12 +343,12 @@ git commit -m "feat(configmerge): add OpAMP extension injection for collector co
 ## Task 2.3: Remote Config Handler
 
 **Files:**
-- Create: `internal/configmanager/manager.go`
-- Create: `internal/configmanager/manager_test.go`
+- Create: `configmanager/manager.go`
+- Create: `configmanager/manager_test.go`
 
 **Step 1: Write tests for config manager**
 
-Create `internal/configmanager/manager_test.go`:
+Create `configmanager/manager_test.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -460,12 +460,12 @@ func WriteTestFile(path string, content []byte) error {
 
 **Step 2: Run test to verify it fails**
 
-Run: `go test ./internal/configmanager/... -v`
+Run: `go test ./configmanager/... -v`
 Expected: FAIL (package not found)
 
 **Step 3: Implement config manager**
 
-Create `internal/configmanager/manager.go`:
+Create `configmanager/manager.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -482,8 +482,8 @@ import (
 	"github.com/open-telemetry/opamp-go/protobufs"
 	"go.uber.org/zap"
 
-	"github.com/Graylog2/collector-sidecar/superv/internal/configmerge"
-	"github.com/Graylog2/collector-sidecar/superv/internal/configwriter"
+	"github.com/Graylog2/collector-sidecar/superv/configmerge"
+	"github.com/Graylog2/collector-sidecar/superv/configwriter"
 )
 
 // Config holds configuration for the config manager.
@@ -633,13 +633,13 @@ func writeFile(path string, content []byte) error {
 
 **Step 4: Run tests to verify they pass**
 
-Run: `go test ./internal/configmanager/... -v`
+Run: `go test ./configmanager/... -v`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add internal/configmanager/
+git add configmanager/
 git commit -m "feat(configmanager): implement remote config handling with merge and write"
 ```
 
@@ -648,12 +648,12 @@ git commit -m "feat(configmanager): implement remote config handling with merge 
 ## Task 2.4: Health Monitor
 
 **Files:**
-- Create: `internal/healthmonitor/monitor.go`
-- Create: `internal/healthmonitor/monitor_test.go`
+- Create: `healthmonitor/monitor.go`
+- Create: `healthmonitor/monitor_test.go`
 
 **Step 1: Write tests for health monitor**
 
-Create `internal/healthmonitor/monitor_test.go`:
+Create `healthmonitor/monitor_test.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -735,12 +735,12 @@ func TestHealthMonitor_ToComponentHealth(t *testing.T) {
 
 **Step 2: Run test to verify it fails**
 
-Run: `go test ./internal/healthmonitor/... -v`
+Run: `go test ./healthmonitor/... -v`
 Expected: FAIL (package not found)
 
 **Step 3: Implement health monitor**
 
-Create `internal/healthmonitor/monitor.go`:
+Create `healthmonitor/monitor.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -880,13 +880,13 @@ func (m *Monitor) StartPolling(ctx context.Context) <-chan *HealthStatus {
 
 **Step 4: Run tests to verify they pass**
 
-Run: `go test ./internal/healthmonitor/... -v`
+Run: `go test ./healthmonitor/... -v`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add internal/healthmonitor/
+git add healthmonitor/
 git commit -m "feat(healthmonitor): implement collector health endpoint polling"
 ```
 
@@ -895,12 +895,12 @@ git commit -m "feat(healthmonitor): implement collector health endpoint polling"
 ## Task 2.5: Effective Config Reporter
 
 **Files:**
-- Modify: `internal/opamp/client.go`
-- Modify: `internal/opamp/client_test.go`
+- Modify: `opamp/client.go`
+- Modify: `opamp/client_test.go`
 
 **Step 1: Write tests for effective config reporting**
 
-Add to `internal/opamp/client_test.go`:
+Add to `opamp/client_test.go`:
 ```go
 func TestClient_SetEffectiveConfig(t *testing.T) {
 	logger := zaptest.NewLogger(t)
@@ -925,12 +925,12 @@ func TestClient_SetEffectiveConfig(t *testing.T) {
 
 **Step 2: Run test to verify it fails**
 
-Run: `go test ./internal/opamp/... -v -run TestClient_SetEffectiveConfig`
+Run: `go test ./opamp/... -v -run TestClient_SetEffectiveConfig`
 Expected: FAIL (undefined: SetEffectiveConfig)
 
 **Step 3: Add SetEffectiveConfig method**
 
-Add to `internal/opamp/client.go`:
+Add to `opamp/client.go`:
 ```go
 // SetEffectiveConfig updates the effective configuration reported to the server.
 // Can be called before Start() to set the initial effective config.
@@ -971,13 +971,13 @@ if c.initialEffectiveConfig != nil {
 
 **Step 4: Run tests to verify they pass**
 
-Run: `go test ./internal/opamp/... -v`
+Run: `go test ./opamp/... -v`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add internal/opamp/client.go internal/opamp/client_test.go
+git add opamp/client.go opamp/client_test.go
 git commit -m "feat(opamp): add SetEffectiveConfig for reporting config to server"
 ```
 
@@ -986,12 +986,12 @@ git commit -m "feat(opamp): add SetEffectiveConfig for reporting config to serve
 ## Task 2.6: Integration Wiring
 
 **Files:**
-- Modify: `internal/supervisor/supervisor.go`
-- Modify: `internal/supervisor/supervisor_test.go`
+- Modify: `supervisor/supervisor.go`
+- Modify: `supervisor/supervisor_test.go`
 
 **Step 1: Write integration test**
 
-Add to `internal/supervisor/supervisor_test.go`:
+Add to `supervisor/supervisor_test.go`:
 ```go
 func TestSupervisor_ConfigManagerIntegration(t *testing.T) {
 	// This is a basic integration test verifying the components wire together
@@ -1028,19 +1028,19 @@ func TestSupervisor_ConfigManagerIntegration(t *testing.T) {
 
 **Step 2: Run test to verify it fails**
 
-Run: `go test ./internal/supervisor/... -v -run TestSupervisor_ConfigManager`
+Run: `go test ./supervisor/... -v -run TestSupervisor_ConfigManager`
 Expected: FAIL (supervisor.configManager undefined)
 
 **Step 3: Wire components in supervisor**
 
-Modify `internal/supervisor/supervisor.go` to add:
+Modify `supervisor/supervisor.go` to add:
 
 1. Add imports:
 ```go
 import (
 	// ... existing imports ...
-	"github.com/Graylog2/collector-sidecar/superv/internal/configmanager"
-	"github.com/Graylog2/collector-sidecar/superv/internal/healthmonitor"
+	"github.com/Graylog2/collector-sidecar/superv/configmanager"
+	"github.com/Graylog2/collector-sidecar/superv/healthmonitor"
 )
 ```
 
@@ -1134,13 +1134,13 @@ go func() {
 
 **Step 4: Run tests to verify they pass**
 
-Run: `go test ./internal/supervisor/... -v`
+Run: `go test ./supervisor/... -v`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add internal/supervisor/
+git add supervisor/
 git commit -m "feat(supervisor): wire config manager and health monitor"
 ```
 

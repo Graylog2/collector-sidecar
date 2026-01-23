@@ -27,11 +27,11 @@ import (
 	"github.com/open-telemetry/opamp-go/server/types"
 	"go.uber.org/zap"
 
-	"github.com/Graylog2/collector-sidecar/superv/internal/config"
-	"github.com/Graylog2/collector-sidecar/superv/internal/keen"
-	"github.com/Graylog2/collector-sidecar/superv/internal/opamp"
-	"github.com/Graylog2/collector-sidecar/superv/internal/persistence"
-	"github.com/Graylog2/collector-sidecar/superv/internal/version"
+	"github.com/Graylog2/collector-sidecar/superv/config"
+	"github.com/Graylog2/collector-sidecar/superv/keen"
+	"github.com/Graylog2/collector-sidecar/superv/opamp"
+	"github.com/Graylog2/collector-sidecar/superv/persistence"
+	"github.com/Graylog2/collector-sidecar/superv/version"
 )
 
 // Supervisor coordinates the management of an OpenTelemetry Collector.

@@ -28,9 +28,9 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/Graylog2/collector-sidecar/superv/internal/config"
-	"github.com/Graylog2/collector-sidecar/superv/internal/supervisor"
-	"github.com/Graylog2/collector-sidecar/superv/internal/version"
+	"github.com/Graylog2/collector-sidecar/superv/config"
+	"github.com/Graylog2/collector-sidecar/superv/supervisor"
+	"github.com/Graylog2/collector-sidecar/superv/version"
 )
 
 func main() {
