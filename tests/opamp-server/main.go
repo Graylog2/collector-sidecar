@@ -232,6 +232,19 @@ func (s *OpAMPServer) OnMessage(ctx context.Context, conn types.Connection, msg 
 	response := &protobufs.ServerToAgent{
 		InstanceUid:  msg.InstanceUid,
 		Capabilities: s.getServerCapabilities(),
+		ConnectionSettings: &protobufs.ConnectionSettingsOffers{
+			OwnLogs: &protobufs.TelemetryConnectionSettings{
+				DestinationEndpoint: "localhost:8080",
+				Headers: &protobufs.Headers{
+					Headers: []*protobufs.Header{
+						{
+							Key:   "X-OTLP-Access-Token",
+							Value: "s3cr3t",
+						},
+					},
+				},
+			},
+		},
 	}
 
 	// Request full agent status on first connect
