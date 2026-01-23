@@ -1,4 +1,4 @@
-module github.com/open-telemetry/opamp-supervisor
+module github.com/Graylog2/collector-sidecar/superv
 
 go 1.25.6
 

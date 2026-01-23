@@ -482,8 +482,8 @@ import (
 	"github.com/open-telemetry/opamp-go/protobufs"
 	"go.uber.org/zap"
 
-	"github.com/open-telemetry/opamp-supervisor/internal/configmerge"
-	"github.com/open-telemetry/opamp-supervisor/internal/configwriter"
+	"github.com/Graylog2/collector-sidecar/superv/internal/configmerge"
+	"github.com/Graylog2/collector-sidecar/superv/internal/configwriter"
 )
 
 // Config holds configuration for the config manager.
@@ -1039,8 +1039,8 @@ Modify `internal/supervisor/supervisor.go` to add:
 ```go
 import (
 	// ... existing imports ...
-	"github.com/open-telemetry/opamp-supervisor/internal/configmanager"
-	"github.com/open-telemetry/opamp-supervisor/internal/healthmonitor"
+	"github.com/Graylog2/collector-sidecar/superv/internal/configmanager"
+	"github.com/Graylog2/collector-sidecar/superv/internal/healthmonitor"
 )
 ```
 

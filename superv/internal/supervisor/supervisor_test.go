@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 
-	"github.com/open-telemetry/opamp-supervisor/internal/config"
+	"github.com/Graylog2/collector-sidecar/superv/internal/config"
 )
 
 func TestNewSupervisor(t *testing.T) {

@@ -28,9 +28,9 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/open-telemetry/opamp-supervisor/internal/config"
-	"github.com/open-telemetry/opamp-supervisor/internal/supervisor"
-	"github.com/open-telemetry/opamp-supervisor/internal/version"
+	"github.com/Graylog2/collector-sidecar/superv/internal/config"
+	"github.com/Graylog2/collector-sidecar/superv/internal/supervisor"
+	"github.com/Graylog2/collector-sidecar/superv/internal/version"
 )
 
 func main() {

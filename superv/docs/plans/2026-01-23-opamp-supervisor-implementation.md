@@ -24,7 +24,7 @@
 
 **Step 1: Initialize Go module**
 
-Run: `go mod init github.com/open-telemetry/opamp-supervisor`
+Run: `go mod init github.com/Graylog2/collector-sidecar/superv`
 Expected: Creates go.mod file
 
 **Step 2: Create main entry point**
@@ -40,7 +40,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/open-telemetry/opamp-supervisor/internal/version"
+	"github.com/Graylog2/collector-sidecar/superv/internal/version"
 )
 
 func main() {
@@ -2706,7 +2706,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 
-	"github.com/open-telemetry/opamp-supervisor/internal/config"
+	"github.com/Graylog2/collector-sidecar/superv/internal/config"
 )
 
 func TestNewSupervisor(t *testing.T) {
@@ -2760,10 +2760,10 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/open-telemetry/opamp-supervisor/internal/keen"
-	"github.com/open-telemetry/opamp-supervisor/internal/config"
-	"github.com/open-telemetry/opamp-supervisor/internal/opamp"
-	"github.com/open-telemetry/opamp-supervisor/internal/persistence"
+	"github.com/Graylog2/collector-sidecar/superv/internal/keen"
+	"github.com/Graylog2/collector-sidecar/superv/internal/config"
+	"github.com/Graylog2/collector-sidecar/superv/internal/opamp"
+	"github.com/Graylog2/collector-sidecar/superv/internal/persistence"
 )
 
 // Supervisor coordinates the management of an OpenTelemetry Collector.
@@ -2986,9 +2986,9 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/open-telemetry/opamp-supervisor/internal/config"
-	"github.com/open-telemetry/opamp-supervisor/internal/supervisor"
-	"github.com/open-telemetry/opamp-supervisor/internal/version"
+	"github.com/Graylog2/collector-sidecar/superv/internal/config"
+	"github.com/Graylog2/collector-sidecar/superv/internal/supervisor"
+	"github.com/Graylog2/collector-sidecar/superv/internal/version"
 )
 
 func main() {
