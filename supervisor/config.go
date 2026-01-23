@@ -109,7 +109,8 @@ func buildConfig(cmd *cobra.Command) (*config.Supervisor, error) {
 			ConfigApplyTimeout: 5 * time.Second,
 			BootstrapTimeout:   3 * time.Second,
 			OpAMPServerPort:    0,
-			PassthroughLogs:    false,
+			// The supervisor will otherwise write an ever-growing agent.log file into the storage dir. (no rotation/trunction)
+			PassthroughLogs:    true,
 			UseHUPConfigReload: runtime.GOOS != "windows", // HUP reload is not supported on Windows
 			ConfigFiles: []string{
 				string(config.SpecialConfigFileOwnTelemetry),
