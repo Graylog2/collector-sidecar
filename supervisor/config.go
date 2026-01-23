@@ -228,6 +228,9 @@ func buildConfig(cmd *cobra.Command) (*config.Supervisor, error) {
 }
 
 func writeConfigFile(data string, path string) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return fmt.Errorf("couldn't create %q directory: %w", filepath.Dir(path), err)
+	}
 	if err := os.WriteFile(path, []byte(data), 0o600); err != nil {
 		return fmt.Errorf("couldn't write config file %q: %w", path, err)
 	}
