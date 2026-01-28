@@ -25,7 +25,7 @@ import (
 
 // MergeConfigs merges two YAML configurations, with override taking precedence.
 func MergeConfigs(base, override []byte) ([]byte, error) {
-	k := koanf.New(".")
+	k := koanf.New("::")
 
 	// Load base config
 	if len(base) > 0 {
@@ -48,7 +48,7 @@ func MergeConfigs(base, override []byte) ([]byte, error) {
 // MergeMultiple merges multiple YAML configurations in order.
 // Later configs take precedence over earlier ones.
 func MergeMultiple(configs ...[]byte) ([]byte, error) {
-	k := koanf.New(".")
+	k := koanf.New("::")
 
 	for _, cfg := range configs {
 		if len(cfg) > 0 {
@@ -63,7 +63,7 @@ func MergeMultiple(configs ...[]byte) ([]byte, error) {
 
 // InjectSettings injects supervisor settings into a collector config.
 func InjectSettings(config []byte, settings map[string]interface{}) ([]byte, error) {
-	k := koanf.New(".")
+	k := koanf.New("::")
 
 	// Load existing config
 	if len(config) > 0 {
