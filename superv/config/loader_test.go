@@ -33,13 +33,13 @@ func TestLoadFromFile(t *testing.T) {
 	require.Equal(t, "/usr/local/bin/otelcol", cfg.Agent.Executable)
 }
 
-func TestLoadWithEnvExpansion(t *testing.T) {
-	os.Setenv("TEST_OPAMP_ENDPOINT", "wss://test.example.com/v1/opamp")
-	defer os.Unsetenv("TEST_OPAMP_ENDPOINT")
+func TestLoadWithEnvOverride(t *testing.T) {
+	os.Setenv("GLC_SERVER_ENDPOINT", "wss://env.example.com/v1/opamp")
+	defer os.Unsetenv("GLC_SERVER_ENDPOINT")
 
 	content := `
 server:
-  endpoint: "${TEST_OPAMP_ENDPOINT}"
+  endpoint: "wss://file.example.com/v1/opamp"
 agent:
   executable: /usr/local/bin/otelcol
 `
@@ -48,7 +48,8 @@ agent:
 
 	cfg, err := Load(tmpFile)
 	require.NoError(t, err)
-	require.Equal(t, "wss://test.example.com/v1/opamp", cfg.Server.Endpoint)
+	// Env var should override file value
+	require.Equal(t, "wss://env.example.com/v1/opamp", cfg.Server.Endpoint)
 }
 
 func TestLoadMergesWithDefaults(t *testing.T) {
@@ -78,28 +79,30 @@ func TestLoadEmptyPath(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestLoadWithEnvExpansionInMaps(t *testing.T) {
-	os.Setenv("TEST_HEADER_VALUE", "secret-value")
-	os.Setenv("TEST_ARG_VALUE", "custom-arg")
+func TestLoadEnvOverridesTakesPrecedence(t *testing.T) {
+	os.Setenv("GLC_AGENT_EXECUTABLE", "/custom/otelcol")
+	os.Setenv("GLC_PERSISTENCE_DIR", "/custom/state")
 	defer func() {
-		os.Unsetenv("TEST_HEADER_VALUE")
-		os.Unsetenv("TEST_ARG_VALUE")
+		os.Unsetenv("GLC_AGENT_EXECUTABLE")
+		os.Unsetenv("GLC_PERSISTENCE_DIR")
 	}()
 
 	content := `
 server:
   endpoint: wss://opamp.example.com/v1/opamp
-  headers:
-    X-Secret: "${TEST_HEADER_VALUE}"
 agent:
   executable: /usr/local/bin/otelcol
-  args: ["--config", "${TEST_ARG_VALUE}"]
+persistence:
+  dir: /var/lib/superv
 `
 	tmpFile := filepath.Join(t.TempDir(), "config.yaml")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(content), 0644))
 
 	cfg, err := Load(tmpFile)
 	require.NoError(t, err)
-	require.Equal(t, "secret-value", cfg.Server.Headers["X-Secret"])
-	require.Contains(t, cfg.Agent.Args, "custom-arg")
+	// Env vars should override file values
+	require.Equal(t, "/custom/otelcol", cfg.Agent.Executable)
+	require.Equal(t, "/custom/state", cfg.Persistence.Dir)
+	// File value should be preserved when no env override
+	require.Equal(t, "wss://opamp.example.com/v1/opamp", cfg.Server.Endpoint)
 }
