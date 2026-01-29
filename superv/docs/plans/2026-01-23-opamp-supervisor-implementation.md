@@ -4,7 +4,7 @@
 
 **Goal:** Build a production-ready OpAMP supervisor that manages an OpenTelemetry Collector with full remote management capabilities.
 
-**Architecture:** Dual OpAMP role - client connecting upstream to management server (WebSocket/HTTP) and server for downstream collector on localhost. Core engine coordinates configuration layering, JWT-based authentication, process management with SIGHUP reload, and package management with signature verification.
+**Architecture:** Dual OpAMP role - client connecting upstream to management server (WebSocket/HTTP) and server for downstream collector on localhost. Core engine coordinates configuration layering, CSR-based authentication with supervisor-signed JWTs, process management with SIGHUP reload, and package management with signature verification.
 
 **Tech Stack:** Go 1.25+, opamp-go (client + server), koanf (config merging), goccy/go-yaml, zap (logging), OTEL SDK (self-telemetry)
 
@@ -203,8 +203,8 @@ import (
 // Config is the top-level supervisor configuration.
 type Config struct {
 	Server      ServerConfig      `koanf:"server"`
-	Bootstrap   BootstrapConfig   `koanf:"bootstrap"`
 	Auth        AuthConfig        `koanf:"auth"`
+	Keys        KeysConfig        `koanf:"keys"`
 	LocalOpAMP  LocalOpAMPConfig  `koanf:"local_opamp"`
 	Agent       AgentConfig       `koanf:"agent"`
 	Packages    PackagesConfig    `koanf:"packages"`
@@ -242,16 +242,24 @@ type BackoffConfig struct {
 	Multiplier float64       `koanf:"multiplier"`
 }
 
-// BootstrapConfig configures trust bootstrap.
-type BootstrapConfig struct {
-	Mode   string `koanf:"mode"` // fingerprint | ca_verified
-	CACert string `koanf:"ca_cert"`
-}
-
 // AuthConfig configures authentication.
 type AuthConfig struct {
-	EnrollmentToken string `koanf:"enrollment_token"`
-	TokenFile       string `koanf:"token_file"`
+	EnrollmentURL string        `koanf:"enrollment_url"`
+	JWTLifetime   time.Duration `koanf:"jwt_lifetime"`
+}
+
+// KeysConfig configures key storage.
+type KeysConfig struct {
+	Dir        string           `koanf:"dir"`
+	Encrypted  bool             `koanf:"encrypted"`
+	Passphrase PassphraseConfig `koanf:"passphrase"`
+}
+
+// PassphraseConfig configures passphrase source for encrypted keys.
+type PassphraseConfig struct {
+	Env  string   `koanf:"env"`
+	File string   `koanf:"file"`
+	Cmd  []string `koanf:"cmd"`
 }
 
 // LocalOpAMPConfig configures the local OpAMP server for the collector.
@@ -349,11 +357,12 @@ func DefaultConfig() Config {
 				},
 			},
 		},
-		Bootstrap: BootstrapConfig{
-			Mode: "fingerprint",
-		},
 		Auth: AuthConfig{
-			TokenFile: "/var/lib/supervisor/auth/agent_token.yaml",
+			JWTLifetime: 5 * time.Minute,
+		},
+		Keys: KeysConfig{
+			Dir:       "/var/lib/supervisor/keys",
+			Encrypted: false,
 		},
 		LocalOpAMP: LocalOpAMPConfig{
 			Endpoint: "localhost:4320",
@@ -533,8 +542,12 @@ server:
     X-Custom-Header: test-value
 
 auth:
-  enrollment_token: "${ENROLLMENT_JWT}"
-  token_file: /var/lib/supervisor/auth/agent_token.yaml
+  enrollment_url: "${ENROLLMENT_URL}"
+  jwt_lifetime: 5m
+
+keys:
+  dir: /var/lib/supervisor/keys
+  encrypted: false
 
 agent:
   executable: /usr/local/bin/otelcol
@@ -735,15 +748,18 @@ func TestValidateAgentExecutable(t *testing.T) {
 	require.Contains(t, err.Error(), "executable")
 }
 
-func TestValidateBootstrapMode(t *testing.T) {
+func TestValidateKeysConfig(t *testing.T) {
 	tests := []struct {
-		name      string
-		mode      string
-		expectErr bool
+		name       string
+		encrypted  bool
+		passphrase PassphraseConfig
+		expectErr  bool
 	}{
-		{"fingerprint", "fingerprint", false},
-		{"ca_verified", "ca_verified", false},
-		{"invalid", "invalid", true},
+		{"unencrypted", false, PassphraseConfig{}, false},
+		{"encrypted_with_env", true, PassphraseConfig{Env: "KEY_PASS"}, false},
+		{"encrypted_with_file", true, PassphraseConfig{File: "/run/secrets/pass"}, false},
+		{"encrypted_with_cmd", true, PassphraseConfig{Cmd: []string{"vault", "read"}}, false},
+		{"encrypted_no_source", true, PassphraseConfig{}, true},
 	}
 
 	for _, tt := range tests {
@@ -751,11 +767,12 @@ func TestValidateBootstrapMode(t *testing.T) {
 			cfg := DefaultConfig()
 			cfg.Server.Endpoint = "ws://localhost:4320"
 			cfg.Agent.Executable = "/bin/test"
-			cfg.Bootstrap.Mode = tt.mode
+			cfg.Keys.Encrypted = tt.encrypted
+			cfg.Keys.Passphrase = tt.passphrase
 			err := cfg.Validate()
 			if tt.expectErr {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "bootstrap")
+				require.Contains(t, err.Error(), "keys")
 			} else {
 				require.NoError(t, err)
 			}
@@ -816,12 +833,11 @@ import (
 )
 
 var (
-	validSchemes        = []string{"ws", "wss", "http", "https"}
-	validBootstrapModes = []string{"fingerprint", "ca_verified"}
-	validLogLevels      = []string{"debug", "info", "warn", "error"}
-	validLogFormats     = []string{"json", "text"}
-	validReloadMethods  = []string{"auto", "signal", "restart"}
-	validTransports     = []string{"websocket", "http", "auto", ""}
+	validSchemes       = []string{"ws", "wss", "http", "https"}
+	validLogLevels     = []string{"debug", "info", "warn", "error"}
+	validLogFormats    = []string{"json", "text"}
+	validReloadMethods = []string{"auto", "signal", "restart"}
+	validTransports    = []string{"websocket", "http", "auto", ""}
 )
 
 // Validate checks the configuration for errors.
@@ -830,8 +846,8 @@ func (c Config) Validate() error {
 		return fmt.Errorf("server: %w", err)
 	}
 
-	if err := c.Bootstrap.Validate(); err != nil {
-		return fmt.Errorf("bootstrap: %w", err)
+	if err := c.Keys.Validate(); err != nil {
+		return fmt.Errorf("keys: %w", err)
 	}
 
 	if err := c.Agent.Validate(); err != nil {
@@ -867,10 +883,10 @@ func (s ServerConfig) Validate() error {
 	return nil
 }
 
-// Validate checks BootstrapConfig for errors.
-func (b BootstrapConfig) Validate() error {
-	if !slices.Contains(validBootstrapModes, b.Mode) {
-		return fmt.Errorf("mode must be one of %v, got %q", validBootstrapModes, b.Mode)
+// Validate checks KeysConfig for errors.
+func (k KeysConfig) Validate() error {
+	if k.Encrypted && k.Passphrase.Env == "" && k.Passphrase.File == "" && len(k.Passphrase.Cmd) == 0 {
+		return errors.New("passphrase source required when keys are encrypted")
 	}
 	return nil
 }
@@ -1116,15 +1132,15 @@ git commit -m "feat(persistence): implement instance UID persistence"
 
 ---
 
-### Task 3.2: Implement Agent Token Persistence
+### Task 3.2: Implement Key & Certificate Persistence
 
 **Files:**
-- Create: `persistence/token.go`
-- Create: `persistence/token_test.go`
+- Create: `persistence/keys.go`
+- Create: `persistence/keys_test.go`
 
-**Step 1: Write tests for token persistence**
+**Step 1: Write tests for key persistence**
 
-Create `persistence/token_test.go`:
+Create `persistence/keys_test.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -1132,96 +1148,136 @@ Create `persistence/token_test.go`:
 package persistence
 
 import (
+	"crypto/ed25519"
+	"crypto/x509"
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestSaveAndLoadAgentToken(t *testing.T) {
+func TestSaveAndLoadSigningKey(t *testing.T) {
 	dir := t.TempDir()
-	authDir := filepath.Join(dir, "auth")
+	keysDir := filepath.Join(dir, "keys")
 
-	token := &AgentToken{
-		Token:      "test-jwt-token",
-		ReceivedAt: time.Now().UTC().Truncate(time.Second),
-		ExpiresAt:  time.Now().UTC().Add(24 * time.Hour).Truncate(time.Second),
-	}
-
-	err := SaveAgentToken(authDir, token)
+	// Generate a test keypair
+	pub, priv, err := ed25519.GenerateKey(nil)
 	require.NoError(t, err)
 
-	loaded, err := LoadAgentToken(authDir)
+	err = SaveSigningKey(keysDir, priv)
 	require.NoError(t, err)
-	require.Equal(t, token.Token, loaded.Token)
-	require.Equal(t, token.ReceivedAt, loaded.ReceivedAt)
-	require.Equal(t, token.ExpiresAt, loaded.ExpiresAt)
+
+	loaded, err := LoadSigningKey(keysDir)
+	require.NoError(t, err)
+	require.Equal(t, priv, loaded)
+	require.Equal(t, pub, loaded.Public())
 }
 
-func TestLoadAgentToken_NotExists(t *testing.T) {
+func TestSaveSigningKey_FilePermissions(t *testing.T) {
 	dir := t.TempDir()
+	keysDir := filepath.Join(dir, "keys")
 
-	_, err := LoadAgentToken(dir)
-	require.Error(t, err)
-	require.True(t, errors.Is(err, os.ErrNotExist))
-}
-
-func TestSaveAgentToken_FilePermissions(t *testing.T) {
-	dir := t.TempDir()
-	authDir := filepath.Join(dir, "auth")
-
-	token := &AgentToken{
-		Token:      "test-jwt-token",
-		ReceivedAt: time.Now().UTC(),
-		ExpiresAt:  time.Now().UTC().Add(24 * time.Hour),
-	}
-
-	err := SaveAgentToken(authDir, token)
+	_, priv, err := ed25519.GenerateKey(nil)
 	require.NoError(t, err)
 
-	filePath := filepath.Join(authDir, "agent_token.yaml")
+	err = SaveSigningKey(keysDir, priv)
+	require.NoError(t, err)
+
+	filePath := filepath.Join(keysDir, "signing.key")
 	info, err := os.Stat(filePath)
 	require.NoError(t, err)
 	require.Equal(t, os.FileMode(0600), info.Mode().Perm())
 }
 
-func TestAgentToken_IsExpired(t *testing.T) {
-	token := &AgentToken{
-		Token:      "test",
-		ReceivedAt: time.Now().UTC(),
-		ExpiresAt:  time.Now().UTC().Add(-1 * time.Hour), // Already expired
-	}
-	require.True(t, token.IsExpired())
+func TestLoadSigningKey_NotExists(t *testing.T) {
+	dir := t.TempDir()
 
-	token.ExpiresAt = time.Now().UTC().Add(1 * time.Hour)
-	require.False(t, token.IsExpired())
+	_, err := LoadSigningKey(dir)
+	require.Error(t, err)
+	require.True(t, os.IsNotExist(err))
 }
 
-func TestAgentToken_IsExpiringSoon(t *testing.T) {
-	token := &AgentToken{
-		Token:      "test",
-		ReceivedAt: time.Now().UTC(),
-		ExpiresAt:  time.Now().UTC().Add(30 * time.Minute), // Expires in 30 min
-	}
+func TestSaveAndLoadCertificate(t *testing.T) {
+	dir := t.TempDir()
+	keysDir := filepath.Join(dir, "keys")
 
-	// With 1 hour threshold, it should be expiring soon
-	require.True(t, token.IsExpiringSoon(1*time.Hour))
+	// Create a minimal test certificate (self-signed for testing)
+	cert := createTestCertificate(t)
 
-	// With 15 minute threshold, it should not be expiring soon
-	require.False(t, token.IsExpiringSoon(15*time.Minute))
+	err := SaveCertificate(keysDir, cert)
+	require.NoError(t, err)
+
+	loaded, err := LoadCertificate(keysDir)
+	require.NoError(t, err)
+	require.Equal(t, cert.Raw, loaded.Raw)
+}
+
+func TestSaveCertificate_FilePermissions(t *testing.T) {
+	dir := t.TempDir()
+	keysDir := filepath.Join(dir, "keys")
+
+	cert := createTestCertificate(t)
+
+	err := SaveCertificate(keysDir, cert)
+	require.NoError(t, err)
+
+	filePath := filepath.Join(keysDir, "signing.crt")
+	info, err := os.Stat(filePath)
+	require.NoError(t, err)
+	// Certificates are public, so 0644 is fine
+	require.Equal(t, os.FileMode(0644), info.Mode().Perm())
+}
+
+func TestKeysExist(t *testing.T) {
+	dir := t.TempDir()
+	keysDir := filepath.Join(dir, "keys")
+
+	// Initially no keys exist
+	require.False(t, SigningKeyExists(keysDir))
+	require.False(t, CertificateExists(keysDir))
+
+	// Create signing key
+	_, priv, _ := ed25519.GenerateKey(nil)
+	_ = SaveSigningKey(keysDir, priv)
+	require.True(t, SigningKeyExists(keysDir))
+
+	// Create certificate
+	cert := createTestCertificate(t)
+	_ = SaveCertificate(keysDir, cert)
+	require.True(t, CertificateExists(keysDir))
+}
+
+func TestCertificateFingerprint(t *testing.T) {
+	dir := t.TempDir()
+	keysDir := filepath.Join(dir, "keys")
+
+	cert := createTestCertificate(t)
+	_ = SaveCertificate(keysDir, cert)
+
+	fp, err := CertificateFingerprint(keysDir)
+	require.NoError(t, err)
+	require.NotEmpty(t, fp)
+	// SHA-256 fingerprint should be 64 hex chars
+	require.Len(t, fp, 64)
+}
+
+// createTestCertificate creates a self-signed certificate for testing
+func createTestCertificate(t *testing.T) *x509.Certificate {
+	t.Helper()
+	// Implementation uses x509.CreateCertificate with test data
+	// ... (test helper implementation)
 }
 ```
 
 **Step 2: Run test to verify it fails**
 
-Run: `go test ./persistence/... -v -run TestSaveAndLoadAgentToken`
-Expected: FAIL (AgentToken not defined)
+Run: `go test ./persistence/... -v -run TestSaveAndLoadSigningKey`
+Expected: FAIL (functions not defined)
 
-**Step 3: Implement token persistence**
+**Step 3: Implement key persistence**
 
-Create `persistence/token.go`:
+Create `persistence/keys.go`:
 ```go
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -1229,96 +1285,137 @@ Create `persistence/token.go`:
 package persistence
 
 import (
+	"crypto/ed25519"
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/hex"
+	"encoding/pem"
+	"errors"
 	"os"
 	"path/filepath"
-	"time"
-
-	"github.com/goccy/go-yaml"
 )
 
-const agentTokenFile = "agent_token.yaml"
+const (
+	signingKeyFile  = "signing.key"
+	signingCertFile = "signing.crt"
+	encryptionKeyFile = "encryption.key"
+)
 
-// AgentToken represents the persisted agent authentication token.
-type AgentToken struct {
-	Token      string    `yaml:"token"`
-	ReceivedAt time.Time `yaml:"received_at"`
-	ExpiresAt  time.Time `yaml:"expires_at"`
-}
-
-// SaveAgentToken saves the agent token to disk with secure permissions (0600).
-func SaveAgentToken(authDir string, token *AgentToken) error {
-	if err := os.MkdirAll(authDir, 0700); err != nil {
+// SaveSigningKey saves an Ed25519 private key to disk in PEM format.
+func SaveSigningKey(keysDir string, key ed25519.PrivateKey) error {
+	if err := os.MkdirAll(keysDir, 0700); err != nil {
 		return err
 	}
 
-	content, err := yaml.Marshal(token)
+	pkcs8, err := x509.MarshalPKCS8PrivateKey(key)
 	if err != nil {
 		return err
 	}
 
-	filePath := filepath.Join(authDir, agentTokenFile)
-	return os.WriteFile(filePath, content, 0600)
+	block := &pem.Block{
+		Type:  "PRIVATE KEY",
+		Bytes: pkcs8,
+	}
+
+	filePath := filepath.Join(keysDir, signingKeyFile)
+	return os.WriteFile(filePath, pem.EncodeToMemory(block), 0600)
 }
 
-// LoadAgentToken loads the agent token from disk.
-func LoadAgentToken(authDir string) (*AgentToken, error) {
-	filePath := filepath.Join(authDir, agentTokenFile)
+// LoadSigningKey loads an Ed25519 private key from disk.
+func LoadSigningKey(keysDir string) (ed25519.PrivateKey, error) {
+	filePath := filepath.Join(keysDir, signingKeyFile)
 
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
 
-	var token AgentToken
-	if err := yaml.Unmarshal(content, &token); err != nil {
+	block, _ := pem.Decode(content)
+	if block == nil {
+		return nil, errors.New("failed to decode PEM block")
+	}
+
+	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	if err != nil {
 		return nil, err
 	}
 
-	return &token, nil
-}
-
-// IsExpired returns true if the token has expired.
-func (t *AgentToken) IsExpired() bool {
-	return time.Now().After(t.ExpiresAt)
-}
-
-// IsExpiringSoon returns true if the token will expire within the given duration.
-func (t *AgentToken) IsExpiringSoon(threshold time.Duration) bool {
-	return time.Now().Add(threshold).After(t.ExpiresAt)
-}
-
-// DeleteAgentToken removes the agent token file.
-func DeleteAgentToken(authDir string) error {
-	filePath := filepath.Join(authDir, agentTokenFile)
-	err := os.Remove(filePath)
-	if os.IsNotExist(err) {
-		return nil
+	ed25519Key, ok := key.(ed25519.PrivateKey)
+	if !ok {
+		return nil, errors.New("key is not Ed25519")
 	}
-	return err
+
+	return ed25519Key, nil
+}
+
+// SaveCertificate saves an X.509 certificate to disk in PEM format.
+func SaveCertificate(keysDir string, cert *x509.Certificate) error {
+	if err := os.MkdirAll(keysDir, 0700); err != nil {
+		return err
+	}
+
+	block := &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: cert.Raw,
+	}
+
+	filePath := filepath.Join(keysDir, signingCertFile)
+	return os.WriteFile(filePath, pem.EncodeToMemory(block), 0644)
+}
+
+// LoadCertificate loads an X.509 certificate from disk.
+func LoadCertificate(keysDir string) (*x509.Certificate, error) {
+	filePath := filepath.Join(keysDir, signingCertFile)
+
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	block, _ := pem.Decode(content)
+	if block == nil {
+		return nil, errors.New("failed to decode PEM block")
+	}
+
+	return x509.ParseCertificate(block.Bytes)
+}
+
+// SigningKeyExists returns true if the signing key file exists.
+func SigningKeyExists(keysDir string) bool {
+	filePath := filepath.Join(keysDir, signingKeyFile)
+	_, err := os.Stat(filePath)
+	return err == nil
+}
+
+// CertificateExists returns true if the certificate file exists.
+func CertificateExists(keysDir string) bool {
+	filePath := filepath.Join(keysDir, signingCertFile)
+	_, err := os.Stat(filePath)
+	return err == nil
+}
+
+// CertificateFingerprint returns the SHA-256 fingerprint of the certificate.
+func CertificateFingerprint(keysDir string) (string, error) {
+	cert, err := LoadCertificate(keysDir)
+	if err != nil {
+		return "", err
+	}
+
+	hash := sha256.Sum256(cert.Raw)
+	return hex.EncodeToString(hash[:]), nil
 }
 ```
 
-**Step 4: Add missing import to test file**
-
-Update `persistence/token_test.go` to add errors import:
-```go
-import (
-	"errors"
-	"os"
-	// ... rest of imports
-)
-```
-
-**Step 5: Run tests to verify they pass**
+**Step 4: Run tests to verify they pass**
 
 Run: `go test ./persistence/... -v`
 Expected: PASS
 
-**Step 6: Commit**
+**Step 5: Commit**
 
 ```bash
 git add persistence/
-git commit -m "feat(persistence): implement agent token persistence with secure permissions"
+git commit -m "feat(persistence): implement Ed25519 key and certificate persistence"
 ```
 
 ---
@@ -2993,14 +3090,14 @@ import (
 
 func main() {
 	var (
-		configPath     string
-		showVersion    bool
-		bootstrapToken string
+		configPath    string
+		showVersion   bool
+		enrollmentURL string
 	)
 
 	flag.StringVar(&configPath, "config", "", "Path to configuration file")
 	flag.BoolVar(&showVersion, "version", false, "Show version and exit")
-	flag.StringVar(&bootstrapToken, "bootstrap-token", "", "Enrollment JWT for zero-touch bootstrap")
+	flag.StringVar(&enrollmentURL, "enrollment-url", "", "Enrollment URL for zero-touch bootstrap (e.g., https://server/opamp/enroll/<JWT>)")
 	flag.Parse()
 
 	if showVersion {
@@ -3027,9 +3124,9 @@ func main() {
 		cfg = config.DefaultConfig()
 	}
 
-	// Override with bootstrap token if provided
-	if bootstrapToken != "" {
-		cfg.Auth.EnrollmentToken = bootstrapToken
+	// Override with enrollment URL if provided
+	if enrollmentURL != "" {
+		cfg.Auth.EnrollmentURL = enrollmentURL
 	}
 
 	// Validate configuration
@@ -3311,13 +3408,559 @@ git commit -m "feat(configmerge): implement YAML configuration merging"
 
 ---
 
-### Task 7.2: Implement JWT Token Management
+### Task 7.2: Implement CSR Flow & Authentication
 
 **Files:**
+- Create: `auth/jwks.go`
+- Create: `auth/jwks_test.go`
+- Create: `auth/enrollment.go`
+- Create: `auth/enrollment_test.go`
+- Create: `auth/keypair.go`
+- Create: `auth/keypair_test.go`
+- Create: `auth/csr.go`
+- Create: `auth/csr_test.go`
 - Create: `auth/jwt.go`
 - Create: `auth/jwt_test.go`
 
-**Step 1: Write tests for JWT handling**
+**Step 1: Write tests for JWKS fetching**
+
+Create `auth/jwks_test.go`:
+```go
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package auth
+
+import (
+	"crypto/ed25519"
+	"encoding/base64"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+func TestFetchJWKS_Success(t *testing.T) {
+	pub, _, _ := ed25519.GenerateKey(nil)
+
+	jwks := map[string]interface{}{
+		"keys": []map[string]interface{}{
+			{
+				"kty": "OKP",
+				"crv": "Ed25519",
+				"kid": "test-key-1",
+				"x":   base64.RawURLEncoding.EncodeToString(pub),
+				"use": "sig",
+			},
+		},
+	}
+
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "/.well-known/jwks.json", r.URL.Path)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(jwks)
+	}))
+	defer server.Close()
+
+	keys, err := FetchJWKS(server.Client(), server.URL)
+	require.NoError(t, err)
+	require.Len(t, keys, 1)
+	require.Equal(t, "test-key-1", keys[0].KeyID)
+}
+
+func TestFetchJWKS_InvalidResponse(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	_, err := FetchJWKS(server.Client(), server.URL)
+	require.Error(t, err)
+}
+
+func TestGetKeyByID(t *testing.T) {
+	pub1, _, _ := ed25519.GenerateKey(nil)
+	pub2, _, _ := ed25519.GenerateKey(nil)
+
+	keys := []JWK{
+		{KeyID: "key-1", PublicKey: pub1},
+		{KeyID: "key-2", PublicKey: pub2},
+	}
+
+	key, err := GetKeyByID(keys, "key-2")
+	require.NoError(t, err)
+	require.Equal(t, pub2, key.PublicKey)
+
+	_, err = GetKeyByID(keys, "nonexistent")
+	require.Error(t, err)
+}
+```
+
+**Step 2: Implement JWKS fetching**
+
+Create `auth/jwks.go`:
+```go
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package auth
+
+import (
+	"crypto/ed25519"
+	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+)
+
+// JWK represents a JSON Web Key.
+type JWK struct {
+	KeyID     string
+	PublicKey ed25519.PublicKey
+}
+
+type jwksResponse struct {
+	Keys []jwkEntry `json:"keys"`
+}
+
+type jwkEntry struct {
+	Kty string `json:"kty"`
+	Crv string `json:"crv"`
+	Kid string `json:"kid"`
+	X   string `json:"x"`
+	Use string `json:"use"`
+}
+
+// FetchJWKS fetches the JWKS from the server's well-known endpoint.
+func FetchJWKS(client *http.Client, baseURL string) ([]JWK, error) {
+	resp, err := client.Get(baseURL + "/.well-known/jwks.json")
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch JWKS: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("JWKS request failed with status %d", resp.StatusCode)
+	}
+
+	var jwks jwksResponse
+	if err := json.NewDecoder(resp.Body).Decode(&jwks); err != nil {
+		return nil, fmt.Errorf("failed to decode JWKS: %w", err)
+	}
+
+	var keys []JWK
+	for _, entry := range jwks.Keys {
+		if entry.Kty != "OKP" || entry.Crv != "Ed25519" {
+			continue // Skip non-Ed25519 keys
+		}
+
+		pubBytes, err := base64.RawURLEncoding.DecodeString(entry.X)
+		if err != nil {
+			continue
+		}
+
+		keys = append(keys, JWK{
+			KeyID:     entry.Kid,
+			PublicKey: ed25519.PublicKey(pubBytes),
+		})
+	}
+
+	return keys, nil
+}
+
+// GetKeyByID finds a key by its ID in the JWKS.
+func GetKeyByID(keys []JWK, kid string) (*JWK, error) {
+	for _, k := range keys {
+		if k.KeyID == kid {
+			return &k, nil
+		}
+	}
+	return nil, errors.New("key not found in JWKS")
+}
+```
+
+**Step 3: Write tests for enrollment JWT validation**
+
+Create `auth/enrollment_test.go`:
+```go
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package auth
+
+import (
+	"crypto/ed25519"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+)
+
+func TestParseEnrollmentURL(t *testing.T) {
+	url := "https://opamp.example.com/opamp/enroll/eyJhbGciOiJFZERTQSJ9.eyJ0ZW5hbnRfaWQiOiJ0ZXN0In0.sig"
+
+	hostname, jwt, err := ParseEnrollmentURL(url)
+	require.NoError(t, err)
+	require.Equal(t, "opamp.example.com", hostname)
+	require.Equal(t, "eyJhbGciOiJFZERTQSJ9.eyJ0ZW5hbnRfaWQiOiJ0ZXN0In0.sig", jwt)
+}
+
+func TestParseEnrollmentURL_InvalidFormat(t *testing.T) {
+	_, _, err := ParseEnrollmentURL("not-a-url")
+	require.Error(t, err)
+
+	_, _, err = ParseEnrollmentURL("https://example.com/no-jwt-here")
+	require.Error(t, err)
+}
+
+func TestValidateEnrollmentJWT(t *testing.T) {
+	pub, priv, _ := ed25519.GenerateKey(nil)
+
+	claims := &EnrollmentClaims{
+		TenantID:     "test-tenant",
+		KeyAlgorithm: "Ed25519",
+		AgentLabels:  map[string]string{"env": "test"},
+	}
+
+	token := createSignedJWT(t, priv, "test-kid", claims, time.Hour)
+
+	keys := []JWK{{KeyID: "test-kid", PublicKey: pub}}
+
+	validated, err := ValidateEnrollmentJWT(token, keys)
+	require.NoError(t, err)
+	require.Equal(t, "test-tenant", validated.TenantID)
+	require.Equal(t, "Ed25519", validated.KeyAlgorithm)
+}
+
+func TestValidateEnrollmentJWT_Expired(t *testing.T) {
+	pub, priv, _ := ed25519.GenerateKey(nil)
+
+	claims := &EnrollmentClaims{TenantID: "test"}
+	token := createSignedJWT(t, priv, "test-kid", claims, -time.Hour) // Expired
+
+	keys := []JWK{{KeyID: "test-kid", PublicKey: pub}}
+
+	_, err := ValidateEnrollmentJWT(token, keys)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "expired")
+}
+
+func TestValidateEnrollmentJWT_InvalidSignature(t *testing.T) {
+	_, priv, _ := ed25519.GenerateKey(nil)
+	otherPub, _, _ := ed25519.GenerateKey(nil) // Different key
+
+	claims := &EnrollmentClaims{TenantID: "test"}
+	token := createSignedJWT(t, priv, "test-kid", claims, time.Hour)
+
+	keys := []JWK{{KeyID: "test-kid", PublicKey: otherPub}}
+
+	_, err := ValidateEnrollmentJWT(token, keys)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "signature")
+}
+```
+
+**Step 4: Implement enrollment JWT validation**
+
+Create `auth/enrollment.go`:
+```go
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package auth
+
+import (
+	"crypto/ed25519"
+	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/url"
+	"strings"
+	"time"
+)
+
+// EnrollmentClaims represents claims from an enrollment JWT.
+type EnrollmentClaims struct {
+	Issuer       string            `json:"iss"`
+	TenantID     string            `json:"tenant_id"`
+	KeyAlgorithm string            `json:"key_algorithm"`
+	AgentLabels  map[string]string `json:"agent_labels"`
+	ExpiresAt    time.Time         `json:"-"`
+	Exp          int64             `json:"exp"`
+}
+
+// ParseEnrollmentURL extracts the hostname and JWT from an enrollment URL.
+// URL format: https://server.example.com/opamp/enroll/<JWT>
+func ParseEnrollmentURL(enrollmentURL string) (hostname string, jwt string, err error) {
+	u, err := url.Parse(enrollmentURL)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid enrollment URL: %w", err)
+	}
+
+	if u.Scheme != "https" {
+		return "", "", errors.New("enrollment URL must use HTTPS")
+	}
+
+	// Extract JWT from path (last segment after /enroll/)
+	parts := strings.Split(u.Path, "/enroll/")
+	if len(parts) != 2 || parts[1] == "" {
+		return "", "", errors.New("enrollment URL must contain /enroll/<JWT>")
+	}
+
+	return u.Host, parts[1], nil
+}
+
+// ValidateEnrollmentJWT validates an enrollment JWT against the JWKS.
+func ValidateEnrollmentJWT(token string, keys []JWK) (*EnrollmentClaims, error) {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return nil, errors.New("invalid JWT format")
+	}
+
+	// Decode header to get key ID
+	headerJSON, err := base64.RawURLEncoding.DecodeString(parts[0])
+	if err != nil {
+		return nil, errors.New("failed to decode JWT header")
+	}
+
+	var header struct {
+		Alg string `json:"alg"`
+		Kid string `json:"kid"`
+	}
+	if err := json.Unmarshal(headerJSON, &header); err != nil {
+		return nil, errors.New("failed to parse JWT header")
+	}
+
+	if header.Alg != "EdDSA" {
+		return nil, fmt.Errorf("unsupported algorithm: %s", header.Alg)
+	}
+
+	// Find the key
+	key, err := GetKeyByID(keys, header.Kid)
+	if err != nil {
+		return nil, err
+	}
+
+	// Verify signature
+	signedContent := parts[0] + "." + parts[1]
+	signature, err := base64.RawURLEncoding.DecodeString(parts[2])
+	if err != nil {
+		return nil, errors.New("failed to decode signature")
+	}
+
+	if !ed25519.Verify(key.PublicKey, []byte(signedContent), signature) {
+		return nil, errors.New("invalid JWT signature")
+	}
+
+	// Decode claims
+	claimsJSON, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, errors.New("failed to decode JWT claims")
+	}
+
+	var claims EnrollmentClaims
+	if err := json.Unmarshal(claimsJSON, &claims); err != nil {
+		return nil, errors.New("failed to parse JWT claims")
+	}
+
+	if claims.Exp > 0 {
+		claims.ExpiresAt = time.Unix(claims.Exp, 0)
+	}
+
+	// Check expiration
+	if time.Now().After(claims.ExpiresAt) {
+		return nil, errors.New("JWT has expired")
+	}
+
+	return &claims, nil
+}
+```
+
+**Step 5: Write tests for keypair generation**
+
+Create `auth/keypair_test.go`:
+```go
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package auth
+
+import (
+	"crypto/ed25519"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/curve25519"
+)
+
+func TestGenerateSigningKeypair(t *testing.T) {
+	pub, priv, err := GenerateSigningKeypair()
+	require.NoError(t, err)
+	require.Len(t, pub, ed25519.PublicKeySize)
+	require.Len(t, priv, ed25519.PrivateKeySize)
+
+	// Verify the keypair works for signing
+	msg := []byte("test message")
+	sig := ed25519.Sign(priv, msg)
+	require.True(t, ed25519.Verify(pub, msg, sig))
+}
+
+func TestGenerateEncryptionKeypair(t *testing.T) {
+	pub, priv, err := GenerateEncryptionKeypair()
+	require.NoError(t, err)
+	require.Len(t, pub, curve25519.PointSize)
+	require.Len(t, priv, curve25519.ScalarSize)
+
+	// Verify ECDH works
+	otherPub, otherPriv, _ := GenerateEncryptionKeypair()
+
+	shared1, err := curve25519.X25519(priv, otherPub)
+	require.NoError(t, err)
+
+	shared2, err := curve25519.X25519(otherPriv, pub)
+	require.NoError(t, err)
+
+	require.Equal(t, shared1, shared2)
+}
+```
+
+**Step 6: Implement keypair generation**
+
+Create `auth/keypair.go`:
+```go
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package auth
+
+import (
+	"crypto/ed25519"
+	"crypto/rand"
+
+	"golang.org/x/crypto/curve25519"
+)
+
+// GenerateSigningKeypair generates a new Ed25519 keypair for signing.
+func GenerateSigningKeypair() (ed25519.PublicKey, ed25519.PrivateKey, error) {
+	return ed25519.GenerateKey(rand.Reader)
+}
+
+// GenerateEncryptionKeypair generates a new X25519 keypair for encryption.
+func GenerateEncryptionKeypair() (publicKey, privateKey []byte, err error) {
+	privateKey = make([]byte, curve25519.ScalarSize)
+	if _, err := rand.Read(privateKey); err != nil {
+		return nil, nil, err
+	}
+
+	publicKey, err = curve25519.X25519(privateKey, curve25519.Basepoint)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return publicKey, privateKey, nil
+}
+```
+
+**Step 7: Write tests for CSR creation**
+
+Create `auth/csr_test.go`:
+```go
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package auth
+
+import (
+	"crypto/ed25519"
+	"crypto/x509"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+func TestCreateCSR(t *testing.T) {
+	_, priv, _ := ed25519.GenerateKey(nil)
+	encPub, _, _ := GenerateEncryptionKeypair()
+
+	instanceUID := "01HQ3K5V7X2M4N8P9R0S1T2U3V"
+
+	csrDER, err := CreateCSR(priv, instanceUID, encPub)
+	require.NoError(t, err)
+	require.NotEmpty(t, csrDER)
+
+	// Parse and verify the CSR
+	csr, err := x509.ParseCertificateRequest(csrDER)
+	require.NoError(t, err)
+	require.Equal(t, instanceUID, csr.Subject.CommonName)
+	require.NoError(t, csr.CheckSignature())
+}
+
+func TestCreateCSR_IncludesEncryptionKey(t *testing.T) {
+	_, priv, _ := ed25519.GenerateKey(nil)
+	encPub, _, _ := GenerateEncryptionKeypair()
+
+	csrDER, err := CreateCSR(priv, "test-uid", encPub)
+	require.NoError(t, err)
+
+	csr, err := x509.ParseCertificateRequest(csrDER)
+	require.NoError(t, err)
+
+	// Encryption key should be in extensions
+	require.NotEmpty(t, csr.Extensions)
+}
+```
+
+**Step 8: Implement CSR creation**
+
+Create `auth/csr.go`:
+```go
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package auth
+
+import (
+	"crypto/ed25519"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/asn1"
+)
+
+// OID for X25519 encryption public key extension (custom OID - TBD)
+var oidEncryptionPublicKey = asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 99999, 1, 1}
+
+// CreateCSR creates a Certificate Signing Request with the instance UID as CN
+// and the X25519 encryption public key as a custom extension.
+func CreateCSR(signingKey ed25519.PrivateKey, instanceUID string, encryptionPubKey []byte) ([]byte, error) {
+	template := &x509.CertificateRequest{
+		Subject: pkix.Name{
+			CommonName: instanceUID,
+		},
+		SignatureAlgorithm: x509.PureEd25519,
+		ExtraExtensions: []pkix.Extension{
+			{
+				Id:       oidEncryptionPublicKey,
+				Critical: false,
+				Value:    encryptionPubKey,
+			},
+		},
+	}
+
+	return x509.CreateCertificateRequest(rand.Reader, template, signingKey)
+}
+
+// ParseCSR parses a DER-encoded CSR.
+func ParseCSR(csrDER []byte) (*x509.CertificateRequest, error) {
+	return x509.ParseCertificateRequest(csrDER)
+}
+```
+
+**Step 9: Write tests for supervisor-signed JWT**
 
 Create `auth/jwt_test.go`:
 ```go
@@ -3327,67 +3970,68 @@ Create `auth/jwt_test.go`:
 package auth
 
 import (
+	"crypto/ed25519"
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/hex"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestParseEnrollmentJWT_ExtractsClaims(t *testing.T) {
-	// This is a test JWT - in production, this would be validated
-	// For testing, we just parse the claims without signature verification
-	token := createTestJWT(t, map[string]interface{}{
-		"endpoint":       "wss://opamp.example.com/v1/opamp",
-		"tenant_id":      "test-tenant",
-		"ca_fingerprint": "sha256:abc123",
-		"exp":            time.Now().Add(time.Hour).Unix(),
-	})
+func TestCreateSupervisorJWT(t *testing.T) {
+	pub, priv, _ := ed25519.GenerateKey(nil)
 
-	claims, err := ParseEnrollmentJWT(token)
+	// Create a test certificate
+	cert := createTestCertWithPublicKey(t, pub)
+	certFingerprint := sha256.Sum256(cert.Raw)
+
+	instanceUID := "01HQ3K5V7X2M4N8P9R0S1T2U3V"
+	audience := "opamp.example.com"
+	lifetime := 5 * time.Minute
+
+	token, err := CreateSupervisorJWT(priv, cert, instanceUID, audience, lifetime)
 	require.NoError(t, err)
-	require.Equal(t, "wss://opamp.example.com/v1/opamp", claims.Endpoint)
-	require.Equal(t, "test-tenant", claims.TenantID)
-	require.Equal(t, "sha256:abc123", claims.CAFingerprint)
-}
+	require.NotEmpty(t, token)
 
-func TestParseAgentJWT_ExtractsClaims(t *testing.T) {
-	token := createTestJWT(t, map[string]interface{}{
-		"sub":       "test-instance-uid",
-		"tenant_id": "test-tenant",
-		"exp":       time.Now().Add(time.Hour).Unix(),
-	})
-
-	claims, err := ParseAgentJWT(token)
+	// Parse and verify the token
+	header, claims, err := ParseSupervisorJWT(token)
 	require.NoError(t, err)
-	require.Equal(t, "test-instance-uid", claims.Subject)
-	require.Equal(t, "test-tenant", claims.TenantID)
+
+	require.Equal(t, "EdDSA", header.Alg)
+	require.Equal(t, hex.EncodeToString(certFingerprint[:]), header.X5tS256)
+
+	require.Equal(t, instanceUID, claims.Subject)
+	require.Equal(t, audience, claims.Audience)
+	require.WithinDuration(t, time.Now(), claims.IssuedAt, time.Second)
+	require.WithinDuration(t, time.Now().Add(lifetime), claims.ExpiresAt, time.Second)
 }
 
-func TestEnrollmentClaims_IsExpired(t *testing.T) {
-	claims := &EnrollmentClaims{
-		ExpiresAt: time.Now().Add(-time.Hour),
-	}
-	require.True(t, claims.IsExpired())
+func TestVerifySupervisorJWT(t *testing.T) {
+	pub, priv, _ := ed25519.GenerateKey(nil)
+	cert := createTestCertWithPublicKey(t, pub)
 
-	claims.ExpiresAt = time.Now().Add(time.Hour)
-	require.False(t, claims.IsExpired())
+	token, _ := CreateSupervisorJWT(priv, cert, "test-uid", "test-aud", 5*time.Minute)
+
+	err := VerifySupervisorJWT(token, cert)
+	require.NoError(t, err)
 }
 
-// createTestJWT creates a test JWT for testing purposes
-// In a real implementation, this would use proper JWT signing
-func createTestJWT(t *testing.T, claims map[string]interface{}) string {
-	// For testing, we'll use a simple base64 encoded payload
-	// A real implementation would use proper JWT libraries
-	return "eyJhbGciOiJub25lIn0.eyJlbmRwb2ludCI6IndzczovL29wYW1wLmV4YW1wbGUuY29tL3YxL29wYW1wIiwidGVuYW50X2lkIjoidGVzdC10ZW5hbnQiLCJjYV9maW5nZXJwcmludCI6InNoYTI1NjphYmMxMjMiLCJleHAiOjk5OTk5OTk5OTksInN1YiI6InRlc3QtaW5zdGFuY2UtdWlkIn0."
+func TestVerifySupervisorJWT_WrongKey(t *testing.T) {
+	_, priv, _ := ed25519.GenerateKey(nil)
+	otherPub, _, _ := ed25519.GenerateKey(nil)
+
+	cert := createTestCertWithPublicKey(t, otherPub) // Different key
+
+	token, _ := CreateSupervisorJWT(priv, cert, "test-uid", "test-aud", 5*time.Minute)
+
+	err := VerifySupervisorJWT(token, cert)
+	require.Error(t, err)
 }
 ```
 
-**Step 2: Run test to verify it fails**
-
-Run: `go test ./auth/... -v`
-Expected: FAIL (package not found)
-
-**Step 3: Implement JWT handling**
+**Step 10: Implement supervisor-signed JWT**
 
 Create `auth/jwt.go`:
 ```go
@@ -3397,28 +4041,27 @@ Create `auth/jwt.go`:
 package auth
 
 import (
+	"crypto/ed25519"
+	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"strings"
 	"time"
 )
 
-// EnrollmentClaims represents claims from an enrollment JWT.
-type EnrollmentClaims struct {
-	Endpoint      string            `json:"endpoint"`
-	TenantID      string            `json:"tenant_id"`
-	CAFingerprint string            `json:"ca_fingerprint"`
-	AgentLabels   map[string]string `json:"agent_labels"`
-	ExpiresAt     time.Time         `json:"-"`
-	Exp           int64             `json:"exp"`
+// JWTHeader represents the header of a supervisor-signed JWT.
+type JWTHeader struct {
+	Alg     string `json:"alg"`
+	Typ     string `json:"typ"`
+	X5tS256 string `json:"x5t#S256"` // Certificate SHA-256 fingerprint
 }
 
-// AgentClaims represents claims from an agent JWT.
-type AgentClaims struct {
+// SupervisorClaims represents the claims in a supervisor-signed JWT.
+type SupervisorClaims struct {
 	Subject   string    `json:"sub"`
-	TenantID  string    `json:"tenant_id"`
-	Issuer    string    `json:"iss"`
 	Audience  string    `json:"aud"`
 	IssuedAt  time.Time `json:"-"`
 	ExpiresAt time.Time `json:"-"`
@@ -3426,109 +4069,131 @@ type AgentClaims struct {
 	Exp       int64     `json:"exp"`
 }
 
-// ParseEnrollmentJWT parses an enrollment JWT and extracts claims.
-// Note: This does NOT verify the signature - that should be done separately
-// based on the trust model (fingerprint or CA-verified).
-func ParseEnrollmentJWT(token string) (*EnrollmentClaims, error) {
-	claims, err := parseJWTClaims(token)
-	if err != nil {
-		return nil, err
+// CreateSupervisorJWT creates a JWT signed by the supervisor's private key.
+func CreateSupervisorJWT(
+	privateKey ed25519.PrivateKey,
+	cert *x509.Certificate,
+	instanceUID string,
+	audience string,
+	lifetime time.Duration,
+) (string, error) {
+	now := time.Now()
+
+	// Calculate certificate fingerprint
+	fingerprint := sha256.Sum256(cert.Raw)
+
+	header := JWTHeader{
+		Alg:     "EdDSA",
+		Typ:     "JWT",
+		X5tS256: hex.EncodeToString(fingerprint[:]),
 	}
 
-	var enrollmentClaims EnrollmentClaims
+	claims := SupervisorClaims{
+		Subject:  instanceUID,
+		Audience: audience,
+		Iat:      now.Unix(),
+		Exp:      now.Add(lifetime).Unix(),
+	}
+
+	headerJSON, err := json.Marshal(header)
+	if err != nil {
+		return "", err
+	}
+
 	claimsJSON, err := json.Marshal(claims)
 	if err != nil {
-		return nil, err
-	}
-	if err := json.Unmarshal(claimsJSON, &enrollmentClaims); err != nil {
-		return nil, err
+		return "", err
 	}
 
-	if enrollmentClaims.Exp > 0 {
-		enrollmentClaims.ExpiresAt = time.Unix(enrollmentClaims.Exp, 0)
-	}
+	headerB64 := base64.RawURLEncoding.EncodeToString(headerJSON)
+	claimsB64 := base64.RawURLEncoding.EncodeToString(claimsJSON)
 
-	return &enrollmentClaims, nil
+	signedContent := headerB64 + "." + claimsB64
+	signature := ed25519.Sign(privateKey, []byte(signedContent))
+	signatureB64 := base64.RawURLEncoding.EncodeToString(signature)
+
+	return signedContent + "." + signatureB64, nil
 }
 
-// ParseAgentJWT parses an agent JWT and extracts claims.
-func ParseAgentJWT(token string) (*AgentClaims, error) {
-	claims, err := parseJWTClaims(token)
-	if err != nil {
-		return nil, err
-	}
-
-	var agentClaims AgentClaims
-	claimsJSON, err := json.Marshal(claims)
-	if err != nil {
-		return nil, err
-	}
-	if err := json.Unmarshal(claimsJSON, &agentClaims); err != nil {
-		return nil, err
-	}
-
-	if agentClaims.Iat > 0 {
-		agentClaims.IssuedAt = time.Unix(agentClaims.Iat, 0)
-	}
-	if agentClaims.Exp > 0 {
-		agentClaims.ExpiresAt = time.Unix(agentClaims.Exp, 0)
-	}
-
-	return &agentClaims, nil
-}
-
-// parseJWTClaims extracts claims from a JWT without verifying the signature.
-func parseJWTClaims(token string) (map[string]interface{}, error) {
+// ParseSupervisorJWT parses a supervisor-signed JWT without verifying.
+func ParseSupervisorJWT(token string) (*JWTHeader, *SupervisorClaims, error) {
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
-		return nil, errors.New("invalid JWT format")
+		return nil, nil, errors.New("invalid JWT format")
 	}
 
-	// Decode the payload (second part)
-	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	headerJSON, err := base64.RawURLEncoding.DecodeString(parts[0])
 	if err != nil {
-		return nil, errors.New("failed to decode JWT payload")
+		return nil, nil, errors.New("failed to decode header")
 	}
 
-	var claims map[string]interface{}
-	if err := json.Unmarshal(payload, &claims); err != nil {
-		return nil, errors.New("failed to parse JWT claims")
+	var header JWTHeader
+	if err := json.Unmarshal(headerJSON, &header); err != nil {
+		return nil, nil, errors.New("failed to parse header")
 	}
 
-	return claims, nil
+	claimsJSON, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, nil, errors.New("failed to decode claims")
+	}
+
+	var claims SupervisorClaims
+	if err := json.Unmarshal(claimsJSON, &claims); err != nil {
+		return nil, nil, errors.New("failed to parse claims")
+	}
+
+	claims.IssuedAt = time.Unix(claims.Iat, 0)
+	claims.ExpiresAt = time.Unix(claims.Exp, 0)
+
+	return &header, &claims, nil
 }
 
-// IsExpired returns true if the claims have expired.
-func (c *EnrollmentClaims) IsExpired() bool {
-	return time.Now().After(c.ExpiresAt)
+// VerifySupervisorJWT verifies a supervisor-signed JWT against the certificate.
+func VerifySupervisorJWT(token string, cert *x509.Certificate) error {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return errors.New("invalid JWT format")
+	}
+
+	signedContent := parts[0] + "." + parts[1]
+	signature, err := base64.RawURLEncoding.DecodeString(parts[2])
+	if err != nil {
+		return errors.New("failed to decode signature")
+	}
+
+	pubKey, ok := cert.PublicKey.(ed25519.PublicKey)
+	if !ok {
+		return errors.New("certificate does not contain Ed25519 key")
+	}
+
+	if !ed25519.Verify(pubKey, []byte(signedContent), signature) {
+		return errors.New("invalid signature")
+	}
+
+	return nil
 }
 
-// IsExpired returns true if the claims have expired.
-func (c *AgentClaims) IsExpired() bool {
-	return time.Now().After(c.ExpiresAt)
-}
-
-// IsExpiringSoon returns true if the claims will expire within the threshold.
-func (c *AgentClaims) IsExpiringSoon(threshold time.Duration) bool {
-	return time.Now().Add(threshold).After(c.ExpiresAt)
-}
-
-// ExtractAuthorizationHeader creates the Authorization header value for the token.
-func ExtractAuthorizationHeader(token string) string {
+// BearerToken returns the token formatted for the Authorization header.
+func BearerToken(token string) string {
 	return "Bearer " + token
 }
 ```
 
-**Step 4: Run tests to verify they pass**
+**Step 11: Add X25519 dependency**
+
+Run: `go get golang.org/x/crypto/curve25519@latest && go mod tidy`
+Expected: Downloads curve25519 package
+
+**Step 12: Run all auth tests**
 
 Run: `go test ./auth/... -v`
 Expected: PASS
 
-**Step 5: Commit**
+**Step 13: Commit**
 
 ```bash
-git add auth/
-git commit -m "feat(auth): implement JWT token parsing for enrollment and agent tokens"
+git add auth/ go.mod go.sum
+git commit -m "feat(auth): implement CSR flow with JWKS validation and supervisor-signed JWTs"
 ```
 
 ---
@@ -3539,11 +4204,11 @@ This implementation plan covers:
 
 1. **Phase 1: Project Foundation** - Go module setup, dependencies
 2. **Phase 2: Configuration System** - Types, loading, validation
-3. **Phase 3: Persistence Layer** - Instance UID, tokens, connection state
+3. **Phase 3: Persistence Layer** - Instance UID, keys/certificates, connection state
 4. **Phase 4: Process Management** - Commander Keen with platform-specific signals
 5. **Phase 5: OpAMP Integration** - Client and server wrappers
 6. **Phase 6: Core Supervisor Engine** - Main supervisor orchestration
-7. **Phase 7: Configuration Merging & Auth** - YAML merging, JWT handling
+7. **Phase 7: Configuration Merging & Auth** - YAML merging, CSR flow, supervisor-signed JWTs
 
 Each task follows TDD principles with:
 - Failing test first
@@ -3558,3 +4223,7 @@ Each task follows TDD principles with:
 - Custom message relay
 - Compliance override handling
 - Windows service integration
+- Config encryption (X25519 + AES-GCM)
+- PKCS#8 encrypted key storage
+- Certificate renewal automation
+- Collector credential injection for OTLP
