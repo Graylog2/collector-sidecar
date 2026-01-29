@@ -5,8 +5,12 @@ server:
     X-Custom-Header: test-value
 
 auth:
-  enrollment_token: "${ENROLLMENT_JWT}"
-  token_file: /var/lib/supervisor/auth/agent_token.yaml
+  enrollment_url: "${ENROLLMENT_URL}"
+  jwt_lifetime: 5m
+
+keys:
+  dir: /var/lib/supervisor/keys
+  encrypted: false
 
 agent:
   executable: /usr/local/bin/otelcol

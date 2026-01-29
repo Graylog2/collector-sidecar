@@ -263,6 +263,23 @@ func (c *Client) SetRemoteConfigStatus(status *protobufs.RemoteConfigStatus) err
 	return c.opampClient.SetRemoteConfigStatus(status)
 }
 
+// RequestConnectionSettings sends a connection settings request to the server.
+// This is used for certificate enrollment - the csrPEM should be a PEM-encoded CSR.
+func (c *Client) RequestConnectionSettings(csrPEM []byte) error {
+	request := &protobufs.ConnectionSettingsRequest{
+		Opamp: &protobufs.OpAMPConnectionSettingsRequest{
+			CertificateRequest: &protobufs.CertificateRequest{
+				Csr: csrPEM,
+			},
+		},
+	}
+
+	if c.opampClient == nil {
+		return errors.New("client not started")
+	}
+	return c.opampClient.RequestConnectionSettings(request)
+}
+
 // parseInstanceUID converts a string UID to types.InstanceUid.
 // Expects a valid UUID string (e.g., "550e8400-e29b-41d4-a716-446655440000").
 // Falls back to copying the raw bytes if parsing fails.

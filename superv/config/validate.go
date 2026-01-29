@@ -25,12 +25,11 @@ import (
 )
 
 var (
-	validSchemes        = []string{"ws", "wss", "http", "https"}
-	validBootstrapModes = []string{"fingerprint", "ca_verified"}
-	validLogLevels      = []string{"debug", "info", "warn", "error"}
-	validLogFormats     = []string{"json", "text"}
-	validReloadMethods  = []string{"auto", "signal", "restart"}
-	validTransports     = []string{"websocket", "http", "auto", ""}
+	validSchemes       = []string{"ws", "wss", "http", "https"}
+	validLogLevels     = []string{"debug", "info", "warn", "error"}
+	validLogFormats    = []string{"json", "text"}
+	validReloadMethods = []string{"auto", "signal", "restart"}
+	validTransports    = []string{"websocket", "http", "auto", ""}
 )
 
 // Validate checks the configuration for errors.
@@ -39,8 +38,8 @@ func (c Config) Validate() error {
 		return fmt.Errorf("server: %w", err)
 	}
 
-	if err := c.Bootstrap.Validate(); err != nil {
-		return fmt.Errorf("bootstrap: %w", err)
+	if err := c.Keys.Validate(); err != nil {
+		return fmt.Errorf("keys: %w", err)
 	}
 
 	if err := c.Agent.Validate(); err != nil {
@@ -76,10 +75,10 @@ func (s ServerConfig) Validate() error {
 	return nil
 }
 
-// Validate checks BootstrapConfig for errors.
-func (b BootstrapConfig) Validate() error {
-	if !slices.Contains(validBootstrapModes, b.Mode) {
-		return fmt.Errorf("mode must be one of %v, got %q", validBootstrapModes, b.Mode)
+// Validate checks KeysConfig for errors.
+func (k KeysConfig) Validate() error {
+	if k.Encrypted && k.Passphrase.Env == "" && k.Passphrase.File == "" && len(k.Passphrase.Cmd) == 0 {
+		return errors.New("passphrase source required when keys are encrypted")
 	}
 	return nil
 }

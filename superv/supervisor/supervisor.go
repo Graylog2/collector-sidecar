@@ -19,7 +19,10 @@ package supervisor
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -31,6 +34,7 @@ import (
 	"github.com/open-telemetry/opamp-go/server/types"
 	"go.uber.org/zap"
 
+	"github.com/Graylog2/collector-sidecar/superv/auth"
 	"github.com/Graylog2/collector-sidecar/superv/config"
 	"github.com/Graylog2/collector-sidecar/superv/keen"
 	"github.com/Graylog2/collector-sidecar/superv/opamp"
@@ -48,11 +52,15 @@ type Supervisor struct {
 	logger      *zap.Logger
 	cfg         config.Config
 	instanceUID string
+	authManager *auth.Manager
 	commander   *keen.Commander
 	opampClient *opamp.Client
 	opampServer *opamp.Server
 	mu          sync.RWMutex
 	running     bool
+
+	// Pending enrollment CSR (set during enrollment, cleared after completion)
+	pendingCSR []byte
 }
 
 // New creates a new Supervisor instance.
@@ -63,10 +71,24 @@ func New(logger *zap.Logger, cfg config.Config) (*Supervisor, error) {
 		return nil, err
 	}
 
+	// Determine keys directory
+	keysDir := cfg.Keys.Dir
+	if keysDir == "" {
+		keysDir = filepath.Join(cfg.Persistence.Dir, "keys")
+	}
+
+	// Create auth manager
+	authMgr := auth.NewManager(logger.Named("auth"), auth.ManagerConfig{
+		KeysDir:     keysDir,
+		JWTLifetime: cfg.Auth.JWTLifetime,
+		InsecureTLS: cfg.Auth.InsecureTLS,
+	})
+
 	return &Supervisor{
 		logger:      logger,
 		cfg:         cfg,
 		instanceUID: uid,
+		authManager: authMgr,
 	}, nil
 }
 
@@ -107,6 +129,28 @@ func (s *Supervisor) Start(ctx context.Context) error {
 		zap.String("instance_uid", s.instanceUID),
 		zap.String("endpoint", s.cfg.Server.Endpoint),
 	)
+
+	// Initialize authentication
+	if err := s.initAuth(ctx); err != nil {
+		return fmt.Errorf("authentication initialization failed: %w", err)
+	}
+
+	// TODO: We need to clarify how the endpoint is set when enrollment is used.
+	//       Config file? Or enrollment URL, received connection settings, which order, etc.
+
+	// If endpoint doesn't have a path, derive it from the enrollment URL
+	if s.cfg.Auth.EnrollmentURL != "" {
+		u, err := url.Parse(s.cfg.Server.Endpoint)
+		if err == nil && (u.Path == "" || u.Path == "/") {
+			derivedEndpoint, err := deriveEndpointFromEnrollmentURL(s.cfg.Auth.EnrollmentURL)
+			if err == nil {
+				s.logger.Info("Derived OpAMP endpoint from enrollment URL",
+					zap.String("endpoint", derivedEndpoint),
+				)
+				s.cfg.Server.Endpoint = derivedEndpoint
+			}
+		}
+	}
 
 	// Determine effective config path
 	// TODO: Write actual merged config when remote config handling is implemented
@@ -157,6 +201,18 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	clientCallbacks := &opamp.Callbacks{
 		OnConnect: func(ctx context.Context) {
 			s.logger.Info("Connected to OpAMP server")
+
+			// If we have a pending enrollment CSR, send it now
+			s.mu.RLock()
+			csr := s.pendingCSR
+			s.mu.RUnlock()
+
+			if len(csr) > 0 && s.opampClient != nil {
+				s.logger.Info("Sending CSR for enrollment via OpAMP")
+				if err := s.opampClient.RequestConnectionSettings(csr); err != nil {
+					s.logger.Error("Failed to send CSR", zap.Error(err))
+				}
+			}
 		},
 		OnConnectFailed: func(ctx context.Context, err error) {
 			s.logger.Error("Failed to connect to OpAMP server", zap.Error(err))
@@ -168,15 +224,52 @@ func (s *Supervisor) Start(ctx context.Context) error {
 		},
 		OnOpampConnectionSettings: func(ctx context.Context, settings *protobufs.OpAMPConnectionSettings) error {
 			s.logger.Info("Received connection settings update")
-			// TODO: Handle token refresh
+
+			// Handle certificate from enrollment response
+			if cert := settings.GetCertificate(); cert != nil {
+				if certPEM := cert.GetCert(); len(certPEM) > 0 {
+					s.logger.Info("Received certificate from server")
+
+					// Check if we have a pending enrollment
+					if s.authManager.HasPendingEnrollment() {
+						s.logger.Info("Completing enrollment with received certificate")
+						if err := s.authManager.CompleteEnrollment(certPEM); err != nil {
+							s.logger.Error("Failed to complete enrollment", zap.Error(err))
+							return err
+						}
+
+						// Clear the pending CSR
+						s.mu.Lock()
+						s.pendingCSR = nil
+						s.mu.Unlock()
+
+						s.logger.Info("Enrollment completed successfully",
+							zap.String("cert_fingerprint", s.authManager.CertFingerprint()),
+						)
+					}
+				}
+			}
+
+			// TODO: Handle certificate renewal (re-enroll before expiry)
+			// TODO: Handle other connection settings (endpoint changes, headers, etc.)
 			return nil
 		},
+	}
+
+	// Build headers with authentication
+	headers, err := s.buildAuthHeaders()
+	if err != nil {
+		s.opampServer.Stop(ctx)
+		return fmt.Errorf("failed to build auth headers: %w", err)
 	}
 
 	opampClient, err := opamp.NewClient(s.logger, opamp.ClientConfig{
 		Endpoint:    s.cfg.Server.Endpoint,
 		InstanceUID: s.instanceUID,
-		Headers:     s.cfg.Server.ToHTTPHeaders(),
+		Headers:     headers,
+		TLSConfig: &tls.Config{
+			InsecureSkipVerify: s.cfg.Auth.InsecureTLS,
+		},
 		Capabilities: opamp.Capabilities{
 			ReportsStatus:                  true,
 			AcceptsRemoteConfig:            true,
@@ -300,4 +393,104 @@ func (s *Supervisor) createAgentDescription() *protobufs.AgentDescription {
 			},
 		},
 	}
+}
+
+// initAuth initializes authentication by loading credentials or preparing enrollment.
+// If enrollment is needed, this prepares the CSR which will be sent via OpAMP.
+func (s *Supervisor) initAuth(ctx context.Context) error {
+	if s.authManager.IsEnrolled() {
+		s.logger.Debug("Loading existing credentials")
+		if err := s.authManager.LoadCredentials(); err != nil {
+			return fmt.Errorf("failed to load credentials: %w", err)
+		}
+
+		// Set server host from endpoint for JWT audience
+		if host := s.extractHostFromEndpoint(); host != "" {
+			s.authManager.SetServerHost(host)
+		}
+
+		s.logger.Info("Credentials loaded",
+			zap.String("cert_fingerprint", s.authManager.CertFingerprint()),
+		)
+		return nil
+	}
+
+	// Need to enroll - prepare the CSR
+	if s.cfg.Auth.EnrollmentURL == "" {
+		return fmt.Errorf("not enrolled and no enrollment URL configured")
+	}
+
+	s.logger.Info("Preparing enrollment")
+	result, err := s.authManager.PrepareEnrollment(ctx, s.cfg.Auth.EnrollmentURL, s.instanceUID)
+	if err != nil {
+		return fmt.Errorf("enrollment preparation failed: %w", err)
+	}
+
+	// Store CSR to send via OpAMP after connection is established
+	s.pendingCSR = result.CSRPEM
+
+	s.logger.Info("Enrollment prepared, CSR ready for submission via OpAMP",
+		zap.String("tenant_id", result.TenantID),
+	)
+
+	return nil
+}
+
+// buildAuthHeaders creates HTTP headers including authentication.
+// During enrollment, uses the enrollment JWT as bearer token.
+// After enrollment, generates a new JWT signed with the client certificate.
+func (s *Supervisor) buildAuthHeaders() (http.Header, error) {
+	headers := s.cfg.Server.ToHTTPHeaders()
+
+	// If we're not enrolled yet, use the enrollment JWT
+	if !s.authManager.IsEnrolled() {
+		if jwt := s.authManager.EnrollmentJWT(); jwt != "" {
+			headers.Set("Authorization", "Bearer "+jwt)
+		}
+		return headers, nil
+	}
+
+	// Get server host for JWT audience
+	audience := s.authManager.ServerHost()
+	if audience == "" {
+		audience = s.extractHostFromEndpoint()
+	}
+
+	if audience != "" {
+		authHeader, err := s.authManager.GetAuthorizationHeader(audience)
+		if err != nil {
+			return nil, err
+		}
+		headers.Set("Authorization", authHeader)
+	}
+
+	return headers, nil
+}
+
+// extractHostFromEndpoint extracts the host from the server endpoint URL.
+func (s *Supervisor) extractHostFromEndpoint() string {
+	u, err := url.Parse(s.cfg.Server.Endpoint)
+	if err != nil {
+		return ""
+	}
+	return u.Host
+}
+
+// deriveEndpointFromEnrollmentURL derives the OpAMP endpoint from the enrollment URL.
+// The enrollment URL format is: https://host:port/opamp/enroll/<jwt>
+// The derived endpoint is: https://host:port/v1/opamp
+func deriveEndpointFromEnrollmentURL(enrollmentURL string) (string, error) {
+	u, err := url.Parse(enrollmentURL)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse enrollment URL: %w", err)
+	}
+
+	// Build the endpoint URL with the same scheme and host
+	endpoint := &url.URL{
+		Scheme: u.Scheme,
+		Host:   u.Host,
+		Path:   "/v1/opamp",
+	}
+
+	return endpoint.String(), nil
 }

@@ -25,6 +25,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/Graylog2/collector-sidecar/superv/auth"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -35,14 +36,16 @@ import (
 
 func main() {
 	var (
-		configPath     string
-		showVersion    bool
-		bootstrapToken string
+		configPath    string
+		showVersion   bool
+		enrollmentURL string
+		insecureTls   bool
 	)
 
 	flag.StringVar(&configPath, "config", "", "Path to configuration file")
 	flag.BoolVar(&showVersion, "version", false, "Show version and exit")
-	flag.StringVar(&bootstrapToken, "bootstrap-token", "", "Enrollment JWT for zero-touch bootstrap")
+	flag.StringVar(&enrollmentURL, "enrollment-url", "", "Enrollment URL for zero-touch bootstrap (e.g., https://server/opamp/enroll/<JWT>)")
+	flag.BoolVar(&insecureTls, "insecure-tls", false, "Use insecure TLS connection")
 	flag.Parse()
 
 	if showVersion {
@@ -51,7 +54,7 @@ func main() {
 	}
 
 	// Initialize logger
-	logger, err := initLogger("info", "json")
+	logger, err := initLogger("info", "xjson")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to initialize logger: %v\n", err)
 		os.Exit(1)
@@ -69,9 +72,19 @@ func main() {
 		cfg = config.DefaultConfig()
 	}
 
-	// Override with bootstrap token if provided
-	if bootstrapToken != "" {
-		cfg.Auth.EnrollmentToken = bootstrapToken
+	cfg.Auth.InsecureTLS = insecureTls
+
+	// Override with enrollment URL if provided
+	if enrollmentURL != "" {
+		cfg.Auth.EnrollmentURL = enrollmentURL
+	}
+
+	if enrollmentURL != "" {
+		baseURL, err := auth.ServerBaseURL(enrollmentURL)
+		if err != nil {
+			logger.Fatal("Failed to parse enrollment URL", zap.Error(err))
+		}
+		cfg.Server.Endpoint = baseURL + "/v1/opamp"
 	}
 
 	// Validate configuration

@@ -18,123 +18,119 @@
 package auth
 
 import (
-	"encoding/base64"
-	"encoding/json"
+	"crypto/ed25519"
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/hex"
 	"errors"
-	"strings"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
-// EnrollmentClaims represents claims from an enrollment JWT.
-type EnrollmentClaims struct {
-	Endpoint      string            `json:"endpoint"`
-	TenantID      string            `json:"tenant_id"`
-	CAFingerprint string            `json:"ca_fingerprint"`
-	AgentLabels   map[string]string `json:"agent_labels"`
-	ExpiresAt     time.Time         `json:"-"`
-	Exp           int64             `json:"exp"`
+// SupervisorClaims represents the claims in a supervisor-signed JWT.
+type SupervisorClaims struct {
+	jwt.RegisteredClaims
 }
 
-// AgentClaims represents claims from an agent JWT.
-type AgentClaims struct {
-	Subject   string    `json:"sub"`
-	TenantID  string    `json:"tenant_id"`
-	Issuer    string    `json:"iss"`
-	Audience  string    `json:"aud"`
-	IssuedAt  time.Time `json:"-"`
-	ExpiresAt time.Time `json:"-"`
-	Iat       int64     `json:"iat"`
-	Exp       int64     `json:"exp"`
-}
-
-// ParseEnrollmentJWT parses an enrollment JWT and extracts claims.
-// Note: This does NOT verify the signature - that should be done separately
-// based on the trust model (fingerprint or CA-verified).
-func ParseEnrollmentJWT(token string) (*EnrollmentClaims, error) {
-	claims, err := parseJWTClaims(token)
-	if err != nil {
-		return nil, err
+// IsExpired returns true if the supervisor claims have expired.
+func (c *SupervisorClaims) IsExpired() bool {
+	if c.ExpiresAt == nil {
+		return false
 	}
-
-	var enrollmentClaims EnrollmentClaims
-	claimsJSON, err := json.Marshal(claims)
-	if err != nil {
-		return nil, err
-	}
-	if err := json.Unmarshal(claimsJSON, &enrollmentClaims); err != nil {
-		return nil, err
-	}
-
-	if enrollmentClaims.Exp > 0 {
-		enrollmentClaims.ExpiresAt = time.Unix(enrollmentClaims.Exp, 0)
-	}
-
-	return &enrollmentClaims, nil
-}
-
-// ParseAgentJWT parses an agent JWT and extracts claims.
-func ParseAgentJWT(token string) (*AgentClaims, error) {
-	claims, err := parseJWTClaims(token)
-	if err != nil {
-		return nil, err
-	}
-
-	var agentClaims AgentClaims
-	claimsJSON, err := json.Marshal(claims)
-	if err != nil {
-		return nil, err
-	}
-	if err := json.Unmarshal(claimsJSON, &agentClaims); err != nil {
-		return nil, err
-	}
-
-	if agentClaims.Iat > 0 {
-		agentClaims.IssuedAt = time.Unix(agentClaims.Iat, 0)
-	}
-	if agentClaims.Exp > 0 {
-		agentClaims.ExpiresAt = time.Unix(agentClaims.Exp, 0)
-	}
-
-	return &agentClaims, nil
-}
-
-// parseJWTClaims extracts claims from a JWT without verifying the signature.
-func parseJWTClaims(token string) (map[string]interface{}, error) {
-	parts := strings.Split(token, ".")
-	if len(parts) != 3 {
-		return nil, errors.New("invalid JWT format")
-	}
-
-	// Decode the payload (second part)
-	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
-	if err != nil {
-		return nil, errors.New("failed to decode JWT payload")
-	}
-
-	var claims map[string]interface{}
-	if err := json.Unmarshal(payload, &claims); err != nil {
-		return nil, errors.New("failed to parse JWT claims")
-	}
-
-	return claims, nil
-}
-
-// IsExpired returns true if the claims have expired.
-func (c *EnrollmentClaims) IsExpired() bool {
-	return time.Now().After(c.ExpiresAt)
-}
-
-// IsExpired returns true if the claims have expired.
-func (c *AgentClaims) IsExpired() bool {
-	return time.Now().After(c.ExpiresAt)
+	return time.Now().After(c.ExpiresAt.Time)
 }
 
 // IsExpiringSoon returns true if the claims will expire within the threshold.
-func (c *AgentClaims) IsExpiringSoon(threshold time.Duration) bool {
-	return time.Now().Add(threshold).After(c.ExpiresAt)
+func (c *SupervisorClaims) IsExpiringSoon(threshold time.Duration) bool {
+	if c.ExpiresAt == nil {
+		return false
+	}
+	return time.Now().Add(threshold).After(c.ExpiresAt.Time)
 }
 
-// ExtractAuthorizationHeader creates the Authorization header value for the token.
-func ExtractAuthorizationHeader(token string) string {
+// CreateSupervisorJWT creates a JWT signed by the supervisor's private key.
+func CreateSupervisorJWT(
+	privateKey ed25519.PrivateKey,
+	cert *x509.Certificate,
+	instanceUID string,
+	audience string,
+	lifetime time.Duration,
+) (string, error) {
+	now := time.Now()
+
+	// Calculate certificate fingerprint for x5t#S256 header
+	fingerprint := sha256.Sum256(cert.Raw)
+
+	claims := SupervisorClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   instanceUID,
+			Audience:  jwt.ClaimStrings{audience},
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(lifetime)),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
+
+	// Add certificate fingerprint to header
+	token.Header["x5t#S256"] = hex.EncodeToString(fingerprint[:])
+
+	return token.SignedString(privateKey)
+}
+
+// ParseSupervisorJWT parses a supervisor-signed JWT without verifying the signature.
+// Returns the certificate fingerprint from header and the claims.
+func ParseSupervisorJWT(tokenString string) (certFingerprint string, claims *SupervisorClaims, err error) {
+	claims = &SupervisorClaims{}
+
+	// Parse without validation to extract claims and header
+	token, _, err := jwt.NewParser().ParseUnverified(tokenString, claims)
+	if err != nil {
+		return "", nil, err
+	}
+
+	// Extract certificate fingerprint from header
+	if fp, ok := token.Header["x5t#S256"].(string); ok {
+		certFingerprint = fp
+	}
+
+	return certFingerprint, claims, nil
+}
+
+// VerifySupervisorJWT verifies a supervisor-signed JWT against the certificate.
+func VerifySupervisorJWT(tokenString string, cert *x509.Certificate) error {
+	pubKey, ok := cert.PublicKey.(ed25519.PublicKey)
+	if !ok {
+		return errors.New("certificate does not contain Ed25519 key")
+	}
+
+	claims := &SupervisorClaims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (any, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodEd25519); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		return pubKey, nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if !token.Valid {
+		return errors.New("invalid token")
+	}
+
+	return nil
+}
+
+// BearerToken returns the token formatted for the Authorization header.
+func BearerToken(token string) string {
 	return "Bearer " + token
+}
+
+// CertificateFingerprint returns the SHA-256 fingerprint of a certificate as a hex string.
+func CertificateFingerprint(cert *x509.Certificate) string {
+	hash := sha256.Sum256(cert.Raw)
+	return hex.EncodeToString(hash[:])
 }

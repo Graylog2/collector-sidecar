@@ -18,56 +18,161 @@
 package auth
 
 import (
+	"crypto/ed25519"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"math/big"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestParseEnrollmentJWT_ExtractsClaims(t *testing.T) {
-	// This is a test JWT - in production, this would be validated
-	// For testing, we just parse the claims without signature verification
-	token := createTestJWT(t, map[string]interface{}{
-		"endpoint":       "wss://opamp.example.com/v1/opamp",
-		"tenant_id":      "test-tenant",
-		"ca_fingerprint": "sha256:abc123",
-		"exp":            time.Now().Add(time.Hour).Unix(),
-	})
-
-	claims, err := ParseEnrollmentJWT(token)
+func TestCreateSupervisorJWT(t *testing.T) {
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	require.NoError(t, err)
-	require.Equal(t, "wss://opamp.example.com/v1/opamp", claims.Endpoint)
-	require.Equal(t, "test-tenant", claims.TenantID)
-	require.Equal(t, "sha256:abc123", claims.CAFingerprint)
+
+	cert := createTestCert(t, pub)
+
+	instanceUID := "01HQ3K5V7X2M4N8P9R0S1T2U3V"
+	audience := "opamp.example.com"
+	lifetime := 5 * time.Minute
+
+	token, err := CreateSupervisorJWT(priv, cert, instanceUID, audience, lifetime)
+	require.NoError(t, err)
+	require.NotEmpty(t, token)
+
+	// Parse and verify the token
+	certFP, claims, err := ParseSupervisorJWT(token)
+	require.NoError(t, err)
+
+	require.Equal(t, CertificateFingerprint(cert), certFP)
+	require.Equal(t, instanceUID, claims.Subject)
+	require.Contains(t, claims.Audience, audience)
+	require.WithinDuration(t, time.Now(), claims.IssuedAt.Time, time.Second)
+	require.WithinDuration(t, time.Now().Add(lifetime), claims.ExpiresAt.Time, time.Second)
 }
 
-func TestParseAgentJWT_ExtractsClaims(t *testing.T) {
-	token := createTestJWT(t, map[string]interface{}{
-		"sub":       "test-instance-uid",
-		"tenant_id": "test-tenant",
-		"exp":       time.Now().Add(time.Hour).Unix(),
-	})
-
-	claims, err := ParseAgentJWT(token)
+func TestVerifySupervisorJWT(t *testing.T) {
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	require.NoError(t, err)
-	require.Equal(t, "test-instance-uid", claims.Subject)
-	require.Equal(t, "test-tenant", claims.TenantID)
+
+	cert := createTestCert(t, pub)
+
+	token, err := CreateSupervisorJWT(priv, cert, "test-uid", "test-aud", 5*time.Minute)
+	require.NoError(t, err)
+
+	err = VerifySupervisorJWT(token, cert)
+	require.NoError(t, err)
 }
 
-func TestEnrollmentClaims_IsExpired(t *testing.T) {
-	claims := &EnrollmentClaims{
-		ExpiresAt: time.Now().Add(-time.Hour),
-	}
+func TestVerifySupervisorJWT_WrongKey(t *testing.T) {
+	_, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	otherPub, _, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	// Create cert with the signing key's public key
+	cert := createTestCert(t, priv.Public().(ed25519.PublicKey))
+
+	token, err := CreateSupervisorJWT(priv, cert, "test-uid", "test-aud", 5*time.Minute)
+	require.NoError(t, err)
+
+	// Try to verify with a cert containing different public key
+	wrongCert := createTestCert(t, otherPub)
+	err = VerifySupervisorJWT(token, wrongCert)
+	require.Error(t, err)
+}
+
+func TestParseSupervisorJWT_InvalidFormat(t *testing.T) {
+	_, _, err := ParseSupervisorJWT("not-a-jwt")
+	require.Error(t, err)
+
+	_, _, err = ParseSupervisorJWT("only.two")
+	require.Error(t, err)
+}
+
+func TestSupervisorClaims_IsExpired(t *testing.T) {
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+	cert := createTestCert(t, pub)
+
+	// Create an already expired token
+	token, err := CreateSupervisorJWT(priv, cert, "test", "aud", -time.Hour)
+	require.NoError(t, err)
+
+	_, claims, err := ParseSupervisorJWT(token)
+	require.NoError(t, err)
 	require.True(t, claims.IsExpired())
 
-	claims.ExpiresAt = time.Now().Add(time.Hour)
-	require.False(t, claims.IsExpired())
+	// Create a valid token
+	token2, err := CreateSupervisorJWT(priv, cert, "test", "aud", time.Hour)
+	require.NoError(t, err)
+
+	_, claims2, err := ParseSupervisorJWT(token2)
+	require.NoError(t, err)
+	require.False(t, claims2.IsExpired())
 }
 
-// createTestJWT creates a test JWT for testing purposes
-// In a real implementation, this would use proper JWT signing
-func createTestJWT(t *testing.T, claims map[string]interface{}) string {
-	// For testing, we'll use a simple base64 encoded payload
-	// A real implementation would use proper JWT libraries
-	return "eyJhbGciOiJub25lIn0.eyJlbmRwb2ludCI6IndzczovL29wYW1wLmV4YW1wbGUuY29tL3YxL29wYW1wIiwidGVuYW50X2lkIjoidGVzdC10ZW5hbnQiLCJjYV9maW5nZXJwcmludCI6InNoYTI1NjphYmMxMjMiLCJleHAiOjk5OTk5OTk5OTksInN1YiI6InRlc3QtaW5zdGFuY2UtdWlkIn0."
+func TestSupervisorClaims_IsExpiringSoon(t *testing.T) {
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+	cert := createTestCert(t, pub)
+
+	// Create token expiring in 30 minutes
+	token, err := CreateSupervisorJWT(priv, cert, "test", "aud", 30*time.Minute)
+	require.NoError(t, err)
+
+	_, claims, err := ParseSupervisorJWT(token)
+	require.NoError(t, err)
+
+	// With 1 hour threshold, it should be expiring soon
+	require.True(t, claims.IsExpiringSoon(1*time.Hour))
+
+	// With 15 minute threshold, it should not be expiring soon
+	require.False(t, claims.IsExpiringSoon(15*time.Minute))
+}
+
+func TestBearerToken(t *testing.T) {
+	token := "eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiJ0ZXN0In0.sig"
+	require.Equal(t, "Bearer "+token, BearerToken(token))
+}
+
+func TestCertificateFingerprint(t *testing.T) {
+	pub, _, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	cert := createTestCert(t, pub)
+
+	fp := CertificateFingerprint(cert)
+	require.NotEmpty(t, fp)
+	// SHA-256 fingerprint should be 64 hex chars
+	require.Len(t, fp, 64)
+}
+
+// createTestCert creates a self-signed certificate for testing.
+func createTestCert(t *testing.T, pub ed25519.PublicKey) *x509.Certificate {
+	t.Helper()
+
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			CommonName: "test-instance-uid",
+		},
+		NotBefore: time.Now(),
+		NotAfter:  time.Now().Add(24 * time.Hour),
+		KeyUsage:  x509.KeyUsageDigitalSignature,
+	}
+
+	// Self-sign the certificate
+	priv := ed25519.NewKeyFromSeed(make([]byte, ed25519.SeedSize)) // Deterministic for testing
+	certDER, err := x509.CreateCertificate(rand.Reader, template, template, pub, priv)
+	require.NoError(t, err)
+
+	cert, err := x509.ParseCertificate(certDER)
+	require.NoError(t, err)
+
+	return cert
 }

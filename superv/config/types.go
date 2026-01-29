@@ -26,8 +26,8 @@ import (
 // Config is the top-level supervisor configuration.
 type Config struct {
 	Server      ServerConfig      `koanf:"server"`
-	Bootstrap   BootstrapConfig   `koanf:"bootstrap"`
 	Auth        AuthConfig        `koanf:"auth"`
+	Keys        KeysConfig        `koanf:"keys"`
 	LocalOpAMP  LocalOpAMPConfig  `koanf:"local_opamp"`
 	Agent       AgentConfig       `koanf:"agent"`
 	Packages    PackagesConfig    `koanf:"packages"`
@@ -65,16 +65,25 @@ type BackoffConfig struct {
 	Multiplier float64       `koanf:"multiplier"`
 }
 
-// BootstrapConfig configures trust bootstrap.
-type BootstrapConfig struct {
-	Mode   string `koanf:"mode"` // fingerprint | ca_verified
-	CACert string `koanf:"ca_cert"`
-}
-
 // AuthConfig configures authentication.
 type AuthConfig struct {
-	EnrollmentToken string `koanf:"enrollment_token"`
-	TokenFile       string `koanf:"token_file"`
+	EnrollmentURL string        `koanf:"enrollment_url"`
+	InsecureTLS   bool          `koanf:"insecure_tls"`
+	JWTLifetime   time.Duration `koanf:"jwt_lifetime"`
+}
+
+// KeysConfig configures key storage.
+type KeysConfig struct {
+	Dir        string           `koanf:"dir"`
+	Encrypted  bool             `koanf:"encrypted"`
+	Passphrase PassphraseConfig `koanf:"passphrase"`
+}
+
+// PassphraseConfig configures passphrase source for encrypted keys.
+type PassphraseConfig struct {
+	Env  string   `koanf:"env"`
+	File string   `koanf:"file"`
+	Cmd  []string `koanf:"cmd"`
 }
 
 // LocalOpAMPConfig configures the local OpAMP server for the collector.
@@ -172,14 +181,15 @@ func DefaultConfig() Config {
 				},
 			},
 		},
-		Bootstrap: BootstrapConfig{
-			Mode: "fingerprint",
-		},
 		Auth: AuthConfig{
-			TokenFile: "/var/lib/supervisor/auth/agent_token.yaml",
+			JWTLifetime: 5 * time.Minute,
+		},
+		Keys: KeysConfig{
+			Dir:       "/var/lib/supervisor/keys",
+			Encrypted: false,
 		},
 		LocalOpAMP: LocalOpAMPConfig{
-			Endpoint: "localhost:4321",
+			Endpoint: "localhost:0", // port 0 = random free port
 		},
 		Agent: AgentConfig{
 			ConfigApplyTimeout: 5 * time.Second,

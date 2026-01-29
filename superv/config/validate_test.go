@@ -62,15 +62,18 @@ func TestValidateAgentExecutable(t *testing.T) {
 	require.Contains(t, err.Error(), "executable")
 }
 
-func TestValidateBootstrapMode(t *testing.T) {
+func TestValidateKeysConfig(t *testing.T) {
 	tests := []struct {
-		name      string
-		mode      string
-		expectErr bool
+		name       string
+		encrypted  bool
+		passphrase PassphraseConfig
+		expectErr  bool
 	}{
-		{"fingerprint", "fingerprint", false},
-		{"ca_verified", "ca_verified", false},
-		{"invalid", "invalid", true},
+		{"unencrypted", false, PassphraseConfig{}, false},
+		{"encrypted_with_env", true, PassphraseConfig{Env: "KEY_PASS"}, false},
+		{"encrypted_with_file", true, PassphraseConfig{File: "/run/secrets/pass"}, false},
+		{"encrypted_with_cmd", true, PassphraseConfig{Cmd: []string{"vault", "read"}}, false},
+		{"encrypted_no_source", true, PassphraseConfig{}, true},
 	}
 
 	for _, tt := range tests {
@@ -78,11 +81,12 @@ func TestValidateBootstrapMode(t *testing.T) {
 			cfg := DefaultConfig()
 			cfg.Server.Endpoint = "ws://localhost:4320"
 			cfg.Agent.Executable = "/bin/test"
-			cfg.Bootstrap.Mode = tt.mode
+			cfg.Keys.Encrypted = tt.encrypted
+			cfg.Keys.Passphrase = tt.passphrase
 			err := cfg.Validate()
 			if tt.expectErr {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "bootstrap")
+				require.Contains(t, err.Error(), "keys")
 			} else {
 				require.NoError(t, err)
 			}
