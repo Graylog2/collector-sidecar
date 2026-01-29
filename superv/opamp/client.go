@@ -185,19 +185,26 @@ func (c *Client) Start(ctx context.Context) error {
 		Callbacks:      c.callbacks.ToTypesCallbacks(),
 		Header:         c.cfg.Headers,
 		TLSConfig:      c.cfg.TLSConfig,
-		Capabilities:   c.cfg.Capabilities.ToProto(),
+	}
+
+	// Apply initial health before starting (required by opamp-go)
+	health := c.initialHealth
+	if health == nil {
+		health = &protobufs.ComponentHealth{Healthy: true}
+	}
+	if err := opampClient.SetHealth(health); err != nil {
+		return err
+	}
+
+	// Set capabilities before starting
+	caps := c.cfg.Capabilities.ToProto()
+	if err := opampClient.SetCapabilities(&caps); err != nil {
+		return err
 	}
 
 	// Apply initial agent description before starting (required by opamp-go)
 	if c.initialDescription != nil {
 		if err := opampClient.SetAgentDescription(c.initialDescription); err != nil {
-			return err
-		}
-	}
-
-	// Apply initial health before starting (required by opamp-go)
-	if c.initialHealth != nil {
-		if err := opampClient.SetHealth(c.initialHealth); err != nil {
 			return err
 		}
 	}
