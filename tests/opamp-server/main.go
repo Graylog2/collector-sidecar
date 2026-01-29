@@ -180,6 +180,9 @@ func (s *OpAMPServer) LoadConfig(configFile string) error {
 
 func (s *OpAMPServer) OnConnecting(request *http.Request) types.ConnectionResponse {
 	s.logger.Printf("Agent connecting from %s", request.RemoteAddr)
+	if request.Header.Get("Authorization") != "" {
+		s.logger.Printf("Agent connecting with Authorization: %s", request.Header.Get("Authorization"))
+	}
 	return types.ConnectionResponse{
 		Accept: true,
 	}
