@@ -63,91 +63,24 @@ A production-ready OpAMP supervisor that manages an OpenTelemetry Collector with
 
 ### 2. Authentication & Trust Bootstrap
 
-#### JWT-Based Bootstrap
+> **Note:** This section has been superseded by the CSR-based trust bootstrap design.
+> See [2026-01-29-csr-trust-bootstrap-design.md](2026-01-29-csr-trust-bootstrap-design.md) for the current design.
 
-The enrollment JWT contains everything needed for zero-touch provisioning:
+#### Summary of New Design
 
-```
-JWT Claims:
-{
-  "iss": "opamp.example.com",
-  "exp": 1706140800,
-  "endpoint": "wss://opamp.example.com/v1/opamp",
-  "tenant_id": "acme-corp",
-  "agent_labels": {
-    "environment": "production",
-    "region": "eu-west-1"
-  },
-  "ca_fingerprint": "sha256:abc123..."
-}
-```
+The new design uses supervisor-generated keypairs with server-signed certificates:
 
-#### Trust Models
+1. **Enrollment URL** - User receives `https://server.example.com/opamp/enroll/<JWT>`
+2. **JWKS Validation** - Supervisor fetches `/.well-known/jwks.json` to validate enrollment JWT
+3. **Keypair Generation** - Supervisor generates Ed25519 (signing) + X25519 (encryption) keypairs
+4. **CSR Flow** - Supervisor sends CSR, server returns signed certificate
+5. **Self-Signed JWT Auth** - Supervisor authenticates with self-signed JWTs (cert fingerprint in header)
 
-| Mode | Trust Source | Use Case |
-|------|--------------|----------|
-| Fingerprint (default) | CA fingerprint in JWT | Standard deployment |
-| CA-verified | Pre-deployed CA cert | High-security environments |
-
-**Fingerprint mode flow:**
-1. Supervisor receives JWT via secure channel
-2. Connects to endpoint from JWT
-3. Server presents TLS certificate
-4. Supervisor verifies CA cert fingerprint matches JWT claim
-5. Proceeds with enrollment
-
-**CA-verified mode flow:**
-1. Supervisor loads pre-deployed CA cert
-2. Validates JWT signature against CA's public key
-3. Connects with full TLS chain validation
-
-#### Authentication Lifecycle
-
-**Phase 1: Enrollment (first run)**
-```
-Supervisor starts with enrollment_token (JWT)
-    → Connects to server with enrollment JWT as bearer token
-    → Server validates enrollment token, accepts connection
-    → Server generates agent-specific JWT
-    → Server sends ConnectionSettingsOffers with new headers containing agent JWT
-    → Supervisor stores agent JWT, discards enrollment token
-    → Supervisor reconnects using agent JWT
-```
-
-**Phase 2: Normal operation (subsequent runs)**
-```
-Supervisor starts with stored agent JWT
-    → Connects with agent JWT in Authorization header
-    → Server may send new ConnectionSettingsOffers to refresh token
-    → Supervisor updates stored token when refreshed
-```
-
-**Agent JWT structure:**
-```json
-{
-  "sub": "<instance-uid>",
-  "iss": "opamp-server",
-  "aud": "opamp-agent",
-  "tenant_id": "acme-corp",
-  "iat": 1704153600,
-  "exp": 1735689600
-}
-```
-
-**Token refresh options:**
-1. **Long-lived tokens** - Agent JWT valid for extended periods
-2. **Server-initiated refresh** - Server sends new `ConnectionSettingsOffers` before expiry
-3. **Agent-initiated refresh** - Agent requests new token when approaching expiry
-
-**Future option: mTLS with CSR**
-
-For high-security environments, mTLS can be added later:
-- Agent generates ed25519 keypair
-- Agent sends CSR via `ConnectionSettingsRequest`
-- Server returns signed certificate
-- Agent reconnects with mTLS
-
-This is not implemented in the initial version but the design supports it.
+Benefits:
+- Private keys never leave the supervisor
+- Visible enrollment URLs (users can inspect hostnames)
+- mTLS infrastructure for OTLP telemetry authentication
+- Future: server-side config encryption using supervisor's public key
 
 ### 3. Configuration Management
 
@@ -345,7 +278,7 @@ Supervisor runs a local OpAMP server for the collector on localhost.
 | RemoteConfig | Apply supervisor config, write collector config, notify collector |
 | PackagesAvailable | Download packages, may include collector binary updates |
 | CustomMessage (for collector) | Relay to collector |
-| ConnectionSettingsOffers | Store new agent JWT, reconnect with updated credentials |
+| ConnectionSettingsOffers | Store new certificate (during enrollment/renewal) |
 
 #### Capability Merging
 
@@ -397,8 +330,11 @@ Exponential backoff with configurable:
 ├── instance_uid.yaml       # Immutable - never modified after creation
 ├── agent_description.yaml  # Mutable - may update over time
 ├── connection.yaml         # Mutable - connection state
-├── auth/
-│   └── agent_token.yaml    # Agent JWT (0600 permissions)
+├── keys/                   # Keypairs and certificate (see CSR design)
+│   ├── signing.key         # Ed25519 private key (PEM or PKCS#8)
+│   ├── signing.crt         # Certificate from server (PEM)
+│   ├── encryption.key      # X25519 private key (PEM or PKCS#8)
+│   └── bearer_token        # JWT for collector OTLP auth
 ├── config/
 │   ├── supervisor.yaml     # Last known supervisor config
 │   ├── collector.yaml      # Last applied collector config (merged)
@@ -447,12 +383,9 @@ remote_config:
   status: APPLIED
 ```
 
-**agent_token.yaml (mutable, secure):**
-```yaml
-token: "eyJhbGciOiJFZDI1NTE5IiwidHlwIjoiSldUIn0..."
-received_at: "2024-01-15T10:30:00Z"
-expires_at: "2025-01-15T10:30:00Z"
-```
+**keys/ directory:**
+
+See [2026-01-29-csr-trust-bootstrap-design.md](2026-01-29-csr-trust-bootstrap-design.md) for key storage details.
 
 #### File Permissions
 
@@ -461,7 +394,10 @@ expires_at: "2025-01-15T10:30:00Z"
 | instance_uid.yaml | First startup | Never | 0444 (read-only) |
 | agent_description.yaml | First startup | As needed | 0644 |
 | connection.yaml | First startup | Frequently | 0600 |
-| agent_token.yaml | Enrollment | Token refresh | 0600 |
+| keys/ directory | Enrollment | - | 0700 |
+| keys/*.key | Enrollment | Never | 0600 |
+| keys/*.crt | Enrollment | Cert renewal | 0644 |
+| keys/bearer_token | First OTLP use | Periodically | 0600 |
 
 ### 9. Supervisor Configuration
 
@@ -482,13 +418,16 @@ server:
       max: 5m
       multiplier: 2
 
-bootstrap:
-  mode: fingerprint              # fingerprint | ca_verified
-  # ca_cert: /etc/supervisor/bootstrap-ca.crt  # For ca_verified mode
-
 auth:
-  enrollment_token: "${ENROLLMENT_JWT}"
-  token_file: /var/lib/supervisor/auth/agent_token.yaml
+  # Enrollment URL provided at first run
+  enrollment_url: "${ENROLLMENT_URL}"  # e.g., https://server.example.com/opamp/enroll/<JWT>
+  jwt_lifetime: 5m                     # Supervisor-signed JWT validity
+
+keys:
+  dir: /var/lib/supervisor/keys
+  encrypted: false
+  passphrase:
+    env: "SUPERVISOR_KEY_PASSPHRASE"
 
 local_opamp:
   endpoint: localhost:4320
@@ -546,19 +485,19 @@ logging:
 
 ## Bootstrap Modes
 
-**Zero-touch (JWT only):**
+**Zero-touch (enrollment URL):**
 ```bash
-supervisor --bootstrap-token "eyJ..."
+supervisor --enrollment-url "https://opamp.example.com/opamp/enroll/eyJ..."
 ```
 
-**Standard (config file):**
+**Standard (config file, already enrolled):**
 ```bash
 supervisor --config /etc/supervisor/config.yaml
 ```
 
-**Hybrid (config + JWT from env):**
+**Hybrid (config + enrollment URL from env):**
 ```bash
-ENROLLMENT_JWT="eyJ..." supervisor --config /etc/supervisor/config.yaml
+ENROLLMENT_URL="https://..." supervisor --config /etc/supervisor/config.yaml
 ```
 
 ## Platform Support
@@ -585,8 +524,10 @@ type ProcessController interface {
 
 ## Security Considerations
 
-1. **Agent tokens** - Stored with 0600 permissions, never logged
-2. **Enrollment tokens** - Short-lived, discarded after use
-3. **Package verification** - Mandatory server attestation, optional publisher signatures
-4. **TLS** - Required for upstream connection, optional for localhost
-5. **Compliance overrides** - Cannot be modified via OpAMP, local control only
+1. **Private keys** - Stored with 0600 permissions, never logged, optionally PKCS#8 encrypted
+2. **Enrollment tokens** - Short-lived, discarded after successful CSR flow
+3. **Supervisor-signed JWTs** - Short-lived (default 5m), generated per connection
+4. **Package verification** - Mandatory server attestation, optional publisher signatures
+5. **TLS** - Required for upstream connection, optional for localhost
+6. **Compliance overrides** - Cannot be modified via OpAMP, local control only
+7. **Config encryption** (future) - Server can encrypt configs for specific supervisors
