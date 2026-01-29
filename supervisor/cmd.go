@@ -41,6 +41,7 @@ func GetCommand() *cobra.Command {
 	}
 	cmd.Flags().StringP("config", "c", "supervisor.yml", "Path to a supervisor configuration file")
 	cmd.Flags().StringP("server-url", "u", "ws://localhost:9000/v1/opamp", "OpAMP server URL")
+	cmd.Flags().StringP("token", "t", "", "Access token for OpAMP server authentication (bearer token)")
 	cmd.Flags().String("data-dir", "", "Supervisor data dir (default platform-dependent)")
 	cmd.Flags().Bool("sidecar", false, "Run Collector with legacy Sidecar extension")
 	cmd.Flags().Bool("dev", false, "Enable development profile")

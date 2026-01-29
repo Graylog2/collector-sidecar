@@ -20,6 +20,7 @@ package supervisor
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -47,6 +48,7 @@ dev: false
 
 type Config struct {
 	URL         string `koanf:"server_url"`
+	Token       string `koanf:"token"`
 	Development bool   `koanf:"dev"`
 	Sidecar     bool   `koanf:"sidecar"`
 	DataDir     string `koanf:"data_dir"`
@@ -93,10 +95,15 @@ func buildConfig(cmd *cobra.Command) (*config.Supervisor, error) {
 		return nil, fmt.Errorf("couldn't get absolute path for %s", os.Args[0])
 	}
 
+	headers := http.Header{}
+	if strings.TrimSpace(cfg.Token) != "" {
+		headers.Set("Authorization", fmt.Sprintf("Bearer %s", strings.TrimSpace(cfg.Token)))
+	}
+
 	supervisorCfg := config.Supervisor{
 		Server: config.OpAMPServer{
 			Endpoint: cfg.URL,
-			Headers:  nil,
+			Headers:  headers,
 			TLS:      configtls.ClientConfig{},
 		},
 		Agent: config.Agent{
