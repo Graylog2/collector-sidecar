@@ -81,13 +81,6 @@ Expected: Binary created successfully
 Run: `./supervisor --version`
 Expected: `0.1.0-dev (unknown)`
 
-**Step 6: Commit**
-
-```bash
-git add .
-git commit -m "feat: initialize Go module with main entry point"
-```
-
 ---
 
 ### Task 1.2: Add Core Dependencies
@@ -129,13 +122,6 @@ Expected: Downloads testify
 
 Run: `go mod tidy`
 Expected: go.mod and go.sum are clean
-
-**Step 8: Commit**
-
-```bash
-git add go.mod go.sum
-git commit -m "feat: add core dependencies (opamp-go, zap, koanf, testify)"
-```
 
 ---
 
@@ -444,13 +430,6 @@ func (t TLSConfig) ToTLSConfig() (*tls.Config, error) {
 Run: `go test ./config/... -v`
 Expected: PASS
 
-**Step 5: Commit**
-
-```bash
-git add config/
-git commit -m "feat(config): add configuration types with defaults"
-```
-
 ---
 
 ### Task 2.2: Implement Configuration Loading
@@ -678,13 +657,6 @@ func expandEnvVars(cfg *Config) {
 
 Run: `go test ./config/... -v`
 Expected: PASS
-
-**Step 6: Commit**
-
-```bash
-git add config/loader.go config/loader_test.go testdata/
-git commit -m "feat(config): implement configuration loading with env expansion"
-```
 
 ---
 
@@ -923,13 +895,6 @@ func (l LoggingConfig) Validate() error {
 Run: `go test ./config/... -v`
 Expected: PASS
 
-**Step 5: Commit**
-
-```bash
-git add config/validate.go config/validate_test.go
-git commit -m "feat(config): add configuration validation"
-```
-
 ---
 
 ## Phase 3: Persistence Layer
@@ -1122,13 +1087,6 @@ Expected: Downloads yaml.v3
 
 Run: `go test ./persistence/... -v`
 Expected: PASS
-
-**Step 6: Commit**
-
-```bash
-git add persistence/ go.mod go.sum
-git commit -m "feat(persistence): implement instance UID persistence"
-```
 
 ---
 
@@ -1411,13 +1369,6 @@ func CertificateFingerprint(keysDir string) (string, error) {
 Run: `go test ./persistence/... -v`
 Expected: PASS
 
-**Step 5: Commit**
-
-```bash
-git add persistence/
-git commit -m "feat(persistence): implement Ed25519 key and certificate persistence"
-```
-
 ---
 
 ### Task 3.3: Implement Connection State Persistence
@@ -1589,13 +1540,6 @@ import (
 
 Run: `go test ./persistence/... -v`
 Expected: PASS
-
-**Step 6: Commit**
-
-```bash
-git add persistence/
-git commit -m "feat(persistence): implement connection state persistence"
-```
 
 ---
 
@@ -2100,13 +2044,6 @@ func sendReloadSignal(process *os.Process) error {
 Run: `go test ./keen/... -v`
 Expected: PASS (some tests may be skipped on Windows)
 
-**Step 7: Commit**
-
-```bash
-git add keen/
-git commit -m "feat(keen): implement Commander Keen process management with platform-specific signals"
-```
-
 ---
 
 ## Phase 5: OpAMP Integration
@@ -2498,13 +2435,6 @@ func (c *Client) SetRemoteConfigStatus(status *protobufs.RemoteConfigStatus) err
 Run: `go test ./opamp/... -v`
 Expected: PASS
 
-**Step 6: Commit**
-
-```bash
-git add opamp/
-git commit -m "feat(opamp): implement OpAMP client wrapper with callbacks"
-```
-
 ---
 
 ### Task 5.2: Implement Local OpAMP Server
@@ -2770,13 +2700,6 @@ var _ server.Callbacks = (*Server)(nil)
 
 Run: `go test ./opamp/... -v`
 Expected: PASS
-
-**Step 5: Commit**
-
-```bash
-git add opamp/server.go opamp/server_test.go
-git commit -m "feat(opamp): implement local OpAMP server for collector communication"
-```
 
 ---
 
@@ -3049,13 +2972,6 @@ func (s *Supervisor) IsRunning() bool {
 Run: `go test ./supervisor/... -v`
 Expected: PASS
 
-**Step 5: Commit**
-
-```bash
-git add supervisor/
-git commit -m "feat(supervisor): implement core supervisor engine"
-```
-
 ---
 
 ### Task 6.2: Wire Up Main Entry Point
@@ -3197,13 +3113,6 @@ Expected: Binary created successfully
 
 Run: `./supervisor -h`
 Expected: Shows usage with flags
-
-**Step 4: Commit**
-
-```bash
-git add cmd/supervisor/main.go
-git commit -m "feat(cli): wire up main entry point with full CLI support"
-```
 
 ---
 
@@ -3398,13 +3307,6 @@ Expected: Downloads rawbytes provider
 
 Run: `go test ./configmerge/... -v`
 Expected: PASS
-
-**Step 6: Commit**
-
-```bash
-git add configmerge/ go.mod go.sum
-git commit -m "feat(configmerge): implement YAML configuration merging"
-```
 
 ---
 
@@ -4188,13 +4090,6 @@ Expected: Downloads curve25519 package
 
 Run: `go test ./auth/... -v`
 Expected: PASS
-
-**Step 13: Commit**
-
-```bash
-git add auth/ go.mod go.sum
-git commit -m "feat(auth): implement CSR flow with JWKS validation and supervisor-signed JWTs"
-```
 
 ---
 
