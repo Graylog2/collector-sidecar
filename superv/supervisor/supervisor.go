@@ -19,9 +19,13 @@ package supervisor
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
+	"text/template"
 
 	"github.com/open-telemetry/opamp-go/protobufs"
 	"github.com/open-telemetry/opamp-go/server/types"
@@ -33,6 +37,11 @@ import (
 	"github.com/Graylog2/collector-sidecar/superv/persistence"
 	"github.com/Graylog2/collector-sidecar/superv/version"
 )
+
+// templateVars holds variables available for template expansion in agent args.
+type templateVars struct {
+	ConfigPath string
+}
 
 // Supervisor coordinates the management of an OpenTelemetry Collector.
 type Supervisor struct {
@@ -66,6 +75,25 @@ func (s *Supervisor) InstanceUID() string {
 	return s.instanceUID
 }
 
+// expandArgs expands template placeholders in agent args.
+func (s *Supervisor) expandArgs(args []string, configPath string) ([]string, error) {
+	vars := templateVars{ConfigPath: configPath}
+	expanded := make([]string, len(args))
+
+	for i, arg := range args {
+		tmpl, err := template.New("arg").Option("missingkey=error").Parse(arg)
+		if err != nil {
+			return nil, fmt.Errorf("invalid template in arg %d: %w", i, err)
+		}
+		var buf strings.Builder
+		if err := tmpl.Execute(&buf, vars); err != nil {
+			return nil, fmt.Errorf("failed to expand arg %d: %w", i, err)
+		}
+		expanded[i] = buf.String()
+	}
+	return expanded, nil
+}
+
 // Start starts the supervisor and begins managing the collector.
 func (s *Supervisor) Start(ctx context.Context) error {
 	s.mu.Lock()
@@ -80,10 +108,20 @@ func (s *Supervisor) Start(ctx context.Context) error {
 		zap.String("endpoint", s.cfg.Server.Endpoint),
 	)
 
+	// Determine effective config path
+	// TODO: Write actual merged config when remote config handling is implemented
+	configPath := filepath.Join(s.cfg.Persistence.Dir, "effective.yaml")
+
+	// Expand template variables in agent args
+	expandedArgs, err := s.expandArgs(s.cfg.Agent.Args, configPath)
+	if err != nil {
+		return fmt.Errorf("failed to expand agent args: %w", err)
+	}
+
 	// Create commander for agent process management
 	cmd, err := keen.New(s.logger, s.cfg.Persistence.Dir, keen.Config{
 		Executable:      s.cfg.Agent.Executable,
-		Args:            s.cfg.Agent.Args,
+		Args:            expandedArgs,
 		Env:             s.cfg.Agent.Env,
 		PassthroughLogs: s.cfg.Agent.PassthroughLogs,
 	})
