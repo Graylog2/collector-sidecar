@@ -21,6 +21,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -236,8 +237,11 @@ func TestHealthMonitor_StartPolling(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 
 	var requestCount int
+	var mu sync.Mutex
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
 		requestCount++
+		mu.Unlock()
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
@@ -260,9 +264,12 @@ func TestHealthMonitor_StartPolling(t *testing.T) {
 	assert.True(t, status.Healthy)
 	assert.Equal(t, http.StatusOK, status.StatusCode)
 
-	// Receive at least one more poll
-	status = <-ch
-	assert.True(t, status.Healthy)
+	// Verify LastSent was updated after initial emission
+	assert.NotNil(t, monitor.LastSent())
+	assert.True(t, monitor.LastSent().Healthy)
+
+	// Wait for multiple polls to occur (but no emissions since status unchanged)
+	time.Sleep(150 * time.Millisecond)
 
 	// Cancel context to stop polling
 	cancel()
@@ -274,7 +281,11 @@ func TestHealthMonitor_StartPolling(t *testing.T) {
 	}
 
 	// Verify we made at least 2 requests (initial + 1 poll)
-	assert.GreaterOrEqual(t, requestCount, 2)
+	// even though only 1 emission occurred due to deduplication
+	mu.Lock()
+	count := requestCount
+	mu.Unlock()
+	assert.GreaterOrEqual(t, count, 2)
 }
 
 func TestHealthMonitor_StartPolling_ContextCancelled(t *testing.T) {
@@ -398,6 +409,205 @@ func TestHealthMonitor_CheckHealth_Non2xxStatusCodes(t *testing.T) {
 			assert.False(t, status.Healthy)
 			assert.Equal(t, code, status.StatusCode)
 			assert.NotEmpty(t, status.ErrorMessage)
+		})
+	}
+}
+
+func TestHealthMonitor_LastSent_InitiallyNil(t *testing.T) {
+	logger := zaptest.NewLogger(t)
+
+	cfg := Config{
+		Endpoint: "http://localhost:8080/health",
+		Timeout:  5 * time.Second,
+		Interval: 1 * time.Second,
+	}
+
+	monitor := New(logger, cfg)
+
+	// Initially, LastSent should be nil
+	assert.Nil(t, monitor.LastSent())
+}
+
+func TestHealthMonitor_StartPolling_Deduplication(t *testing.T) {
+	logger := zaptest.NewLogger(t)
+
+	// Server always returns the same healthy status
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	cfg := Config{
+		Endpoint: server.URL,
+		Timeout:  5 * time.Second,
+		Interval: 20 * time.Millisecond, // Fast polling
+	}
+
+	monitor := New(logger, cfg)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	ch := monitor.StartPolling(ctx)
+
+	// Receive initial status (always emitted)
+	status := <-ch
+	assert.True(t, status.Healthy)
+
+	// Count emissions received during polling (use non-blocking receive with timeout)
+	// We wait for multiple poll cycles but should receive no additional emissions
+	// since status is unchanged
+	extraEmissions := 0
+	timeout := time.After(100 * time.Millisecond)
+loop:
+	for {
+		select {
+		case _, ok := <-ch:
+			if !ok {
+				break loop
+			}
+			extraEmissions++
+		case <-timeout:
+			break loop
+		}
+	}
+
+	// Should have no extra emissions since status never changed
+	assert.Equal(t, 0, extraEmissions, "should not emit unchanged status")
+
+	// Verify LastSent was set
+	assert.NotNil(t, monitor.LastSent())
+	assert.True(t, monitor.LastSent().Healthy)
+
+	// Clean up
+	cancel()
+	for range ch {
+	}
+}
+
+func TestHealthMonitor_StartPolling_EmitsOnChange(t *testing.T) {
+	logger := zaptest.NewLogger(t)
+
+	var requestCount int
+	// Server alternates between healthy and unhealthy
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
+		if requestCount%2 == 1 {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}
+	}))
+	defer server.Close()
+
+	cfg := Config{
+		Endpoint: server.URL,
+		Timeout:  5 * time.Second,
+		Interval: 20 * time.Millisecond,
+	}
+
+	monitor := New(logger, cfg)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	ch := monitor.StartPolling(ctx)
+
+	// Collect emissions with timeout
+	var emissions []*HealthStatus
+	timeout := time.After(150 * time.Millisecond)
+
+collection:
+	for {
+		select {
+		case status, ok := <-ch:
+			if !ok {
+				break collection
+			}
+			emissions = append(emissions, status)
+			if len(emissions) >= 4 {
+				cancel()
+			}
+		case <-timeout:
+			cancel()
+			break collection
+		}
+	}
+
+	// Drain remaining
+	for range ch {
+	}
+
+	// Should have multiple emissions due to status changes
+	assert.GreaterOrEqual(t, len(emissions), 2, "should emit on status changes")
+
+	// First should be healthy, second should be unhealthy (or vice versa depending on timing)
+	if len(emissions) >= 2 {
+		assert.NotEqual(t, emissions[0].Healthy, emissions[1].Healthy, "consecutive emissions should differ")
+	}
+}
+
+func TestHealthStatus_Equal(t *testing.T) {
+	tests := []struct {
+		name     string
+		a        *HealthStatus
+		b        *HealthStatus
+		expected bool
+	}{
+		{
+			name:     "both nil",
+			a:        nil,
+			b:        nil,
+			expected: true,
+		},
+		{
+			name:     "first nil",
+			a:        nil,
+			b:        &HealthStatus{Healthy: true},
+			expected: false,
+		},
+		{
+			name:     "second nil",
+			a:        &HealthStatus{Healthy: true},
+			b:        nil,
+			expected: false,
+		},
+		{
+			name:     "equal healthy",
+			a:        &HealthStatus{Healthy: true, StatusCode: 200, ErrorMessage: ""},
+			b:        &HealthStatus{Healthy: true, StatusCode: 200, ErrorMessage: ""},
+			expected: true,
+		},
+		{
+			name:     "equal unhealthy",
+			a:        &HealthStatus{Healthy: false, StatusCode: 503, ErrorMessage: "Service Unavailable"},
+			b:        &HealthStatus{Healthy: false, StatusCode: 503, ErrorMessage: "Service Unavailable"},
+			expected: true,
+		},
+		{
+			name:     "different healthy",
+			a:        &HealthStatus{Healthy: true, StatusCode: 200, ErrorMessage: ""},
+			b:        &HealthStatus{Healthy: false, StatusCode: 200, ErrorMessage: ""},
+			expected: false,
+		},
+		{
+			name:     "different status code",
+			a:        &HealthStatus{Healthy: false, StatusCode: 500, ErrorMessage: "Internal Server Error"},
+			b:        &HealthStatus{Healthy: false, StatusCode: 503, ErrorMessage: "Service Unavailable"},
+			expected: false,
+		},
+		{
+			name:     "different error message",
+			a:        &HealthStatus{Healthy: false, StatusCode: 0, ErrorMessage: "connection refused"},
+			b:        &HealthStatus{Healthy: false, StatusCode: 0, ErrorMessage: "timeout"},
+			expected: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := tc.a.Equal(tc.b)
+			assert.Equal(t, tc.expected, result)
 		})
 	}
 }

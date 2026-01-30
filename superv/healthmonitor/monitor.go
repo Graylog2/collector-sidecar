@@ -71,6 +71,16 @@ type HealthStatus struct {
 	ErrorMessage string
 }
 
+// Equal returns true if two HealthStatus values are equivalent.
+func (s *HealthStatus) Equal(other *HealthStatus) bool {
+	if s == nil || other == nil {
+		return s == other
+	}
+	return s.Healthy == other.Healthy &&
+		s.StatusCode == other.StatusCode &&
+		s.ErrorMessage == other.ErrorMessage
+}
+
 // ToComponentHealth converts the health status to OpAMP ComponentHealth format.
 // agentProvider is optional - if nil, start time will be zero.
 func (s *HealthStatus) ToComponentHealth(agentProvider AgentStateProvider) *protobufs.ComponentHealth {
@@ -95,8 +105,9 @@ type Monitor struct {
 	cfg    Config
 	client *http.Client
 
-	mu   sync.RWMutex
-	last *HealthStatus
+	mu       sync.RWMutex
+	last     *HealthStatus
+	lastSent *HealthStatus // last status emitted to channel
 }
 
 // New creates a new health monitor with an HTTP client using the configured timeout.
@@ -157,9 +168,23 @@ func (m *Monitor) setLastStatus(status *HealthStatus) {
 	m.last = status
 }
 
+// LastSent returns the last status sent to the polling channel.
+func (m *Monitor) LastSent() *HealthStatus {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.lastSent
+}
+
+// setLastSent updates the last sent status in a thread-safe manner.
+func (m *Monitor) setLastSent(status *HealthStatus) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.lastSent = status
+}
+
 // StartPolling starts background polling of the health endpoint.
 // It performs an initial check immediately, then polls every cfg.Interval.
-// Sends health status updates to the returned channel.
+// Sends health status updates to the returned channel only when status changes.
 // Stops when the context is cancelled.
 func (m *Monitor) StartPolling(ctx context.Context) <-chan *HealthStatus {
 	ch := make(chan *HealthStatus)
@@ -172,8 +197,10 @@ func (m *Monitor) StartPolling(ctx context.Context) <-chan *HealthStatus {
 		if err != nil {
 			m.logger.Warn("initial health check failed", zap.Error(err))
 		}
+		// Always send initial status
 		select {
 		case ch <- status:
+			m.setLastSent(status)
 		case <-ctx.Done():
 			m.logger.Debug("context cancelled")
 			return
@@ -191,11 +218,15 @@ func (m *Monitor) StartPolling(ctx context.Context) <-chan *HealthStatus {
 				if err != nil {
 					m.logger.Debug("health check failed", zap.Error(err))
 				}
-				select {
-				case ch <- status:
-				case <-ctx.Done():
-					m.logger.Debug("context cancelled")
-					return
+				// Only send if status changed
+				if !status.Equal(m.LastSent()) {
+					select {
+					case ch <- status:
+						m.setLastSent(status)
+					case <-ctx.Done():
+						m.logger.Debug("context cancelled")
+						return
+					}
 				}
 			}
 		}
