@@ -4,9 +4,9 @@
 
 **Goal:** Implement operational robustness features that ensure the supervisor handles real-world failure scenarios gracefully.
 
-**Architecture:** Phase 3 builds on Phase 1 (foundation) and Phase 2 (config management) by adding: (1) crash recovery with exponential backoff, (2) certificate renewal before expiry, (3) full TLS configuration loading, and (4) orphan detection for clean shutdown.
+**Architecture:** Phase 3 builds on Phase 1 (foundation) and Phase 2 (config management) by adding: (1) crash recovery with exponential backoff, (2) certificate renewal before expiry, and (3) full TLS configuration loading.
 
-**Tech Stack:** Go 1.25+, crypto/tls, crypto/x509, time (backoff), os (process detection)
+**Tech Stack:** Go 1.25+, crypto/tls, crypto/x509, time (backoff)
 
 **Prerequisites:** Phase 1 complete, Phase 2 in progress or complete
 
@@ -19,7 +19,8 @@
 | 3.1 | Crash Recovery | Restart collector with exponential backoff on crash | High |
 | 3.2 | Certificate Renewal | Re-enroll before certificate expiry | Medium |
 | 3.3 | Full TLS Config | Load CA certs, client certs from config | Medium |
-| 3.4 | Orphan Detection | Detect parent death, clean shutdown | Low |
+
+**Note on Orphan Detection:** The collector's OpAMP extension handles orphan detection (detecting when the supervisor dies). This is a collector configuration concern, not supervisor code. The supervisor's local OpAMP server endpoint is already passed to the config manager. Ensure the generated collector config includes appropriate OpAMP extension settings (connection timeout, shutdown-on-disconnect behavior).
 
 ---
 
@@ -1148,267 +1149,6 @@ git commit -m "feat(config): implement full TLS configuration loading"
 
 ---
 
-## Task 3.4: Orphan Detection
-
-**Files:**
-- Create: `keen/orphan.go`
-- Create: `keen/orphan_test.go`
-- Create: `keen/orphan_unix.go`
-- Create: `keen/orphan_windows.go`
-
-**Step 1: Write tests for orphan detection**
-
-Create `keen/orphan_test.go`:
-```go
-// Copyright Graylog, Inc.
-// SPDX-License-Identifier: Apache-2.0
-
-package keen
-
-import (
-	"context"
-	"testing"
-	"time"
-
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap/zaptest"
-)
-
-func TestOrphanDetector_NotOrphanedInitially(t *testing.T) {
-	logger := zaptest.NewLogger(t)
-	detector := NewOrphanDetector(logger, OrphanConfig{
-		CheckInterval: 10 * time.Millisecond,
-	})
-
-	// Should not be orphaned when parent is running
-	require.False(t, detector.IsOrphaned())
-}
-
-func TestOrphanDetector_CallsCallbackWhenOrphaned(t *testing.T) {
-	// This test is tricky to write properly since we can't easily orphan ourselves.
-	// We'll test the callback mechanism with a mock.
-
-	logger := zaptest.NewLogger(t)
-	callbackCalled := make(chan struct{})
-
-	detector := NewOrphanDetector(logger, OrphanConfig{
-		CheckInterval: 10 * time.Millisecond,
-		OnOrphaned: func() {
-			close(callbackCalled)
-		},
-	})
-
-	// Manually trigger orphan detection for testing
-	detector.setOrphaned(true)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-	defer cancel()
-
-	detector.Start(ctx)
-
-	select {
-	case <-callbackCalled:
-		// Success
-	case <-ctx.Done():
-		// Expected if not actually orphaned - this is a design limitation
-		// Real orphan detection requires parent process to die
-	}
-}
-```
-
-**Step 2: Create orphan detector interface**
-
-Create `keen/orphan.go`:
-```go
-// Copyright Graylog, Inc.
-// SPDX-License-Identifier: Apache-2.0
-
-package keen
-
-import (
-	"context"
-	"sync"
-	"time"
-
-	"go.uber.org/zap"
-)
-
-// OrphanConfig configures orphan detection.
-type OrphanConfig struct {
-	// CheckInterval is how often to check if orphaned.
-	CheckInterval time.Duration
-
-	// OnOrphaned is called when the supervisor becomes orphaned.
-	OnOrphaned func()
-}
-
-// OrphanDetector monitors the parent process and detects orphan state.
-type OrphanDetector struct {
-	logger     *zap.Logger
-	cfg        OrphanConfig
-	orphaned   bool
-	mu         sync.RWMutex
-}
-
-// NewOrphanDetector creates a new orphan detector.
-func NewOrphanDetector(logger *zap.Logger, cfg OrphanConfig) *OrphanDetector {
-	if cfg.CheckInterval == 0 {
-		cfg.CheckInterval = 5 * time.Second
-	}
-
-	return &OrphanDetector{
-		logger: logger,
-		cfg:    cfg,
-	}
-}
-
-// Start begins monitoring for orphan state.
-func (d *OrphanDetector) Start(ctx context.Context) {
-	go d.monitorLoop(ctx)
-}
-
-// IsOrphaned returns true if the supervisor is orphaned.
-func (d *OrphanDetector) IsOrphaned() bool {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-	return d.orphaned
-}
-
-// setOrphaned sets the orphan state (for testing).
-func (d *OrphanDetector) setOrphaned(orphaned bool) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	d.orphaned = orphaned
-}
-
-func (d *OrphanDetector) monitorLoop(ctx context.Context) {
-	ticker := time.NewTicker(d.cfg.CheckInterval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			if d.checkOrphaned() {
-				d.mu.Lock()
-				wasOrphaned := d.orphaned
-				d.orphaned = true
-				d.mu.Unlock()
-
-				if !wasOrphaned {
-					d.logger.Warn("Supervisor is orphaned (parent process died)")
-					if d.cfg.OnOrphaned != nil {
-						d.cfg.OnOrphaned()
-					}
-				}
-			}
-		}
-	}
-}
-```
-
-**Step 3: Create Unix-specific orphan detection**
-
-Create `keen/orphan_unix.go`:
-```go
-//go:build !windows
-
-// Copyright Graylog, Inc.
-// SPDX-License-Identifier: Apache-2.0
-
-package keen
-
-import (
-	"os"
-)
-
-// checkOrphaned returns true if the parent process is init (PID 1),
-// indicating this process has been orphaned.
-func (d *OrphanDetector) checkOrphaned() bool {
-	// On Unix, when parent dies, process is re-parented to init (PID 1)
-	return os.Getppid() == 1
-}
-```
-
-**Step 4: Create Windows-specific orphan detection**
-
-Create `keen/orphan_windows.go`:
-```go
-//go:build windows
-
-// Copyright Graylog, Inc.
-// SPDX-License-Identifier: Apache-2.0
-
-package keen
-
-import (
-	"os"
-	"syscall"
-)
-
-var initialPPID int
-
-func init() {
-	// Store initial parent PID at startup
-	initialPPID = os.Getppid()
-}
-
-// checkOrphaned returns true if the parent process has changed or died.
-func (d *OrphanDetector) checkOrphaned() bool {
-	currentPPID := os.Getppid()
-
-	// On Windows, check if parent PID changed or if we can't open the parent process
-	if currentPPID != initialPPID {
-		return true
-	}
-
-	// Try to open parent process to verify it's still running
-	handle, err := syscall.OpenProcess(syscall.PROCESS_QUERY_INFORMATION, false, uint32(initialPPID))
-	if err != nil {
-		return true // Can't open = probably dead
-	}
-	syscall.CloseHandle(handle)
-
-	return false
-}
-```
-
-**Step 5: Run tests**
-
-Run: `go test ./keen/... -v -run TestOrphan`
-Expected: PASS
-
-**Step 6: Wire orphan detection in supervisor**
-
-Add to `supervisor/supervisor.go`:
-```go
-// Add to Supervisor struct:
-type Supervisor struct {
-	// ... existing fields ...
-	orphanDetector *keen.OrphanDetector
-}
-
-// In Start():
-s.orphanDetector = keen.NewOrphanDetector(s.logger, keen.OrphanConfig{
-	CheckInterval: 5 * time.Second,
-	OnOrphaned: func() {
-		s.logger.Warn("Supervisor orphaned, initiating shutdown")
-		s.Stop()
-	},
-})
-s.orphanDetector.Start(ctx)
-```
-
-**Step 7: Commit**
-
-```bash
-git add keen/orphan.go keen/orphan_test.go keen/orphan_unix.go keen/orphan_windows.go supervisor/supervisor.go
-git commit -m "feat(keen): implement orphan detection for clean shutdown"
-```
-
----
-
 ## Summary
 
 Phase 3 implements operational robustness:
@@ -1416,13 +1156,13 @@ Phase 3 implements operational robustness:
 1. **Crash Recovery** - Exponential backoff restart on collector crash
 2. **Certificate Renewal** - Automatic re-enrollment before certificate expiry
 3. **Full TLS Config** - Load CA certs, client certs, configure min version
-4. **Orphan Detection** - Clean shutdown when parent process dies
 
 After Phase 3, the supervisor handles:
 - Collector crashes gracefully with configurable retry limits
 - Long-running deployments with automatic certificate refresh
 - Secure connections with full TLS configuration
-- Clean shutdown in service manager environments
+
+**Note:** Orphan detection (collector detecting supervisor death) is handled by the collector's OpAMP extension configuration, not supervisor code.
 
 **Not covered (Phase 4):**
 - Package management (download, verify, install collector binaries)
