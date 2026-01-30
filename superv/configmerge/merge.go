@@ -18,12 +18,52 @@
 package configmerge
 
 import (
+	"github.com/knadh/koanf/maps"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/knadh/koanf/v2"
 )
 
-// MergeConfigs merges two YAML configurations, with override taking precedence.
+// deduplicateSlice removes duplicates from a slice while preserving order.
+func deduplicateSlice(slice []any) []any {
+	seen := make(map[any]struct{}, len(slice))
+	result := make([]any, 0, len(slice))
+	for _, v := range slice {
+		if _, ok := seen[v]; !ok {
+			seen[v] = struct{}{}
+			result = append(result, v)
+		}
+	}
+	return result
+}
+
+// collectorConfigMerge is a custom merge function for koanf that handles
+// OTel Collector config semantics. Extension lists in service.extensions
+// are concatenated and deduplicated rather than overwritten.
+func collectorConfigMerge(src, dest map[string]any) error {
+	// Capture extension lists before standard merge overwrites them
+	srcExt := maps.Search(src, []string{"service", "extensions"})
+	destExt := maps.Search(dest, []string{"service", "extensions"})
+
+	// Standard map merge (this overwrites arrays)
+	maps.Merge(src, dest)
+
+	// Restore concatenated, deduplicated extensions
+	destSlice, _ := destExt.([]any)
+	srcSlice, _ := srcExt.([]any)
+
+	if len(destSlice) > 0 || len(srcSlice) > 0 {
+		merged := deduplicateSlice(append(destSlice, srcSlice...))
+		if service, ok := dest["service"].(map[string]any); ok {
+			service["extensions"] = merged
+		}
+	}
+
+	return nil
+}
+
+// MergeConfigs merges two YAML configurations with collector-aware semantics.
+// Extension lists in service.extensions are concatenated and deduplicated.
 func MergeConfigs(base, override []byte) ([]byte, error) {
 	k := koanf.New("::")
 
@@ -34,9 +74,10 @@ func MergeConfigs(base, override []byte) ([]byte, error) {
 		}
 	}
 
-	// Merge override config
+	// Merge override config with custom merge function
 	if len(override) > 0 {
-		if err := k.Load(rawbytes.Provider(override), yaml.Parser()); err != nil {
+		if err := k.Load(rawbytes.Provider(override), yaml.Parser(),
+			koanf.WithMergeFunc(collectorConfigMerge)); err != nil {
 			return nil, err
 		}
 	}
@@ -45,16 +86,25 @@ func MergeConfigs(base, override []byte) ([]byte, error) {
 	return k.Marshal(yaml.Parser())
 }
 
-// MergeMultiple merges multiple YAML configurations in order.
+// MergeMultiple merges multiple YAML configurations in order with collector-aware semantics.
 // Later configs take precedence over earlier ones.
+// Extension lists in service.extensions are concatenated and deduplicated.
 func MergeMultiple(configs ...[]byte) ([]byte, error) {
 	k := koanf.New("::")
 
-	for _, cfg := range configs {
-		if len(cfg) > 0 {
-			if err := k.Load(rawbytes.Provider(cfg), yaml.Parser()); err != nil {
-				return nil, err
-			}
+	for i, cfg := range configs {
+		if len(cfg) == 0 {
+			continue
+		}
+
+		var opts []koanf.Option
+		if i > 0 {
+			// Use custom merge for all configs after the first
+			opts = append(opts, koanf.WithMergeFunc(collectorConfigMerge))
+		}
+
+		if err := k.Load(rawbytes.Provider(cfg), yaml.Parser(), opts...); err != nil {
+			return nil, err
 		}
 	}
 

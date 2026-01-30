@@ -20,8 +20,18 @@ package configmerge
 import (
 	"testing"
 
+	"github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 )
+
+// parseYAML parses YAML bytes into a map. Fails the test on error.
+func parseYAML(t *testing.T, data []byte) map[string]any {
+	t.Helper()
+	var cfg map[string]any
+	err := yaml.Unmarshal(data, &cfg)
+	require.NoError(t, err)
+	return cfg
+}
 
 func TestMergeConfigs_SimpleOverride(t *testing.T) {
 	base := []byte(`
@@ -166,4 +176,129 @@ func TestInjectSettings_OverwriteExisting(t *testing.T) {
 	// Should contain debug (the new value), not info (the old value)
 	require.Contains(t, string(result), "debug")
 	require.NotContains(t, string(result), "info")
+}
+
+func TestMergeConfigs_ExtensionsConcatenated(t *testing.T) {
+	base := []byte(`
+service:
+  extensions: [health_check]
+`)
+	override := []byte(`
+service:
+  extensions: [opamp]
+`)
+
+	result, err := MergeConfigs(base, override)
+	require.NoError(t, err)
+
+	cfg := parseYAML(t, result)
+
+	service := cfg["service"].(map[string]any)
+	extensions := service["extensions"].([]any)
+	require.ElementsMatch(t, []any{"health_check", "opamp"}, extensions)
+}
+
+func TestMergeConfigs_ExtensionsDeduplicated(t *testing.T) {
+	base := []byte(`
+service:
+  extensions: [health_check, opamp]
+`)
+	override := []byte(`
+service:
+  extensions: [opamp, zpages]
+`)
+
+	result, err := MergeConfigs(base, override)
+	require.NoError(t, err)
+
+	cfg := parseYAML(t, result)
+
+	service := cfg["service"].(map[string]any)
+	extensions := service["extensions"].([]any)
+	require.ElementsMatch(t, []any{"health_check", "opamp", "zpages"}, extensions)
+}
+
+func TestMergeMultiple_ExtensionsConcatenated(t *testing.T) {
+	configs := [][]byte{
+		[]byte(`
+service:
+  extensions: [health_check]
+`),
+		[]byte(`
+service:
+  extensions: [opamp]
+`),
+		[]byte(`
+service:
+  extensions: [zpages]
+`),
+	}
+
+	result, err := MergeMultiple(configs...)
+	require.NoError(t, err)
+
+	cfg := parseYAML(t, result)
+
+	service := cfg["service"].(map[string]any)
+	extensions := service["extensions"].([]any)
+	require.ElementsMatch(t, []any{"health_check", "opamp", "zpages"}, extensions)
+}
+
+func TestMergeConfigs_NoServiceSection(t *testing.T) {
+	base := []byte(`
+receivers:
+  otlp: {}
+`)
+	override := []byte(`
+exporters:
+  debug: {}
+`)
+
+	result, err := MergeConfigs(base, override)
+	require.NoError(t, err)
+
+	// Should merge normally without service section
+	require.Contains(t, string(result), "receivers")
+	require.Contains(t, string(result), "exporters")
+}
+
+func TestMergeConfigs_OneConfigHasExtensions(t *testing.T) {
+	base := []byte(`
+receivers:
+  otlp: {}
+`)
+	override := []byte(`
+service:
+  extensions: [opamp]
+`)
+
+	result, err := MergeConfigs(base, override)
+	require.NoError(t, err)
+
+	cfg := parseYAML(t, result)
+
+	require.Contains(t, cfg, "receivers")
+	service := cfg["service"].(map[string]any)
+	extensions := service["extensions"].([]any)
+	require.ElementsMatch(t, []any{"opamp"}, extensions)
+}
+
+func TestMergeConfigs_EmptyExtensionsList(t *testing.T) {
+	base := []byte(`
+service:
+  extensions: []
+`)
+	override := []byte(`
+service:
+  extensions: [opamp]
+`)
+
+	result, err := MergeConfigs(base, override)
+	require.NoError(t, err)
+
+	cfg := parseYAML(t, result)
+
+	service := cfg["service"].(map[string]any)
+	extensions := service["extensions"].([]any)
+	require.ElementsMatch(t, []any{"opamp"}, extensions)
 }
