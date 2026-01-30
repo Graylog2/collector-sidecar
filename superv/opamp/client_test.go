@@ -194,6 +194,33 @@ func TestClient_MethodsWithoutStart(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestClient_SetEffectiveConfig(t *testing.T) {
+	logger := zaptest.NewLogger(t)
+	callbacks := &Callbacks{}
+
+	client, err := NewClient(logger, ClientConfig{
+		Endpoint:    "ws://localhost:4320/v1/opamp",
+		InstanceUID: "test-uid",
+	}, callbacks)
+	require.NoError(t, err)
+
+	// Before start, should store for later
+	config := map[string]*protobufs.AgentConfigFile{
+		"collector.yaml": {
+			Body: []byte("test: config"),
+		},
+	}
+	err = client.SetEffectiveConfig(config)
+	require.NoError(t, err)
+
+	// Verify the config was stored internally
+	require.NotNil(t, client.effectiveConfig)
+	require.NotNil(t, client.effectiveConfig.ConfigMap)
+	require.NotNil(t, client.effectiveConfig.ConfigMap.ConfigMap)
+	require.Contains(t, client.effectiveConfig.ConfigMap.ConfigMap, "collector.yaml")
+	require.Equal(t, []byte("test: config"), client.effectiveConfig.ConfigMap.ConfigMap["collector.yaml"].Body)
+}
+
 func TestCallbacks_ToTypesCallbacks(t *testing.T) {
 	var connectCalled bool
 	var connectFailedErr error

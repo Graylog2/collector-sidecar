@@ -36,6 +36,8 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/superv/auth"
 	"github.com/Graylog2/collector-sidecar/superv/config"
+	"github.com/Graylog2/collector-sidecar/superv/configmanager"
+	"github.com/Graylog2/collector-sidecar/superv/healthmonitor"
 	"github.com/Graylog2/collector-sidecar/superv/keen"
 	"github.com/Graylog2/collector-sidecar/superv/opamp"
 	"github.com/Graylog2/collector-sidecar/superv/persistence"
@@ -49,15 +51,18 @@ type templateVars struct {
 
 // Supervisor coordinates the management of an OpenTelemetry Collector.
 type Supervisor struct {
-	logger      *zap.Logger
-	cfg         config.Config
-	instanceUID string
-	authManager *auth.Manager
-	commander   *keen.Commander
-	opampClient *opamp.Client
-	opampServer *opamp.Server
-	mu          sync.RWMutex
-	running     bool
+	logger        *zap.Logger
+	cfg           config.Config
+	instanceUID   string
+	authManager   *auth.Manager
+	configManager *configmanager.Manager
+	healthMonitor *healthmonitor.Monitor
+	healthCancel  context.CancelFunc
+	commander     *keen.Commander
+	opampClient   *opamp.Client
+	opampServer   *opamp.Server
+	mu            sync.RWMutex
+	running       bool
 
 	// Pending enrollment CSR (set during enrollment, cleared after completion)
 	pendingCSR []byte
@@ -84,11 +89,29 @@ func New(logger *zap.Logger, cfg config.Config) (*Supervisor, error) {
 		InsecureTLS: cfg.Auth.InsecureTLS,
 	})
 
+	// Initialize config manager
+	configMgr := configmanager.New(logger.Named("config"), configmanager.Config{
+		ConfigDir:      filepath.Join(cfg.Persistence.Dir, "config"),
+		OutputPath:     filepath.Join(cfg.Persistence.Dir, "config", "collector.yaml"),
+		LocalOverrides: cfg.Agent.Config.LocalOverrides,
+		LocalEndpoint:  cfg.LocalOpAMP.Endpoint,
+		InstanceUID:    uid,
+	})
+
+	// Initialize health monitor
+	healthMon := healthmonitor.New(logger.Named("health"), healthmonitor.Config{
+		Endpoint: cfg.Agent.Health.Endpoint,
+		Timeout:  cfg.Agent.Health.Timeout,
+		Interval: cfg.Agent.Health.Interval,
+	})
+
 	return &Supervisor{
-		logger:      logger,
-		cfg:         cfg,
-		instanceUID: uid,
-		authManager: authMgr,
+		logger:        logger,
+		cfg:           cfg,
+		instanceUID:   uid,
+		authManager:   authMgr,
+		configManager: configMgr,
+		healthMonitor: healthMon,
 	}, nil
 }
 
@@ -219,7 +242,27 @@ func (s *Supervisor) Start(ctx context.Context) error {
 		},
 		OnRemoteConfig: func(ctx context.Context, cfg *protobufs.AgentRemoteConfig) bool {
 			s.logger.Info("Received remote configuration")
-			// TODO: Apply configuration
+
+			result, err := s.configManager.ApplyRemoteConfig(ctx, cfg)
+			if err != nil {
+				s.logger.Error("Failed to apply remote config", zap.Error(err))
+				return false
+			}
+
+			if result.Changed {
+				// TODO: Reload collector via commander when implemented
+				s.logger.Info("Config changed, collector reload needed")
+
+				// Report effective config
+				if err := s.opampClient.SetEffectiveConfig(map[string]*protobufs.AgentConfigFile{
+					"collector.yaml": {
+						Body: result.EffectiveConfig,
+					},
+				}); err != nil {
+					s.logger.Warn("Failed to report effective config", zap.Error(err))
+				}
+			}
+
 			return true
 		},
 		OnOpampConnectionSettings: func(ctx context.Context, settings *protobufs.OpAMPConnectionSettings) error {
@@ -305,6 +348,20 @@ func (s *Supervisor) Start(ctx context.Context) error {
 		return err
 	}
 
+	// Start health monitoring with a cancellable context
+	healthCtx, healthCancel := context.WithCancel(ctx)
+	s.healthCancel = healthCancel
+	healthUpdates := s.healthMonitor.StartPolling(healthCtx)
+	go func() {
+		for status := range healthUpdates {
+			// TODO: Pass commander as AgentStateProvider once it implements the interface
+			// This will enable accurate agent start time reporting per OpAMP spec
+			if err := s.opampClient.SetHealth(status.ToComponentHealth(nil)); err != nil {
+				s.logger.Warn("Failed to report health", zap.Error(err))
+			}
+		}
+	}()
+
 	// Start the collector agent
 	if err := s.commander.Start(ctx); err != nil {
 		s.opampClient.Stop(ctx)
@@ -326,6 +383,11 @@ func (s *Supervisor) Stop(ctx context.Context) error {
 	}
 
 	s.logger.Info("Stopping supervisor")
+
+	// Stop health monitoring
+	if s.healthCancel != nil {
+		s.healthCancel()
+	}
 
 	// Stop commander (agent)
 	if s.commander != nil {

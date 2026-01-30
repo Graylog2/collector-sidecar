@@ -145,6 +145,7 @@ type Client struct {
 	opampClient        client.OpAMPClient
 	initialDescription *protobufs.AgentDescription
 	initialHealth      *protobufs.ComponentHealth
+	effectiveConfig    *protobufs.EffectiveConfig
 }
 
 // NewClient creates a new OpAMP client wrapper.
@@ -178,6 +179,12 @@ func (c *Client) Start(ctx context.Context) error {
 
 	// Convert string InstanceUID to types.InstanceUid ([16]byte)
 	instanceUID := parseInstanceUID(c.cfg.InstanceUID)
+
+	// Set GetEffectiveConfig to return our stored config
+	// This allows SetEffectiveConfig to work both before and after Start()
+	c.callbacks.GetEffectiveConfig = func(ctx context.Context) (*protobufs.EffectiveConfig, error) {
+		return c.effectiveConfig, nil
+	}
 
 	settings := types.StartSettings{
 		OpAMPServerURL: c.cfg.Endpoint,
@@ -214,6 +221,14 @@ func (c *Client) Start(ctx context.Context) error {
 	}
 
 	c.opampClient = opampClient
+
+	// Trigger effective config update if we have an initial config
+	if c.effectiveConfig != nil {
+		if err := c.opampClient.UpdateEffectiveConfig(ctx); err != nil {
+			c.logger.Warn("failed to send initial effective config", zap.Error(err))
+		}
+	}
+
 	return nil
 }
 
@@ -245,6 +260,24 @@ func (c *Client) SetHealth(health *protobufs.ComponentHealth) error {
 		return nil
 	}
 	return c.opampClient.SetHealth(health)
+}
+
+// SetEffectiveConfig updates the effective configuration reported to the server.
+// Can be called before Start() to set the initial effective config.
+func (c *Client) SetEffectiveConfig(config map[string]*protobufs.AgentConfigFile) error {
+	c.effectiveConfig = &protobufs.EffectiveConfig{
+		ConfigMap: &protobufs.AgentConfigMap{
+			ConfigMap: config,
+		},
+	}
+
+	if c.opampClient == nil {
+		// Store for use when Start() is called
+		return nil
+	}
+
+	// Trigger the OpAMP client to fetch and send the effective config via callback
+	return c.opampClient.UpdateEffectiveConfig(context.Background())
 }
 
 // UpdateEffectiveConfig updates the effective configuration.

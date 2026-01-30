@@ -19,6 +19,7 @@ package supervisor
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
@@ -81,4 +82,38 @@ func TestNewSupervisor_PersistenceError(t *testing.T) {
 	sup, err := New(logger, cfg)
 	require.Error(t, err)
 	require.Nil(t, sup)
+}
+
+func TestSupervisor_ConfigManagerIntegration(t *testing.T) {
+	logger := zaptest.NewLogger(t)
+	dir := t.TempDir()
+
+	cfg := config.Config{
+		Server: config.ServerConfig{
+			Endpoint: "ws://localhost:4320/v1/opamp",
+		},
+		LocalOpAMP: config.LocalOpAMPConfig{
+			Endpoint: "localhost:4321",
+		},
+		Agent: config.AgentConfig{
+			Executable: "/bin/sleep",
+			Args:       []string{"1"},
+			Health: config.HealthConfig{
+				Endpoint: "http://localhost:13133/health",
+				Interval: 10 * time.Second,
+				Timeout:  5 * time.Second,
+			},
+		},
+		Persistence: config.PersistenceConfig{
+			Dir: dir,
+		},
+	}
+
+	supervisor, err := New(logger, cfg)
+	require.NoError(t, err)
+	require.NotNil(t, supervisor)
+
+	// Verify components are created
+	require.NotNil(t, supervisor.configManager)
+	require.NotNil(t, supervisor.healthMonitor)
 }
