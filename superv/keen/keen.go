@@ -27,6 +27,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -50,6 +51,13 @@ type Commander struct {
 	running atomic.Bool
 	doneCh  chan struct{}
 	exitCh  chan struct{}
+
+	// Crash recovery fields
+	backoff      *Backoff
+	crashCount   int
+	crashMu      sync.Mutex
+	recoveryDone chan struct{}
+	stopRecovery context.CancelFunc
 }
 
 // New creates a new Commander instance.
@@ -208,6 +216,11 @@ func (c *Commander) watch() {
 
 // Stop stops the agent process gracefully.
 func (c *Commander) Stop(ctx context.Context) error {
+	// Cancel recovery loop if running
+	if c.stopRecovery != nil {
+		c.stopRecovery()
+	}
+
 	if !c.running.Load() {
 		return nil
 	}
@@ -282,4 +295,128 @@ func (c *Commander) ExitCode() int {
 // IsRunning returns true if the agent process is running.
 func (c *Commander) IsRunning() bool {
 	return c.running.Load()
+}
+
+// SetBackoff configures the backoff behavior for crash recovery.
+func (c *Commander) SetBackoff(cfg BackoffConfig) {
+	c.backoff = NewBackoff(cfg)
+}
+
+// StartWithRecovery starts the agent process with automatic crash recovery.
+// It will restart the process on non-zero exit codes according to the
+// configured backoff policy.
+func (c *Commander) StartWithRecovery(ctx context.Context) error {
+	if c.backoff == nil {
+		c.backoff = NewBackoff(DefaultBackoffConfig())
+	}
+
+	c.recoveryDone = make(chan struct{})
+
+	// Create a cancellable context for the recovery loop
+	recoveryCtx, cancel := context.WithCancel(ctx)
+	c.stopRecovery = cancel
+
+	go c.recoveryLoop(recoveryCtx)
+
+	return nil
+}
+
+// recoveryLoop runs the crash recovery loop.
+func (c *Commander) recoveryLoop(ctx context.Context) {
+	defer close(c.recoveryDone)
+
+	for {
+		// Start the process
+		if err := c.Start(ctx); err != nil {
+			c.logger.Error("Failed to start agent", zap.Error(err))
+			if !c.handleCrash(ctx) {
+				return
+			}
+			continue
+		}
+
+		// Mark as running for stability tracking
+		c.backoff.MarkRunning()
+
+		// Wait for process to exit
+		select {
+		case <-ctx.Done():
+			// Context cancelled, stop the process and exit
+			c.logger.Debug("Recovery loop context cancelled")
+			stopCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			c.Stop(stopCtx)
+			cancel()
+			return
+
+		case <-c.exitCh:
+			// Process exited, check if we should restart
+			exitCode := c.ExitCode()
+
+			// Check if process was stable before crash
+			c.backoff.CheckAndResetIfStable()
+
+			if exitCode == 0 {
+				// Clean exit, don't restart
+				c.logger.Debug("Agent exited cleanly", zap.Int("exit_code", exitCode))
+				return
+			}
+
+			// Non-zero exit, handle as crash
+			c.logger.Warn("Agent crashed",
+				zap.Int("exit_code", exitCode),
+				zap.Int("crash_count", c.CrashCount()+1),
+			)
+
+			if !c.handleCrash(ctx) {
+				return
+			}
+		}
+	}
+}
+
+// handleCrash handles a process crash. Returns true if recovery should continue.
+func (c *Commander) handleCrash(ctx context.Context) bool {
+	c.crashMu.Lock()
+	c.crashCount++
+	c.crashMu.Unlock()
+
+	if !c.backoff.ShouldRetry() {
+		c.logger.Error("Max crash recovery attempts reached, giving up",
+			zap.Int("crash_count", c.CrashCount()),
+			zap.Int("max_retries", c.backoff.MaxRetries()),
+		)
+		return false
+	}
+
+	delay := c.backoff.NextDelay()
+	c.logger.Info("Waiting before restart",
+		zap.Duration("delay", delay),
+		zap.Int("attempt", c.backoff.Attempts()),
+	)
+
+	select {
+	case <-ctx.Done():
+		c.logger.Debug("Recovery cancelled during backoff wait")
+		return false
+	case <-time.After(delay):
+		return true
+	}
+}
+
+// CrashCount returns the number of times the process has crashed.
+func (c *Commander) CrashCount() int {
+	c.crashMu.Lock()
+	defer c.crashMu.Unlock()
+	return c.crashCount
+}
+
+// Done returns a channel that signals when the recovery loop has completed.
+// This happens when max retries are exhausted, the process exits cleanly,
+// or the recovery is stopped.
+func (c *Commander) Done() <-chan struct{} {
+	if c.recoveryDone != nil {
+		return c.recoveryDone
+	}
+	// Return exitCh if not using recovery
+	return c.exitCh
 }

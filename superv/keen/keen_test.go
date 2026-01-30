@@ -148,3 +148,124 @@ func TestCommander_Restart(t *testing.T) {
 
 	cmd.Stop(ctx)
 }
+
+func TestCommander_CrashRecovery(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows - need different test binary")
+	}
+
+	logger := zaptest.NewLogger(t)
+
+	// Use a command that exits immediately (simulates crash)
+	cmd, err := New(logger, t.TempDir(), Config{
+		Executable: "/bin/false", // Always exits with code 1
+		Args:       []string{},
+	})
+	require.NoError(t, err)
+
+	// Configure backoff with short delays for testing
+	cmd.SetBackoff(BackoffConfig{
+		InitialInterval:     10 * time.Millisecond,
+		MaxInterval:         20 * time.Millisecond,
+		Multiplier:          2.0,
+		RandomizationFactor: 0, // No jitter for predictable tests
+		MaxRetries:          3,
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+
+	// Start with crash recovery enabled
+	err = cmd.StartWithRecovery(ctx)
+	require.NoError(t, err)
+
+	// Wait for max retries to be exhausted
+	select {
+	case <-cmd.Done():
+		// Expected - process gave up after max retries
+	case <-ctx.Done():
+		t.Fatal("timeout waiting for crash recovery to exhaust retries")
+	}
+
+	require.GreaterOrEqual(t, cmd.CrashCount(), 2)
+}
+
+func TestCommander_CrashRecovery_GracefulExit(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows")
+	}
+
+	logger := zaptest.NewLogger(t)
+
+	// Use a command that exits cleanly (exit code 0)
+	cmd, err := New(logger, t.TempDir(), Config{
+		Executable: "/bin/true", // Always exits with code 0
+		Args:       []string{},
+	})
+	require.NoError(t, err)
+
+	cmd.SetBackoff(BackoffConfig{
+		InitialInterval:     10 * time.Millisecond,
+		RandomizationFactor: 0,
+		MaxRetries:          5,
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+
+	err = cmd.StartWithRecovery(ctx)
+	require.NoError(t, err)
+
+	// Wait for recovery loop to finish
+	select {
+	case <-cmd.Done():
+		// Expected - process exited cleanly, no restart
+	case <-ctx.Done():
+		t.Fatal("timeout waiting for clean exit")
+	}
+
+	// No crash should be counted for clean exit
+	require.Equal(t, 0, cmd.CrashCount())
+}
+
+func TestCommander_CrashRecovery_StopDuringRecovery(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows")
+	}
+
+	logger := zaptest.NewLogger(t)
+
+	// Use a command that exits immediately but would retry forever
+	cmd, err := New(logger, t.TempDir(), Config{
+		Executable: "/bin/false",
+		Args:       []string{},
+	})
+	require.NoError(t, err)
+
+	cmd.SetBackoff(BackoffConfig{
+		InitialInterval:     50 * time.Millisecond,
+		MaxInterval:         50 * time.Millisecond,
+		RandomizationFactor: 0,
+		MaxRetries:          0, // Unlimited retries
+	})
+
+	ctx := context.Background()
+
+	err = cmd.StartWithRecovery(ctx)
+	require.NoError(t, err)
+
+	// Wait a bit for some crashes to occur
+	time.Sleep(100 * time.Millisecond)
+
+	// Stop should work even during recovery
+	err = cmd.Stop(ctx)
+	require.NoError(t, err)
+
+	// Wait for recovery loop to finish
+	select {
+	case <-cmd.Done():
+		// Expected
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for recovery loop to stop")
+	}
+}

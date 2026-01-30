@@ -3,6 +3,7 @@ module github.com/Graylog2/collector-sidecar/superv
 go 1.25.6
 
 require (
+	github.com/cenkalti/backoff/v5 v5.0.3
 	github.com/goccy/go-yaml v1.19.2
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/renameio/v2 v2.0.2

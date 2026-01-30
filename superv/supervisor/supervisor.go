@@ -362,11 +362,47 @@ func (s *Supervisor) Start(ctx context.Context) error {
 		}
 	}()
 
+	// Configure crash recovery if enabled
+	if s.cfg.Agent.Restart.MaxRetries > 0 {
+		defaults := keen.DefaultBackoffConfig()
+		backoffCfg := keen.BackoffConfig{
+			MaxRetries:          s.cfg.Agent.Restart.MaxRetries,
+			InitialInterval:     s.cfg.Agent.Restart.InitialInterval,
+			MaxInterval:         s.cfg.Agent.Restart.MaxInterval,
+			Multiplier:          s.cfg.Agent.Restart.Multiplier,
+			RandomizationFactor: s.cfg.Agent.Restart.RandomizationFactor,
+			StableAfter:         s.cfg.Agent.Restart.StableAfter,
+		}
+		// Apply defaults for zero values
+		if backoffCfg.InitialInterval == 0 {
+			backoffCfg.InitialInterval = defaults.InitialInterval
+		}
+		if backoffCfg.MaxInterval == 0 {
+			backoffCfg.MaxInterval = defaults.MaxInterval
+		}
+		if backoffCfg.Multiplier == 0 {
+			backoffCfg.Multiplier = defaults.Multiplier
+		}
+		if backoffCfg.StableAfter == 0 {
+			backoffCfg.StableAfter = defaults.StableAfter
+		}
+		// Note: RandomizationFactor of 0 is valid (no jitter), so don't default it
+		s.commander.SetBackoff(backoffCfg)
+	}
+
 	// Start the collector agent
-	if err := s.commander.Start(ctx); err != nil {
-		s.opampClient.Stop(ctx)
-		s.opampServer.Stop(ctx)
-		return err
+	if s.cfg.Agent.Restart.MaxRetries > 0 {
+		if err := s.commander.StartWithRecovery(ctx); err != nil {
+			s.opampClient.Stop(ctx)
+			s.opampServer.Stop(ctx)
+			return fmt.Errorf("failed to start agent with recovery: %w", err)
+		}
+	} else {
+		if err := s.commander.Start(ctx); err != nil {
+			s.opampClient.Stop(ctx)
+			s.opampServer.Stop(ctx)
+			return fmt.Errorf("failed to start agent: %w", err)
+		}
 	}
 
 	s.running = true

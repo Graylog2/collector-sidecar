@@ -126,10 +126,26 @@ type ReloadConfig struct {
 	RestartOnReloadFailure bool   `koanf:"restart_on_reload_failure"`
 }
 
-// RestartConfig configures crash recovery.
+// RestartConfig configures crash recovery with exponential backoff.
 type RestartConfig struct {
-	MaxRetries int             `koanf:"max_retries"`
-	Backoff    []time.Duration `koanf:"backoff"`
+	// MaxRetries is the maximum number of restart attempts. 0 means unlimited.
+	MaxRetries int `koanf:"max_retries"`
+
+	// InitialInterval is the first backoff delay. Default: 1s.
+	InitialInterval time.Duration `koanf:"initial_interval"`
+
+	// MaxInterval is the maximum backoff delay. Default: 30s.
+	MaxInterval time.Duration `koanf:"max_interval"`
+
+	// Multiplier is the factor by which delay increases. Default: 2.0.
+	Multiplier float64 `koanf:"multiplier"`
+
+	// RandomizationFactor adds jitter to delays. 0.5 means ±50%. Default: 0.5.
+	RandomizationFactor float64 `koanf:"randomization_factor"`
+
+	// StableAfter is the duration after which a running process is considered
+	// stable and backoff resets. Default: 30s. 0 disables stability tracking.
+	StableAfter time.Duration `koanf:"stable_after"`
 }
 
 // ShutdownConfig configures graceful shutdown.
@@ -208,14 +224,12 @@ func DefaultConfig() Config {
 				RestartOnReloadFailure: true,
 			},
 			Restart: RestartConfig{
-				MaxRetries: 5,
-				Backoff: []time.Duration{
-					1 * time.Second,
-					2 * time.Second,
-					4 * time.Second,
-					8 * time.Second,
-					16 * time.Second,
-				},
+				MaxRetries:          5,
+				InitialInterval:     1 * time.Second,
+				MaxInterval:         30 * time.Second,
+				Multiplier:          2.0,
+				RandomizationFactor: 0.5,
+				StableAfter:         30 * time.Second,
 			},
 			Shutdown: ShutdownConfig{
 				GracefulTimeout: 30 * time.Second,
