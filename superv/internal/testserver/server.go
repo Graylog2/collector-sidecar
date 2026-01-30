@@ -401,40 +401,11 @@ func (s *Server) handleHTTPOpAMP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extract instance UID
-	var instanceUID string
-	if msg.InstanceUid != nil {
-		instanceUID = fmt.Sprintf("%x", msg.InstanceUid)
-	}
+	// Get or create agent connection for this request
+	agent := s.getOrCreateAgent(&msg, nil)
 
-	// Create or get agent connection (for HTTP, we track per request)
-	agent := &AgentConnection{
-		InstanceUID: instanceUID,
-		lastSeen:    time.Now(),
-	}
-
-	// Store agent if not exists
-	s.mu.Lock()
-	if existing, ok := s.agents[instanceUID]; ok {
-		agent = existing
-		agent.lastSeen = time.Now()
-	} else if instanceUID != "" {
-		s.agents[instanceUID] = agent
-		s.mu.Unlock()
-		if s.OnAgentConnect != nil {
-			s.OnAgentConnect(instanceUID, agent)
-		}
-		s.mu.Lock()
-	}
-	s.mu.Unlock()
-
-	// Call message callback
-	if s.OnAgentMessage != nil {
-		s.OnAgentMessage(instanceUID, &msg)
-	}
-
-	// Create response
-	response := s.createResponse(&msg, agent)
+	// Process message and create response
+	response := s.processMessage(&msg, agent)
 
 	// Marshal response
 	respData, err := proto.Marshal(response)
@@ -449,20 +420,15 @@ func (s *Server) handleHTTPOpAMP(w http.ResponseWriter, r *http.Request) {
 	w.Write(respData)
 }
 
-// handleAgentConnection handles an individual agent connection.
+// handleAgentConnection handles an individual agent WebSocket connection.
 func (s *Server) handleAgentConnection(conn *websocket.Conn) {
 	defer conn.Close()
 
-	var instanceUID string
-	agent := &AgentConnection{
-		Conn:     conn,
-		lastSeen: time.Now(),
-	}
+	var agent *AgentConnection
 
 	for {
 		messageType, message, err := conn.ReadMessage()
 		if err != nil {
-			// Log the error for debugging
 			_ = messageType // avoid unused warning
 			break
 		}
@@ -472,46 +438,72 @@ func (s *Server) handleAgentConnection(conn *websocket.Conn) {
 			continue
 		}
 
-		// Extract instance UID from first message
-		if instanceUID == "" && msg.InstanceUid != nil {
-			instanceUID = fmt.Sprintf("%x", msg.InstanceUid)
-			agent.InstanceUID = instanceUID
-
-			s.mu.Lock()
-			s.agents[instanceUID] = agent
-			s.mu.Unlock()
-
-			if s.OnAgentConnect != nil {
-				s.OnAgentConnect(instanceUID, agent)
-			}
+		// Get or create agent on first message
+		if agent == nil {
+			agent = s.getOrCreateAgent(&msg, conn)
 		}
 
-		agent.mu.Lock()
-		agent.lastSeen = time.Now()
-		agent.mu.Unlock()
-
-		// Call message callback
-		if s.OnAgentMessage != nil {
-			s.OnAgentMessage(instanceUID, &msg)
-		}
-
-		// Create response
-		response := s.createResponse(&msg, agent)
+		// Process message and create response
+		response := s.processMessage(&msg, agent)
 		if err := agent.Send(response); err != nil {
 			break
 		}
 	}
 
 	// Cleanup
-	if instanceUID != "" {
+	if agent != nil && agent.InstanceUID != "" {
 		s.mu.Lock()
-		delete(s.agents, instanceUID)
+		delete(s.agents, agent.InstanceUID)
 		s.mu.Unlock()
 
 		if s.OnAgentDisconnect != nil {
-			s.OnAgentDisconnect(instanceUID)
+			s.OnAgentDisconnect(agent.InstanceUID)
 		}
 	}
+}
+
+// getOrCreateAgent returns an existing agent or creates a new one.
+func (s *Server) getOrCreateAgent(msg *protobufs.AgentToServer, conn *websocket.Conn) *AgentConnection {
+	var instanceUID string
+	if msg.InstanceUid != nil {
+		instanceUID = fmt.Sprintf("%x", msg.InstanceUid)
+	}
+
+	s.mu.Lock()
+	if existing, ok := s.agents[instanceUID]; ok {
+		s.mu.Unlock()
+		return existing
+	}
+
+	agent := &AgentConnection{
+		InstanceUID: instanceUID,
+		Conn:        conn,
+		lastSeen:    time.Now(),
+	}
+
+	if instanceUID != "" {
+		s.agents[instanceUID] = agent
+	}
+	s.mu.Unlock()
+
+	if instanceUID != "" && s.OnAgentConnect != nil {
+		s.OnAgentConnect(instanceUID, agent)
+	}
+
+	return agent
+}
+
+// processMessage handles an incoming agent message and returns the response.
+func (s *Server) processMessage(msg *protobufs.AgentToServer, agent *AgentConnection) *protobufs.ServerToAgent {
+	agent.mu.Lock()
+	agent.lastSeen = time.Now()
+	agent.mu.Unlock()
+
+	if s.OnAgentMessage != nil {
+		s.OnAgentMessage(agent.InstanceUID, msg)
+	}
+
+	return s.createResponse(msg, agent)
 }
 
 // createResponse creates a response for an agent message.

@@ -30,6 +30,7 @@ import (
 func TestServer_OpAMP_WebSocket(t *testing.T) {
 	server, err := New()
 	require.NoError(t, err)
+	server.RequireAuth = false
 
 	url := server.Start()
 	defer server.Stop()
@@ -80,6 +81,7 @@ func TestServer_OpAMP_WebSocket(t *testing.T) {
 func TestServer_OpAMP_HTTP(t *testing.T) {
 	server, err := New()
 	require.NoError(t, err)
+	server.RequireAuth = false
 
 	url := server.Start()
 	defer server.Stop()
@@ -122,6 +124,7 @@ func TestServer_OpAMP_HTTP(t *testing.T) {
 func TestServer_OpAMP_HTTP_CSR(t *testing.T) {
 	server, err := New()
 	require.NoError(t, err)
+	server.RequireAuth = false
 
 	// Track if CSR was received
 	csrReceived := make(chan string, 1)
@@ -216,6 +219,7 @@ func TestServer_OpAMP_HTTP_CSR(t *testing.T) {
 func TestServer_OpAMP_CSR(t *testing.T) {
 	server, err := New()
 	require.NoError(t, err)
+	server.RequireAuth = false
 
 	// Track if CSR was received
 	csrReceived := make(chan string, 1)
