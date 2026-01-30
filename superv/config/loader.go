@@ -71,4 +71,3 @@ func Load(path string) (Config, error) {
 
 	return cfg, nil
 }
-

@@ -254,7 +254,7 @@ func TestIntegration_JWTExpiry(t *testing.T) {
 	require.False(t, claims1.IsExpired())
 
 	// Check IsExpiringSoon with different thresholds
-	require.True(t, claims1.IsExpiringSoon(5*time.Second))          // expires within 5s - true
+	require.True(t, claims1.IsExpiringSoon(5*time.Second))         // expires within 5s - true
 	require.False(t, claims1.IsExpiringSoon(500*time.Millisecond)) // expires within 500ms - false (we have ~2s)
 
 	// Wait for expiry
