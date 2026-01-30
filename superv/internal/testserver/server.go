@@ -210,8 +210,8 @@ func (s *Server) SendToAgent(instanceUID string, msg *protobufs.ServerToAgent) e
 
 // HandleJWKS serves the JWKS endpoint.
 func (s *Server) HandleJWKS(w http.ResponseWriter, r *http.Request) {
-	jwks := map[string]interface{}{
-		"keys": []map[string]interface{}{
+	jwks := map[string]any{
+		"keys": []map[string]any{
 			{
 				"kty": "OKP",
 				"crv": "Ed25519",
@@ -269,7 +269,7 @@ func (s *Server) checkAuth(r *http.Request) AuthResult {
 
 // validateEnrollmentJWT validates an enrollment JWT signed by the server.
 func (s *Server) validateEnrollmentJWT(tokenString string) AuthResult {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		// Verify signing method
 		if _, ok := token.Method.(*jwt.SigningMethodEd25519); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -335,7 +335,7 @@ func (s *Server) validateSupervisorJWT(tokenString string) AuthResult {
 	}
 
 	// Now verify the token with the agent's public key
-	token, err = jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+	token, err = jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodEd25519); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}

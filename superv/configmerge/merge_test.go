@@ -107,8 +107,8 @@ func TestInjectSettings_Basic(t *testing.T) {
 	config := []byte(`receivers:
   otlp: {}
 `)
-	settings := map[string]interface{}{
-		"exporters::debug": map[string]interface{}{},
+	settings := map[string]any{
+		"exporters::debug": map[string]any{},
 	}
 
 	result, err := InjectSettings(config, settings)
@@ -122,7 +122,7 @@ func TestInjectSettings_NestedKeyPath(t *testing.T) {
 	config := []byte(`receivers:
   otlp: {}
 `)
-	settings := map[string]interface{}{
+	settings := map[string]any{
 		"service::telemetry::logs::level": "debug",
 	}
 
@@ -137,7 +137,7 @@ func TestInjectSettings_NestedKeyPath(t *testing.T) {
 
 func TestInjectSettings_EmptyConfig(t *testing.T) {
 	// Test with empty config
-	settings := map[string]interface{}{
+	settings := map[string]any{
 		"key": "value",
 	}
 
@@ -157,7 +157,7 @@ func TestInjectSettings_OverwriteExisting(t *testing.T) {
     logs:
       level: info
 `)
-	settings := map[string]interface{}{
+	settings := map[string]any{
 		"service::telemetry::logs::level": "debug",
 	}
 

@@ -170,8 +170,8 @@ func TestManager_PrepareAndCompleteEnrollment(t *testing.T) {
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/.well-known/jwks.json":
-			jwks := map[string]interface{}{
-				"keys": []map[string]interface{}{
+			jwks := map[string]any{
+				"keys": []map[string]any{
 					{
 						"kty": "OKP",
 						"crv": "Ed25519",

@@ -64,8 +64,8 @@ func main() {
 	}
 
 	if printJWKS {
-		jwks := map[string]interface{}{
-			"keys": []map[string]interface{}{
+		jwks := map[string]any{
+			"keys": []map[string]any{
 				{
 					"kty": "OKP",
 					"crv": "Ed25519",

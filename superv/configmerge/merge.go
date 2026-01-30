@@ -62,7 +62,7 @@ func MergeMultiple(configs ...[]byte) ([]byte, error) {
 }
 
 // InjectSettings injects supervisor settings into a collector config.
-func InjectSettings(config []byte, settings map[string]interface{}) ([]byte, error) {
+func InjectSettings(config []byte, settings map[string]any) ([]byte, error) {
 	// TODO: Check how the reference implementation handles nested keys and arrays.
 	//       Currently, this implementation will overwrite entire sections if nested keys are provided.
 	k := koanf.New("::")

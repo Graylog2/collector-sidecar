@@ -44,21 +44,21 @@ service:
 	require.NoError(t, err)
 
 	// Parse result to verify structure
-	var parsed map[string]interface{}
+	var parsed map[string]any
 	err = yaml.Unmarshal(result, &parsed)
 	require.NoError(t, err)
 
 	// Verify extensions.opamp exists with correct settings
-	extensions, ok := parsed["extensions"].(map[string]interface{})
+	extensions, ok := parsed["extensions"].(map[string]any)
 	require.True(t, ok, "extensions should exist")
 
-	opamp, ok := extensions["opamp"].(map[string]interface{})
+	opamp, ok := extensions["opamp"].(map[string]any)
 	require.True(t, ok, "extensions.opamp should exist")
 
-	server, ok := opamp["server"].(map[string]interface{})
+	server, ok := opamp["server"].(map[string]any)
 	require.True(t, ok, "extensions.opamp.server should exist")
 
-	ws, ok := server["ws"].(map[string]interface{})
+	ws, ok := server["ws"].(map[string]any)
 	require.True(t, ok, "extensions.opamp.server.ws should exist")
 
 	endpoint, ok := ws["endpoint"].(string)
@@ -70,10 +70,10 @@ service:
 	require.Equal(t, "test-instance-123", instanceUID)
 
 	// Verify service.extensions includes opamp
-	service, ok := parsed["service"].(map[string]interface{})
+	service, ok := parsed["service"].(map[string]any)
 	require.True(t, ok, "service should exist")
 
-	serviceExtensions, ok := service["extensions"].([]interface{})
+	serviceExtensions, ok := service["extensions"].([]any)
 	require.True(t, ok, "service.extensions should be a list")
 	require.Contains(t, serviceExtensions, "opamp")
 
@@ -103,18 +103,18 @@ service:
 	require.NoError(t, err)
 
 	// Parse result to verify structure
-	var parsed map[string]interface{}
+	var parsed map[string]any
 	err = yaml.Unmarshal(result, &parsed)
 	require.NoError(t, err)
 
 	// Verify both extensions exist
-	extensions, ok := parsed["extensions"].(map[string]interface{})
+	extensions, ok := parsed["extensions"].(map[string]any)
 	require.True(t, ok, "extensions should exist")
 
-	_, ok = extensions["health_check"].(map[string]interface{})
+	_, ok = extensions["health_check"].(map[string]any)
 	require.True(t, ok, "extensions.health_check should be preserved")
 
-	opamp, ok := extensions["opamp"].(map[string]interface{})
+	opamp, ok := extensions["opamp"].(map[string]any)
 	require.True(t, ok, "extensions.opamp should exist")
 
 	// Verify opamp config is correct
@@ -123,10 +123,10 @@ service:
 	require.Equal(t, "test-instance-456", instanceUID)
 
 	// Verify service.extensions includes both
-	service, ok := parsed["service"].(map[string]interface{})
+	service, ok := parsed["service"].(map[string]any)
 	require.True(t, ok)
 
-	serviceExtensions, ok := service["extensions"].([]interface{})
+	serviceExtensions, ok := service["extensions"].([]any)
 	require.True(t, ok, "service.extensions should be a list")
 	require.Contains(t, serviceExtensions, "health_check")
 	require.Contains(t, serviceExtensions, "opamp")
@@ -137,15 +137,15 @@ func TestInjectOpAMPExtension_EmptyConfig(t *testing.T) {
 	result, err := InjectOpAMPExtension([]byte{}, "ws://localhost:4320/v1/opamp", "empty-test")
 	require.NoError(t, err)
 
-	var parsed map[string]interface{}
+	var parsed map[string]any
 	err = yaml.Unmarshal(result, &parsed)
 	require.NoError(t, err)
 
 	// Verify opamp extension is injected
-	extensions, ok := parsed["extensions"].(map[string]interface{})
+	extensions, ok := parsed["extensions"].(map[string]any)
 	require.True(t, ok)
 
-	opamp, ok := extensions["opamp"].(map[string]interface{})
+	opamp, ok := extensions["opamp"].(map[string]any)
 	require.True(t, ok)
 
 	instanceUID, ok := opamp["instance_uid"].(string)
@@ -153,10 +153,10 @@ func TestInjectOpAMPExtension_EmptyConfig(t *testing.T) {
 	require.Equal(t, "empty-test", instanceUID)
 
 	// Verify service.extensions includes opamp
-	service, ok := parsed["service"].(map[string]interface{})
+	service, ok := parsed["service"].(map[string]any)
 	require.True(t, ok)
 
-	serviceExtensions, ok := service["extensions"].([]interface{})
+	serviceExtensions, ok := service["extensions"].([]any)
 	require.True(t, ok)
 	require.Contains(t, serviceExtensions, "opamp")
 
@@ -167,10 +167,10 @@ func TestInjectOpAMPExtension_EmptyConfig(t *testing.T) {
 	err = yaml.Unmarshal(result, &parsed)
 	require.NoError(t, err)
 
-	extensions, ok = parsed["extensions"].(map[string]interface{})
+	extensions, ok = parsed["extensions"].(map[string]any)
 	require.True(t, ok)
 
-	opamp, ok = extensions["opamp"].(map[string]interface{})
+	opamp, ok = extensions["opamp"].(map[string]any)
 	require.True(t, ok)
 
 	instanceUID, ok = opamp["instance_uid"].(string)
@@ -194,21 +194,21 @@ service:
 	result, err := InjectOpAMPExtension(config, "ws://localhost:4320/v1/opamp", "test-123")
 	require.NoError(t, err)
 
-	var parsed map[string]interface{}
+	var parsed map[string]any
 	err = yaml.Unmarshal(result, &parsed)
 	require.NoError(t, err)
 
 	// Verify opamp extension is added
-	extensions, ok := parsed["extensions"].(map[string]interface{})
+	extensions, ok := parsed["extensions"].(map[string]any)
 	require.True(t, ok)
 
-	opamp, ok := extensions["opamp"].(map[string]interface{})
+	opamp, ok := extensions["opamp"].(map[string]any)
 	require.True(t, ok)
 	require.Equal(t, "test-123", opamp["instance_uid"])
 
 	// Verify service.extensions has opamp exactly once
-	service := parsed["service"].(map[string]interface{})
-	serviceExtensions := service["extensions"].([]interface{})
+	service := parsed["service"].(map[string]any)
+	serviceExtensions := service["extensions"].([]any)
 
 	count := 0
 	for _, ext := range serviceExtensions {
@@ -232,12 +232,12 @@ service:
 	result, err := InjectServiceExtension(config, "opamp")
 	require.NoError(t, err)
 
-	var parsed map[string]interface{}
+	var parsed map[string]any
 	err = yaml.Unmarshal(result, &parsed)
 	require.NoError(t, err)
 
-	service := parsed["service"].(map[string]interface{})
-	serviceExtensions := service["extensions"].([]interface{})
+	service := parsed["service"].(map[string]any)
+	serviceExtensions := service["extensions"].([]any)
 	require.Contains(t, serviceExtensions, "opamp")
 }
 
@@ -250,12 +250,12 @@ service:
 	result, err := InjectServiceExtension(config, "opamp")
 	require.NoError(t, err)
 
-	var parsed map[string]interface{}
+	var parsed map[string]any
 	err = yaml.Unmarshal(result, &parsed)
 	require.NoError(t, err)
 
-	service := parsed["service"].(map[string]interface{})
-	serviceExtensions := service["extensions"].([]interface{})
+	service := parsed["service"].(map[string]any)
+	serviceExtensions := service["extensions"].([]any)
 	require.Contains(t, serviceExtensions, "health_check")
 	require.Contains(t, serviceExtensions, "zpages")
 	require.Contains(t, serviceExtensions, "opamp")
@@ -270,12 +270,12 @@ service:
 	result, err := InjectServiceExtension(config, "opamp")
 	require.NoError(t, err)
 
-	var parsed map[string]interface{}
+	var parsed map[string]any
 	err = yaml.Unmarshal(result, &parsed)
 	require.NoError(t, err)
 
-	service := parsed["service"].(map[string]interface{})
-	serviceExtensions := service["extensions"].([]interface{})
+	service := parsed["service"].(map[string]any)
+	serviceExtensions := service["extensions"].([]any)
 
 	// Count occurrences
 	count := 0
@@ -291,12 +291,12 @@ func TestInjectServiceExtension_EmptyConfig(t *testing.T) {
 	result, err := InjectServiceExtension([]byte{}, "opamp")
 	require.NoError(t, err)
 
-	var parsed map[string]interface{}
+	var parsed map[string]any
 	err = yaml.Unmarshal(result, &parsed)
 	require.NoError(t, err)
 
-	service := parsed["service"].(map[string]interface{})
-	serviceExtensions := service["extensions"].([]interface{})
+	service := parsed["service"].(map[string]any)
+	serviceExtensions := service["extensions"].([]any)
 	require.Contains(t, serviceExtensions, "opamp")
 }
 
@@ -321,15 +321,15 @@ service:
 	})
 	require.NoError(t, err)
 
-	var parsed map[string]interface{}
+	var parsed map[string]any
 	err = yaml.Unmarshal(result, &parsed)
 	require.NoError(t, err)
 
 	// Verify extensions.health_check exists with correct settings
-	extensions, ok := parsed["extensions"].(map[string]interface{})
+	extensions, ok := parsed["extensions"].(map[string]any)
 	require.True(t, ok, "extensions should exist")
 
-	healthCheck, ok := extensions["health_check"].(map[string]interface{})
+	healthCheck, ok := extensions["health_check"].(map[string]any)
 	require.True(t, ok, "extensions.health_check should exist")
 
 	endpoint, ok := healthCheck["endpoint"].(string)
@@ -337,10 +337,10 @@ service:
 	require.Equal(t, "localhost:13133", endpoint)
 
 	// Verify service.extensions includes health_check
-	service, ok := parsed["service"].(map[string]interface{})
+	service, ok := parsed["service"].(map[string]any)
 	require.True(t, ok, "service should exist")
 
-	serviceExtensions, ok := service["extensions"].([]interface{})
+	serviceExtensions, ok := service["extensions"].([]any)
 	require.True(t, ok, "service.extensions should be a list")
 	require.Contains(t, serviceExtensions, "health_check")
 }
@@ -361,12 +361,12 @@ service:
 	})
 	require.NoError(t, err)
 
-	var parsed map[string]interface{}
+	var parsed map[string]any
 	err = yaml.Unmarshal(result, &parsed)
 	require.NoError(t, err)
 
-	extensions := parsed["extensions"].(map[string]interface{})
-	healthCheck := extensions["health_check"].(map[string]interface{})
+	extensions := parsed["extensions"].(map[string]any)
+	healthCheck := extensions["health_check"].(map[string]any)
 
 	require.Equal(t, "0.0.0.0:13133", healthCheck["endpoint"])
 	require.Equal(t, "/health/status", healthCheck["path"])
@@ -386,23 +386,23 @@ service:
 	})
 	require.NoError(t, err)
 
-	var parsed map[string]interface{}
+	var parsed map[string]any
 	err = yaml.Unmarshal(result, &parsed)
 	require.NoError(t, err)
 
-	extensions := parsed["extensions"].(map[string]interface{})
+	extensions := parsed["extensions"].(map[string]any)
 
 	// Verify zpages is preserved
-	_, ok := extensions["zpages"].(map[string]interface{})
+	_, ok := extensions["zpages"].(map[string]any)
 	require.True(t, ok, "extensions.zpages should be preserved")
 
 	// Verify health_check is added
-	_, ok = extensions["health_check"].(map[string]interface{})
+	_, ok = extensions["health_check"].(map[string]any)
 	require.True(t, ok, "extensions.health_check should exist")
 
 	// Verify service.extensions includes both
-	service := parsed["service"].(map[string]interface{})
-	serviceExtensions := service["extensions"].([]interface{})
+	service := parsed["service"].(map[string]any)
+	serviceExtensions := service["extensions"].([]any)
 	require.Contains(t, serviceExtensions, "zpages")
 	require.Contains(t, serviceExtensions, "health_check")
 }
