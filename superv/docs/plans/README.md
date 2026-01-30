@@ -23,6 +23,8 @@ Executed plans are archived in [`completed/`](completed/):
 | [Phase 2](completed/2026-01-23-opamp-supervisor-phase2.md) | Config management & health monitoring |
 | [Template Expansion](completed/2026-01-28-template-expansion-design.md) | Agent args template expansion |
 | [CSR Trust Bootstrap](completed/2026-01-29-csr-trust-bootstrap-design.md) | Authentication design |
+| [Config Merge](completed/2026-01-30-config-merge-implementation.md) | Custom merge for service.extensions concatenation |
+| [Health Deduplication](completed/2026-01-30-health-deduplication.md) | Deduplicate health status emissions |
 
 ## Execution Order
 
