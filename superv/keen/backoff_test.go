@@ -103,7 +103,7 @@ func TestBackoff_UnlimitedRetries(t *testing.T) {
 		MaxRetries:          0, // 0 means unlimited
 	})
 
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		require.True(t, b.ShouldRetry())
 		b.NextDelay()
 	}
