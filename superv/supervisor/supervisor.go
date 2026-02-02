@@ -58,6 +58,7 @@ type Supervisor struct {
 	configManager *configmanager.Manager
 	healthMonitor *healthmonitor.Monitor
 	healthCancel  context.CancelFunc
+	healthWg      sync.WaitGroup
 	commander     *keen.Commander
 	opampClient   *opamp.Client
 	opampServer   *opamp.Server
@@ -352,7 +353,7 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	healthCtx, healthCancel := context.WithCancel(ctx)
 	s.healthCancel = healthCancel
 	healthUpdates := s.healthMonitor.StartPolling(healthCtx)
-	go func() {
+	s.healthWg.Go(func() {
 		for status := range healthUpdates {
 			// TODO: Pass commander as AgentStateProvider once it implements the interface
 			// This will enable accurate agent start time reporting per OpAMP spec
@@ -360,7 +361,7 @@ func (s *Supervisor) Start(ctx context.Context) error {
 				s.logger.Warn("Failed to report health", zap.Error(err))
 			}
 		}
-	}()
+	})
 
 	// Configure crash recovery if enabled
 	if s.cfg.Agent.Restart.MaxRetries > 0 {
@@ -424,6 +425,7 @@ func (s *Supervisor) Stop(ctx context.Context) error {
 	if s.healthCancel != nil {
 		s.healthCancel()
 	}
+	s.healthWg.Wait()
 
 	// Stop commander (agent)
 	if s.commander != nil {

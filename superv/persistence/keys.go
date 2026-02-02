@@ -24,6 +24,7 @@ import (
 	"encoding/hex"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -45,7 +46,7 @@ func SaveSigningKey(keysDir string, key ed25519.PrivateKey) error {
 
 	pkcs8, err := x509.MarshalPKCS8PrivateKey(key)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshaling PKCS8 private key: %w", err)
 	}
 
 	block := &pem.Block{
@@ -73,7 +74,7 @@ func LoadSigningKey(keysDir string) (ed25519.PrivateKey, error) {
 
 	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parsing PKCS8 private key: %w", err)
 	}
 
 	ed25519Key, ok := key.(ed25519.PrivateKey)
