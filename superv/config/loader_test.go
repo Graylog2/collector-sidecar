@@ -34,8 +34,7 @@ func TestLoadFromFile(t *testing.T) {
 }
 
 func TestLoadWithEnvOverride(t *testing.T) {
-	os.Setenv("GLC_SERVER_ENDPOINT", "wss://env.example.com/v1/opamp")
-	defer os.Unsetenv("GLC_SERVER_ENDPOINT")
+	t.Setenv("GLC_SERVER_ENDPOINT", "wss://env.example.com/v1/opamp")
 
 	content := `
 server:
@@ -80,12 +79,8 @@ func TestLoadEmptyPath(t *testing.T) {
 }
 
 func TestLoadEnvOverridesTakesPrecedence(t *testing.T) {
-	os.Setenv("GLC_AGENT_EXECUTABLE", "/custom/otelcol")
-	os.Setenv("GLC_PERSISTENCE_DIR", "/custom/state")
-	defer func() {
-		os.Unsetenv("GLC_AGENT_EXECUTABLE")
-		os.Unsetenv("GLC_PERSISTENCE_DIR")
-	}()
+	t.Setenv("GLC_AGENT_EXECUTABLE", "/custom/otelcol")
+	t.Setenv("GLC_PERSISTENCE_DIR", "/custom/state")
 
 	content := `
 server:

@@ -352,9 +352,3 @@ func createTestEnrollmentJWT(t *testing.T, priv ed25519.PrivateKey, kid string, 
 	return tokenString
 }
 
-func mustReadAll(t *testing.T, r interface{ Read([]byte) (int, error) }) []byte {
-	t.Helper()
-	buf := make([]byte, 4096)
-	n, _ := r.Read(buf)
-	return buf[:n]
-}
