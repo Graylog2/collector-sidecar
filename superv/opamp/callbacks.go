@@ -33,6 +33,7 @@ type Callbacks struct {
 	OnOpampConnectionSettings func(ctx context.Context, settings *protobufs.OpAMPConnectionSettings) error
 	OnPackagesAvailable       func(ctx context.Context, packages *protobufs.PackagesAvailable) bool
 	OnCommand                 func(ctx context.Context, command *protobufs.ServerToAgentCommand) error
+	OnCustomMessage           func(ctx context.Context, customMessage *protobufs.CustomMessage)
 	SaveRemoteConfigStatus    func(ctx context.Context, status *protobufs.RemoteConfigStatus)
 	GetEffectiveConfig        func(ctx context.Context) (*protobufs.EffectiveConfig, error)
 }
@@ -97,5 +98,10 @@ func (c *Callbacks) onMessage(ctx context.Context, msg *types.MessageData) {
 	// Handle packages
 	if msg.PackagesAvailable != nil && c.OnPackagesAvailable != nil {
 		c.OnPackagesAvailable(ctx, msg.PackagesAvailable)
+	}
+
+	// Handle custom messages
+	if msg.CustomMessage != nil && c.OnCustomMessage != nil {
+		c.OnCustomMessage(ctx, msg.CustomMessage)
 	}
 }

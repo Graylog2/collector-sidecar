@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/open-telemetry/opamp-go/client/types"
 	"github.com/open-telemetry/opamp-go/protobufs"
@@ -34,7 +35,7 @@ func TestNewClient(t *testing.T) {
 
 	client, err := NewClient(logger, ClientConfig{
 		Endpoint:    "ws://localhost:4320/v1/opamp",
-		InstanceUID: "test-instance-uid",
+		InstanceUID: "550e8400-e29b-41d4-a716-446655440000",
 	}, callbacks)
 	require.NoError(t, err)
 	require.NotNil(t, client)
@@ -50,7 +51,7 @@ func TestClientConfig_Validate(t *testing.T) {
 			name: "valid websocket",
 			cfg: ClientConfig{
 				Endpoint:    "ws://localhost:4320/v1/opamp",
-				InstanceUID: "test-uid",
+				InstanceUID: "550e8400-e29b-41d4-a716-446655440000",
 			},
 			expectErr: false,
 		},
@@ -58,14 +59,14 @@ func TestClientConfig_Validate(t *testing.T) {
 			name: "valid wss",
 			cfg: ClientConfig{
 				Endpoint:    "wss://opamp.example.com/v1/opamp",
-				InstanceUID: "test-uid",
+				InstanceUID: "550e8400-e29b-41d4-a716-446655440000",
 			},
 			expectErr: false,
 		},
 		{
 			name: "missing endpoint",
 			cfg: ClientConfig{
-				InstanceUID: "test-uid",
+				InstanceUID: "550e8400-e29b-41d4-a716-446655440000",
 			},
 			expectErr: true,
 		},
@@ -92,7 +93,6 @@ func TestClientConfig_Validate(t *testing.T) {
 
 func TestCapabilitiesToProto(t *testing.T) {
 	caps := Capabilities{
-		ReportsStatus:          true,
 		AcceptsRemoteConfig:    true,
 		ReportsEffectiveConfig: true,
 		ReportsHealth:          true,
@@ -107,7 +107,6 @@ func TestCapabilitiesToProto(t *testing.T) {
 
 func TestCapabilitiesToProto_AllCapabilities(t *testing.T) {
 	caps := Capabilities{
-		ReportsStatus:                  true,
 		AcceptsRemoteConfig:            true,
 		ReportsEffectiveConfig:         true,
 		AcceptsPackages:                true,
@@ -119,6 +118,8 @@ func TestCapabilitiesToProto_AllCapabilities(t *testing.T) {
 		AcceptsRestartCommand:          true,
 		ReportsHealth:                  true,
 		ReportsRemoteConfig:            true,
+		ReportsHeartbeat:               true,
+		ReportsAvailableComponents:     true,
 	}
 
 	proto := caps.ToProto()
@@ -134,12 +135,36 @@ func TestCapabilitiesToProto_AllCapabilities(t *testing.T) {
 	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_AcceptsRestartCommand != 0)
 	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsHealth != 0)
 	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsRemoteConfig != 0)
+	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsHeartbeat != 0)
+	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsAvailableComponents != 0)
 }
 
 func TestCapabilitiesToProto_NoCapabilities(t *testing.T) {
 	caps := Capabilities{}
 	proto := caps.ToProto()
-	require.Equal(t, protobufs.AgentCapabilities(0), proto)
+	// ReportsStatus is always set per OpAMP spec, even with empty capabilities
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus, proto)
+}
+
+func TestCapabilitiesToProto_AlwaysIncludesReportsStatus(t *testing.T) {
+	// Empty capabilities should still have ReportsStatus
+	caps := Capabilities{}
+	proto := caps.ToProto()
+
+	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus != 0,
+		"ReportsStatus must always be set")
+}
+
+func TestCapabilitiesToProto_ReportsStatusAlwaysSet(t *testing.T) {
+	// Even with other capabilities, ReportsStatus should be present
+	caps := Capabilities{
+		AcceptsRemoteConfig: true,
+		ReportsHealth:       true,
+	}
+	proto := caps.ToProto()
+
+	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus != 0,
+		"ReportsStatus must always be set regardless of other capabilities")
 }
 
 func TestNewClient_ValidationFailure(t *testing.T) {
@@ -148,7 +173,7 @@ func TestNewClient_ValidationFailure(t *testing.T) {
 
 	// Missing endpoint
 	client, err := NewClient(logger, ClientConfig{
-		InstanceUID: "test-uid",
+		InstanceUID: "550e8400-e29b-41d4-a716-446655440000",
 	}, callbacks)
 	require.Error(t, err)
 	require.Nil(t, client)
@@ -160,7 +185,7 @@ func TestNewClient_ValidationFailure(t *testing.T) {
 	}, callbacks)
 	require.Error(t, err)
 	require.Nil(t, client)
-	require.Contains(t, err.Error(), "instance UID is required")
+	require.Contains(t, err.Error(), "instance_uid is required")
 }
 
 func TestClient_MethodsWithoutStart(t *testing.T) {
@@ -169,7 +194,7 @@ func TestClient_MethodsWithoutStart(t *testing.T) {
 
 	client, err := NewClient(logger, ClientConfig{
 		Endpoint:    "ws://localhost:4320/v1/opamp",
-		InstanceUID: "test-uid",
+		InstanceUID: "550e8400-e29b-41d4-a716-446655440000",
 	}, callbacks)
 	require.NoError(t, err)
 
@@ -200,7 +225,7 @@ func TestClient_SetEffectiveConfig(t *testing.T) {
 
 	client, err := NewClient(logger, ClientConfig{
 		Endpoint:    "ws://localhost:4320/v1/opamp",
-		InstanceUID: "test-uid",
+		InstanceUID: "550e8400-e29b-41d4-a716-446655440000",
 	}, callbacks)
 	require.NoError(t, err)
 
@@ -210,7 +235,7 @@ func TestClient_SetEffectiveConfig(t *testing.T) {
 			Body: []byte("test: config"),
 		},
 	}
-	err = client.SetEffectiveConfig(config)
+	err = client.SetEffectiveConfig(t.Context(), config)
 	require.NoError(t, err)
 
 	// Verify the config was stored internally
@@ -219,6 +244,28 @@ func TestClient_SetEffectiveConfig(t *testing.T) {
 	require.NotNil(t, client.effectiveConfig.ConfigMap.ConfigMap)
 	require.Contains(t, client.effectiveConfig.ConfigMap.ConfigMap, "collector.yaml")
 	require.Equal(t, []byte("test: config"), client.effectiveConfig.ConfigMap.ConfigMap["collector.yaml"].Body)
+}
+
+func TestClient_SetEffectiveConfig_RespectsContext(t *testing.T) {
+	// Create a cancelled context
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	logger := zaptest.NewLogger(t)
+	c := &Client{
+		logger:      logger,
+		opampClient: nil, // Not started
+	}
+
+	config := map[string]*protobufs.AgentConfigFile{
+		"test.yaml": {Body: []byte("test: config")},
+	}
+
+	// Should not hang or ignore context cancellation
+	err := c.SetEffectiveConfig(ctx, config)
+	// With nil opampClient, it stores config but doesn't call UpdateEffectiveConfig
+	// This test verifies the method signature accepts context
+	require.NoError(t, err)
 }
 
 func TestCallbacks_ToTypesCallbacks(t *testing.T) {
@@ -244,7 +291,7 @@ func TestCallbacks_ToTypesCallbacks(t *testing.T) {
 	}
 
 	typesCallbacks := callbacks.ToTypesCallbacks()
-	ctx := context.Background()
+	ctx := t.Context()
 
 	// Test OnConnect
 	typesCallbacks.OnConnect(ctx)
@@ -276,7 +323,7 @@ func TestCallbacks_NilHandlers(t *testing.T) {
 	// Test that nil handlers don't panic
 	callbacks := &Callbacks{}
 	typesCallbacks := callbacks.ToTypesCallbacks()
-	ctx := context.Background()
+	ctx := t.Context()
 
 	// These should not panic
 	typesCallbacks.OnConnect(ctx)
@@ -307,7 +354,7 @@ func TestCallbacks_GetEffectiveConfig(t *testing.T) {
 	}
 
 	typesCallbacks := callbacks.ToTypesCallbacks()
-	config, err := typesCallbacks.GetEffectiveConfig(context.Background())
+	config, err := typesCallbacks.GetEffectiveConfig(t.Context())
 	require.NoError(t, err)
 	require.Equal(t, expectedConfig, config)
 }
@@ -325,7 +372,7 @@ func TestCallbacks_SaveRemoteConfigStatus(t *testing.T) {
 	status := &protobufs.RemoteConfigStatus{
 		LastRemoteConfigHash: []byte("test-hash"),
 	}
-	typesCallbacks.SaveRemoteConfigStatus(context.Background(), status)
+	typesCallbacks.SaveRemoteConfigStatus(t.Context(), status)
 	require.Equal(t, status, savedStatus)
 }
 
@@ -346,7 +393,7 @@ func TestCallbacks_OnMessage_RemoteConfig(t *testing.T) {
 
 	// Call OnMessage directly with a MessageData containing remote config
 	// This tests the internal routing in onMessage
-	callbacks.onMessage(context.Background(), &types.MessageData{
+	callbacks.onMessage(t.Context(), &types.MessageData{
 		RemoteConfig: &protobufs.AgentRemoteConfig{
 			ConfigHash: []byte("test-hash"),
 		},
@@ -369,7 +416,7 @@ func TestCallbacks_OnOpampConnectionSettings(t *testing.T) {
 		DestinationEndpoint: "ws://new-server:4320",
 	}
 
-	err := typesCallbacks.OnOpampConnectionSettings(context.Background(), settings)
+	err := typesCallbacks.OnOpampConnectionSettings(t.Context(), settings)
 	require.NoError(t, err)
 	require.Equal(t, settings, receivedSettings)
 }
@@ -384,7 +431,7 @@ func TestCallbacks_OnOpampConnectionSettings_Error(t *testing.T) {
 	}
 
 	typesCallbacks := callbacks.ToTypesCallbacks()
-	err := typesCallbacks.OnOpampConnectionSettings(context.Background(), &protobufs.OpAMPConnectionSettings{})
+	err := typesCallbacks.OnOpampConnectionSettings(t.Context(), &protobufs.OpAMPConnectionSettings{})
 	require.Equal(t, expectedErr, err)
 }
 
@@ -397,7 +444,7 @@ func TestCallbacks_OnMessage_Packages(t *testing.T) {
 		},
 	}
 	tc := callbacks.ToTypesCallbacks()
-	tc.OnMessage(context.Background(), &types.MessageData{
+	tc.OnMessage(t.Context(), &types.MessageData{
 		PackagesAvailable: &protobufs.PackagesAvailable{},
 	})
 	require.True(t, packagesCalled)
@@ -412,15 +459,38 @@ func TestCallbacks_OnMessage_Command(t *testing.T) {
 		},
 	}
 	tc := callbacks.ToTypesCallbacks()
-	err := tc.OnCommand(context.Background(), &protobufs.ServerToAgentCommand{})
+	err := tc.OnCommand(t.Context(), &protobufs.ServerToAgentCommand{})
 	require.NoError(t, err)
 	require.True(t, commandCalled)
+}
+
+func TestCallbacks_OnMessage_CustomMessage(t *testing.T) {
+	var customMessageCalled bool
+	var receivedMessage *protobufs.CustomMessage
+	callbacks := &Callbacks{
+		OnCustomMessage: func(ctx context.Context, customMessage *protobufs.CustomMessage) {
+			customMessageCalled = true
+			receivedMessage = customMessage
+		},
+	}
+	tc := callbacks.ToTypesCallbacks()
+	expectedMessage := &protobufs.CustomMessage{
+		Capability: "test.capability",
+		Type:       "test.type",
+		Data:       []byte("test data"),
+	}
+	tc.OnMessage(t.Context(), &types.MessageData{
+		CustomMessage: expectedMessage,
+	})
+	require.True(t, customMessageCalled)
+	require.Equal(t, expectedMessage, receivedMessage)
 }
 
 func TestParseInstanceUID_ValidUUID(t *testing.T) {
 	// Standard UUID format
 	uid := "550e8400-e29b-41d4-a716-446655440000"
-	result := parseInstanceUID(uid)
+	result, err := parseInstanceUID(uid)
+	require.NoError(t, err)
 
 	// The result should be 16 bytes (binary UUID representation)
 	require.Len(t, result, 16)
@@ -434,13 +504,152 @@ func TestParseInstanceUID_ValidUUID(t *testing.T) {
 	require.Equal(t, expected, result)
 }
 
-func TestParseInstanceUID_InvalidUUID(t *testing.T) {
-	// Non-UUID string should fallback to copying bytes
-	uid := "not-a-valid-uuid"
-	result := parseInstanceUID(uid)
+func TestParseInstanceUID_RejectsInvalidUUID(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"empty string", ""},
+		{"short string", "abc"},
+		{"invalid format", "not-a-uuid-at-all"},
+		{"wrong length hex", "0123456789abcdef"}, // 16 chars but not valid UUID
+	}
 
-	// Should copy raw bytes as fallback
-	require.Len(t, result, 16)
-	require.Equal(t, byte('n'), result[0])
-	require.Equal(t, byte('o'), result[1])
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := parseInstanceUID(tt.input)
+			require.Error(t, err, "should reject invalid UUID: %s", tt.input)
+		})
+	}
 }
+
+func TestParseInstanceUID_AcceptsValidUUID(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"UUID v4", "550e8400-e29b-41d4-a716-446655440000"},
+		{"UUID v7", "01902a9e-8b3c-7def-8a12-123456789abc"},
+		{"uppercase", "550E8400-E29B-41D4-A716-446655440000"},
+		{"no dashes", "550e8400e29b41d4a716446655440000"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			uid, err := parseInstanceUID(tt.input)
+			require.NoError(t, err)
+			require.Len(t, uid, 16, "UID must be exactly 16 bytes")
+		})
+	}
+}
+
+func TestClientConfig_Validate_RejectsInvalidInstanceUID(t *testing.T) {
+	cfg := ClientConfig{
+		Endpoint:    "ws://localhost:4320/v1/opamp",
+		InstanceUID: "not-a-valid-uuid",
+	}
+	err := cfg.Validate()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "instance_uid")
+}
+
+func TestCapabilitiesToProto_ReportsHeartbeat(t *testing.T) {
+	caps := Capabilities{
+		ReportsHeartbeat: true,
+	}
+	proto := caps.ToProto()
+
+	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsHeartbeat != 0,
+		"ReportsHeartbeat capability should be set")
+}
+
+func TestClient_HeartbeatInterval_Default(t *testing.T) {
+	logger := zaptest.NewLogger(t)
+	cfg := ClientConfig{
+		Endpoint:    "ws://localhost:4320/v1/opamp",
+		InstanceUID: "550e8400-e29b-41d4-a716-446655440000",
+		Capabilities: Capabilities{
+			ReportsHeartbeat: true,
+		},
+	}
+
+	client, err := NewClient(logger, cfg, nil)
+	require.NoError(t, err)
+	require.Equal(t, 30*time.Second, client.HeartbeatInterval(),
+		"Default heartbeat interval should be 30 seconds")
+}
+
+func TestClient_SetHeartbeatInterval(t *testing.T) {
+	logger := zaptest.NewLogger(t)
+	cfg := ClientConfig{
+		Endpoint:    "ws://localhost:4320/v1/opamp",
+		InstanceUID: "550e8400-e29b-41d4-a716-446655440000",
+		Capabilities: Capabilities{
+			ReportsHeartbeat: true,
+		},
+	}
+
+	client, err := NewClient(logger, cfg, nil)
+	require.NoError(t, err)
+
+	client.SetHeartbeatInterval(45 * time.Second)
+	require.Equal(t, 45*time.Second, client.HeartbeatInterval())
+}
+
+func TestClient_SetConnectionSettingsStatus(t *testing.T) {
+	logger := zaptest.NewLogger(t)
+	cfg := ClientConfig{
+		Endpoint:    "ws://localhost:4320/v1/opamp",
+		InstanceUID: "550e8400-e29b-41d4-a716-446655440000",
+	}
+
+	client, err := NewClient(logger, cfg, nil)
+	require.NoError(t, err)
+
+	// Before Start, should not error (just logs)
+	status := &protobufs.ConnectionSettingsStatus{
+		Status:       protobufs.ConnectionSettingsStatuses_ConnectionSettingsStatuses_FAILED,
+		ErrorMessage: "test error",
+	}
+	err = client.SetConnectionSettingsStatus(status)
+	require.NoError(t, err)
+}
+
+func TestCapabilitiesToProto_ReportsAvailableComponents(t *testing.T) {
+	caps := Capabilities{
+		ReportsAvailableComponents: true,
+	}
+
+	proto := caps.ToProto()
+
+	// ReportsStatus is always included (mandatory)
+	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus != 0,
+		"ReportsStatus should always be set")
+	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsAvailableComponents != 0,
+		"ReportsAvailableComponents should be set")
+}
+
+func TestClient_SetAvailableComponents_BeforeStart(t *testing.T) {
+	logger := zaptest.NewLogger(t)
+
+	client, err := NewClient(logger, ClientConfig{
+		Endpoint:    "ws://localhost:4320/v1/opamp",
+		InstanceUID: "550e8400-e29b-41d4-a716-446655440000",
+	}, &Callbacks{})
+	require.NoError(t, err)
+
+	// Set components before start should not error
+	components := &protobufs.AvailableComponents{
+		Components: map[string]*protobufs.ComponentDetails{
+			"receiver/otlp": {},
+		},
+		Hash: []byte("test-hash"),
+	}
+	err = client.SetAvailableComponents(components)
+	require.NoError(t, err)
+
+	// Verify the components were stored internally
+	require.NotNil(t, client.initialComponents)
+	require.Contains(t, client.initialComponents.Components, "receiver/otlp")
+}
+

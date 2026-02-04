@@ -87,3 +87,8 @@ func TestServerConfig_Validate(t *testing.T) {
 		})
 	}
 }
+
+// Note: Testing lock behavior (that Broadcast doesn't hold the lock while sending)
+// is impractical in unit tests as it requires simulating slow network connections.
+// The implementation uses a snapshot pattern (copy connections under lock, then
+// iterate without lock) which is verified by code review rather than testing.

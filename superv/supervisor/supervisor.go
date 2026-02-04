@@ -29,12 +29,14 @@ import (
 	"strings"
 	"sync"
 	"text/template"
+	"time"
 
 	"github.com/open-telemetry/opamp-go/protobufs"
 	"github.com/open-telemetry/opamp-go/server/types"
 	"go.uber.org/zap"
 
 	"github.com/Graylog2/collector-sidecar/superv/auth"
+	"github.com/Graylog2/collector-sidecar/superv/components"
 	"github.com/Graylog2/collector-sidecar/superv/config"
 	"github.com/Graylog2/collector-sidecar/superv/configmanager"
 	"github.com/Graylog2/collector-sidecar/superv/healthmonitor"
@@ -47,6 +49,16 @@ import (
 // templateVars holds variables available for template expansion in agent args.
 type templateVars struct {
 	ConfigPath string
+}
+
+// connectionSettingsSnapshot holds the previous connection state for rollback.
+type connectionSettingsSnapshot struct {
+	endpoint    string
+	headers     http.Header
+	tlsInsecure bool
+	tlsCACert   string
+	tlsMinVer   string
+	proxyURL    string
 }
 
 // Supervisor coordinates the management of an OpenTelemetry Collector.
@@ -67,6 +79,9 @@ type Supervisor struct {
 
 	// Pending enrollment CSR (set during enrollment, cleared after completion)
 	pendingCSR []byte
+
+	// Connection settings snapshot for rollback
+	connSettingsSnapshot *connectionSettingsSnapshot
 }
 
 // New creates a new Supervisor instance.
@@ -221,133 +236,19 @@ func (s *Supervisor) Start(ctx context.Context) error {
 		return err
 	}
 
-	// Create OpAMP client for upstream server
-	clientCallbacks := &opamp.Callbacks{
-		OnConnect: func(ctx context.Context) {
-			s.logger.Info("Connected to OpAMP server")
-
-			// If we have a pending enrollment CSR, send it now
-			s.mu.RLock()
-			csr := s.pendingCSR
-			s.mu.RUnlock()
-
-			if len(csr) > 0 && s.opampClient != nil {
-				s.logger.Info("Sending CSR for enrollment via OpAMP")
-				if err := s.opampClient.RequestConnectionSettings(csr); err != nil {
-					s.logger.Error("Failed to send CSR", zap.Error(err))
-				}
-			}
-		},
-		OnConnectFailed: func(ctx context.Context, err error) {
-			s.logger.Error("Failed to connect to OpAMP server", zap.Error(err))
-		},
-		OnRemoteConfig: func(ctx context.Context, cfg *protobufs.AgentRemoteConfig) bool {
-			s.logger.Info("Received remote configuration")
-
-			result, err := s.configManager.ApplyRemoteConfig(ctx, cfg)
-			if err != nil {
-				s.logger.Error("Failed to apply remote config", zap.Error(err))
-				return false
-			}
-
-			if result.Changed {
-				// TODO: Reload collector via commander when implemented
-				s.logger.Info("Config changed, collector reload needed")
-
-				// Report effective config
-				if err := s.opampClient.SetEffectiveConfig(map[string]*protobufs.AgentConfigFile{
-					"collector.yaml": {
-						Body: result.EffectiveConfig,
-					},
-				}); err != nil {
-					s.logger.Warn("Failed to report effective config", zap.Error(err))
-				}
-			}
-
-			return true
-		},
-		OnOpampConnectionSettings: func(ctx context.Context, settings *protobufs.OpAMPConnectionSettings) error {
-			s.logger.Info("Received connection settings update")
-
-			// Handle certificate from enrollment response
-			if cert := settings.GetCertificate(); cert != nil {
-				if certPEM := cert.GetCert(); len(certPEM) > 0 {
-					s.logger.Info("Received certificate from server")
-
-					// Check if we have a pending enrollment
-					if s.authManager.HasPendingEnrollment() {
-						s.logger.Info("Completing enrollment with received certificate")
-						if err := s.authManager.CompleteEnrollment(certPEM); err != nil {
-							s.logger.Error("Failed to complete enrollment", zap.Error(err))
-							return err
-						}
-
-						// Clear the pending CSR
-						s.mu.Lock()
-						s.pendingCSR = nil
-						s.mu.Unlock()
-
-						s.logger.Info("Enrollment completed successfully",
-							zap.String("cert_fingerprint", s.authManager.CertFingerprint()),
-						)
-					}
-				}
-			}
-
-			// TODO: Handle certificate renewal (re-enroll before expiry)
-			// TODO: Handle other connection settings (endpoint changes, headers, etc.)
-			return nil
-		},
+	// Load any persisted connection settings from previous server interactions
+	if err := s.loadPersistedConnectionSettings(); err != nil {
+		s.logger.Warn("Failed to load persisted connection settings", zap.Error(err))
+		// Continue with initial config if persisted settings fail to load
 	}
 
-	// Build headers with authentication
-	headers, err := s.buildAuthHeaders()
+	// Create and start OpAMP client for upstream server
+	opampClient, err := s.createAndStartClient(ctx)
 	if err != nil {
 		s.opampServer.Stop(ctx)
-		return fmt.Errorf("failed to build auth headers: %w", err)
-	}
-
-	opampClient, err := opamp.NewClient(s.logger, opamp.ClientConfig{
-		Endpoint:    s.cfg.Server.Endpoint,
-		InstanceUID: s.instanceUID,
-		Headers:     headers,
-		TLSConfig: &tls.Config{
-			InsecureSkipVerify: s.cfg.Auth.InsecureTLS,
-		},
-		Capabilities: opamp.Capabilities{
-			ReportsStatus:                  true,
-			AcceptsRemoteConfig:            true,
-			ReportsEffectiveConfig:         true,
-			ReportsHealth:                  true,
-			AcceptsOpAMPConnectionSettings: true,
-			AcceptsRestartCommand:          true,
-		},
-	}, clientCallbacks)
-	if err != nil {
-		s.opampServer.Stop(ctx)
-		return err
+		return fmt.Errorf("create opamp client: %w", err)
 	}
 	s.opampClient = opampClient
-
-	// Set initial agent description before starting
-	if err := s.opampClient.SetAgentDescription(s.createAgentDescription()); err != nil {
-		s.opampServer.Stop(ctx)
-		return err
-	}
-
-	// Set initial health status before starting
-	if err := s.opampClient.SetHealth(&protobufs.ComponentHealth{
-		Healthy: true,
-	}); err != nil {
-		s.opampServer.Stop(ctx)
-		return err
-	}
-
-	// Start OpAMP client
-	if err := s.opampClient.Start(ctx); err != nil {
-		s.opampServer.Stop(ctx)
-		return err
-	}
 
 	// Start health monitoring with a cancellable context
 	healthCtx, healthCancel := context.WithCancel(ctx)
@@ -495,6 +396,89 @@ func (s *Supervisor) createAgentDescription() *protobufs.AgentDescription {
 	}
 }
 
+// discoverComponents discovers available components from the collector.
+// This is a best-effort operation - failures are logged but don't prevent startup.
+func (s *Supervisor) discoverComponents(ctx context.Context) *protobufs.AvailableComponents {
+	cfg := components.DiscoverConfig{
+		Executable: s.cfg.Agent.Executable,
+		Timeout:    10 * time.Second,
+	}
+
+	discovered, err := components.Discover(ctx, cfg)
+	if err != nil {
+		s.logger.Warn("Failed to discover components", zap.Error(err))
+		return nil
+	}
+
+	s.logger.Info("Discovered available components",
+		zap.Int("receivers", len(discovered.Receivers)),
+		zap.Int("processors", len(discovered.Processors)),
+		zap.Int("exporters", len(discovered.Exporters)),
+		zap.Int("extensions", len(discovered.Extensions)),
+	)
+
+	return discovered.ToProto()
+}
+
+// createAndStartClient creates a new OpAMP client with current config, sets it up, and starts it.
+// This is used when reconnecting with new or restored connection settings.
+func (s *Supervisor) createAndStartClient(ctx context.Context) (*opamp.Client, error) {
+	headers, err := s.buildAuthHeaders()
+	if err != nil {
+		return nil, fmt.Errorf("build auth headers: %w", err)
+	}
+
+	client, err := opamp.NewClient(s.logger, opamp.ClientConfig{
+		Endpoint:    s.cfg.Server.Endpoint,
+		InstanceUID: s.instanceUID,
+		Headers:     headers,
+		TLSConfig: &tls.Config{
+			InsecureSkipVerify: s.cfg.Auth.InsecureTLS || s.cfg.Server.TLS.Insecure,
+		},
+		Capabilities: opamp.Capabilities{
+			AcceptsRemoteConfig:            true,
+			ReportsEffectiveConfig:         true,
+			ReportsHealth:                  true,
+			AcceptsOpAMPConnectionSettings: true,
+			AcceptsRestartCommand:          true,
+			ReportsHeartbeat:               true,
+			ReportsAvailableComponents:     true,
+		},
+	}, s.createOpAMPCallbacks())
+	if err != nil {
+		return nil, fmt.Errorf("create client: %w", err)
+	}
+
+	if err := client.SetAgentDescription(s.createAgentDescription()); err != nil {
+		return nil, fmt.Errorf("set agent description: %w", err)
+	}
+
+	if err := client.SetHealth(&protobufs.ComponentHealth{Healthy: true}); err != nil {
+		return nil, fmt.Errorf("set health: %w", err)
+	}
+
+	// Discover and set available components (required before Start when capability is set)
+	if err := s.setClientAvailableComponents(ctx, client); err != nil {
+		return nil, fmt.Errorf("set available components: %w", err)
+	}
+
+	if err := client.Start(ctx); err != nil {
+		return nil, fmt.Errorf("start client: %w", err)
+	}
+
+	return client, nil
+}
+
+// setClientAvailableComponents discovers and sets available components on the given client.
+func (s *Supervisor) setClientAvailableComponents(ctx context.Context, client *opamp.Client) error {
+	availableComponents := s.discoverComponents(ctx)
+	if availableComponents == nil {
+		// Use empty components if discovery fails (still need valid hash for opamp-go)
+		availableComponents = (&components.Components{}).ToProto()
+	}
+	return client.SetAvailableComponents(availableComponents)
+}
+
 // initAuth initializes authentication by loading credentials or preparing enrollment.
 // If enrollment is needed, this prepares the CSR which will be sent via OpAMP.
 func (s *Supervisor) initAuth(ctx context.Context) error {
@@ -593,4 +577,499 @@ func deriveEndpointFromEnrollmentURL(enrollmentURL string) (string, error) {
 	}
 
 	return endpoint.String(), nil
+}
+
+// handleConnectionSettings processes connection settings updates from the server.
+// This is called in a goroutine from the OnOpampConnectionSettings callback.
+// Note: ctx should be context.Background() since the callback context may be cancelled.
+func (s *Supervisor) handleConnectionSettings(ctx context.Context, settings *protobufs.OpAMPConnectionSettings) {
+	if settings == nil {
+		s.logger.Debug("Received nil connection settings, ignoring")
+		return
+	}
+
+	// Handle enrollment certificate first (doesn't require reconnection)
+	if err := s.handleEnrollmentCertificate(settings); err != nil {
+		s.logger.Error("Failed to handle enrollment certificate", zap.Error(err))
+		s.reportConnectionSettingsStatus(false, fmt.Sprintf("enrollment certificate handling failed: %v", err))
+		return
+	}
+
+	// Handle heartbeat interval update (doesn't require reconnection)
+	if interval := settings.GetHeartbeatIntervalSeconds(); interval > 0 {
+		newInterval := time.Duration(interval) * time.Second
+		s.mu.RLock()
+		client := s.opampClient
+		s.mu.RUnlock()
+
+		if client != nil {
+			oldInterval := client.HeartbeatInterval()
+			if newInterval != oldInterval {
+				client.SetHeartbeatInterval(newInterval)
+				s.logger.Info("Updated heartbeat interval",
+					zap.Duration("old_interval", oldInterval),
+					zap.Duration("new_interval", newInterval),
+				)
+			}
+		}
+	}
+
+	// Check if any settings require reconnection
+	if !s.connectionSettingsChanged(settings) {
+		s.logger.Debug("No connection settings changes requiring reconnection")
+		s.reportConnectionSettingsStatus(true, "")
+		return
+	}
+
+	// Capture current state for rollback
+	s.captureConnectionSnapshot()
+
+	// Apply new settings with reconnection
+	if err := s.applyConnectionSettings(ctx, settings); err != nil {
+		s.logger.Error("Failed to apply connection settings, rolling back", zap.Error(err))
+		if rollbackErr := s.rollbackConnectionSettings(ctx); rollbackErr != nil {
+			s.logger.Error("Rollback also failed", zap.Error(rollbackErr))
+		}
+		s.reportConnectionSettingsStatus(false, fmt.Sprintf("failed to apply settings: %v", err))
+		return
+	}
+
+	// Persist settings after successful reconnection
+	if err := s.persistConnectionSettings(settings); err != nil {
+		s.logger.Warn("Failed to persist connection settings", zap.Error(err))
+		// Don't fail - we're already connected with new settings
+	}
+
+	// Clear snapshot after successful application
+	s.mu.Lock()
+	s.connSettingsSnapshot = nil
+	s.mu.Unlock()
+
+	s.reportConnectionSettingsStatus(true, "")
+	s.logger.Info("Connection settings applied successfully")
+}
+
+// handleEnrollmentCertificate handles certificate from enrollment response.
+func (s *Supervisor) handleEnrollmentCertificate(settings *protobufs.OpAMPConnectionSettings) error {
+	cert := settings.GetCertificate()
+	if cert == nil {
+		return nil
+	}
+
+	certPEM := cert.GetCert()
+	if len(certPEM) == 0 {
+		return nil
+	}
+
+	s.logger.Info("Received certificate from server")
+
+	// Check if we have a pending enrollment
+	if !s.authManager.HasPendingEnrollment() {
+		s.logger.Debug("No pending enrollment, ignoring certificate")
+		return nil
+	}
+
+	s.logger.Info("Completing enrollment with received certificate")
+	if err := s.authManager.CompleteEnrollment(certPEM); err != nil {
+		return fmt.Errorf("failed to complete enrollment: %w", err)
+	}
+
+	// Clear the pending CSR
+	s.mu.Lock()
+	s.pendingCSR = nil
+	s.mu.Unlock()
+
+	s.logger.Info("Enrollment completed successfully",
+		zap.String("cert_fingerprint", s.authManager.CertFingerprint()),
+	)
+
+	return nil
+}
+
+// connectionSettingsChanged checks if the settings require a reconnection.
+// Returns true if endpoint, headers, TLS, or proxy settings have changed.
+func (s *Supervisor) connectionSettingsChanged(settings *protobufs.OpAMPConnectionSettings) bool {
+	// Check endpoint change
+	if endpoint := settings.GetDestinationEndpoint(); endpoint != "" && endpoint != s.cfg.Server.Endpoint {
+		s.logger.Debug("Endpoint change detected",
+			zap.String("current", s.cfg.Server.Endpoint),
+			zap.String("new", endpoint),
+		)
+		return true
+	}
+
+	// Check headers change
+	if headers := settings.GetHeaders(); headers != nil {
+		newHeaders := convertProtoHeaders(headers)
+		if !headersEqual(s.cfg.Server.Headers, newHeaders) {
+			s.logger.Debug("Headers change detected")
+			return true
+		}
+	}
+
+	// Check TLS settings change
+	if tls := settings.GetTls(); tls != nil {
+		// Any TLS settings provided indicates a change
+		s.logger.Debug("TLS settings change detected")
+		return true
+	}
+
+	// Check proxy settings change
+	if proxy := settings.GetProxy(); proxy != nil {
+		if proxyURL := proxy.GetUrl(); proxyURL != "" {
+			s.logger.Debug("Proxy settings change detected")
+			return true
+		}
+	}
+
+	return false
+}
+
+// captureConnectionSnapshot saves the current connection state for rollback.
+func (s *Supervisor) captureConnectionSnapshot() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.connSettingsSnapshot = &connectionSettingsSnapshot{
+		endpoint:    s.cfg.Server.Endpoint,
+		headers:     s.cfg.Server.ToHTTPHeaders(),
+		tlsInsecure: s.cfg.Server.TLS.Insecure,
+		tlsCACert:   s.cfg.Server.TLS.CACert,
+		tlsMinVer:   s.cfg.Server.TLS.MinVersion,
+	}
+
+	s.logger.Debug("Captured connection settings snapshot",
+		zap.String("endpoint", s.connSettingsSnapshot.endpoint),
+	)
+}
+
+// applyConnectionSettings stops the client, applies new settings, and restarts.
+func (s *Supervisor) applyConnectionSettings(ctx context.Context, settings *protobufs.OpAMPConnectionSettings) error {
+	s.mu.Lock()
+	client := s.opampClient
+	s.mu.Unlock()
+
+	if client == nil {
+		return fmt.Errorf("opamp client not initialized")
+	}
+
+	// Stop the current client
+	s.logger.Info("Stopping OpAMP client for connection settings update")
+	if err := client.Stop(ctx); err != nil {
+		return fmt.Errorf("failed to stop client: %w", err)
+	}
+
+	// Apply new endpoint
+	if endpoint := settings.GetDestinationEndpoint(); endpoint != "" {
+		s.cfg.Server.Endpoint = endpoint
+	}
+
+	// Apply new headers
+	if headers := settings.GetHeaders(); headers != nil {
+		s.cfg.Server.Headers = convertProtoHeaders(headers)
+	}
+
+	// Apply TLS settings
+	if tlsSettings := settings.GetTls(); tlsSettings != nil {
+		if caPEM := tlsSettings.GetCaPemContents(); caPEM != "" {
+			s.cfg.Server.TLS.CACert = caPEM
+		}
+		s.cfg.Server.TLS.Insecure = tlsSettings.GetInsecureSkipVerify()
+		if minVer := tlsSettings.GetMinVersion(); minVer != "" {
+			s.cfg.Server.TLS.MinVersion = minVer
+		}
+	}
+
+	// Create and start new client with updated settings
+	s.logger.Info("Starting OpAMP client with new connection settings",
+		zap.String("endpoint", s.cfg.Server.Endpoint),
+	)
+	newClient, err := s.createAndStartClient(ctx)
+	if err != nil {
+		return fmt.Errorf("apply connection settings: %w", err)
+	}
+
+	s.mu.Lock()
+	s.opampClient = newClient
+	s.mu.Unlock()
+
+	return nil
+}
+
+// rollbackConnectionSettings restores the previous connection state.
+func (s *Supervisor) rollbackConnectionSettings(ctx context.Context) error {
+	s.mu.Lock()
+	snapshot := s.connSettingsSnapshot
+	s.mu.Unlock()
+
+	if snapshot == nil {
+		return fmt.Errorf("no snapshot available for rollback")
+	}
+
+	s.logger.Info("Rolling back connection settings",
+		zap.String("endpoint", snapshot.endpoint),
+	)
+
+	// Restore the original endpoint
+	s.cfg.Server.Endpoint = snapshot.endpoint
+
+	// Restore original headers (extract from http.Header to map[string]string)
+	if snapshot.headers != nil {
+		s.cfg.Server.Headers = make(map[string]string)
+		for k, v := range snapshot.headers {
+			if len(v) > 0 {
+				s.cfg.Server.Headers[k] = v[0]
+			}
+		}
+	}
+
+	// Restore TLS settings
+	s.cfg.Server.TLS.Insecure = snapshot.tlsInsecure
+	s.cfg.Server.TLS.CACert = snapshot.tlsCACert
+	s.cfg.Server.TLS.MinVersion = snapshot.tlsMinVer
+
+	// Create and start client with restored settings
+	newClient, err := s.createAndStartClient(ctx)
+	if err != nil {
+		return fmt.Errorf("rollback connection settings: %w", err)
+	}
+
+	s.mu.Lock()
+	s.opampClient = newClient
+	s.connSettingsSnapshot = nil
+	s.mu.Unlock()
+
+	s.logger.Info("Connection settings rollback completed")
+	return nil
+}
+
+// loadPersistedConnectionSettings loads any persisted connection settings from disk
+// and applies them to the configuration. Settings from the server override initial config.
+func (s *Supervisor) loadPersistedConnectionSettings() error {
+	settings, err := persistence.LoadOpAMPSettings(s.cfg.Persistence.Dir)
+	if err != nil {
+		return fmt.Errorf("load persisted settings: %w", err)
+	}
+	if settings == nil {
+		// No persisted settings, use initial config
+		return nil
+	}
+
+	s.logger.Info("Applying persisted connection settings",
+		zap.Time("updated_at", settings.UpdatedAt),
+	)
+
+	// Apply persisted endpoint if present
+	if settings.Endpoint != "" {
+		s.cfg.Server.Endpoint = settings.Endpoint
+	}
+
+	// Apply persisted headers if present
+	if settings.Headers != nil {
+		s.cfg.Server.Headers = settings.Headers
+	}
+
+	// Apply persisted TLS settings if present
+	if settings.CACertPEM != "" {
+		s.cfg.Server.TLS.CACert = settings.CACertPEM
+	}
+
+	// Note: HeartbeatInterval will be applied after client is created
+	// via client.SetHeartbeatInterval() if needed
+
+	return nil
+}
+
+// persistConnectionSettings saves the connection settings to disk.
+func (s *Supervisor) persistConnectionSettings(settings *protobufs.OpAMPConnectionSettings) error {
+	opampSettings := &persistence.OpAMPSettings{
+		UpdatedAt: time.Now(),
+	}
+
+	if endpoint := settings.GetDestinationEndpoint(); endpoint != "" {
+		opampSettings.Endpoint = endpoint
+	}
+
+	if headers := settings.GetHeaders(); headers != nil {
+		opampSettings.Headers = convertProtoHeaders(headers)
+	}
+
+	if tlsSettings := settings.GetTls(); tlsSettings != nil {
+		opampSettings.CACertPEM = tlsSettings.GetCaPemContents()
+	}
+
+	if proxy := settings.GetProxy(); proxy != nil {
+		opampSettings.ProxyURL = proxy.GetUrl()
+	}
+
+	if interval := settings.GetHeartbeatIntervalSeconds(); interval > 0 {
+		opampSettings.HeartbeatInterval = time.Duration(interval) * time.Second
+	}
+
+	return persistence.SaveOpAMPSettings(s.cfg.Persistence.Dir, opampSettings)
+}
+
+// reportConnectionSettingsStatus reports the result of applying connection settings.
+func (s *Supervisor) reportConnectionSettingsStatus(success bool, errorMsg string) {
+	s.mu.RLock()
+	client := s.opampClient
+	s.mu.RUnlock()
+
+	if client == nil {
+		return
+	}
+
+	var status protobufs.ConnectionSettingsStatuses
+	if success {
+		status = protobufs.ConnectionSettingsStatuses_ConnectionSettingsStatuses_APPLIED
+	} else {
+		status = protobufs.ConnectionSettingsStatuses_ConnectionSettingsStatuses_FAILED
+	}
+
+	statusMsg := &protobufs.ConnectionSettingsStatus{
+		Status:       status,
+		ErrorMessage: errorMsg,
+	}
+
+	if err := client.SetConnectionSettingsStatus(statusMsg); err != nil {
+		s.logger.Warn("Failed to report connection settings status", zap.Error(err))
+	}
+}
+
+// createOpAMPCallbacks creates the OpAMP client callbacks.
+// This is extracted to avoid duplication when recreating the client.
+func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
+	return &opamp.Callbacks{
+		OnConnect: func(ctx context.Context) {
+			s.logger.Info("Connected to OpAMP server")
+
+			// If we have a pending enrollment CSR, send it now
+			s.mu.RLock()
+			csr := s.pendingCSR
+			client := s.opampClient
+			s.mu.RUnlock()
+
+			if len(csr) > 0 && client != nil {
+				s.logger.Info("Sending CSR for enrollment via OpAMP")
+				if err := client.RequestConnectionSettings(csr); err != nil {
+					s.logger.Error("Failed to send CSR", zap.Error(err))
+				}
+			}
+		},
+		OnConnectFailed: func(ctx context.Context, err error) {
+			s.logger.Error("Failed to connect to OpAMP server", zap.Error(err))
+		},
+		OnError: func(ctx context.Context, err *protobufs.ServerErrorResponse) {
+			s.logger.Error("OpAMP server error", zap.Error(fmt.Errorf("%s: %s", err.GetType(), err.GetErrorMessage())))
+		},
+		OnRemoteConfig: func(ctx context.Context, cfg *protobufs.AgentRemoteConfig) bool {
+			s.logger.Info("Received remote configuration")
+
+			result, err := s.configManager.ApplyRemoteConfig(ctx, cfg)
+			if err != nil {
+				s.logger.Error("Failed to apply remote config", zap.Error(err))
+				return false
+			}
+
+			if result.Changed {
+				// TODO: Reload collector via commander when implemented
+				s.logger.Info("Config changed, collector reload needed")
+
+				s.mu.RLock()
+				client := s.opampClient
+				s.mu.RUnlock()
+
+				// Report effective config
+				if client != nil {
+					if err := client.SetEffectiveConfig(ctx, map[string]*protobufs.AgentConfigFile{
+						"collector.yaml": {
+							Body: result.EffectiveConfig,
+						},
+					}); err != nil {
+						s.logger.Warn("Failed to report effective config", zap.Error(err))
+					}
+				}
+			}
+
+			return true
+		},
+		OnOpampConnectionSettings: func(ctx context.Context, settings *protobufs.OpAMPConnectionSettings) error {
+			s.logger.Info("Received connection settings update")
+
+			// Handle connection settings in a goroutine to avoid blocking the callback.
+			// Use a fresh context with timeout since the callback context may be cancelled
+			// after this function returns.
+			go func() {
+				ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+				defer cancel()
+				s.handleConnectionSettings(ctx, settings)
+			}()
+
+			return nil
+		},
+		OnPackagesAvailable: func(ctx context.Context, packages *protobufs.PackagesAvailable) bool {
+			// TODO: Implement package handling - opamp-go/client/types.PackagesSyncer
+			s.logger.Warn("TODO: Received packages available: %s", zap.String("packages", fmt.Sprintf("%v", packages.GetPackages())))
+			return false
+		},
+		OnCommand: func(ctx context.Context, command *protobufs.ServerToAgentCommand) error {
+			s.logger.Warn("TODO: Received command: %s", zap.String("type", command.GetType().String()))
+			return nil
+		},
+		OnCustomMessage: func(ctx context.Context, customMessage *protobufs.CustomMessage) {
+			s.logger.Debug("Received custom message",
+				zap.String("capability", customMessage.GetCapability()),
+				zap.String("type", customMessage.GetType()),
+			)
+
+			// Forward custom messages to the local OpAMP server (collector)
+			s.forwardCustomMessage(ctx, customMessage)
+		},
+	}
+}
+
+// forwardCustomMessage forwards a custom message from the upstream server to the local collector.
+func (s *Supervisor) forwardCustomMessage(ctx context.Context, customMessage *protobufs.CustomMessage) {
+	s.mu.RLock()
+	server := s.opampServer
+	s.mu.RUnlock()
+
+	if server == nil {
+		s.logger.Warn("Cannot forward custom message: local OpAMP server not running")
+		return
+	}
+
+	// Create a ServerToAgent message containing the custom message
+	msg := &protobufs.ServerToAgent{
+		CustomMessage: customMessage,
+	}
+
+	// Broadcast to all connected collectors (typically just one)
+	server.Broadcast(ctx, msg)
+	s.logger.Debug("Forwarded custom message to collector")
+}
+
+// convertProtoHeaders converts protobufs.Headers to map[string]string.
+func convertProtoHeaders(h *protobufs.Headers) map[string]string {
+	if h == nil {
+		return nil
+	}
+	result := make(map[string]string, len(h.Headers))
+	for _, header := range h.Headers {
+		result[header.Key] = header.Value
+	}
+	return result
+}
+
+// headersEqual compares two header maps for equality.
+func headersEqual(a, b map[string]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k, v := range a {
+		if bv, ok := b[k]; !ok || bv != v {
+			return false
+		}
+	}
+	return true
 }

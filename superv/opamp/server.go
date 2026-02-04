@@ -56,7 +56,7 @@ type Server struct {
 	cfg         ServerConfig
 	callbacks   *ServerCallbacks
 	opampServer server.OpAMPServer
-	mu          sync.Mutex
+	mu          sync.RWMutex
 	connections map[types.Connection]struct{}
 }
 
@@ -117,12 +117,18 @@ func (s *Server) SendToAgent(ctx context.Context, conn types.Connection, msg *pr
 
 // Broadcast sends a message to all connected agents.
 func (s *Server) Broadcast(ctx context.Context, msg *protobufs.ServerToAgent) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
+	// Snapshot connections under lock, then send outside lock
+	s.mu.RLock()
+	conns := make([]types.Connection, 0, len(s.connections))
 	for conn := range s.connections {
+		conns = append(conns, conn)
+	}
+	s.mu.RUnlock()
+
+	// Send to each connection outside the lock
+	for _, conn := range conns {
 		if err := conn.Send(ctx, msg); err != nil {
-			s.logger.Error("Failed to send to agent", zap.Error(err))
+			s.logger.Warn("Failed to send broadcast message", zap.Error(err))
 		}
 	}
 }

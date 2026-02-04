@@ -273,6 +273,59 @@ func TestIntegration_JWTExpiry(t *testing.T) {
 	require.False(t, claims2.IsExpired())
 }
 
+func TestIntegration_ConnectionSettingsUpdate(t *testing.T) {
+	// This integration test verifies the full connection settings workflow:
+	// 1. Supervisor connects to OpAMP server
+	// 2. Server sends connection settings update (new endpoint, headers, TLS, heartbeat)
+	// 3. Supervisor captures snapshot, applies settings, reconnects
+	// 4. On success: persists settings and reports APPLIED status
+	// 5. On failure: rolls back to previous settings and reports FAILED status
+	//
+	// Implementation requires a more sophisticated test server that can:
+	// - Accept initial connection
+	// - Send OpAMPConnectionSettings message
+	// - Accept reconnection on new endpoint
+	// - Verify ConnectionSettingsStatus response
+	t.Skip("TODO: Implement with enhanced test server supporting connection settings workflow")
+}
+
+func TestIntegration_AvailableComponentsReporting(t *testing.T) {
+	// This integration test verifies available components reporting:
+	// 1. Supervisor starts with a collector that supports the 'components' command
+	// 2. Supervisor discovers available components (receivers, processors, exporters, extensions)
+	// 3. Supervisor reports components to OpAMP server via SetAvailableComponents
+	// 4. Server receives and can query the available components
+	t.Skip("TODO: Implement with test collector binary that supports 'components' command")
+}
+
+func TestIntegration_CustomMessageForwarding(t *testing.T) {
+	// This integration test verifies custom message forwarding:
+	// 1. Supervisor connects to upstream OpAMP server
+	// 2. Collector connects to supervisor's local OpAMP server
+	// 3. Upstream server sends custom message to supervisor
+	// 4. Supervisor forwards custom message to collector via local server
+	// 5. Collector receives the custom message
+	t.Skip("TODO: Implement with collector that can receive and verify custom messages")
+}
+
+func TestIntegration_HeartbeatIntervalUpdate(t *testing.T) {
+	// This integration test verifies heartbeat interval handling:
+	// 1. Supervisor connects with default 30s heartbeat interval
+	// 2. Server sends connection settings with new heartbeat interval
+	// 3. Supervisor updates interval without reconnecting
+	// 4. Supervisor sends heartbeats at new interval
+	t.Skip("TODO: Implement with test server that can verify heartbeat timing")
+}
+
+func TestIntegration_ConnectionSettingsPersistence(t *testing.T) {
+	// This integration test verifies settings persistence across restarts:
+	// 1. Supervisor connects and receives connection settings
+	// 2. Settings are persisted to disk after successful application
+	// 3. Supervisor restarts
+	// 4. Supervisor loads persisted settings and connects to new endpoint
+	t.Skip("TODO: Implement with supervisor lifecycle testing")
+}
+
 // sendCSRViaOpAMP sends a CSR to the test server via OpAMP WebSocket and returns the certificate.
 func sendCSRViaOpAMP(t *testing.T, serverURL, instanceUID string, csrPEM []byte) []byte {
 	t.Helper()
