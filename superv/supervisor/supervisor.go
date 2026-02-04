@@ -941,7 +941,7 @@ func (s *Supervisor) reportConnectionSettingsStatus(success bool, errorMsg strin
 func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 	return &opamp.Callbacks{
 		OnConnect: func(ctx context.Context) {
-			s.logger.Info("Connected to OpAMP server")
+			s.logger.Info("Connected to OpAMP server", zap.String("endpoint", s.cfg.Server.Endpoint))
 
 			// If we have a pending enrollment CSR, send it now
 			s.mu.RLock()

@@ -61,11 +61,8 @@ type Server struct {
 	// Enrolled agents (instance UID -> certificate) for JWT verification
 	enrolledAgents map[string]*x509.Certificate
 
-	// Callbacks
-	OnAgentConnect    func(instanceUID string, conn *AgentConnection)
-	OnAgentDisconnect func(instanceUID string)
-	OnAgentMessage    func(instanceUID string, msg *protobufs.AgentToServer)
-	OnCSRReceived     func(instanceUID string, csr *x509.CertificateRequest)
+	// Logger receives events from the server. If nil, events are discarded.
+	Logger Logger
 
 	// Configuration to send to agents
 	remoteConfig *protobufs.AgentRemoteConfig
@@ -74,6 +71,19 @@ type Server struct {
 	RequireAuth bool
 
 	upgrader websocket.Upgrader
+}
+
+// emit sends an event to the logger if one is configured.
+func (s *Server) emit(kind EventKind, agentID string, data any) {
+	if s.Logger == nil {
+		return
+	}
+	s.Logger.Log(Event{
+		Kind:      kind,
+		Timestamp: time.Now(),
+		AgentID:   agentID,
+		Data:      data,
+	})
 }
 
 // AgentConnection represents a connected agent.
@@ -456,9 +466,7 @@ func (s *Server) handleAgentConnection(conn *websocket.Conn) {
 		delete(s.agents, agent.InstanceUID)
 		s.mu.Unlock()
 
-		if s.OnAgentDisconnect != nil {
-			s.OnAgentDisconnect(agent.InstanceUID)
-		}
+		s.emit(EventAgentDisconnect, agent.InstanceUID, nil)
 	}
 }
 
@@ -486,8 +494,8 @@ func (s *Server) getOrCreateAgent(msg *protobufs.AgentToServer, conn *websocket.
 	}
 	s.mu.Unlock()
 
-	if instanceUID != "" && s.OnAgentConnect != nil {
-		s.OnAgentConnect(instanceUID, agent)
+	if instanceUID != "" {
+		s.emit(EventAgentConnect, instanceUID, nil)
 	}
 
 	return agent
@@ -499,8 +507,32 @@ func (s *Server) processMessage(msg *protobufs.AgentToServer, agent *AgentConnec
 	agent.lastSeen = time.Now()
 	agent.mu.Unlock()
 
-	if s.OnAgentMessage != nil {
-		s.OnAgentMessage(agent.InstanceUID, msg)
+	// Emit full message event (verbosity: full)
+	s.emit(EventAgentMessage, agent.InstanceUID, msg)
+
+	// Emit specific events based on message content
+	if msg.Health != nil {
+		s.emit(EventHealth, agent.InstanceUID, msg.Health)
+	}
+
+	if msg.AgentDescription != nil {
+		s.emit(EventAgentDescription, agent.InstanceUID, msg.AgentDescription)
+	}
+
+	if msg.RemoteConfigStatus != nil {
+		s.emit(EventConfigStatus, agent.InstanceUID, msg.RemoteConfigStatus)
+	}
+
+	if msg.EffectiveConfig != nil {
+		s.emit(EventEffectiveConfig, agent.InstanceUID, msg.EffectiveConfig)
+	}
+
+	if msg.PackageStatuses != nil {
+		s.emit(EventPackageStatus, agent.InstanceUID, msg.PackageStatuses)
+	}
+
+	if msg.CustomCapabilities != nil {
+		s.emit(EventCustomCapabilities, agent.InstanceUID, msg.CustomCapabilities)
 	}
 
 	return s.createResponse(msg, agent)
@@ -555,10 +587,8 @@ func (s *Server) handleCSRRequest(csrPEM []byte, agent *AgentConnection) *protob
 		return nil
 	}
 
-	// Callback
-	if s.OnCSRReceived != nil {
-		s.OnCSRReceived(agent.InstanceUID, csr)
-	}
+	// Emit CSR received event
+	s.emit(EventCSRReceived, agent.InstanceUID, csr)
 
 	// Sign the CSR
 	cert, err := s.signCSR(csr)
@@ -577,6 +607,9 @@ func (s *Server) handleCSRRequest(csrPEM []byte, agent *AgentConnection) *protob
 		s.mu.Lock()
 		s.enrolledAgents[instanceUID] = cert
 		s.mu.Unlock()
+
+		// Emit certificate issued event
+		s.emit(EventCertIssued, agent.InstanceUID, cert)
 	}
 
 	// Encode certificate to PEM
@@ -591,6 +624,7 @@ func (s *Server) handleCSRRequest(csrPEM []byte, agent *AgentConnection) *protob
 				Cert: certPEM,
 				// Note: private_key is NOT set - agent already has it
 			},
+			HeartbeatIntervalSeconds: 30,
 		},
 	}
 }

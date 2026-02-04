@@ -15,14 +15,11 @@
 //
 // SPDX-License-Identifier: SSPL-1.0
 
-//go:build integration
-
 package supervisor
 
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/pem"
 	"path/filepath"
 	"strings"
@@ -44,11 +41,7 @@ func TestIntegration_Enrollment(t *testing.T) {
 	// Create test server
 	server, err := testserver.New()
 	require.NoError(t, err)
-
-	// Add debug logging
-	server.OnCSRReceived = func(uid string, csr *x509.CertificateRequest) {
-		t.Logf("SERVER: CSR received from %s, CN: %s", uid, csr.Subject.CommonName)
-	}
+	server.RequireAuth = false
 
 	serverURL := server.Start()
 	defer server.Stop()
@@ -115,6 +108,7 @@ func TestIntegration_EnrollmentPersistence(t *testing.T) {
 	// Create test server
 	server, err := testserver.New()
 	require.NoError(t, err)
+	server.RequireAuth = false
 
 	serverURL := server.Start()
 	defer server.Stop()
@@ -171,6 +165,7 @@ func TestIntegration_EnrollmentWithTenant(t *testing.T) {
 	// Create test server
 	server, err := testserver.New()
 	require.NoError(t, err)
+	server.RequireAuth = false
 
 	serverURL := server.Start()
 	defer server.Stop()
@@ -213,6 +208,7 @@ func TestIntegration_JWTExpiry(t *testing.T) {
 	// Create test server
 	server, err := testserver.New()
 	require.NoError(t, err)
+	server.RequireAuth = false
 
 	serverURL := server.Start()
 	defer server.Stop()

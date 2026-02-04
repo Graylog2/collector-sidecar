@@ -126,12 +126,8 @@ func TestServer_OpAMP_HTTP_CSR(t *testing.T) {
 	require.NoError(t, err)
 	server.RequireAuth = false
 
-	// Track if CSR was received
-	csrReceived := make(chan string, 1)
-	server.OnCSRReceived = func(uid string, csr *x509.CertificateRequest) {
-		t.Logf("CSR received from %s, CN: %s", uid, csr.Subject.CommonName)
-		csrReceived <- uid
-	}
+	recorder := NewTestRecorder()
+	server.Logger = recorder
 
 	url := server.Start()
 	defer server.Stop()
@@ -181,13 +177,11 @@ func TestServer_OpAMP_HTTP_CSR(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	// Wait for CSR callback
-	select {
-	case uid := <-csrReceived:
-		t.Logf("CSR received by server for %s", uid)
-	case <-time.After(2 * time.Second):
-		t.Fatal("Timeout waiting for CSR callback")
-	}
+	// Wait for CSR event
+	event, err := recorder.WaitForKind(EventCSRReceived, 2*time.Second)
+	require.NoError(t, err)
+	csr := event.Data.(*x509.CertificateRequest)
+	t.Logf("CSR received, CN: %s", csr.Subject.CommonName)
 
 	// Read response
 	respData, err := io.ReadAll(resp.Body)
@@ -221,12 +215,8 @@ func TestServer_OpAMP_CSR(t *testing.T) {
 	require.NoError(t, err)
 	server.RequireAuth = false
 
-	// Track if CSR was received
-	csrReceived := make(chan string, 1)
-	server.OnCSRReceived = func(uid string, csr *x509.CertificateRequest) {
-		t.Logf("CSR received from %s, CN: %s", uid, csr.Subject.CommonName)
-		csrReceived <- uid
-	}
+	recorder := NewTestRecorder()
+	server.Logger = recorder
 
 	url := server.Start()
 	defer server.Stop()
@@ -279,13 +269,11 @@ func TestServer_OpAMP_CSR(t *testing.T) {
 	require.NoError(t, err)
 	t.Log("Sent CSR message")
 
-	// Wait for CSR callback
-	select {
-	case uid := <-csrReceived:
-		t.Logf("CSR received by server for %s", uid)
-	case <-time.After(2 * time.Second):
-		t.Fatal("Timeout waiting for CSR callback")
-	}
+	// Wait for CSR event
+	event, err := recorder.WaitForKind(EventCSRReceived, 2*time.Second)
+	require.NoError(t, err)
+	csr := event.Data.(*x509.CertificateRequest)
+	t.Logf("CSR received, CN: %s", csr.Subject.CommonName)
 
 	// Read response
 	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
@@ -491,11 +479,11 @@ func TestServer_RequireAuth_SupervisorJWT(t *testing.T) {
 	block, _ := pem.Decode(certPEM)
 	require.NotNil(t, block)
 
-	cert, err := x509.ParseCertificate(block.Bytes)
+	_, err = x509.ParseCertificate(block.Bytes)
 	require.NoError(t, err)
 
 	// Now create a supervisor JWT signed with our private key
-	supervisorJWT := createTestSupervisorJWT(t, signingPriv, cert, instanceUID, "localhost")
+	supervisorJWT := createTestSupervisorJWT(t, signingPriv, instanceUID, "localhost")
 
 	// Send a regular message with supervisor JWT
 	msg2 := &protobufs.AgentToServer{
@@ -520,7 +508,7 @@ func TestServer_RequireAuth_SupervisorJWT(t *testing.T) {
 }
 
 // createTestSupervisorJWT creates a supervisor JWT for testing.
-func createTestSupervisorJWT(t *testing.T, privateKey ed25519.PrivateKey, cert *x509.Certificate, instanceUID, audience string) string {
+func createTestSupervisorJWT(t *testing.T, privateKey ed25519.PrivateKey, instanceUID, audience string) string {
 	t.Helper()
 
 	now := time.Now()

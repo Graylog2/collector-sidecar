@@ -37,25 +37,27 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/open-telemetry/opamp-go/protobufs"
-
 	"github.com/Graylog2/collector-sidecar/superv/internal/testserver"
 )
 
 func main() {
 	var (
-		addr      string
-		tenantID  string
-		jwtExpiry time.Duration
-		printJWKS bool
-		printCurl bool
+		addr        string
+		tenantID    string
+		jwtExpiry   time.Duration
+		printJWKS   bool
+		verbose     bool
+		veryVerbose bool
+		jsonLogs    bool
 	)
 
 	flag.StringVar(&addr, "addr", ":8443", "Address to listen on")
 	flag.StringVar(&tenantID, "tenant", "test-tenant", "Tenant ID for enrollment JWT")
 	flag.DurationVar(&jwtExpiry, "jwt-expiry", 24*time.Hour, "Enrollment JWT expiry duration")
 	flag.BoolVar(&printJWKS, "print-jwks", false, "Print JWKS and exit")
-	flag.BoolVar(&printCurl, "print-curl", false, "Print curl commands for testing")
+	flag.BoolVar(&verbose, "v", false, "Detailed logging (description, effective config, packages)")
+	flag.BoolVar(&veryVerbose, "vv", false, "Full logging (includes complete protobuf dumps)")
+	flag.BoolVar(&jsonLogs, "json", false, "Output logs as JSON")
 	flag.Parse()
 
 	server, err := testserver.New()
@@ -81,53 +83,27 @@ func main() {
 		return
 	}
 
+	// Determine verbosity level
+	verbosity := testserver.VerbosityDefault
+	if verbose {
+		verbosity = testserver.VerbosityDetailed
+	}
+	if veryVerbose {
+		verbosity = testserver.VerbosityFull
+	}
+
+	// Set up logger
+	logger := testserver.NewDebugLogger(verbosity, jsonLogs)
+	server.Logger = logger
+
 	// Create the server with custom address
 	mux := http.NewServeMux()
 
 	// JWKS endpoint
-	mux.HandleFunc("/.well-known/jwks.json", func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("[JWKS] %s %s", r.Method, r.URL.Path)
-		server.HandleJWKS(w, r)
-	})
+	mux.HandleFunc("/.well-known/jwks.json", server.HandleJWKS)
 
-	// OpAMP WebSocket endpoint
-	mux.HandleFunc("/v1/opamp", func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("[OpAMP] %s %s", r.Method, r.URL.Path)
-		if r.Header.Get("Authorization") != "" {
-			authHeader := r.Header.Get("Authorization")
-			if len(authHeader) > 50 {
-				authHeader = authHeader[:50] + "..."
-			}
-			log.Printf("[OpAMP] Authorization: %s", authHeader)
-		}
-		server.HandleOpAMP(w, r)
-	})
-
-	// Catch-all handler to log unknown paths (only for paths we don't explicitly handle)
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		// Only handle if this is actually root or an unknown path
-		if r.URL.Path != "/" {
-			log.Printf("[UNKNOWN] %s %s (404)", r.Method, r.URL.Path)
-		}
-		http.NotFound(w, r)
-	})
-
-	// Set callbacks for logging
-	server.OnAgentConnect = func(instanceUID string, conn *testserver.AgentConnection) {
-		log.Printf("[OpAMP] Agent connected: %s", instanceUID)
-	}
-	server.OnAgentDisconnect = func(instanceUID string) {
-		log.Printf("[OpAMP] Agent disconnected: %s", instanceUID)
-	}
-	server.OnAgentMessage = func(instanceUID string, msg *protobufs.AgentToServer) {
-		log.Printf("[OpAMP] Message from %s (capabilities: %d)", instanceUID, msg.Capabilities)
-		if msg.ConnectionSettingsRequest != nil {
-			log.Printf("[OpAMP] Agent %s sent CSR request", instanceUID)
-		}
-	}
-	server.OnCSRReceived = func(instanceUID string, csr *x509.CertificateRequest) {
-		log.Printf("[CSR] Received CSR from %s (CN: %s, O: %v)", instanceUID, csr.Subject.CommonName, csr.Subject.Organization)
-	}
+	// OpAMP endpoint
+	mux.HandleFunc("/v1/opamp", server.HandleOpAMP)
 
 	// Generate self-signed TLS cert
 	tlsConfig, err := generateTLSConfig()
@@ -153,27 +129,17 @@ func main() {
 	fmt.Printf("Listening on: https://localhost%s\n", addr)
 	fmt.Printf("Tenant ID: %s\n", tenantID)
 	fmt.Printf("JWT Expiry: %s\n", jwtExpiry)
+	fmt.Printf("Verbosity: %d\n", verbosity)
+	fmt.Printf("JSON logs: %v\n", jsonLogs)
 	fmt.Println()
 	fmt.Println("Endpoints:")
-	fmt.Printf("  JWKS:        https://localhost%s/.well-known/jwks.json\n", addr)
-	fmt.Printf("  OpAMP (WS):  wss://localhost%s/v1/opamp\n", addr)
+	fmt.Printf("  JWKS:         https://localhost%s/.well-known/jwks.json\n", addr)
+	fmt.Printf("  OpAMP (WS):   wss://localhost%s/v1/opamp\n", addr)
 	fmt.Printf("  OpAMP (HTTP): https://localhost%s/v1/opamp\n", addr)
 	fmt.Println()
 	fmt.Println("Enrollment URL:")
 	fmt.Printf("  https://localhost%s/opamp/enroll/%s\n", addr, enrollmentJWT)
 	fmt.Println()
-
-	if printCurl {
-		fmt.Println("Curl commands for testing:")
-		fmt.Println()
-		fmt.Println("# Fetch JWKS:")
-		fmt.Printf("curl -k https://localhost%s/.well-known/jwks.json | jq .\n", addr)
-		fmt.Println()
-		fmt.Println("# Test enrollment URL parsing (supervisor command):")
-		fmt.Printf("./supervisor --enrollment-url 'https://localhost%s/opamp/enroll/%s'\n", addr, enrollmentJWT)
-		fmt.Println()
-	}
-
 	fmt.Println("Press Ctrl+C to stop")
 	fmt.Println("========================================")
 
@@ -184,6 +150,7 @@ func main() {
 	go func() {
 		<-sigCh
 		fmt.Println("\nShutting down...")
+		logger.Sync()
 		httpServer.Close()
 	}()
 
