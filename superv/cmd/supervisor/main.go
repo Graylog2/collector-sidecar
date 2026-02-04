@@ -40,10 +40,14 @@ func main() {
 		showVersion   bool
 		enrollmentURL string
 		insecureTls   bool
+		debug         bool
+		jsonFormat    bool
 	)
 
 	flag.StringVar(&configPath, "config", "", "Path to configuration file")
 	flag.BoolVar(&showVersion, "version", false, "Show version and exit")
+	flag.BoolVar(&debug, "debug", false, "Enable debug mode")
+	flag.BoolVar(&jsonFormat, "json", false, "Enable JSON log output")
 	flag.StringVar(&enrollmentURL, "enrollment-url", "", "Enrollment URL for zero-touch bootstrap (e.g., https://server/opamp/enroll/<JWT>)")
 	flag.BoolVar(&insecureTls, "insecure-tls", false, "Use insecure TLS connection")
 	flag.Parse()
@@ -54,7 +58,15 @@ func main() {
 	}
 
 	// Initialize logger
-	logger, err := initLogger("info", "xjson")
+	level := "info"
+	format := "console"
+	if debug {
+		level = "debug"
+	}
+	if jsonFormat {
+		format = "json"
+	}
+	logger, err := initLogger(level, format)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to initialize logger: %v\n", err)
 		os.Exit(1)
