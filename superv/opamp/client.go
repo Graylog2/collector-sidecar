@@ -217,7 +217,11 @@ func (c *Client) Start(ctx context.Context) error {
 		InstanceUid:    instanceUID,
 		Callbacks:      c.callbacks.ToTypesCallbacks(),
 		Header:         c.cfg.Headers,
-		TLSConfig:      c.cfg.TLSConfig,
+	}
+
+	// opamp-go will fail if TLSConfig is set but the URL is not HTTPS/WSS
+	if strings.HasPrefix(c.cfg.Endpoint, "wss") || strings.HasPrefix(c.cfg.Endpoint, "https") {
+		settings.TLSConfig = c.cfg.TLSConfig
 	}
 
 	// Apply initial health before starting (required by opamp-go)
