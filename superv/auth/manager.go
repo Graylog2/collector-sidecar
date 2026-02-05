@@ -244,7 +244,7 @@ func (m *Manager) CompleteEnrollment(certPEM []byte) error {
 	m.pendingEnrollmentJWT = ""
 
 	m.logger.Info("Enrollment completed successfully",
-		zap.String("cert_fingerprint", CertificateFingerprint(cert)),
+		zap.String("cert_fingerprint", CertificateHexFingerprint(cert)),
 	)
 
 	return nil
@@ -284,7 +284,7 @@ func (m *Manager) CertFingerprint() string {
 	if m.certificate == nil {
 		return ""
 	}
-	return CertificateFingerprint(m.certificate)
+	return CertificateHexFingerprint(m.certificate)
 }
 
 // ServerHost returns the server hostname from enrollment.

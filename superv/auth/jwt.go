@@ -21,6 +21,7 @@ import (
 	"crypto/ed25519"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"time"
@@ -59,9 +60,6 @@ func CreateSupervisorJWT(
 ) (string, error) {
 	now := time.Now()
 
-	// Calculate certificate fingerprint for x5t#S256 header
-	fingerprint := sha256.Sum256(cert.Raw)
-
 	claims := SupervisorClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   instanceUID,
@@ -73,8 +71,8 @@ func CreateSupervisorJWT(
 
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
 
-	// Add certificate fingerprint to header
-	token.Header["x5t#S256"] = hex.EncodeToString(fingerprint[:])
+	// Required by server to lookup correct certificate
+	token.Header["x5t#S256"] = CertificateB64URLFingerprint(cert)
 	// Header required by server
 	token.Header["ctt"] = "agent"
 
@@ -131,8 +129,14 @@ func BearerToken(token string) string {
 	return "Bearer " + token
 }
 
-// CertificateFingerprint returns the SHA-256 fingerprint of a certificate as a hex string.
-func CertificateFingerprint(cert *x509.Certificate) string {
+// CertificateHexFingerprint returns the SHA-256 fingerprint of a certificate as a hex string.
+func CertificateHexFingerprint(cert *x509.Certificate) string {
 	hash := sha256.Sum256(cert.Raw)
 	return hex.EncodeToString(hash[:])
+}
+
+// CertificateB64URLFingerprint returns the SHA-256 fingerprint of a certificate as a base64url-encoded string.
+func CertificateB64URLFingerprint(cert *x509.Certificate) string {
+	hash := sha256.Sum256(cert.Raw)
+	return base64.URLEncoding.EncodeToString(hash[:])
 }

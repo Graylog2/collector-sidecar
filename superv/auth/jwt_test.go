@@ -48,7 +48,7 @@ func TestCreateSupervisorJWT(t *testing.T) {
 	certFP, claims, err := ParseSupervisorJWT(token)
 	require.NoError(t, err)
 
-	require.Equal(t, CertificateFingerprint(cert), certFP)
+	require.Equal(t, CertificateB64URLFingerprint(cert), certFP)
 	require.Equal(t, instanceUID, claims.Subject)
 	require.Contains(t, claims.Audience, audience)
 	require.WithinDuration(t, time.Now(), claims.IssuedAt.Time, time.Second)
@@ -149,15 +149,42 @@ func TestBearerToken(t *testing.T) {
 }
 
 func TestCertificateFingerprint(t *testing.T) {
-	pub, _, err := ed25519.GenerateKey(rand.Reader)
+	seed := make([]byte, ed25519.SeedSize) // Deterministic for testing
+
+	priv := ed25519.NewKeyFromSeed(seed)
+	pub, ok := priv.Public().(ed25519.PublicKey)
+	require.True(t, ok)
+
+	// Create a certificate that always has the same fingerprint.
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			CommonName: "test-instance-uid",
+		},
+		NotBefore: time.UnixMilli(0),
+		NotAfter:  time.UnixMilli(10),
+		KeyUsage:  x509.KeyUsageDigitalSignature,
+	}
+
+	// Self-sign the certificate
+	signPriv := ed25519.NewKeyFromSeed(seed)
+	certDER, err := x509.CreateCertificate(rand.Reader, template, template, pub, signPriv)
 	require.NoError(t, err)
 
-	cert := createTestCert(t, pub)
+	cert, err := x509.ParseCertificate(certDER)
+	require.NoError(t, err)
 
-	fp := CertificateFingerprint(cert)
-	require.NotEmpty(t, fp)
-	// SHA-256 fingerprint should be 64 hex chars
-	require.Len(t, fp, 64)
+	t.Run("Hex", func(t *testing.T) {
+		fp := CertificateHexFingerprint(cert)
+		require.NotEmpty(t, fp)
+		require.Equal(t, "02438c90d57d85802339a884786ffaf1f638e272b9ceebc6018ad474d45f22fa", fp)
+	})
+
+	t.Run("Base64URL", func(t *testing.T) {
+		fp := CertificateB64URLFingerprint(cert)
+		require.NotEmpty(t, fp)
+		require.Equal(t, "AkOMkNV9hYAjOaiEeG_68fY44nK5zuvGAYrUdNRfIvo=", fp)
+	})
 }
 
 // createTestCert creates a self-signed certificate for testing.

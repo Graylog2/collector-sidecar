@@ -78,7 +78,7 @@ func TestManager_LoadCredentials(t *testing.T) {
 	err := m.LoadCredentials()
 	require.NoError(t, err)
 	require.NotNil(t, m.Certificate())
-	require.Equal(t, CertificateFingerprint(cert), m.CertFingerprint())
+	require.Equal(t, CertificateHexFingerprint(cert), m.CertFingerprint())
 }
 
 func TestManager_LoadCredentials_NotEnrolled(t *testing.T) {
@@ -124,7 +124,7 @@ func TestManager_GenerateJWT(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "test-instance-uid", claims.Subject)
 	require.Contains(t, claims.Audience, "opamp.example.com")
-	require.Equal(t, CertificateFingerprint(cert), certFP)
+	require.Equal(t, CertificateHexFingerprint(cert), certFP)
 }
 
 func TestManager_GenerateJWT_NotLoaded(t *testing.T) {
@@ -351,4 +351,3 @@ func createTestEnrollmentJWT(t *testing.T, priv ed25519.PrivateKey, kid string, 
 
 	return tokenString
 }
-
