@@ -48,7 +48,7 @@ func TestCreateSupervisorJWT(t *testing.T) {
 	certFP, claims, err := ParseSupervisorJWT(token)
 	require.NoError(t, err)
 
-	require.Equal(t, CertificateB64URLFingerprint(cert), certFP)
+	require.Equal(t, CertificateHexFingerprint(cert), certFP)
 	require.Equal(t, instanceUID, claims.Subject)
 	require.Contains(t, claims.Audience, audience)
 	require.WithinDuration(t, time.Now(), claims.IssuedAt.Time, time.Second)

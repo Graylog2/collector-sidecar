@@ -24,6 +24,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -98,7 +99,12 @@ func ParseSupervisorJWT(tokenString string) (certFingerprint string, claims *Sup
 		certFingerprint = fp
 	}
 
-	return certFingerprint, claims, nil
+	hexCertFingerprint, err := base64.URLEncoding.DecodeString(certFingerprint)
+	if err != nil {
+		return "", nil, fmt.Errorf("couldn't decode fingerprint from header: %w", err)
+	}
+
+	return hex.EncodeToString(hexCertFingerprint), claims, nil
 }
 
 // VerifySupervisorJWT verifies a supervisor-signed JWT against the certificate.
