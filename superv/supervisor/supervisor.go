@@ -597,7 +597,8 @@ func (s *Supervisor) handleConnectionSettings(ctx context.Context, settings *pro
 	}
 
 	// Handle enrollment certificate first (doesn't require reconnection)
-	if err := s.handleEnrollmentCertificate(settings); err != nil {
+	newlyEnrolled, err := s.handleEnrollmentCertificate(settings)
+	if err != nil {
 		s.logger.Error("Failed to handle enrollment certificate", zap.Error(err))
 		s.reportConnectionSettingsStatus(false, fmt.Sprintf("enrollment certificate handling failed: %v", err))
 		return
@@ -623,7 +624,7 @@ func (s *Supervisor) handleConnectionSettings(ctx context.Context, settings *pro
 	}
 
 	// Check if any settings require reconnection
-	if !s.connectionSettingsChanged(settings) {
+	if !s.connectionSettingsChanged(settings) && !newlyEnrolled {
 		s.logger.Debug("No connection settings changes requiring reconnection")
 		s.reportConnectionSettingsStatus(true, "")
 		return
@@ -658,15 +659,15 @@ func (s *Supervisor) handleConnectionSettings(ctx context.Context, settings *pro
 }
 
 // handleEnrollmentCertificate handles certificate from enrollment response.
-func (s *Supervisor) handleEnrollmentCertificate(settings *protobufs.OpAMPConnectionSettings) error {
+func (s *Supervisor) handleEnrollmentCertificate(settings *protobufs.OpAMPConnectionSettings) (bool, error) {
 	cert := settings.GetCertificate()
 	if cert == nil {
-		return nil
+		return false, nil
 	}
 
 	certPEM := cert.GetCert()
 	if len(certPEM) == 0 {
-		return nil
+		return false, nil
 	}
 
 	s.logger.Info("Received certificate from server")
@@ -674,12 +675,12 @@ func (s *Supervisor) handleEnrollmentCertificate(settings *protobufs.OpAMPConnec
 	// Check if we have a pending enrollment
 	if !s.authManager.HasPendingEnrollment() {
 		s.logger.Debug("No pending enrollment, ignoring certificate")
-		return nil
+		return false, nil
 	}
 
 	s.logger.Info("Completing enrollment with received certificate")
 	if err := s.authManager.CompleteEnrollment(certPEM); err != nil {
-		return fmt.Errorf("failed to complete enrollment: %w", err)
+		return false, fmt.Errorf("failed to complete enrollment: %w", err)
 	}
 
 	// Clear the pending CSR
@@ -691,7 +692,7 @@ func (s *Supervisor) handleEnrollmentCertificate(settings *protobufs.OpAMPConnec
 		zap.String("cert_fingerprint", s.authManager.CertFingerprint()),
 	)
 
-	return nil
+	return true, nil
 }
 
 // connectionSettingsChanged checks if the settings require a reconnection.
