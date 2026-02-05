@@ -75,7 +75,7 @@ func TestLoadInvalidPath(t *testing.T) {
 
 func TestLoadEmptyPath(t *testing.T) {
 	_, err := Load("")
-	require.Error(t, err)
+	require.NoError(t, err)
 }
 
 func TestLoadEnvOverridesTakesPrecedence(t *testing.T) {

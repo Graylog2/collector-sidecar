@@ -652,4 +652,3 @@ func TestClient_SetAvailableComponents_BeforeStart(t *testing.T) {
 	require.NotNil(t, client.initialComponents)
 	require.Contains(t, client.initialComponents.Components, "receiver/otlp")
 }
-
