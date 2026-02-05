@@ -58,6 +58,7 @@ func TestCreateSupervisorJWT(t *testing.T) {
 		tk, _, err := jwt.NewParser().ParseUnverified(token, claims)
 		require.Nil(t, err)
 
+		require.Len(t, tk.Header["x5t#S256"], 44)
 		require.Equal(t, "agent", tk.Header["ctt"])
 	})
 }

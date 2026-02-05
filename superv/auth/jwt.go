@@ -29,6 +29,9 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+const x5tHeader = "x5t#S256"
+const cttHeader = "ctt"
+
 // SupervisorClaims represents the claims in a supervisor-signed JWT.
 type SupervisorClaims struct {
 	jwt.RegisteredClaims
@@ -72,9 +75,9 @@ func CreateSupervisorJWT(
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
 
 	// Required by server to lookup correct certificate
-	token.Header["x5t#S256"] = CertificateB64URLFingerprint(cert)
+	token.Header[x5tHeader] = CertificateB64URLFingerprint(cert)
 	// Header required by server
-	token.Header["ctt"] = "agent"
+	token.Header[cttHeader] = "agent"
 
 	return token.SignedString(privateKey)
 }
@@ -91,7 +94,7 @@ func ParseSupervisorJWT(tokenString string) (certFingerprint string, claims *Sup
 	}
 
 	// Extract certificate fingerprint from header
-	if fp, ok := token.Header["x5t#S256"].(string); ok {
+	if fp, ok := token.Header[x5tHeader].(string); ok {
 		certFingerprint = fp
 	}
 
