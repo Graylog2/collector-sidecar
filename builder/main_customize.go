@@ -19,7 +19,7 @@
 package main
 
 import (
-	"github.com/Graylog2/collector-sidecar/supervisor"
+	"github.com/Graylog2/collector-sidecar/superv"
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/collector/otelcol"
 	"go.uber.org/zap"
@@ -31,5 +31,5 @@ func customizeSettings(params *otelcol.CollectorSettings) {
 }
 
 func customizeCommand(params *otelcol.CollectorSettings, cmd *cobra.Command) {
-	cmd.AddCommand(supervisor.GetCommand())
+	cmd.AddCommand(superv.GetCommand())
 }
