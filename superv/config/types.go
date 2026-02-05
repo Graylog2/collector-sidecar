@@ -104,6 +104,7 @@ type AgentConfig struct {
 	Reload             ReloadConfig      `koanf:"reload"`
 	Restart            RestartConfig     `koanf:"restart"`
 	Shutdown           ShutdownConfig    `koanf:"shutdown"`
+	Sidecar            Sidecar           `koanf:"sidecar"`
 }
 
 // AgentConfigMerge configures how agent configs are merged.
@@ -151,6 +152,11 @@ type RestartConfig struct {
 // ShutdownConfig configures graceful shutdown.
 type ShutdownConfig struct {
 	GracefulTimeout time.Duration `koanf:"graceful_timeout"`
+}
+
+type Sidecar struct {
+	Enabled    bool `koanf:"enabled"`
+	Autodetect bool `koanf:"autodetect"`
 }
 
 // PackagesConfig configures package management.
@@ -234,6 +240,10 @@ func DefaultConfig() Config {
 			Shutdown: ShutdownConfig{
 				GracefulTimeout: 30 * time.Second,
 			},
+			Sidecar: Sidecar{
+				Enabled:    false,
+				Autodetect: true,
+			},
 		},
 		Packages: PackagesConfig{
 			StorageDir:   "/var/lib/supervisor/packages",
@@ -274,4 +284,15 @@ func (t TLSConfig) ToTLSConfig() (*tls.Config, error) {
 	return &tls.Config{
 		MinVersion: tls.VersionTLS12,
 	}, nil
+}
+
+// SetInsecure configures the supervisor to not validate TLS certificates.
+func (c *Config) SetInsecure() {
+	c.Auth.InsecureTLS = true
+	c.Server.TLS.Insecure = true
+}
+
+// IsInsecure returns true if any of the TLS verification settings is disabled.
+func (c *Config) IsInsecure() bool {
+	return c.Auth.InsecureTLS || c.Server.TLS.Insecure
 }

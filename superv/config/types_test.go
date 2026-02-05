@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,4 +34,40 @@ func TestAgentConfigDefaults(t *testing.T) {
 	cfg := DefaultConfig()
 	require.Greater(t, cfg.Agent.ConfigApplyTimeout, time.Duration(0))
 	require.Greater(t, cfg.Agent.BootstrapTimeout, time.Duration(0))
+}
+
+func TestConfigInsecure(t *testing.T) {
+	cfg := DefaultConfig()
+
+	assert.False(t, cfg.IsInsecure())
+
+	cfg.SetInsecure()
+
+	assert.True(t, cfg.IsInsecure())
+
+	t.Run("IsInsecure", func(t *testing.T) {
+		cfg := DefaultConfig()
+
+		assert.False(t, cfg.IsInsecure())
+
+		cfg.Auth.InsecureTLS = true
+		cfg.Server.TLS.Insecure = true
+
+		assert.True(t, cfg.IsInsecure())
+
+		cfg.Auth.InsecureTLS = true
+		cfg.Server.TLS.Insecure = false
+
+		assert.True(t, cfg.IsInsecure())
+
+		cfg.Auth.InsecureTLS = false
+		cfg.Server.TLS.Insecure = true
+
+		assert.True(t, cfg.IsInsecure())
+
+		cfg.Auth.InsecureTLS = false
+		cfg.Server.TLS.Insecure = false
+
+		assert.False(t, cfg.IsInsecure())
+	})
 }

@@ -33,7 +33,7 @@ var (
 )
 
 // Validate checks the configuration for errors.
-func (c Config) Validate() error {
+func (c *Config) Validate() error {
 	if err := c.Server.Validate(); err != nil {
 		return fmt.Errorf("server: %w", err)
 	}

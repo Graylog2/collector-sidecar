@@ -18,7 +18,7 @@
 package config
 
 import (
-	"errors"
+	"os"
 	"strings"
 
 	"github.com/knadh/koanf/parsers/yaml"
@@ -30,14 +30,14 @@ import (
 
 const envPrefix = "GLC_"
 
+func DefaultConfigPaths() []string {
+	return []string{"/etc/graylog/collector/supervisor.yaml", "./supervisor.yaml"}
+}
+
 // Load loads configuration from a YAML file, merging with defaults.
 // Environment variables with the GLC_ prefix override config values
 // (e.g., GLC_SERVER_ENDPOINT overrides server.endpoint).
 func Load(path string) (Config, error) {
-	if path == "" {
-		return Config{}, errors.New("config path cannot be empty")
-	}
-
 	k := koanf.New("::")
 
 	// Load defaults first using structs provider
@@ -46,9 +46,14 @@ func Load(path string) (Config, error) {
 		return Config{}, err
 	}
 
-	// Load from file (merges with defaults, file values take precedence)
-	if err := k.Load(file.Provider(path), yaml.Parser()); err != nil {
-		return Config{}, err
+	if path != "" {
+		// Load from file (merges with defaults, file values take precedence)
+		if err := k.Load(file.Provider(path), yaml.Parser()); err != nil {
+			// It's okay to run the supervisor without config file
+			if !os.IsNotExist(err) {
+				return Config{}, err
+			}
+		}
 	}
 
 	// Load environment variables (highest precedence)
