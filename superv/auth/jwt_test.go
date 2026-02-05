@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
 )
 
@@ -52,6 +53,13 @@ func TestCreateSupervisorJWT(t *testing.T) {
 	require.Contains(t, claims.Audience, audience)
 	require.WithinDuration(t, time.Now(), claims.IssuedAt.Time, time.Second)
 	require.WithinDuration(t, time.Now().Add(lifetime), claims.ExpiresAt.Time, time.Second)
+
+	t.Run("SetsHeaders", func(t *testing.T) {
+		tk, _, err := jwt.NewParser().ParseUnverified(token, claims)
+		require.Nil(t, err)
+
+		require.Equal(t, "agent", tk.Header["ctt"])
+	})
 }
 
 func TestVerifySupervisorJWT(t *testing.T) {

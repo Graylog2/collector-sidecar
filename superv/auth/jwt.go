@@ -75,6 +75,8 @@ func CreateSupervisorJWT(
 
 	// Add certificate fingerprint to header
 	token.Header["x5t#S256"] = hex.EncodeToString(fingerprint[:])
+	// Header required by server
+	token.Header["ctt"] = "agent"
 
 	return token.SignedString(privateKey)
 }
