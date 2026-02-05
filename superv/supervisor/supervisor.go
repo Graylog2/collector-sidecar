@@ -462,6 +462,14 @@ func (s *Supervisor) createAndStartClient(ctx context.Context) (*opamp.Client, e
 		return nil, fmt.Errorf("set available components: %w", err)
 	}
 
+	// We need this in the enrollment process
+	if len(s.pendingCSR) > 0 && client != nil {
+		s.logger.Info("Sending CSR for enrollment via OpAMP")
+		if err := client.RequestConnectionSettings(s.pendingCSR); err != nil {
+			return nil, fmt.Errorf("request connection settings: %w", err)
+		}
+	}
+
 	if err := client.Start(ctx); err != nil {
 		return nil, fmt.Errorf("start client: %w", err)
 	}
@@ -943,18 +951,6 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 		OnConnect: func(ctx context.Context) {
 			s.logger.Info("Connected to OpAMP server", zap.String("endpoint", s.cfg.Server.Endpoint))
 
-			// If we have a pending enrollment CSR, send it now
-			s.mu.RLock()
-			csr := s.pendingCSR
-			client := s.opampClient
-			s.mu.RUnlock()
-
-			if len(csr) > 0 && client != nil {
-				s.logger.Info("Sending CSR for enrollment via OpAMP")
-				if err := client.RequestConnectionSettings(csr); err != nil {
-					s.logger.Error("Failed to send CSR", zap.Error(err))
-				}
-			}
 		},
 		OnConnectFailed: func(ctx context.Context, err error) {
 			s.logger.Error("Failed to connect to OpAMP server", zap.Error(err))

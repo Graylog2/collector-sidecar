@@ -154,14 +154,15 @@ var _ types.Logger = (*opampLogger)(nil)
 
 // Client wraps the opamp-go client with supervisor-specific functionality.
 type Client struct {
-	logger              *zap.Logger
-	cfg                 ClientConfig
-	callbacks           *Callbacks
-	opampClient         client.OpAMPClient
-	initialDescription  *protobufs.AgentDescription
-	initialHealth       *protobufs.ComponentHealth
-	initialComponents   *protobufs.AvailableComponents
-	effectiveConfig     *protobufs.EffectiveConfig
+	logger                    *zap.Logger
+	cfg                       ClientConfig
+	callbacks                 *Callbacks
+	opampClient               client.OpAMPClient
+	initialDescription        *protobufs.AgentDescription
+	initialHealth             *protobufs.ComponentHealth
+	initialComponents         *protobufs.AvailableComponents
+	initialConnectionSettings *protobufs.ConnectionSettingsRequest
+	effectiveConfig           *protobufs.EffectiveConfig
 
 	mu                sync.RWMutex
 	heartbeatInterval time.Duration
@@ -240,6 +241,13 @@ func (c *Client) Start(ctx context.Context) error {
 	if c.initialComponents != nil {
 		if err := opampClient.SetAvailableComponents(c.initialComponents); err != nil {
 			return fmt.Errorf("SetAvailableComponents: %w", err)
+		}
+	}
+
+	// We set an initial connection settings request in the enrollment phase.
+	if c.initialConnectionSettings != nil {
+		if err := opampClient.RequestConnectionSettings(c.initialConnectionSettings); err != nil {
+			return fmt.Errorf("RequestConnectionSettings: %w", err)
 		}
 	}
 
@@ -358,7 +366,8 @@ func (c *Client) RequestConnectionSettings(csrPEM []byte) error {
 	}
 
 	if c.opampClient == nil {
-		return errors.New("client not started")
+		c.initialConnectionSettings = request
+		return nil
 	}
 	return c.opampClient.RequestConnectionSettings(request)
 }
