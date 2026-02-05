@@ -56,12 +56,6 @@ func TestParseEnrollmentURL_InvalidFormat(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestParseEnrollmentURL_RequiresHTTPS(t *testing.T) {
-	_, _, err := ParseEnrollmentURL("http://example.com/opamp/enroll/token")
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "HTTPS")
-}
-
 func TestServerBaseURL(t *testing.T) {
 	url, err := ServerBaseURL("https://opamp.example.com/opamp/enroll/token")
 	require.NoError(t, err)

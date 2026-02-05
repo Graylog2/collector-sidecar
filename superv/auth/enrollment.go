@@ -45,14 +45,11 @@ func (c *EnrollmentClaims) IsExpired() bool {
 
 // ParseEnrollmentURL extracts the hostname and JWT from an enrollment URL.
 // URL format: https://server.example.com/opamp/enroll/<JWT>
+// TODO: Finalize enrollment URL format. Do we want to keep it that way?
 func ParseEnrollmentURL(enrollmentURL string) (hostname string, jwtToken string, err error) {
 	u, err := url.Parse(enrollmentURL)
 	if err != nil {
 		return "", "", fmt.Errorf("invalid enrollment URL: %w", err)
-	}
-
-	if u.Scheme != "https" {
-		return "", "", errors.New("enrollment URL must use HTTPS")
 	}
 
 	// Extract JWT from path (last segment after /enroll/)
