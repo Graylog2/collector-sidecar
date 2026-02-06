@@ -59,7 +59,7 @@ func TestValidateAgentExecutable(t *testing.T) {
 	cfg.Agent.Executable = ""
 	err := cfg.Validate()
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "executable")
+	require.Contains(t, err.Error(), "agent.executable")
 }
 
 func TestValidateKeysConfig(t *testing.T) {
@@ -86,7 +86,7 @@ func TestValidateKeysConfig(t *testing.T) {
 			err := cfg.Validate()
 			if tt.expectErr {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "keys")
+				require.Contains(t, err.Error(), "keys.")
 			} else {
 				require.NoError(t, err)
 			}
@@ -116,7 +116,7 @@ func TestValidateLoggingLevel(t *testing.T) {
 			err := cfg.Validate()
 			if tt.expectErr {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "logging")
+				require.Contains(t, err.Error(), "logging.")
 			} else {
 				require.NoError(t, err)
 			}
@@ -144,7 +144,7 @@ func TestValidateLoggingFormat(t *testing.T) {
 			err := cfg.Validate()
 			if tt.expectErr {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "logging")
+				require.Contains(t, err.Error(), "logging.")
 			} else {
 				require.NoError(t, err)
 			}
@@ -161,7 +161,7 @@ func TestValidateTransport(t *testing.T) {
 		{"websocket", "websocket", false},
 		{"http", "http", false},
 		{"auto", "auto", false},
-		{"empty", "", false},
+		{"empty", "", true},
 		{"invalid", "tcp", true},
 	}
 
@@ -174,7 +174,7 @@ func TestValidateTransport(t *testing.T) {
 			err := cfg.Validate()
 			if tt.expectErr {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "transport")
+				require.Contains(t, err.Error(), "server.transport")
 			} else {
 				require.NoError(t, err)
 			}
@@ -203,7 +203,7 @@ func TestValidateReloadMethod(t *testing.T) {
 			err := cfg.Validate()
 			if tt.expectErr {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "reload.method")
+				require.Contains(t, err.Error(), "agent.reload.method")
 			} else {
 				require.NoError(t, err)
 			}

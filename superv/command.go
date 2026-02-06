@@ -134,6 +134,15 @@ func buildConfig(cmd *cobra.Command) (config.Config, error) {
 		cfg.Persistence.Dir = absPath
 	}
 
+	// We usually expect the supervisor to be run as a subcommand of the collector.
+	if cfg.Agent.Executable == "" {
+		cfg.Agent.Executable = os.Args[0]
+	}
+
+	if err := cfg.Validate(); err != nil {
+		return config.Config{}, fmt.Errorf("invalid configuration:\n%s", config.RenderErrors(err))
+	}
+
 	return cfg, nil
 }
 
