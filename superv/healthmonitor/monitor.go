@@ -195,7 +195,7 @@ func (m *Monitor) StartPolling(ctx context.Context) <-chan *HealthStatus {
 		// Perform initial check immediately
 		status, err := m.CheckHealth(ctx)
 		if err != nil {
-			m.logger.Warn("initial health check failed", zap.Error(err))
+			m.logger.Debug("initial health check failed", zap.Error(err))
 		}
 		// Always send initial status
 		select {

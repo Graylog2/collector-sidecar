@@ -233,10 +233,14 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	healthUpdates := s.healthMonitor.StartPolling(healthCtx)
 	s.healthWg.Go(func() {
 		for status := range healthUpdates {
-			// TODO: Pass commander as AgentStateProvider once it implements the interface
-			// This will enable accurate agent start time reporting per OpAMP spec
-			if err := s.opampClient.SetHealth(status.ToComponentHealth(nil)); err != nil {
-				s.logger.Warn("Failed to report health", zap.Error(err))
+			// Only report health if we're enrolled - during enrollment we want to avoid sending multiple requests
+			// using the enrollment token.
+			if s.authManager.IsEnrolled() { // TODO: Check how expensive IsEnrolled is and if we can cache it after enrollment
+				// TODO: Pass commander as AgentStateProvider once it implements the interface
+				// This will enable accurate agent start time reporting per OpAMP spec
+				if err := s.opampClient.SetHealth(status.ToComponentHealth(nil)); err != nil {
+					s.logger.Warn("Failed to report health", zap.Error(err))
+				}
 			}
 		}
 	})
