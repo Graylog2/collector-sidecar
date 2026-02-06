@@ -37,14 +37,10 @@ import (
 
 func GetCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:               "supervisor",
-		Short:             "Start the supervisor",
-		Long:              "Start the Collector supervisor process",
-		ValidArgs:         nil,
-		ValidArgsFunction: nil,
-		Args:              nil,
-		ArgAliases:        nil,
-		RunE:              runSupervisor,
+		Use:   "supervisor",
+		Short: "Start the supervisor",
+		Long:  "Start the Collector supervisor process",
+		RunE:  runSupervisor,
 	}
 
 	cmd.Flags().StringP("config", "c", "", "Path to a supervisor configuration file")
