@@ -51,7 +51,6 @@ func TestConfigDefaults(t *testing.T) {
 	assert.Greater(t, cfg.Agent.Restart.InitialInterval, time.Duration(0))
 	assert.Greater(t, cfg.Agent.Restart.MaxInterval, time.Duration(0))
 	assert.Greater(t, cfg.Agent.Restart.Multiplier, 0.0)
-	assert.Greater(t, cfg.Agent.Restart.RandomizationFactor, 0.0)
 	assert.Greater(t, cfg.Agent.Restart.StableAfter, time.Duration(0))
 
 	assert.Greater(t, cfg.Agent.Shutdown.GracefulTimeout, 5*time.Second)

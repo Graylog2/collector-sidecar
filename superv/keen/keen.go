@@ -61,18 +61,39 @@ type Commander struct {
 }
 
 // New creates a new Commander instance.
-func New(logger *zap.Logger, logsDir string, cfg Config) (*Commander, error) {
+func New(logger *zap.Logger, logsDir string, cfg Config, backoff *Backoff) (*Commander, error) {
+	if backoff == nil {
+		return nil, errors.New("backoff is required")
+	}
 	return &Commander{
 		logger:  logger,
 		logsDir: logsDir,
 		cfg:     cfg,
 		doneCh:  make(chan struct{}, 1),
 		exitCh:  make(chan struct{}, 1),
+		backoff: backoff,
 	}, nil
 }
 
 // Start starts the agent process.
 func (c *Commander) Start(ctx context.Context) error {
+	if c.backoff.MaxRetries() < 1 {
+		// No crash recovery requested
+		return c.start(ctx)
+	}
+
+	c.recoveryDone = make(chan struct{})
+
+	// Create a cancellable context for the recovery loop
+	recoveryCtx, cancel := context.WithCancel(ctx)
+	c.stopRecovery = cancel
+
+	go c.recoveryLoop(recoveryCtx)
+
+	return nil
+}
+
+func (c *Commander) start(ctx context.Context) error {
 	if !c.running.CompareAndSwap(false, true) {
 		return nil // Already running
 	}
@@ -297,37 +318,13 @@ func (c *Commander) IsRunning() bool {
 	return c.running.Load()
 }
 
-// SetBackoff configures the backoff behavior for crash recovery.
-func (c *Commander) SetBackoff(cfg BackoffConfig) {
-	c.backoff = NewBackoff(cfg)
-}
-
-// StartWithRecovery starts the agent process with automatic crash recovery.
-// It will restart the process on non-zero exit codes according to the
-// configured backoff policy.
-func (c *Commander) StartWithRecovery(ctx context.Context) error {
-	if c.backoff == nil {
-		c.backoff = NewBackoff(DefaultBackoffConfig())
-	}
-
-	c.recoveryDone = make(chan struct{})
-
-	// Create a cancellable context for the recovery loop
-	recoveryCtx, cancel := context.WithCancel(ctx)
-	c.stopRecovery = cancel
-
-	go c.recoveryLoop(recoveryCtx)
-
-	return nil
-}
-
 // recoveryLoop runs the crash recovery loop.
 func (c *Commander) recoveryLoop(ctx context.Context) {
 	defer close(c.recoveryDone)
 
 	for {
 		// Start the process
-		if err := c.Start(ctx); err != nil {
+		if err := c.start(ctx); err != nil {
 			c.logger.Error("Failed to start agent", zap.Error(err))
 			if !c.handleCrash(ctx) {
 				return

@@ -38,11 +38,11 @@ func TestCommander_StartStop(t *testing.T) {
 	cmd, err := New(logger, logsDir, Config{
 		Executable: "/bin/sleep",
 		Args:       []string{"60"},
-	})
+	}, NewBackoff(DefaultBackoffConfig()))
 	require.NoError(t, err)
 
 	ctx := context.Background()
-	err = cmd.Start(ctx)
+	err = cmd.start(ctx)
 	require.NoError(t, err)
 	require.True(t, cmd.IsRunning())
 	require.Greater(t, cmd.Pid(), 0)
@@ -63,16 +63,16 @@ func TestCommander_StartAlreadyRunning(t *testing.T) {
 	cmd, err := New(logger, logsDir, Config{
 		Executable: "/bin/sleep",
 		Args:       []string{"60"},
-	})
+	}, NewBackoff(DefaultBackoffConfig()))
 	require.NoError(t, err)
 
 	ctx := context.Background()
-	err = cmd.Start(ctx)
+	err = cmd.start(ctx)
 	require.NoError(t, err)
 	defer cmd.Stop(ctx)
 
 	// Second start should be no-op
-	err = cmd.Start(ctx)
+	err = cmd.start(ctx)
 	require.NoError(t, err)
 }
 
@@ -83,7 +83,7 @@ func TestCommander_StopNotRunning(t *testing.T) {
 	cmd, err := New(logger, logsDir, Config{
 		Executable: "/bin/sleep",
 		Args:       []string{"60"},
-	})
+	}, NewBackoff(DefaultBackoffConfig()))
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -102,11 +102,11 @@ func TestCommander_ExitedChannel(t *testing.T) {
 	cmd, err := New(logger, logsDir, Config{
 		Executable: "/bin/sh",
 		Args:       []string{"-c", "exit 0"},
-	})
+	}, NewBackoff(DefaultBackoffConfig()))
 	require.NoError(t, err)
 
 	ctx := context.Background()
-	err = cmd.Start(ctx)
+	err = cmd.start(ctx)
 	require.NoError(t, err)
 
 	select {
@@ -130,11 +130,11 @@ func TestCommander_Restart(t *testing.T) {
 	cmd, err := New(logger, logsDir, Config{
 		Executable: "/bin/sleep",
 		Args:       []string{"60"},
-	})
+	}, NewBackoff(BackoffConfig{MaxRetries: 0})) // Disable restart so we don't have to take care of the async recovery look startup
 	require.NoError(t, err)
 
 	ctx := context.Background()
-	err = cmd.Start(ctx)
+	err = cmd.start(ctx)
 	require.NoError(t, err)
 
 	pid1 := cmd.Pid()
@@ -160,23 +160,20 @@ func TestCommander_CrashRecovery(t *testing.T) {
 	cmd, err := New(logger, t.TempDir(), Config{
 		Executable: "/bin/false", // Always exits with code 1
 		Args:       []string{},
-	})
-	require.NoError(t, err)
-
-	// Configure backoff with short delays for testing
-	cmd.SetBackoff(BackoffConfig{
+	}, NewBackoff(BackoffConfig{ // Configure backoff with short delays for testing
 		InitialInterval:     10 * time.Millisecond,
 		MaxInterval:         20 * time.Millisecond,
 		Multiplier:          2.0,
 		RandomizationFactor: 0, // No jitter for predictable tests
 		MaxRetries:          3,
-	})
+	}))
+	require.NoError(t, err)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
 
-	// Start with crash recovery enabled
-	err = cmd.StartWithRecovery(ctx)
+	// start with crash recovery enabled
+	err = cmd.Start(ctx)
 	require.NoError(t, err)
 
 	// Wait for max retries to be exhausted
@@ -201,19 +198,17 @@ func TestCommander_CrashRecovery_GracefulExit(t *testing.T) {
 	cmd, err := New(logger, t.TempDir(), Config{
 		Executable: "/bin/true", // Always exits with code 0
 		Args:       []string{},
-	})
-	require.NoError(t, err)
-
-	cmd.SetBackoff(BackoffConfig{
+	}, NewBackoff(BackoffConfig{
 		InitialInterval:     10 * time.Millisecond,
 		RandomizationFactor: 0,
 		MaxRetries:          5,
-	})
+	}))
+	require.NoError(t, err)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
 
-	err = cmd.StartWithRecovery(ctx)
+	err = cmd.Start(ctx)
 	require.NoError(t, err)
 
 	// Wait for recovery loop to finish
@@ -239,19 +234,17 @@ func TestCommander_CrashRecovery_StopDuringRecovery(t *testing.T) {
 	cmd, err := New(logger, t.TempDir(), Config{
 		Executable: "/bin/false",
 		Args:       []string{},
-	})
-	require.NoError(t, err)
-
-	cmd.SetBackoff(BackoffConfig{
+	}, NewBackoff(BackoffConfig{
 		InitialInterval:     50 * time.Millisecond,
 		MaxInterval:         50 * time.Millisecond,
 		RandomizationFactor: 0,
 		MaxRetries:          0, // Unlimited retries
-	})
+	}))
+	require.NoError(t, err)
 
 	ctx := context.Background()
 
-	err = cmd.StartWithRecovery(ctx)
+	err = cmd.Start(ctx)
 	require.NoError(t, err)
 
 	// Wait a bit for some crashes to occur
