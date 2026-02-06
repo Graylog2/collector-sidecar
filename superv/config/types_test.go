@@ -60,8 +60,8 @@ func TestConfigDefaults(t *testing.T) {
 	assert.True(t, cfg.Agent.Sidecar.Autodetect)
 
 	assert.Equal(t, "/var/lib/graylog-collector/supervisor", cfg.Persistence.Dir)
-	assert.Equal(t, "/var/lib/graylog-collector/supervisor/keys", cfg.Keys.Dir)
-	assert.Equal(t, "/var/lib/graylog-collector/supervisor/packages", cfg.Packages.StorageDir)
+	assert.Equal(t, "/var/lib/graylog-collector/keys", cfg.Keys.Dir)
+	assert.Equal(t, "/var/lib/graylog-collector/packages", cfg.Packages.StorageDir)
 }
 
 func TestConfigInsecure(t *testing.T) {

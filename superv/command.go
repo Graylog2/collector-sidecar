@@ -172,11 +172,11 @@ func buildConfig(cmd *cobra.Command) (config.Config, []func(logger *zap.Logger),
 	}
 
 	if isDev, _ := cmd.Flags().GetBool("dev"); isDev {
-		absPath, err := filepath.Abs("./data/supervisor")
+		absPath, err := filepath.Abs("./data")
 		if err != nil {
 			return config.Config{}, nil, err
 		}
-		cfg.Persistence.Dir = absPath
+		cfg.Persistence.Dir = filepath.Join(absPath, "supervisor")
 		cfg.Keys.Dir = filepath.Join(absPath, "keys")
 		cfg.Packages.StorageDir = filepath.Join(absPath, "packages")
 		cfg.Logging.Format = "text"

@@ -88,6 +88,9 @@ func (k AuthConfig) Validate() error {
 
 // Validate checks KeysConfig for errors.
 func (k KeysConfig) Validate() error {
+	if k.Dir == "" {
+		return errors.New("keys.dir: is required")
+	}
 	if k.Encrypted && k.Passphrase.Env == "" && k.Passphrase.File == "" && len(k.Passphrase.Cmd) == 0 {
 		return errors.New("keys.passphrase: source required when keys are encrypted")
 	}

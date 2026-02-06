@@ -92,15 +92,9 @@ func New(logger *zap.Logger, cfg config.Config) (*Supervisor, error) {
 		return nil, err
 	}
 
-	// Determine keys directory
-	keysDir := cfg.Keys.Dir
-	if keysDir == "" {
-		keysDir = filepath.Join(cfg.Persistence.Dir, "keys")
-	}
-
 	// Create auth manager
 	authMgr := auth.NewManager(logger.Named("auth"), auth.ManagerConfig{
-		KeysDir:     keysDir,
+		KeysDir:     cfg.Keys.Dir,
 		JWTLifetime: cfg.Server.Auth.JWTLifetime,
 		InsecureTLS: cfg.Server.Auth.InsecureTLS,
 	})

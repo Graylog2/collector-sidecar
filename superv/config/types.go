@@ -211,7 +211,7 @@ func DefaultConfig() Config {
 		},
 		Keys: KeysConfig{
 			// TODO: Branding
-			Dir:       "/var/lib/graylog-collector/supervisor/keys",
+			Dir:       "/var/lib/graylog-collector/keys",
 			Encrypted: false,
 		},
 		LocalServer: LocalServer{
@@ -251,7 +251,7 @@ func DefaultConfig() Config {
 		},
 		Packages: PackagesConfig{
 			// TODO: Branding
-			StorageDir:   "/var/lib/graylog-collector/supervisor/packages",
+			StorageDir:   "/var/lib/graylog-collector/packages",
 			KeepVersions: 2,
 			Verification: VerificationConfig{
 				PublisherSignature: PublisherSignatureConfig{
