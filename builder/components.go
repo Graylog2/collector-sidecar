@@ -47,7 +47,7 @@ func components() (otelcol.Factories, error) {
 	}
 	factories.ExtensionModules = makeModulesMap(factories.Extensions, map[component.Type]string{
 		sidecar.NewFactory().Type():        "github.com/Graylog2/collector-sidecar/extension/sidecar v1.5.0",
-		opampextension.NewFactory().Type(): "github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampextension v0.144.0",
+		opampextension.NewFactory().Type(): "github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampextension v0.145.0",
 	})
 
 	factories.Receivers, err = otelcol.MakeFactoryMap[receiver.Factory](
@@ -58,8 +58,8 @@ func components() (otelcol.Factories, error) {
 		return otelcol.Factories{}, err
 	}
 	factories.ReceiverModules = makeModulesMap(factories.Receivers, map[component.Type]string{
-		otlpreceiver.NewFactory().Type():     "go.opentelemetry.io/collector/receiver/otlpreceiver v0.144.0",
-		journaldreceiver.NewFactory().Type(): "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver v0.144.0",
+		otlpreceiver.NewFactory().Type():     "go.opentelemetry.io/collector/receiver/otlpreceiver v0.145.0",
+		journaldreceiver.NewFactory().Type(): "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver v0.145.0",
 	})
 
 	factories.Exporters, err = otelcol.MakeFactoryMap[exporter.Factory](
@@ -69,7 +69,7 @@ func components() (otelcol.Factories, error) {
 		return otelcol.Factories{}, err
 	}
 	factories.ExporterModules = makeModulesMap(factories.Exporters, map[component.Type]string{
-		debugexporter.NewFactory().Type(): "go.opentelemetry.io/collector/exporter/debugexporter v0.144.0",
+		debugexporter.NewFactory().Type(): "go.opentelemetry.io/collector/exporter/debugexporter v0.145.0",
 	})
 
 	factories.Processors, err = otelcol.MakeFactoryMap[processor.Factory]()
