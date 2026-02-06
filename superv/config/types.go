@@ -33,6 +33,7 @@ type Config struct {
 	Packages    PackagesConfig    `koanf:"packages"`
 	Persistence PersistenceConfig `koanf:"persistence"`
 	Logging     LoggingConfig     `koanf:"logging"`
+	Debug       bool              `koanf:"debug"`
 }
 
 // ServerConfig configures the upstream OpAMP server connection.

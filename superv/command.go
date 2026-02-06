@@ -52,6 +52,7 @@ func GetCommand() *cobra.Command {
 	cmd.Flags().String("enroll", "", "Enroll collector with enrollment token")
 	cmd.Flags().String("data-dir", "", "Data directory")
 	cmd.Flags().Bool("insecure", false, "Start in insecure mode (no TLS verification, etc.)")
+	cmd.Flags().Bool("debug", false, "Enable debug logging")
 	cmd.Flags().Bool("dev", false, "Enable development profile")
 	_ = cmd.Flags().MarkHidden("dev") // Developer-only setting
 
@@ -71,46 +72,75 @@ func findConfigFile(paths []string) (string, error) {
 	return "", nil
 }
 
-func buildConfig(cmd *cobra.Command) (config.Config, error) {
+func buildConfig(cmd *cobra.Command) (config.Config, []func(logger *zap.Logger), error) {
+	var events []func(logger *zap.Logger)
+
 	var configFile string
 	if cmd.Flag("config").Changed {
 		configFile, _ = cmd.Flags().GetString("config")
+
+		events = append(events, func(logger *zap.Logger) {
+			logger.Debug("Using config file path from command line flag", zap.String("config", configFile))
+		})
 	} else {
 		file, err := findConfigFile(append(config.DefaultConfigPaths(), configFile))
 		if err != nil {
-			return config.Config{}, fmt.Errorf("supervisor: %w", err)
+			return config.Config{}, nil, fmt.Errorf("supervisor: %w", err)
 		}
 		configFile = file
+
 	}
 
 	if configFile != "" {
 		absPath, err := filepath.Abs(configFile)
 		if err != nil {
-			return config.Config{}, err
+			return config.Config{}, nil, err
 		}
 		configFile = absPath
+
+		events = append(events, func(logger *zap.Logger) {
+			logger.Debug("Using config file", zap.String("config", configFile))
+		})
+	} else {
+		events = append(events, func(logger *zap.Logger) {
+			logger.Debug("Running without config file")
+		})
 	}
 
 	cfg, err := config.Load(configFile)
 	if err != nil {
-		return config.Config{}, err
+		return config.Config{}, nil, err
 	}
 
 	if cmd.Flag("endpoint").Changed {
 		endpoint, _ := cmd.Flags().GetString("endpoint")
 		cfg.Server.Endpoint = endpoint
+
+		events = append(events, func(logger *zap.Logger) {
+			logger.Debug("Using server endpoint from command line flag", zap.String("endpoint", endpoint))
+		})
 	}
 	if cmd.Flag("enroll").Changed {
 		enroll, _ := cmd.Flags().GetString("enroll")
 		cfg.Auth.EnrollmentURL = enroll
+
+		events = append(events, func(logger *zap.Logger) {
+			logger.Debug("Using enrollment token from command line flag")
+		})
 	}
 	if cmd.Flag("data-dir").Changed {
 		dataDir, _ := cmd.Flags().GetString("data-dir")
 		cfg.Persistence.Dir = dataDir
+		events = append(events, func(logger *zap.Logger) {
+			logger.Debug("Using data directory from command line flag", zap.String("data-dir", dataDir))
+		})
 	}
 
 	if isInsecure, _ := cmd.Flags().GetBool("insecure"); isInsecure {
 		cfg.SetInsecure()
+		events = append(events, func(logger *zap.Logger) {
+			logger.Warn("Supervisor runs in insecure mode!")
+		})
 	}
 
 	if cfg.Agent.Sidecar.Autodetect {
@@ -121,32 +151,60 @@ func buildConfig(cmd *cobra.Command) (config.Config, error) {
 			filepath.Join(filepath.Dir(configFile), "sidecar.yml"),
 		})
 		if err != nil {
-			return config.Config{}, fmt.Errorf("sidecar: %w", err)
+			return config.Config{}, nil, fmt.Errorf("sidecar: %w", err)
 		}
-		cfg.Agent.Sidecar.Enabled = sidecarConfigPath != ""
+		if sidecarConfigPath != "" {
+			cfg.Agent.Sidecar.Enabled = true
+
+			events = append(events, func(logger *zap.Logger) {
+				logger.Debug("Sidecar enabled via auto-detection", zap.String("config", sidecarConfigPath))
+			})
+		}
 	}
 
 	if isDev, _ := cmd.Flags().GetBool("dev"); isDev {
 		absPath, err := filepath.Abs("./data/supervisor")
 		if err != nil {
-			return config.Config{}, err
+			return config.Config{}, nil, err
 		}
 		cfg.Persistence.Dir = absPath
+		cfg.Logging.Format = "text"
+
+		events = append(events, func(logger *zap.Logger) {
+			logger.Debug("DEV mode activated", zap.String("data-dir", cfg.Persistence.Dir),
+				zap.String("logging-format", cfg.Logging.Format))
+		})
+	}
+	if isDebug, _ := cmd.Flags().GetBool("debug"); isDebug {
+		cfg.Debug = true
+		cfg.Logging.Level = "debug"
+
+		events = append(events, func(logger *zap.Logger) {
+			logger.Debug("DEBUG mode activated", zap.String("logging-level", cfg.Logging.Level))
+		})
 	}
 
 	// We usually expect the supervisor to be run as a subcommand of the collector.
 	if cfg.Agent.Executable == "" {
-		cfg.Agent.Executable = os.Args[0]
+		absPath, err := filepath.Abs(os.Args[0])
+		if err != nil {
+			return config.Config{}, nil, fmt.Errorf("failed to determine absolute path of supervisor executable: %w", err)
+		}
+		cfg.Agent.Executable = absPath
+
+		events = append(events, func(logger *zap.Logger) {
+			logger.Debug("Using supervisor binary as agent executable", zap.String("bin", cfg.Agent.Executable))
+		})
 	}
 
 	if err := cfg.Validate(); err != nil {
-		return config.Config{}, fmt.Errorf("invalid configuration:\n%s", config.RenderErrors(err))
+		return config.Config{}, nil, fmt.Errorf("invalid configuration:\n%s", config.RenderErrors(err))
 	}
 
-	return cfg, nil
+	return cfg, events, nil
 }
 
-func initLogger(level, format string) (*zap.Logger, error) {
+func initLogger(level, format string, debug bool) (*zap.Logger, error) {
 	var zapLevel zapcore.Level
 	if err := zapLevel.UnmarshalText([]byte(level)); err != nil {
 		zapLevel = zapcore.InfoLevel
@@ -159,23 +217,24 @@ func initLogger(level, format string) (*zap.Logger, error) {
 		cfg = zap.NewDevelopmentConfig()
 	}
 	cfg.Level = zap.NewAtomicLevelAt(zapLevel)
+	cfg.DisableStacktrace = debug
 
 	return cfg.Build()
 }
 
 func runSupervisor(cmd *cobra.Command, args []string) error {
-	cfg, err := buildConfig(cmd)
+	cfg, events, err := buildConfig(cmd)
 	if err != nil {
 		return fmt.Errorf("couldn't load config: %w", err)
 	}
 
-	logger, err := initLogger(cfg.Logging.Level, cfg.Logging.Format)
+	logger, err := initLogger(cfg.Logging.Level, cfg.Logging.Format, cfg.Debug)
 	if err != nil {
 		return fmt.Errorf("failed to create logger: %w", err)
 	}
 
-	if cfg.IsInsecure() {
-		logger.Warn("Supervisor runs in insecure mode!")
+	for _, event := range events {
+		event(logger)
 	}
 
 	sv, err := supervisor.New(logger.Named("supervisor"), cfg)
