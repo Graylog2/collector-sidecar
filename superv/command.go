@@ -118,7 +118,7 @@ func buildConfig(cmd *cobra.Command) (config.Config, []func(logger *zap.Logger),
 	}
 	if cmd.Flag("enroll").Changed {
 		enroll, _ := cmd.Flags().GetString("enroll")
-		cfg.Auth.EnrollmentURL = enroll
+		cfg.Server.Auth.EnrollmentURL = enroll
 
 		events = append(events, func(logger *zap.Logger) {
 			logger.Debug("Using enrollment token from command line flag")

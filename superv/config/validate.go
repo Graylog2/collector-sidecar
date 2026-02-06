@@ -23,6 +23,7 @@ import (
 	"net/url"
 	"slices"
 	"strings"
+	"time"
 )
 
 var (
@@ -31,12 +32,14 @@ var (
 	validLogFormats    = []string{"json", "text"}
 	validReloadMethods = []string{"auto", "signal", "restart"}
 	validTransports    = []string{"websocket", "http", "auto"}
+	minJWTLifetime     = 15 * time.Second
 )
 
 // Validate checks the configuration for errors.
 func (c *Config) Validate() error {
 	return errors.Join(
 		c.Server.Validate(),
+		c.Server.Auth.Validate(),
 		c.Keys.Validate(),
 		c.Agent.Validate(),
 		c.Logging.Validate(),
@@ -72,6 +75,14 @@ func (s ServerConfig) Validate() error {
 		return fmt.Errorf("server.transport: must be one of %v, got %q", validTransports, s.Transport)
 	}
 
+	return nil
+}
+
+// Validate checks AuthConfig for errors.
+func (k AuthConfig) Validate() error {
+	if k.JWTLifetime < minJWTLifetime {
+		return fmt.Errorf("server.auth.jwt_lifetime: JWT lifetime must be at least %s", minJWTLifetime)
+	}
 	return nil
 }
 

@@ -95,7 +95,7 @@ func TestSupervisor_ConfigManagerIntegration(t *testing.T) {
 		Server: config.ServerConfig{
 			Endpoint: "ws://localhost:4320/v1/opamp",
 		},
-		LocalOpAMP: config.LocalOpAMPConfig{
+		LocalServer: config.LocalServer{
 			Endpoint: "localhost:4321",
 		},
 		Agent: config.AgentConfig{

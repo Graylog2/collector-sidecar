@@ -84,11 +84,11 @@ func main() {
 		cfg = config.DefaultConfig()
 	}
 
-	cfg.Auth.InsecureTLS = insecureTls
+	cfg.Server.Auth.InsecureTLS = insecureTls
 
 	// Override with enrollment URL if provided
 	if enrollmentURL != "" {
-		cfg.Auth.EnrollmentURL = enrollmentURL
+		cfg.Server.Auth.EnrollmentURL = enrollmentURL
 	}
 
 	if enrollmentURL != "" {

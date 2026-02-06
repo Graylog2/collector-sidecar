@@ -101,8 +101,8 @@ func New(logger *zap.Logger, cfg config.Config) (*Supervisor, error) {
 	// Create auth manager
 	authMgr := auth.NewManager(logger.Named("auth"), auth.ManagerConfig{
 		KeysDir:     keysDir,
-		JWTLifetime: cfg.Auth.JWTLifetime,
-		InsecureTLS: cfg.Auth.InsecureTLS,
+		JWTLifetime: cfg.Server.Auth.JWTLifetime,
+		InsecureTLS: cfg.Server.Auth.InsecureTLS,
 	})
 
 	// Initialize config manager
@@ -110,7 +110,7 @@ func New(logger *zap.Logger, cfg config.Config) (*Supervisor, error) {
 		ConfigDir:      filepath.Join(cfg.Persistence.Dir, "config"),
 		OutputPath:     filepath.Join(cfg.Persistence.Dir, "config", "collector.yaml"),
 		LocalOverrides: cfg.Agent.Config.LocalOverrides,
-		LocalEndpoint:  cfg.LocalOpAMP.Endpoint,
+		LocalEndpoint:  cfg.LocalServer.Endpoint,
 		InstanceUID:    uid,
 	})
 
@@ -178,10 +178,10 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	//       Config file? Or enrollment URL, received connection settings, which order, etc.
 
 	// If endpoint doesn't have a path, derive it from the enrollment URL
-	if s.cfg.Auth.EnrollmentURL != "" {
+	if s.cfg.Server.Auth.EnrollmentURL != "" {
 		u, err := url.Parse(s.cfg.Server.Endpoint)
 		if err == nil && (u.Path == "" || u.Path == "/") {
-			derivedEndpoint, err := deriveEndpointFromEnrollmentURL(s.cfg.Auth.EnrollmentURL)
+			derivedEndpoint, err := deriveEndpointFromEnrollmentURL(s.cfg.Server.Auth.EnrollmentURL)
 			if err == nil {
 				s.logger.Info("Derived OpAMP endpoint from enrollment URL",
 					zap.String("endpoint", derivedEndpoint),
@@ -224,7 +224,7 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	}
 
 	opampServer, err := opamp.NewServer(s.logger, opamp.ServerConfig{
-		ListenEndpoint: s.cfg.LocalOpAMP.Endpoint,
+		ListenEndpoint: s.cfg.LocalServer.Endpoint,
 	}, serverCallbacks)
 	if err != nil {
 		return err
@@ -433,7 +433,7 @@ func (s *Supervisor) createAndStartClient(ctx context.Context) (*opamp.Client, e
 		InstanceUID: s.instanceUID,
 		Headers:     headers,
 		TLSConfig: &tls.Config{
-			InsecureSkipVerify: s.cfg.Auth.InsecureTLS || s.cfg.Server.TLS.Insecure,
+			InsecureSkipVerify: s.cfg.IsInsecure(),
 		},
 		Capabilities: opamp.Capabilities{
 			AcceptsRemoteConfig:            true,
@@ -508,12 +508,12 @@ func (s *Supervisor) initAuth(ctx context.Context) error {
 	}
 
 	// Need to enroll - prepare the CSR
-	if s.cfg.Auth.EnrollmentURL == "" {
+	if s.cfg.Server.Auth.EnrollmentURL == "" {
 		return fmt.Errorf("not enrolled and no enrollment URL configured")
 	}
 
 	s.logger.Info("Preparing enrollment")
-	result, err := s.authManager.PrepareEnrollment(ctx, s.cfg.Auth.EnrollmentURL, s.instanceUID)
+	result, err := s.authManager.PrepareEnrollment(ctx, s.cfg.Server.Auth.EnrollmentURL, s.instanceUID)
 	if err != nil {
 		return fmt.Errorf("enrollment preparation failed: %w", err)
 	}

@@ -26,9 +26,8 @@ import (
 // Config is the top-level supervisor configuration.
 type Config struct {
 	Server      ServerConfig      `koanf:"server"`
-	Auth        AuthConfig        `koanf:"auth"`
 	Keys        KeysConfig        `koanf:"keys"`
-	LocalOpAMP  LocalOpAMPConfig  `koanf:"local_opamp"`
+	LocalServer LocalServer       `koanf:"local_server"`
 	Agent       AgentConfig       `koanf:"agent"`
 	Packages    PackagesConfig    `koanf:"packages"`
 	Persistence PersistenceConfig `koanf:"persistence"`
@@ -43,6 +42,7 @@ type ServerConfig struct {
 	Headers    map[string]string `koanf:"headers"`
 	TLS        TLSConfig         `koanf:"tls"`
 	Connection ConnectionConfig  `koanf:"connection"`
+	Auth       AuthConfig        `koanf:"auth"`
 }
 
 // TLSConfig configures TLS for server connection.
@@ -87,8 +87,8 @@ type PassphraseConfig struct {
 	Cmd  []string `koanf:"cmd"`
 }
 
-// LocalOpAMPConfig configures the local OpAMP server for the collector.
-type LocalOpAMPConfig struct {
+// LocalServer configures the local OpAMP server for the collector.
+type LocalServer struct {
 	Endpoint string `koanf:"endpoint"`
 }
 
@@ -195,7 +195,7 @@ type LoggingConfig struct {
 func DefaultConfig() Config {
 	return Config{
 		Server: ServerConfig{
-			Endpoint:  "ws://localhost:4320/v1/opamp",
+			Endpoint:  "", //ws://localhost:4320/v1/opamp",
 			Transport: "auto",
 			Connection: ConnectionConfig{
 				RetryBackoff: BackoffConfig{
@@ -204,15 +204,16 @@ func DefaultConfig() Config {
 					Multiplier: 2.0,
 				},
 			},
-		},
-		Auth: AuthConfig{
-			JWTLifetime: 5 * time.Minute,
+			Auth: AuthConfig{
+				JWTLifetime: 5 * time.Minute,
+			},
 		},
 		Keys: KeysConfig{
-			Dir:       "/var/lib/supervisor/keys",
+			// TODO: Branding
+			Dir:       "/var/lib/graylog-collector/supervisor/keys",
 			Encrypted: false,
 		},
-		LocalOpAMP: LocalOpAMPConfig{
+		LocalServer: LocalServer{
 			Endpoint: "localhost:0", // port 0 = random free port
 		},
 		Agent: AgentConfig{
@@ -232,7 +233,7 @@ func DefaultConfig() Config {
 				RestartOnReloadFailure: true,
 			},
 			Restart: RestartConfig{
-				MaxRetries:          5,
+				MaxRetries:          0, // Unlimited retries by default
 				InitialInterval:     1 * time.Second,
 				MaxInterval:         30 * time.Second,
 				Multiplier:          2.0,
@@ -248,7 +249,8 @@ func DefaultConfig() Config {
 			},
 		},
 		Packages: PackagesConfig{
-			StorageDir:   "/var/lib/supervisor/packages",
+			// TODO: Branding
+			StorageDir:   "/var/lib/graylog-collector/supervisor/packages",
 			KeepVersions: 2,
 			Verification: VerificationConfig{
 				PublisherSignature: PublisherSignatureConfig{
@@ -258,7 +260,8 @@ func DefaultConfig() Config {
 			},
 		},
 		Persistence: PersistenceConfig{
-			Dir: "/var/lib/supervisor",
+			// TODO: Branding
+			Dir: "/var/lib/graylog-collector/supervisor",
 		},
 		Logging: LoggingConfig{
 			Format: "json",
@@ -290,11 +293,11 @@ func (t TLSConfig) ToTLSConfig() (*tls.Config, error) {
 
 // SetInsecure configures the supervisor to not validate TLS certificates.
 func (c *Config) SetInsecure() {
-	c.Auth.InsecureTLS = true
+	c.Server.Auth.InsecureTLS = true
 	c.Server.TLS.Insecure = true
 }
 
 // IsInsecure returns true if any of the TLS verification settings is disabled.
 func (c *Config) IsInsecure() bool {
-	return c.Auth.InsecureTLS || c.Server.TLS.Insecure
+	return c.Server.Auth.InsecureTLS || c.Server.TLS.Insecure
 }

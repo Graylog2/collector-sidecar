@@ -22,18 +22,45 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func TestServerConfigDefaults(t *testing.T) {
+func TestConfigDefaults(t *testing.T) {
 	cfg := DefaultConfig()
-	require.NotEmpty(t, cfg.Server.Endpoint)
-}
 
-func TestAgentConfigDefaults(t *testing.T) {
-	cfg := DefaultConfig()
-	require.Greater(t, cfg.Agent.ConfigApplyTimeout, time.Duration(0))
-	require.Greater(t, cfg.Agent.BootstrapTimeout, time.Duration(0))
+	assert.Empty(t, cfg.Server.Endpoint)
+	assert.Equal(t, "auto", cfg.Server.Transport)
+
+	assert.Greater(t, cfg.Server.Connection.RetryBackoff.Initial, time.Duration(0))
+	assert.Greater(t, cfg.Server.Connection.RetryBackoff.Max, 1*time.Minute)
+	assert.Greater(t, cfg.Server.Connection.RetryBackoff.Multiplier, 0.0)
+
+	assert.GreaterOrEqual(t, cfg.Server.Auth.JWTLifetime, time.Minute)
+	assert.False(t, cfg.Server.Auth.InsecureTLS)
+	assert.Empty(t, cfg.Server.Auth.EnrollmentURL)
+
+	assert.Equal(t, "localhost:0", cfg.LocalServer.Endpoint)
+
+	assert.Greater(t, cfg.Agent.ConfigApplyTimeout, time.Duration(0))
+	assert.Greater(t, cfg.Agent.BootstrapTimeout, time.Duration(0))
+
+	assert.Greater(t, cfg.Agent.Health.Timeout, time.Duration(0))
+	assert.Greater(t, cfg.Agent.Health.Interval, time.Duration(0))
+
+	assert.Equal(t, 0, cfg.Agent.Restart.MaxRetries) // Unlimited retries by default
+	assert.Greater(t, cfg.Agent.Restart.InitialInterval, time.Duration(0))
+	assert.Greater(t, cfg.Agent.Restart.MaxInterval, time.Duration(0))
+	assert.Greater(t, cfg.Agent.Restart.Multiplier, 0.0)
+	assert.Greater(t, cfg.Agent.Restart.RandomizationFactor, 0.0)
+	assert.Greater(t, cfg.Agent.Restart.StableAfter, time.Duration(0))
+
+	assert.Greater(t, cfg.Agent.Shutdown.GracefulTimeout, 5*time.Second)
+
+	assert.False(t, cfg.Agent.Sidecar.Enabled)
+	assert.True(t, cfg.Agent.Sidecar.Autodetect)
+
+	assert.Equal(t, "/var/lib/graylog-collector/supervisor", cfg.Persistence.Dir)
+	assert.Equal(t, "/var/lib/graylog-collector/supervisor/keys", cfg.Keys.Dir)
+	assert.Equal(t, "/var/lib/graylog-collector/supervisor/packages", cfg.Packages.StorageDir)
 }
 
 func TestConfigInsecure(t *testing.T) {
@@ -50,22 +77,22 @@ func TestConfigInsecure(t *testing.T) {
 
 		assert.False(t, cfg.IsInsecure())
 
-		cfg.Auth.InsecureTLS = true
+		cfg.Server.Auth.InsecureTLS = true
 		cfg.Server.TLS.Insecure = true
 
 		assert.True(t, cfg.IsInsecure())
 
-		cfg.Auth.InsecureTLS = true
+		cfg.Server.Auth.InsecureTLS = true
 		cfg.Server.TLS.Insecure = false
 
 		assert.True(t, cfg.IsInsecure())
 
-		cfg.Auth.InsecureTLS = false
+		cfg.Server.Auth.InsecureTLS = false
 		cfg.Server.TLS.Insecure = true
 
 		assert.True(t, cfg.IsInsecure())
 
-		cfg.Auth.InsecureTLS = false
+		cfg.Server.Auth.InsecureTLS = false
 		cfg.Server.TLS.Insecure = false
 
 		assert.False(t, cfg.IsInsecure())
