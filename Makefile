@@ -224,8 +224,14 @@ v2:
 	$(GO) tool github.com/google/addlicense -check $(FMT_ARGS)
 	(cd builder && $(GO) build -o ../graylog-collector .)
 
+GOTEST_FLAGS := -vet=all -race
+ifdef CI
+GOTEST_CI_FLAGS := -v
+endif
+
 .PHONY: v2test
 v2test:
-	(cd builder/mod && $(GO) test -v .)
+	(cd builder && $(GO) test $(GOTEST_FLAGS) $(GOTEST_CI_FLAGS) ./...)
+	(cd superv && $(GO) test $(GOTEST_FLAGS) $(GOTEST_CI_FLAGS) ./...)
 
 .DEFAULT_GOAL := all
