@@ -46,8 +46,7 @@ func TestIntegration_Enrollment(t *testing.T) {
 	serverURL := server.Start()
 	defer server.Stop()
 
-	// Create enrollment URL
-	enrollmentURL, err := server.CreateEnrollmentURL("test-tenant", time.Hour)
+	enrollmentToken, err := server.CreateEnrollmentJWT("test-tenant", time.Hour)
 	require.NoError(t, err)
 
 	// Setup dirs
@@ -70,7 +69,7 @@ func TestIntegration_Enrollment(t *testing.T) {
 	require.NoError(t, err)
 
 	// Phase 1: Prepare enrollment (validates JWT, generates keys, creates CSR)
-	result, err := authMgr.PrepareEnrollment(context.Background(), enrollmentURL, instanceUID)
+	result, err := authMgr.PrepareEnrollment(context.Background(), server.URL(), enrollmentToken, instanceUID)
 	require.NoError(t, err)
 	require.NotEmpty(t, result.CSRPEM)
 	require.Equal(t, "test-tenant", result.TenantID)
@@ -92,7 +91,7 @@ func TestIntegration_Enrollment(t *testing.T) {
 	require.NotEmpty(t, authMgr.CertFingerprint())
 
 	// Verify we can generate a JWT
-	jwt, err := authMgr.GenerateJWT("test.example.com")
+	jwt, err := authMgr.GenerateJWT()
 	require.NoError(t, err)
 	require.NotEmpty(t, jwt)
 
@@ -100,7 +99,6 @@ func TestIntegration_Enrollment(t *testing.T) {
 	certFP, claims, err := auth.ParseSupervisorJWT(jwt)
 	require.NoError(t, err)
 	require.Equal(t, instanceUID, claims.Subject)
-	require.Contains(t, claims.Audience, "test.example.com")
 	require.Equal(t, authMgr.CertFingerprint(), certFP)
 }
 
@@ -113,8 +111,7 @@ func TestIntegration_EnrollmentPersistence(t *testing.T) {
 	serverURL := server.Start()
 	defer server.Stop()
 
-	// Create enrollment URL
-	enrollmentURL, err := server.CreateEnrollmentURL("test-tenant", time.Hour)
+	enrollmentToken, err := server.CreateEnrollmentJWT("test-tenant", time.Hour)
 	require.NoError(t, err)
 
 	dir := t.TempDir()
@@ -130,7 +127,7 @@ func TestIntegration_EnrollmentPersistence(t *testing.T) {
 	instanceUID, _ := persistence.LoadOrCreateInstanceUID(dir)
 
 	// Prepare enrollment
-	result, err := authMgr1.PrepareEnrollment(context.Background(), enrollmentURL, instanceUID)
+	result, err := authMgr1.PrepareEnrollment(context.Background(), server.URL(), enrollmentToken, instanceUID)
 	require.NoError(t, err)
 
 	// Get certificate via OpAMP
@@ -156,7 +153,7 @@ func TestIntegration_EnrollmentPersistence(t *testing.T) {
 	require.Equal(t, fingerprint1, authMgr2.CertFingerprint())
 
 	// Verify JWT generation works
-	jwt, err := authMgr2.GenerateJWT("example.com")
+	jwt, err := authMgr2.GenerateJWT()
 	require.NoError(t, err)
 	require.NotEmpty(t, jwt)
 }
@@ -170,8 +167,7 @@ func TestIntegration_EnrollmentWithTenant(t *testing.T) {
 	serverURL := server.Start()
 	defer server.Stop()
 
-	// Create enrollment URL with specific tenant
-	enrollmentURL, err := server.CreateEnrollmentURL("acme-corp", time.Hour)
+	enrollmentToken, err := server.CreateEnrollmentJWT("acme-corp", time.Hour)
 	require.NoError(t, err)
 
 	dir := t.TempDir()
@@ -186,7 +182,7 @@ func TestIntegration_EnrollmentWithTenant(t *testing.T) {
 	instanceUID, _ := persistence.LoadOrCreateInstanceUID(dir)
 
 	// Prepare enrollment
-	result, err := authMgr.PrepareEnrollment(context.Background(), enrollmentURL, instanceUID)
+	result, err := authMgr.PrepareEnrollment(context.Background(), server.URL(), enrollmentToken, instanceUID)
 	require.NoError(t, err)
 	require.Equal(t, "acme-corp", result.TenantID)
 
@@ -213,7 +209,7 @@ func TestIntegration_JWTExpiry(t *testing.T) {
 	serverURL := server.Start()
 	defer server.Stop()
 
-	enrollmentURL, err := server.CreateEnrollmentURL("test-tenant", time.Hour)
+	enrollmentToken, err := server.CreateEnrollmentJWT("test-tenant", time.Hour)
 	require.NoError(t, err)
 
 	dir := t.TempDir()
@@ -230,7 +226,7 @@ func TestIntegration_JWTExpiry(t *testing.T) {
 	instanceUID, _ := persistence.LoadOrCreateInstanceUID(dir)
 
 	// Prepare enrollment
-	result, err := authMgr.PrepareEnrollment(context.Background(), enrollmentURL, instanceUID)
+	result, err := authMgr.PrepareEnrollment(context.Background(), server.URL(), enrollmentToken, instanceUID)
 	require.NoError(t, err)
 
 	// Get certificate via OpAMP
@@ -241,7 +237,7 @@ func TestIntegration_JWTExpiry(t *testing.T) {
 	require.NoError(t, err)
 
 	// Generate JWT
-	jwt1, err := authMgr.GenerateJWT("example.com")
+	jwt1, err := authMgr.GenerateJWT()
 	require.NoError(t, err)
 
 	// Parse and check expiry - should not be expired yet
@@ -260,7 +256,7 @@ func TestIntegration_JWTExpiry(t *testing.T) {
 	require.True(t, claims1.IsExpired())
 
 	// But we can generate a new one
-	jwt2, err := authMgr.GenerateJWT("example.com")
+	jwt2, err := authMgr.GenerateJWT()
 	require.NoError(t, err)
 	require.NotEqual(t, jwt1, jwt2)
 

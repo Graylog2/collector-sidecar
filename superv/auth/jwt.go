@@ -58,16 +58,15 @@ func (c *SupervisorClaims) IsExpiringSoon(threshold time.Duration) bool {
 func CreateSupervisorJWT(
 	privateKey ed25519.PrivateKey,
 	cert *x509.Certificate,
-	instanceUID string,
-	audience string,
+	instanceUID string, // TODO: Use a custom type for instance UID to enforce format?
 	lifetime time.Duration,
 ) (string, error) {
 	now := time.Now()
 
 	claims := SupervisorClaims{
+		// We don't set an audience or issuer since the server can validate based on the CA chain.
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   instanceUID,
-			Audience:  jwt.ClaimStrings{audience},
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(lifetime)),
 		},

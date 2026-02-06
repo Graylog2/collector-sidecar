@@ -63,16 +63,3 @@ func TestServer_EnrollmentJWT(t *testing.T) {
 	require.Equal(t, "test-tenant", claims.TenantID)
 	require.Equal(t, "Ed25519", claims.KeyAlgorithm)
 }
-
-func TestServer_CreateEnrollmentURL(t *testing.T) {
-	server, err := New()
-	require.NoError(t, err)
-
-	url := server.Start()
-	defer server.Stop()
-
-	enrollURL, err := server.CreateEnrollmentURL("test-tenant", time.Hour)
-	require.NoError(t, err)
-	require.Contains(t, enrollURL, url)
-	require.Contains(t, enrollURL, "/opamp/enroll/")
-}

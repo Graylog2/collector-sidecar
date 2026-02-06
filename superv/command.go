@@ -45,7 +45,8 @@ func GetCommand() *cobra.Command {
 
 	cmd.Flags().StringP("config", "c", "", "Path to a supervisor configuration file")
 	cmd.Flags().String("endpoint", "", "OpAMP server endpoint")
-	cmd.Flags().String("enroll", "", "Enroll collector with enrollment token")
+	cmd.Flags().String("enroll-endpoint", "", "Enrollment endpoint")
+	cmd.Flags().String("enroll-token", "", "Enrollment token")
 	cmd.Flags().String("data-dir", "", "Data directory")
 	cmd.Flags().Bool("insecure", false, "Start in insecure mode (no TLS verification, etc.)")
 	cmd.Flags().Bool("debug", false, "Enable debug logging")
@@ -116,9 +117,21 @@ func buildConfig(cmd *cobra.Command) (config.Config, []func(logger *zap.Logger),
 			logger.Debug("Using server endpoint from command line flag", zap.String("endpoint", endpoint))
 		})
 	}
-	if cmd.Flag("enroll").Changed {
-		enroll, _ := cmd.Flags().GetString("enroll")
-		cfg.Server.Auth.EnrollmentURL = enroll
+	if cmd.Flag("enroll-endpoint").Changed {
+		enrollEndpoint, _ := cmd.Flags().GetString("enroll-endpoint")
+		endpoint, err := config.DeriveEnrollmentEndpoint(enrollEndpoint)
+		if err != nil {
+			return config.Config{}, nil, fmt.Errorf("invalid enrollment endpoint: %w", err)
+		}
+		cfg.Server.Auth.EnrollmentEndpoint = endpoint
+
+		events = append(events, func(logger *zap.Logger) {
+			logger.Debug("Using enrollment endpoint from command line flag", zap.String("endpoint", endpoint))
+		})
+	}
+	if cmd.Flag("enroll-token").Changed {
+		enrollToken, _ := cmd.Flags().GetString("enroll-token")
+		cfg.Server.Auth.EnrollmentToken = enrollToken
 
 		events = append(events, func(logger *zap.Logger) {
 			logger.Debug("Using enrollment token from command line flag")
@@ -194,6 +207,10 @@ func buildConfig(cmd *cobra.Command) (config.Config, []func(logger *zap.Logger),
 		events = append(events, func(logger *zap.Logger) {
 			logger.Debug("Using supervisor binary as agent executable", zap.String("bin", cfg.Agent.Executable))
 		})
+	}
+
+	if cfg.Server.Auth.EnrollmentEndpoint != "" && cfg.Server.Endpoint == "" {
+		cfg.Server.Endpoint = cfg.Server.Auth.EnrollmentEndpoint
 	}
 
 	if err := cfg.Validate(); err != nil {

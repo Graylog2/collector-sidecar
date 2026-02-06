@@ -175,15 +175,6 @@ func (s *Server) CreateEnrollmentJWT(tenantID string, expiry time.Duration) (str
 	return token.SignedString(s.ServerPrivateKey)
 }
 
-// CreateEnrollmentURL creates a full enrollment URL with embedded JWT.
-func (s *Server) CreateEnrollmentURL(tenantID string, expiry time.Duration) (string, error) {
-	jwt, err := s.CreateEnrollmentJWT(tenantID, expiry)
-	if err != nil {
-		return "", err
-	}
-	return s.URL() + "/opamp/enroll/" + jwt, nil
-}
-
 // SetRemoteConfig sets the configuration to send to agents.
 func (s *Server) SetRemoteConfig(config *protobufs.AgentRemoteConfig) {
 	s.mu.Lock()

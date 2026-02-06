@@ -37,10 +37,9 @@ func TestCreateSupervisorJWT(t *testing.T) {
 	cert := createTestCert(t, pub)
 
 	instanceUID := "01HQ3K5V7X2M4N8P9R0S1T2U3V"
-	audience := "opamp.example.com"
 	lifetime := 5 * time.Minute
 
-	token, err := CreateSupervisorJWT(priv, cert, instanceUID, audience, lifetime)
+	token, err := CreateSupervisorJWT(priv, cert, instanceUID, lifetime)
 	require.NoError(t, err)
 	require.NotEmpty(t, token)
 
@@ -50,7 +49,6 @@ func TestCreateSupervisorJWT(t *testing.T) {
 
 	require.Equal(t, CertificateHexFingerprint(cert), certFP)
 	require.Equal(t, instanceUID, claims.Subject)
-	require.Contains(t, claims.Audience, audience)
 	require.WithinDuration(t, time.Now(), claims.IssuedAt.Time, time.Second)
 	require.WithinDuration(t, time.Now().Add(lifetime), claims.ExpiresAt.Time, time.Second)
 
@@ -69,7 +67,7 @@ func TestVerifySupervisorJWT(t *testing.T) {
 
 	cert := createTestCert(t, pub)
 
-	token, err := CreateSupervisorJWT(priv, cert, "test-uid", "test-aud", 5*time.Minute)
+	token, err := CreateSupervisorJWT(priv, cert, "test-uid", 5*time.Minute)
 	require.NoError(t, err)
 
 	err = VerifySupervisorJWT(token, cert)
@@ -86,7 +84,7 @@ func TestVerifySupervisorJWT_WrongKey(t *testing.T) {
 	// Create cert with the signing key's public key
 	cert := createTestCert(t, priv.Public().(ed25519.PublicKey))
 
-	token, err := CreateSupervisorJWT(priv, cert, "test-uid", "test-aud", 5*time.Minute)
+	token, err := CreateSupervisorJWT(priv, cert, "test-uid", 5*time.Minute)
 	require.NoError(t, err)
 
 	// Try to verify with a cert containing different public key
@@ -109,7 +107,7 @@ func TestSupervisorClaims_IsExpired(t *testing.T) {
 	cert := createTestCert(t, pub)
 
 	// Create an already expired token
-	token, err := CreateSupervisorJWT(priv, cert, "test", "aud", -time.Hour)
+	token, err := CreateSupervisorJWT(priv, cert, "test", -time.Hour)
 	require.NoError(t, err)
 
 	_, claims, err := ParseSupervisorJWT(token)
@@ -117,7 +115,7 @@ func TestSupervisorClaims_IsExpired(t *testing.T) {
 	require.True(t, claims.IsExpired())
 
 	// Create a valid token
-	token2, err := CreateSupervisorJWT(priv, cert, "test", "aud", time.Hour)
+	token2, err := CreateSupervisorJWT(priv, cert, "test", time.Hour)
 	require.NoError(t, err)
 
 	_, claims2, err := ParseSupervisorJWT(token2)
@@ -131,7 +129,7 @@ func TestSupervisorClaims_IsExpiringSoon(t *testing.T) {
 	cert := createTestCert(t, pub)
 
 	// Create token expiring in 30 minutes
-	token, err := CreateSupervisorJWT(priv, cert, "test", "aud", 30*time.Minute)
+	token, err := CreateSupervisorJWT(priv, cert, "test", 30*time.Minute)
 	require.NoError(t, err)
 
 	_, claims, err := ParseSupervisorJWT(token)

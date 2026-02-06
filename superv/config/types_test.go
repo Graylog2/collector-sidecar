@@ -36,7 +36,8 @@ func TestConfigDefaults(t *testing.T) {
 
 	assert.GreaterOrEqual(t, cfg.Server.Auth.JWTLifetime, time.Minute)
 	assert.False(t, cfg.Server.Auth.InsecureTLS)
-	assert.Empty(t, cfg.Server.Auth.EnrollmentURL)
+	assert.Empty(t, cfg.Server.Auth.EnrollmentEndpoint)
+	assert.Empty(t, cfg.Server.Auth.EnrollmentToken)
 
 	assert.Equal(t, "localhost:0", cfg.LocalServer.Endpoint)
 

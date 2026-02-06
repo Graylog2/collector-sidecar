@@ -174,23 +174,6 @@ func (s *Supervisor) Start(ctx context.Context) error {
 		return fmt.Errorf("authentication initialization failed: %w", err)
 	}
 
-	// TODO: We need to clarify how the endpoint is set when enrollment is used.
-	//       Config file? Or enrollment URL, received connection settings, which order, etc.
-
-	// If endpoint doesn't have a path, derive it from the enrollment URL
-	if s.cfg.Server.Auth.EnrollmentURL != "" {
-		u, err := url.Parse(s.cfg.Server.Endpoint)
-		if err == nil && (u.Path == "" || u.Path == "/") {
-			derivedEndpoint, err := deriveEndpointFromEnrollmentURL(s.cfg.Server.Auth.EnrollmentURL)
-			if err == nil {
-				s.logger.Info("Derived OpAMP endpoint from enrollment URL",
-					zap.String("endpoint", derivedEndpoint),
-				)
-				s.cfg.Server.Endpoint = derivedEndpoint
-			}
-		}
-	}
-
 	// Determine effective config path
 	// TODO: Write actual merged config when remote config handling is implemented
 	configPath := filepath.Join(s.cfg.Persistence.Dir, "effective.yaml")
@@ -496,11 +479,6 @@ func (s *Supervisor) initAuth(ctx context.Context) error {
 			return fmt.Errorf("failed to load credentials: %w", err)
 		}
 
-		// Set server host from endpoint for JWT audience
-		if host := s.extractHostFromEndpoint(); host != "" {
-			s.authManager.SetServerHost(host)
-		}
-
 		s.logger.Info("Credentials loaded",
 			zap.String("cert_fingerprint", s.authManager.CertFingerprint()),
 		)
@@ -508,12 +486,15 @@ func (s *Supervisor) initAuth(ctx context.Context) error {
 	}
 
 	// Need to enroll - prepare the CSR
-	if s.cfg.Server.Auth.EnrollmentURL == "" {
+	if s.cfg.Server.Auth.EnrollmentEndpoint == "" {
 		return fmt.Errorf("not enrolled and no enrollment URL configured")
+	}
+	if s.cfg.Server.Auth.EnrollmentToken == "" {
+		return fmt.Errorf("not enrolled and no enrollment token configured")
 	}
 
 	s.logger.Info("Preparing enrollment")
-	result, err := s.authManager.PrepareEnrollment(ctx, s.cfg.Server.Auth.EnrollmentURL, s.instanceUID)
+	result, err := s.authManager.PrepareEnrollment(ctx, s.cfg.Server.Auth.EnrollmentEndpoint, s.cfg.Server.Auth.EnrollmentToken, s.instanceUID)
 	if err != nil {
 		return fmt.Errorf("enrollment preparation failed: %w", err)
 	}
@@ -542,19 +523,11 @@ func (s *Supervisor) buildAuthHeaders() (http.Header, error) {
 		return headers, nil
 	}
 
-	// Get server host for JWT audience
-	audience := s.authManager.ServerHost()
-	if audience == "" {
-		audience = s.extractHostFromEndpoint()
+	authHeader, err := s.authManager.GetAuthorizationHeader()
+	if err != nil {
+		return nil, err
 	}
-
-	if audience != "" {
-		authHeader, err := s.authManager.GetAuthorizationHeader(audience)
-		if err != nil {
-			return nil, err
-		}
-		headers.Set("Authorization", authHeader)
-	}
+	headers.Set("Authorization", authHeader)
 
 	return headers, nil
 }
@@ -566,25 +539,6 @@ func (s *Supervisor) extractHostFromEndpoint() string {
 		return ""
 	}
 	return u.Host
-}
-
-// deriveEndpointFromEnrollmentURL derives the OpAMP endpoint from the enrollment URL.
-// The enrollment URL format is: https://host:port/opamp/enroll/<jwt>
-// The derived endpoint is: https://host:port/v1/opamp
-func deriveEndpointFromEnrollmentURL(enrollmentURL string) (string, error) {
-	u, err := url.Parse(enrollmentURL)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse enrollment URL: %w", err)
-	}
-
-	// Build the endpoint URL with the same scheme and host
-	endpoint := &url.URL{
-		Scheme: u.Scheme,
-		Host:   u.Host,
-		Path:   "/v1/opamp",
-	}
-
-	return endpoint.String(), nil
 }
 
 // handleConnectionSettings processes connection settings updates from the server.

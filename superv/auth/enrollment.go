@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -43,26 +42,12 @@ func (c *EnrollmentClaims) IsExpired() bool {
 	return time.Now().After(c.ExpiresAt.Time)
 }
 
-// ParseEnrollmentURL extracts the hostname and JWT from an enrollment URL.
-// URL format: https://server.example.com/opamp/enroll/<JWT>
-// TODO: Finalize enrollment URL format. Do we want to keep it that way?
-func ParseEnrollmentURL(enrollmentURL string) (hostname string, jwtToken string, err error) {
-	u, err := url.Parse(enrollmentURL)
-	if err != nil {
-		return "", "", fmt.Errorf("invalid enrollment URL: %w", err)
-	}
-
-	// Extract JWT from path (last segment after /enroll/)
-	parts := strings.Split(u.Path, "/enroll/")
-	if len(parts) != 2 || parts[1] == "" {
-		return "", "", errors.New("enrollment URL must contain /enroll/<JWT>")
-	}
-
-	return u.Host, parts[1], nil
-}
-
 // ServerBaseURL extracts the base URL (scheme + host) from an enrollment URL.
 func ServerBaseURL(enrollmentURL string) (string, error) {
+	if enrollmentURL == "" {
+		return "", errors.New("enrollment URL cannot be empty")
+	}
+
 	u, err := url.Parse(enrollmentURL)
 	if err != nil {
 		return "", fmt.Errorf("invalid enrollment URL: %w", err)

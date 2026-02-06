@@ -68,9 +68,10 @@ type BackoffConfig struct {
 
 // AuthConfig configures authentication.
 type AuthConfig struct {
-	EnrollmentURL string        `koanf:"enrollment_url"`
-	InsecureTLS   bool          `koanf:"insecure_tls"`
-	JWTLifetime   time.Duration `koanf:"jwt_lifetime"`
+	EnrollmentEndpoint string        `koanf:"enrollment_endpoint"`
+	EnrollmentToken    string        `koanf:"enrollment_token"`
+	InsecureTLS        bool          `koanf:"insecure_tls"`
+	JWTLifetime        time.Duration `koanf:"jwt_lifetime"`
 }
 
 // KeysConfig configures key storage.

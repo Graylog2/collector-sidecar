@@ -111,7 +111,7 @@ func TestManager_GenerateJWT(t *testing.T) {
 	err := m.LoadCredentials()
 	require.NoError(t, err)
 
-	jwtToken, err := m.GenerateJWT("opamp.example.com")
+	jwtToken, err := m.GenerateJWT()
 	require.NoError(t, err)
 	require.NotEmpty(t, jwtToken)
 
@@ -123,7 +123,6 @@ func TestManager_GenerateJWT(t *testing.T) {
 	certFP, claims, err := ParseSupervisorJWT(jwtToken)
 	require.NoError(t, err)
 	require.Equal(t, "test-instance-uid", claims.Subject)
-	require.Contains(t, claims.Audience, "opamp.example.com")
 	require.Equal(t, CertificateHexFingerprint(cert), certFP)
 }
 
@@ -133,9 +132,9 @@ func TestManager_GenerateJWT_NotLoaded(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	m := NewManager(logger, ManagerConfig{KeysDir: dir})
 
-	_, err := m.GenerateJWT("example.com")
+	_, err := m.GenerateJWT()
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "credentials not loaded")
+	require.ErrorContains(t, err, "credentials not loaded")
 }
 
 func TestManager_GetAuthorizationHeader(t *testing.T) {
@@ -153,7 +152,7 @@ func TestManager_GetAuthorizationHeader(t *testing.T) {
 	m := NewManager(logger, ManagerConfig{KeysDir: keysDir})
 	_ = m.LoadCredentials()
 
-	header, err := m.GetAuthorizationHeader("example.com")
+	header, err := m.GetAuthorizationHeader()
 	require.NoError(t, err)
 	require.True(t, len(header) > 7)
 	require.Equal(t, "Bearer ", header[:7])
@@ -199,8 +198,6 @@ func TestManager_PrepareAndCompleteEnrollment(t *testing.T) {
 		KeyAlgorithm: "Ed25519",
 	})
 
-	enrollmentURL := server.URL + "/opamp/enroll/" + enrollmentJWT
-
 	logger := zaptest.NewLogger(t)
 	m := NewManager(logger, ManagerConfig{
 		KeysDir:    keysDir,
@@ -208,7 +205,7 @@ func TestManager_PrepareAndCompleteEnrollment(t *testing.T) {
 	})
 
 	// Phase 1: Prepare enrollment (validates JWT, generates keys, creates CSR)
-	result, err := m.PrepareEnrollment(context.Background(), enrollmentURL, "test-instance")
+	result, err := m.PrepareEnrollment(context.Background(), server.URL, enrollmentJWT, "test-instance")
 	require.NoError(t, err)
 	require.NotEmpty(t, result.CSRPEM)
 	require.Equal(t, "test-tenant", result.TenantID)
@@ -244,20 +241,31 @@ func TestManager_PrepareAndCompleteEnrollment(t *testing.T) {
 	require.NotEmpty(t, m.CertFingerprint())
 
 	// Should be able to generate JWT now
-	jwtToken, err := m.GenerateJWT("example.com")
+	jwtToken, err := m.GenerateJWT()
 	require.NoError(t, err)
 	require.NotEmpty(t, jwtToken)
 }
 
-func TestManager_PrepareEnrollment_InvalidURL(t *testing.T) {
+func TestManager_PrepareEnrollment_InvalidEndpoint(t *testing.T) {
 	dir := t.TempDir()
 
 	logger := zaptest.NewLogger(t)
 	m := NewManager(logger, ManagerConfig{KeysDir: dir})
 
-	_, err := m.PrepareEnrollment(context.Background(), "not-a-url", "test-instance")
+	_, err := m.PrepareEnrollment(context.Background(), "", "ey", "test-instance")
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "enrollment URL")
+	require.ErrorContains(t, err, "enrollment URL")
+}
+
+func TestManager_PrepareEnrollment_InvalidToken(t *testing.T) {
+	dir := t.TempDir()
+
+	logger := zaptest.NewLogger(t)
+	m := NewManager(logger, ManagerConfig{KeysDir: dir})
+
+	_, err := m.PrepareEnrollment(context.Background(), "https://example.com", "", "test-instance")
+	require.Error(t, err)
+	require.ErrorContains(t, err, "enrollment token")
 }
 
 func TestManager_CompleteEnrollment_NoPending(t *testing.T) {
@@ -269,7 +277,7 @@ func TestManager_CompleteEnrollment_NoPending(t *testing.T) {
 	// Try to complete without preparing first
 	err := m.CompleteEnrollment([]byte("some-cert"))
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "no pending enrollment")
+	require.ErrorContains(t, err, "no pending enrollment")
 }
 
 // signCSRForTest signs a CSR and returns a certificate (for testing).

@@ -43,7 +43,6 @@ type Manager struct {
 	// Cached credentials
 	signingKey  ed25519.PrivateKey
 	certificate *x509.Certificate
-	serverHost  string
 
 	// Enrollment state (before CSR is submitted)
 	pendingSigningKey    ed25519.PrivateKey
@@ -122,25 +121,22 @@ type EnrollmentResult struct {
 // PrepareEnrollment validates the enrollment JWT, generates keypairs, and creates a CSR.
 // The CSR should be submitted via the OpAMP protocol using connection_settings_request.
 // After receiving the certificate from the server, call CompleteEnrollment.
-func (m *Manager) PrepareEnrollment(ctx context.Context, enrollmentURL, instanceUID string) (*EnrollmentResult, error) {
-	m.logger.Info("Preparing enrollment", zap.String("instance_uid", instanceUID))
+func (m *Manager) PrepareEnrollment(ctx context.Context, enrollmentEndpoint, enrollmentToken, instanceUID string) (*EnrollmentResult, error) {
+	m.logger.Info("Preparing enrollment", zap.String("instance_uid", instanceUID), zap.String("endpoint", enrollmentEndpoint))
 
-	// Parse enrollment URL
-	hostname, enrollmentJWT, err := ParseEnrollmentURL(enrollmentURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse enrollment URL: %w", err)
-	}
-
-	baseURL, err := ServerBaseURL(enrollmentURL)
+	baseURL, err := ServerBaseURL(enrollmentEndpoint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get server base URL: %w", err)
 	}
 
-	m.serverHost = hostname
-	m.logger.Debug("Parsed enrollment URL", zap.String("host", hostname))
+	if enrollmentToken == "" {
+		return nil, errors.New("enrollment token cannot be empty")
+	}
+
+	m.logger.Debug("Parsed server base URL", zap.String("url", baseURL))
 
 	// Fetch JWKS
-	m.logger.Debug("Fetching JWKS")
+	m.logger.Debug("Fetching JWKS", zap.String("base-url", baseURL))
 	jwks, err := FetchJWKS(m.httpClient, baseURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch JWKS: %w", err)
@@ -148,7 +144,7 @@ func (m *Manager) PrepareEnrollment(ctx context.Context, enrollmentURL, instance
 
 	// Validate enrollment JWT
 	m.logger.Debug("Validating enrollment JWT")
-	claims, err := ValidateEnrollmentJWT(enrollmentJWT, jwks)
+	claims, err := ValidateEnrollmentJWT(enrollmentToken, jwks)
 	if err != nil {
 		return nil, fmt.Errorf("enrollment JWT validation failed: %w", err)
 	}
@@ -188,7 +184,7 @@ func (m *Manager) PrepareEnrollment(ctx context.Context, enrollmentURL, instance
 	m.pendingSigningKey = signingPriv
 	m.pendingEncryptionKey = encPriv
 	m.pendingTenantID = claims.TenantID
-	m.pendingEnrollmentJWT = enrollmentJWT
+	m.pendingEnrollmentJWT = enrollmentToken
 
 	// Return the CSR in PEM format for submission via OpAMP
 	csrPEM := EncodeCSRToPEM(csrDER)
@@ -256,18 +252,20 @@ func (m *Manager) HasPendingEnrollment() bool {
 }
 
 // GenerateJWT generates a new JWT for authenticating with the OpAMP server.
-func (m *Manager) GenerateJWT(audience string) (string, error) {
+func (m *Manager) GenerateJWT() (string, error) {
 	if m.signingKey == nil || m.certificate == nil {
 		return "", errors.New("credentials not loaded")
 	}
 
+	// TODO: Should we really use the instance uid from the cert here or our stored instance UID?
+	//       They should be the same but maybe we want to be explicit about it and check that they match?
 	instanceUID := m.certificate.Subject.CommonName
-	return CreateSupervisorJWT(m.signingKey, m.certificate, instanceUID, audience, m.jwtLifetime)
+	return CreateSupervisorJWT(m.signingKey, m.certificate, instanceUID, m.jwtLifetime)
 }
 
 // GetAuthorizationHeader returns the Authorization header value for OpAMP connections.
-func (m *Manager) GetAuthorizationHeader(audience string) (string, error) {
-	jwt, err := m.GenerateJWT(audience)
+func (m *Manager) GetAuthorizationHeader() (string, error) {
+	jwt, err := m.GenerateJWT()
 	if err != nil {
 		return "", err
 	}
@@ -285,16 +283,6 @@ func (m *Manager) CertFingerprint() string {
 		return ""
 	}
 	return CertificateHexFingerprint(m.certificate)
-}
-
-// ServerHost returns the server hostname from enrollment.
-func (m *Manager) ServerHost() string {
-	return m.serverHost
-}
-
-// SetServerHost sets the server host for JWT audience.
-func (m *Manager) SetServerHost(host string) {
-	m.serverHost = host
 }
 
 // EnrollmentJWT returns the pending enrollment JWT, or empty string if not enrolling.

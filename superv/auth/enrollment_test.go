@@ -27,35 +27,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParseEnrollmentURL(t *testing.T) {
-	url := "https://opamp.example.com/opamp/enroll/eyJhbGciOiJFZERTQSJ9.eyJ0ZW5hbnRfaWQiOiJ0ZXN0In0.sig"
-
-	hostname, jwtToken, err := ParseEnrollmentURL(url)
-	require.NoError(t, err)
-	require.Equal(t, "opamp.example.com", hostname)
-	require.Equal(t, "eyJhbGciOiJFZERTQSJ9.eyJ0ZW5hbnRfaWQiOiJ0ZXN0In0.sig", jwtToken)
-}
-
-func TestParseEnrollmentURL_WithPort(t *testing.T) {
-	url := "https://opamp.example.com:8443/opamp/enroll/token123"
-
-	hostname, jwtToken, err := ParseEnrollmentURL(url)
-	require.NoError(t, err)
-	require.Equal(t, "opamp.example.com:8443", hostname)
-	require.Equal(t, "token123", jwtToken)
-}
-
-func TestParseEnrollmentURL_InvalidFormat(t *testing.T) {
-	_, _, err := ParseEnrollmentURL("not-a-url")
-	require.Error(t, err)
-
-	_, _, err = ParseEnrollmentURL("https://example.com/no-jwt-here")
-	require.Error(t, err)
-
-	_, _, err = ParseEnrollmentURL("https://example.com/enroll/")
-	require.Error(t, err)
-}
-
 func TestServerBaseURL(t *testing.T) {
 	url, err := ServerBaseURL("https://opamp.example.com/opamp/enroll/token")
 	require.NoError(t, err)
