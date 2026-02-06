@@ -188,6 +188,7 @@ type PersistenceConfig struct {
 type LoggingConfig struct {
 	Format string `koanf:"format"` // json | text
 	Level  string `koanf:"level"`  // debug | info | warn | error
+	Color  bool   `koanf:"color"`
 }
 
 // DefaultConfig returns a Config with sensible defaults.

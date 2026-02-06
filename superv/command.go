@@ -169,10 +169,11 @@ func buildConfig(cmd *cobra.Command) (config.Config, []func(logger *zap.Logger),
 		}
 		cfg.Persistence.Dir = absPath
 		cfg.Logging.Format = "text"
+		cfg.Logging.Color = true
 
 		events = append(events, func(logger *zap.Logger) {
 			logger.Debug("DEV mode activated", zap.String("data-dir", cfg.Persistence.Dir),
-				zap.String("logging-format", cfg.Logging.Format))
+				zap.String("logging-format", cfg.Logging.Format), zap.String("logging-color", "true"))
 		})
 	}
 	if isDebug, _ := cmd.Flags().GetBool("debug"); isDebug {
@@ -204,20 +205,24 @@ func buildConfig(cmd *cobra.Command) (config.Config, []func(logger *zap.Logger),
 	return cfg, events, nil
 }
 
-func initLogger(level, format string, debug bool) (*zap.Logger, error) {
+func initLogger(loggingCfg config.LoggingConfig, debug bool) (*zap.Logger, error) {
 	var zapLevel zapcore.Level
-	if err := zapLevel.UnmarshalText([]byte(level)); err != nil {
+	if err := zapLevel.UnmarshalText([]byte(loggingCfg.Level)); err != nil {
 		zapLevel = zapcore.InfoLevel
 	}
 
 	var cfg zap.Config
-	if format == "json" {
+	if loggingCfg.Format == "json" {
 		cfg = zap.NewProductionConfig()
 	} else {
 		cfg = zap.NewDevelopmentConfig()
 	}
 	cfg.Level = zap.NewAtomicLevelAt(zapLevel)
 	cfg.DisableStacktrace = debug
+
+	if loggingCfg.Color {
+		cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	}
 
 	return cfg.Build()
 }
@@ -228,7 +233,7 @@ func runSupervisor(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("couldn't load config: %w", err)
 	}
 
-	logger, err := initLogger(cfg.Logging.Level, cfg.Logging.Format, cfg.Debug)
+	logger, err := initLogger(cfg.Logging, cfg.Debug)
 	if err != nil {
 		return fmt.Errorf("failed to create logger: %w", err)
 	}
