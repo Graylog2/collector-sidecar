@@ -254,8 +254,9 @@ func (s *Supervisor) Start(ctx context.Context) error {
 
 	// Start the collector agent
 	if err := s.commander.Start(ctx); err != nil {
-		s.opampClient.Stop(ctx)
-		s.opampServer.Stop(ctx)
+		opampClient.Stop(ctx)
+		opampServer.Stop(ctx)
+		healthCancel()
 		return fmt.Errorf("failed to start agent: %w", err)
 	}
 
