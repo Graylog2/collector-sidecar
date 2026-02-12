@@ -18,16 +18,16 @@
 package supervisor
 
 import (
+	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/open-telemetry/opamp-go/protobufs"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 
 	"github.com/Graylog2/collector-sidecar/superv/config"
-	"github.com/Graylog2/collector-sidecar/superv/persistence"
+	"github.com/Graylog2/collector-sidecar/superv/supervisor/connection"
 )
 
 func TestNewSupervisor(t *testing.T) {
@@ -128,227 +128,95 @@ func TestSupervisor_OnOpampConnectionSettings_UpdatesEndpoint(t *testing.T) {
 	t.Skip("Requires integration test setup with mock OpAMP server")
 }
 
-func TestConvertProtoHeaders(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    *protobufs.Headers
-		expected map[string]string
-	}{
-		{
-			name:     "nil headers",
-			input:    nil,
-			expected: nil,
-		},
-		{
-			name: "empty headers",
-			input: &protobufs.Headers{
-				Headers: []*protobufs.Header{},
-			},
-			expected: map[string]string{},
-		},
-		{
-			name: "single header",
-			input: &protobufs.Headers{
-				Headers: []*protobufs.Header{
-					{Key: "Authorization", Value: "Bearer token"},
-				},
-			},
-			expected: map[string]string{
-				"Authorization": "Bearer token",
-			},
-		},
-		{
-			name: "multiple headers",
-			input: &protobufs.Headers{
-				Headers: []*protobufs.Header{
-					{Key: "Authorization", Value: "Bearer token"},
-					{Key: "X-Custom", Value: "value"},
-				},
-			},
-			expected: map[string]string{
-				"Authorization": "Bearer token",
-				"X-Custom":      "value",
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := convertProtoHeaders(tt.input)
-			require.Equal(t, tt.expected, result)
+func TestNewSupervisor_ConnectionSettingsBootstrap(t *testing.T) {
+	t.Run("uses persisted settings when server endpoint is not configured", func(t *testing.T) {
+		dir := t.TempDir()
+		writePersistedConnectionSettings(t, dir, connection.Settings{
+			Endpoint: "wss://persisted.example.com/v1/opamp",
+			Headers:  map[string]string{"X-Persisted": "true"},
 		})
-	}
-}
 
-func TestHeadersEqual(t *testing.T) {
-	tests := []struct {
-		name     string
-		a        map[string]string
-		b        map[string]string
-		expected bool
-	}{
-		{
-			name:     "both nil",
-			a:        nil,
-			b:        nil,
-			expected: true,
-		},
-		{
-			name:     "one nil one empty",
-			a:        nil,
-			b:        map[string]string{},
-			expected: true,
-		},
-		{
-			name:     "both empty",
-			a:        map[string]string{},
-			b:        map[string]string{},
-			expected: true,
-		},
-		{
-			name:     "equal single",
-			a:        map[string]string{"k": "v"},
-			b:        map[string]string{"k": "v"},
-			expected: true,
-		},
-		{
-			name:     "different values",
-			a:        map[string]string{"k": "v1"},
-			b:        map[string]string{"k": "v2"},
-			expected: false,
-		},
-		{
-			name:     "different keys",
-			a:        map[string]string{"k1": "v"},
-			b:        map[string]string{"k2": "v"},
-			expected: false,
-		},
-		{
-			name:     "different lengths",
-			a:        map[string]string{"k1": "v1"},
-			b:        map[string]string{"k1": "v1", "k2": "v2"},
-			expected: false,
-		},
-	}
+		logger := zaptest.NewLogger(t)
+		cfg := config.DefaultConfig()
+		cfg.Persistence.Dir = dir
+		cfg.Keys.Dir = filepath.Join(dir, "keys")
+		cfg.Agent.Executable = "/bin/echo"
+		cfg.Server.Endpoint = ""
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := headersEqual(tt.a, tt.b)
-			require.Equal(t, tt.expected, result)
+		sup, err := New(logger, cfg)
+		require.NoError(t, err)
+
+		current := sup.connectionSettingsManager.GetCurrent()
+		require.Equal(t, "wss://persisted.example.com/v1/opamp", current.Endpoint)
+		require.Equal(t, map[string]string{"X-Persisted": "true"}, current.Headers)
+	})
+
+	t.Run("configured endpoint overrides persisted endpoint and headers", func(t *testing.T) {
+		dir := t.TempDir()
+		writePersistedConnectionSettings(t, dir, connection.Settings{
+			Endpoint: "wss://persisted.example.com/v1/opamp",
+			Headers:  map[string]string{"X-Persisted": "true"},
 		})
-	}
+
+		logger := zaptest.NewLogger(t)
+		cfg := config.DefaultConfig()
+		cfg.Persistence.Dir = dir
+		cfg.Keys.Dir = filepath.Join(dir, "keys")
+		cfg.Agent.Executable = "/bin/echo"
+		cfg.Server.Endpoint = "wss://configured.example.com/v1/opamp"
+		cfg.Server.Headers = map[string]string{"X-Configured": "true"}
+
+		sup, err := New(logger, cfg)
+		require.NoError(t, err)
+
+		current := sup.connectionSettingsManager.GetCurrent()
+		require.Equal(t, "wss://configured.example.com/v1/opamp", current.Endpoint)
+		require.Equal(t, map[string]string{"X-Configured": "true"}, current.Headers)
+	})
+
+	t.Run("uses enrollment endpoint when no server or persisted endpoint exists", func(t *testing.T) {
+		dir := t.TempDir()
+		logger := zaptest.NewLogger(t)
+		cfg := config.DefaultConfig()
+		cfg.Persistence.Dir = dir
+		cfg.Keys.Dir = filepath.Join(dir, "keys")
+		cfg.Agent.Executable = "/bin/echo"
+		cfg.Server.Endpoint = ""
+		cfg.Server.Auth.EnrollmentEndpoint = "wss://enroll.example.com/v1/opamp"
+		cfg.Server.Auth.EnrollmentHeaders = map[string]string{"X-Enrollment": "true"}
+
+		sup, err := New(logger, cfg)
+		require.NoError(t, err)
+
+		current := sup.connectionSettingsManager.GetCurrent()
+		require.Equal(t, "wss://enroll.example.com/v1/opamp", current.Endpoint)
+		require.Equal(t, map[string]string{"X-Enrollment": "true"}, current.Headers)
+	})
+
+	t.Run("returns error when no endpoint can be resolved", func(t *testing.T) {
+		dir := t.TempDir()
+		logger := zaptest.NewLogger(t)
+		cfg := config.DefaultConfig()
+		cfg.Persistence.Dir = dir
+		cfg.Keys.Dir = filepath.Join(dir, "keys")
+		cfg.Agent.Executable = "/bin/echo"
+		cfg.Server.Endpoint = ""
+		cfg.Server.Auth.EnrollmentEndpoint = ""
+
+		sup, err := New(logger, cfg)
+		require.Error(t, err)
+		require.Nil(t, sup)
+		require.ErrorContains(t, err, "no server endpoint configured and no persisted connection settings found")
+	})
 }
 
-func TestSupervisor_LoadPersistedConnectionSettings(t *testing.T) {
-	tmpDir := t.TempDir()
-	logger := zaptest.NewLogger(t)
+func writePersistedConnectionSettings(t *testing.T, dir string, settings connection.Settings) {
+	t.Helper()
 
-	// Save some settings first
-	settings := &persistence.OpAMPSettings{
-		Endpoint:  "wss://persisted-server.example.com/opamp",
-		Headers:   map[string]string{"X-Custom": "value"},
-		UpdatedAt: time.Now(),
-	}
-	require.NoError(t, persistence.SaveOpAMPSettings(tmpDir, settings))
+	manager := connection.NewSettingsManager(zap.NewNop(), dir)
+	manager.SetCurrent(connection.Settings{Endpoint: "wss://bootstrap.example.com/v1/opamp"})
 
-	// Create supervisor with different initial endpoint
-	sup, err := New(logger, config.Config{
-		Persistence: config.PersistenceConfig{Dir: tmpDir},
-		Server:      config.ServerConfig{Endpoint: "wss://initial.example.com/opamp"},
-		Agent: config.AgentConfig{
-			Executable: "/bin/true",
-		},
-	})
+	stage, err := manager.StageNext(settings)
 	require.NoError(t, err)
-
-	// Load persisted settings
-	err = sup.loadPersistedConnectionSettings()
-	require.NoError(t, err)
-
-	// Verify endpoint was updated from persisted settings
-	assert.Equal(t, "wss://persisted-server.example.com/opamp", sup.cfg.Server.Endpoint)
-	assert.Equal(t, "value", sup.cfg.Server.Headers["X-Custom"])
-}
-
-func TestSupervisor_LoadPersistedConnectionSettings_NoFile(t *testing.T) {
-	tmpDir := t.TempDir()
-	logger := zaptest.NewLogger(t)
-
-	// Create supervisor without persisted settings
-	sup, err := New(logger, config.Config{
-		Persistence: config.PersistenceConfig{Dir: tmpDir},
-		Server:      config.ServerConfig{Endpoint: "wss://initial.example.com/opamp"},
-		Agent: config.AgentConfig{
-			Executable: "/bin/true",
-		},
-	})
-	require.NoError(t, err)
-
-	// Load persisted settings (should succeed with no file)
-	err = sup.loadPersistedConnectionSettings()
-	require.NoError(t, err)
-
-	// Verify initial endpoint unchanged
-	assert.Equal(t, "wss://initial.example.com/opamp", sup.cfg.Server.Endpoint)
-}
-
-func TestSupervisor_LoadPersistedConnectionSettings_TLSSettings(t *testing.T) {
-	tmpDir := t.TempDir()
-	logger := zaptest.NewLogger(t)
-
-	// Save settings with CA cert
-	settings := &persistence.OpAMPSettings{
-		Endpoint:  "wss://secure-server.example.com/opamp",
-		CACertPEM: "-----BEGIN CERTIFICATE-----\ntest cert\n-----END CERTIFICATE-----",
-		UpdatedAt: time.Now(),
-	}
-	require.NoError(t, persistence.SaveOpAMPSettings(tmpDir, settings))
-
-	// Create supervisor
-	sup, err := New(logger, config.Config{
-		Persistence: config.PersistenceConfig{Dir: tmpDir},
-		Server:      config.ServerConfig{Endpoint: "wss://initial.example.com/opamp"},
-		Agent: config.AgentConfig{
-			Executable: "/bin/true",
-		},
-	})
-	require.NoError(t, err)
-
-	// Load persisted settings
-	err = sup.loadPersistedConnectionSettings()
-	require.NoError(t, err)
-
-	// Verify TLS settings were applied
-	assert.Equal(t, "wss://secure-server.example.com/opamp", sup.cfg.Server.Endpoint)
-	assert.Equal(t, "-----BEGIN CERTIFICATE-----\ntest cert\n-----END CERTIFICATE-----", sup.cfg.Server.TLS.CACert)
-}
-
-func TestSupervisor_LoadPersistedConnectionSettings_PartialSettings(t *testing.T) {
-	tmpDir := t.TempDir()
-	logger := zaptest.NewLogger(t)
-
-	// Save settings with only headers (no endpoint)
-	settings := &persistence.OpAMPSettings{
-		Headers:   map[string]string{"X-Token": "secret"},
-		UpdatedAt: time.Now(),
-	}
-	require.NoError(t, persistence.SaveOpAMPSettings(tmpDir, settings))
-
-	// Create supervisor with initial endpoint
-	sup, err := New(logger, config.Config{
-		Persistence: config.PersistenceConfig{Dir: tmpDir},
-		Server:      config.ServerConfig{Endpoint: "wss://initial.example.com/opamp"},
-		Agent: config.AgentConfig{
-			Executable: "/bin/true",
-		},
-	})
-	require.NoError(t, err)
-
-	// Load persisted settings
-	err = sup.loadPersistedConnectionSettings()
-	require.NoError(t, err)
-
-	// Verify initial endpoint unchanged but headers applied
-	assert.Equal(t, "wss://initial.example.com/opamp", sup.cfg.Server.Endpoint)
-	assert.Equal(t, "secret", sup.cfg.Server.Headers["X-Token"])
+	require.NoError(t, stage.Commit())
 }

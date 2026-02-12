@@ -59,7 +59,8 @@ func RenderErrors(err error) string {
 // Validate checks ServerConfig for errors.
 func (s ServerConfig) Validate() error {
 	if s.Endpoint == "" {
-		return errors.New("server.endpoint: is required")
+		// An empty endpoint is okay for config validation, it can be set later via stored connection settings.
+		return nil
 	}
 
 	u, err := url.Parse(s.Endpoint)

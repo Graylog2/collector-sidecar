@@ -209,10 +209,6 @@ func buildConfig(cmd *cobra.Command) (config.Config, []func(logger *zap.Logger),
 		})
 	}
 
-	if cfg.Server.Auth.EnrollmentEndpoint != "" && cfg.Server.Endpoint == "" {
-		cfg.Server.Endpoint = cfg.Server.Auth.EnrollmentEndpoint
-	}
-
 	if err := cfg.Validate(); err != nil {
 		return config.Config{}, nil, fmt.Errorf("invalid configuration:\n%s", config.RenderErrors(err))
 	}

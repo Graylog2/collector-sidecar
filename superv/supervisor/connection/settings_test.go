@@ -136,10 +136,104 @@ func TestSettingsEqual(t *testing.T) {
 func TestToTLSVersion(t *testing.T) {
 	var s TLSSettings
 
-	require.Equal(t, uint16(tls.VersionTLS12), s.ToTLSVersion("TLSv1.2"))
-	require.Equal(t, uint16(tls.VersionTLS13), s.ToTLSVersion("TLSv1.3"))
-	require.Equal(t, uint16(tls.VersionTLS13), s.ToTLSVersion(""))
-	require.Equal(t, uint16(tls.VersionTLS13), s.ToTLSVersion("unknown"))
+	tests := []struct {
+		input     string
+		expected  uint16
+		expectErr bool
+	}{
+		{"TLSv1.2", tls.VersionTLS12, false},
+		{"TLSv1.3", tls.VersionTLS13, false},
+		{"1.2", tls.VersionTLS12, false},
+		{"1.3", tls.VersionTLS13, false},
+		{" TLSv1.2 ", tls.VersionTLS12, false},
+		{"", 0, true},
+		{"unknown", 0, true},
+	}
+
+	for _, test := range tests {
+		version, err := s.ToTLSVersion(test.input)
+
+		if test.expectErr {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+		}
+
+		require.Equal(t, test.expected, version)
+	}
+}
+
+func TestToTLSMinMaxVersion(t *testing.T) {
+	tests := []struct {
+		name      string
+		settings  TLSSettings
+		wantMin   uint16
+		wantMax   uint16
+		expectErr bool
+	}{
+		{
+			name:      "both empty uses defaults",
+			settings:  TLSSettings{},
+			wantMin:   0,
+			wantMax:   0,
+			expectErr: false,
+		},
+		{
+			name:      "min only",
+			settings:  TLSSettings{MinVersion: "1.2"},
+			wantMin:   tls.VersionTLS12,
+			wantMax:   0,
+			expectErr: false,
+		},
+		{
+			name:      "max only",
+			settings:  TLSSettings{MaxVersion: "TLSv1.3"},
+			wantMin:   0,
+			wantMax:   tls.VersionTLS13,
+			expectErr: false,
+		},
+		{
+			name:      "valid range",
+			settings:  TLSSettings{MinVersion: "TLSv1.2", MaxVersion: "TLSv1.3"},
+			wantMin:   tls.VersionTLS12,
+			wantMax:   tls.VersionTLS13,
+			expectErr: false,
+		},
+		{
+			name:      "invalid min",
+			settings:  TLSSettings{MinVersion: "TLSv1.1"},
+			wantMin:   0,
+			wantMax:   0,
+			expectErr: true,
+		},
+		{
+			name:      "invalid max",
+			settings:  TLSSettings{MaxVersion: "TLSv1.1"},
+			wantMin:   0,
+			wantMax:   0,
+			expectErr: true,
+		},
+		{
+			name:      "min greater than max",
+			settings:  TLSSettings{MinVersion: "1.3", MaxVersion: "1.2"},
+			wantMin:   0,
+			wantMax:   0,
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			minVersion, maxVersion, err := tt.settings.ToTLSMinMaxVersion()
+			if tt.expectErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.wantMin, minVersion)
+			require.Equal(t, tt.wantMax, maxVersion)
+		})
+	}
 }
 
 func TestConvertProtoHeaders(t *testing.T) {
@@ -303,6 +397,13 @@ func TestUpdateFromOpAMPSettings(t *testing.T) {
 		require.Equal(t, 60*time.Second, result.HeartbeatInterval)
 	})
 
+	t.Run("heartbeat interval zero preserves current", func(t *testing.T) {
+		result := manager.updateFromOpAMPSettings(current, &protobufs.OpAMPConnectionSettings{
+			HeartbeatIntervalSeconds: 0,
+		})
+		require.Equal(t, current.HeartbeatInterval, result.HeartbeatInterval)
+	})
+
 	t.Run("does not mutate current", func(t *testing.T) {
 		original := current.clone()
 		manager.updateFromOpAMPSettings(current, &protobufs.OpAMPConnectionSettings{
@@ -323,6 +424,13 @@ func TestSettingsChanged(t *testing.T) {
 	t.Run("returns false when nothing changed", func(t *testing.T) {
 		_, changed := manager.SettingsChanged(&protobufs.OpAMPConnectionSettings{
 			HeartbeatIntervalSeconds: 30,
+		})
+		require.False(t, changed)
+	})
+
+	t.Run("returns false when heartbeat interval is not provided", func(t *testing.T) {
+		_, changed := manager.SettingsChanged(&protobufs.OpAMPConnectionSettings{
+			HeartbeatIntervalSeconds: 0,
 		})
 		require.False(t, changed)
 	})

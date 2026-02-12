@@ -25,6 +25,7 @@ import (
 	"maps"
 	"math"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -83,15 +84,41 @@ type TLSSettings struct {
 	CAPEMContents string `koanf:"ca_pem_contents,omitempty"`
 }
 
-func (t TLSSettings) ToTLSVersion(version string) uint16 {
-	switch version {
-	case "TLSv1.2":
-		return tls.VersionTLS12
-	case "TLSv1.3":
-		fallthrough
+func (t TLSSettings) ToTLSVersion(version string) (uint16, error) {
+	switch strings.TrimSpace(version) {
+	case "TLSv1.2", "1.2":
+		return tls.VersionTLS12, nil
+	case "TLSv1.3", "1.3":
+		return tls.VersionTLS13, nil
 	default:
-		return tls.VersionTLS13
+		return 0, fmt.Errorf("unsupported TLS version %q", version)
 	}
+}
+
+func (t TLSSettings) ToTLSMinMaxVersion() (uint16, uint16, error) {
+	var minVersion uint16
+	if t.MinVersion != "" {
+		parsedMin, err := t.ToTLSVersion(t.MinVersion)
+		if err != nil {
+			return 0, 0, fmt.Errorf("parse TLS min version: %w", err)
+		}
+		minVersion = parsedMin
+	}
+
+	var maxVersion uint16
+	if t.MaxVersion != "" {
+		parsedMax, err := t.ToTLSVersion(t.MaxVersion)
+		if err != nil {
+			return 0, 0, fmt.Errorf("parse TLS max version: %w", err)
+		}
+		maxVersion = parsedMax
+	}
+
+	if minVersion != 0 && maxVersion != 0 && minVersion > maxVersion {
+		return 0, 0, fmt.Errorf("invalid TLS version range: min version %q is greater than max version %q", t.MinVersion, t.MaxVersion)
+	}
+
+	return minVersion, maxVersion, nil
 }
 
 func (t TLSSettings) clone() TLSSettings {
@@ -161,7 +188,12 @@ func (s *SettingsManager) SettingsChanged(settings *protobufs.OpAMPConnectionSet
 func (s *SettingsManager) updateFromOpAMPSettings(current Settings, settings *protobufs.OpAMPConnectionSettings) Settings {
 	updated := current.clone()
 
-	updated.HeartbeatInterval = heartbeatDurationFromSeconds(settings.GetHeartbeatIntervalSeconds())
+	// A 0 value for HeartbeatIntervalSeconds is considered as "not provided" according to the OpAMP spec.
+	if settings.GetHeartbeatIntervalSeconds() > 0 {
+		// According to the OpAMP spec, if HeartbeatIntervalSeconds is provided and greater than 0, the client MUST
+		// use it and ignore any previously configured heartbeat interval.
+		updated.HeartbeatInterval = heartbeatDurationFromSeconds(settings.GetHeartbeatIntervalSeconds())
+	}
 
 	if endpoint := settings.GetDestinationEndpoint(); endpoint != "" {
 		updated.Endpoint = endpoint
@@ -219,6 +251,10 @@ func (s *SettingsManager) TryLoadPersisted() (Settings, bool, error) {
 		return Settings{}, true, err
 	}
 	return settings, true, nil
+}
+
+func (s *SettingsManager) Persist(settings Settings) error {
+	return persistence.WriteYAMLFile(".", s.filePath, &settings)
 }
 
 // StageNext stages the provided settings but does not yet make them current. This allows the caller to persist the

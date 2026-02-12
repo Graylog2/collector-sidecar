@@ -78,22 +78,22 @@ func TestConfigInsecure(t *testing.T) {
 		assert.False(t, cfg.IsInsecure())
 
 		cfg.Server.Auth.InsecureTLS = true
-		cfg.Server.TLS.Insecure = true
+		cfg.Server.TLS.Insecure = new(true)
 
 		assert.True(t, cfg.IsInsecure())
 
 		cfg.Server.Auth.InsecureTLS = true
-		cfg.Server.TLS.Insecure = false
+		cfg.Server.TLS.Insecure = new(false)
 
 		assert.True(t, cfg.IsInsecure())
 
 		cfg.Server.Auth.InsecureTLS = false
-		cfg.Server.TLS.Insecure = true
+		cfg.Server.TLS.Insecure = new(true)
 
 		assert.True(t, cfg.IsInsecure())
 
 		cfg.Server.Auth.InsecureTLS = false
-		cfg.Server.TLS.Insecure = false
+		cfg.Server.TLS.Insecure = new(false)
 
 		assert.False(t, cfg.IsInsecure())
 	})

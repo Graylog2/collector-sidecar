@@ -33,7 +33,8 @@ func TestValidateServerEndpoint(t *testing.T) {
 		{"valid wss", "wss://opamp.example.com/v1/opamp", false},
 		{"valid http", "http://localhost:4320/v1/opamp", false},
 		{"valid https", "https://opamp.example.com/v1/opamp", false},
-		{"empty endpoint", "", true},
+		// An empty endpoint is okay for config validation, it can be set later via stored connection settings.
+		{"empty endpoint", "", false},
 		{"invalid scheme", "ftp://localhost/v1/opamp", true},
 		{"missing scheme", "not-a-url", true},
 	}

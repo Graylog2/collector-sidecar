@@ -20,9 +20,9 @@ package supervisor
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -31,6 +31,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/Graylog2/collector-sidecar/superv/supervisor/connection"
 	"github.com/open-telemetry/opamp-go/protobufs"
 	"github.com/open-telemetry/opamp-go/server/types"
 	"go.uber.org/zap"
@@ -51,37 +52,28 @@ type templateVars struct {
 	ConfigPath string
 }
 
-// connectionSettingsSnapshot holds the previous connection state for rollback.
-type connectionSettingsSnapshot struct {
-	endpoint    string
-	headers     http.Header
-	tlsInsecure bool
-	tlsCACert   string
-	tlsMinVer   string
-	proxyURL    string
-}
-
 // Supervisor coordinates the management of an OpenTelemetry Collector.
 type Supervisor struct {
-	logger        *zap.Logger
-	cfg           config.Config
-	instanceUID   string
-	authManager   *auth.Manager
-	configManager *configmanager.Manager
-	healthMonitor *healthmonitor.Monitor
-	healthCancel  context.CancelFunc
-	healthWg      sync.WaitGroup
-	commander     *keen.Commander
-	opampClient   *opamp.Client
-	opampServer   *opamp.Server
-	mu            sync.RWMutex
-	running       bool
+	logger                    *zap.Logger
+	agentCfg                  config.AgentConfig
+	authCfg                   config.AuthConfig
+	localServerCfg            config.LocalServer
+	persistenceDir            string
+	instanceUID               string
+	authManager               *auth.Manager
+	connectionSettingsManager *connection.SettingsManager
+	configManager             *configmanager.Manager
+	healthMonitor             *healthmonitor.Monitor
+	healthCancel              context.CancelFunc
+	healthWg                  sync.WaitGroup
+	commander                 *keen.Commander
+	opampClient               *opamp.Client
+	opampServer               *opamp.Server
+	mu                        sync.RWMutex
+	running                   bool
 
 	// Pending enrollment CSR (set during enrollment, cleared after completion)
 	pendingCSR []byte
-
-	// Connection settings snapshot for rollback
-	connSettingsSnapshot *connectionSettingsSnapshot
 }
 
 // New creates a new Supervisor instance.
@@ -98,6 +90,54 @@ func New(logger *zap.Logger, cfg config.Config) (*Supervisor, error) {
 		JWTLifetime: cfg.Server.Auth.JWTLifetime,
 		InsecureTLS: cfg.Server.Auth.InsecureTLS,
 	})
+
+	// Setup connection settings manager, trying to load persisted settings or falling back to config defaults.
+	connSettingsMgr := connection.NewSettingsManager(logger, cfg.Persistence.Dir)
+
+	connSettings, exist, err := connSettingsMgr.TryLoadPersisted()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load persisted connection settings: %w", err)
+	}
+
+	if !exist {
+		connSettings = connection.Settings{
+			HeartbeatInterval: 30 * time.Second,
+			TLS: connection.TLSSettings{
+				Insecure:   cfg.IsInsecure(),
+				MinVersion: "TLSv1.3",
+				MaxVersion: "TLSv1.3",
+			},
+			UpdatedAt: time.Now().UTC(),
+		}
+
+		if authMgr.IsEnrolled() {
+			// We should have stored connection settings when enrolled, but in case we don't,
+			// use server config as fallback.
+			connSettings.Endpoint = cfg.Server.Endpoint
+			connSettings.Headers = cfg.Server.Headers
+		} else {
+			if enrollEndpoint := cfg.Server.Auth.EnrollmentEndpoint; enrollEndpoint != "" {
+				connSettings.Endpoint = enrollEndpoint
+				connSettings.Headers = cfg.Server.Auth.EnrollmentHeaders
+			} else if serverEndpoint := cfg.Server.Endpoint; serverEndpoint != "" {
+				connSettings.Endpoint = serverEndpoint
+				connSettings.Headers = cfg.Server.Headers
+			}
+		}
+	} else {
+		// A configured server endpoint should take precedence over stored connections.
+		if serverEndpoint := cfg.Server.Endpoint; serverEndpoint != "" {
+			connSettings.Endpoint = serverEndpoint
+			connSettings.Headers = cfg.Server.Headers
+		}
+		// TODO: Do we want to override TLS settings from config as well, or only endpoint and headers?
+	}
+
+	if connSettings.Endpoint == "" {
+		return nil, errors.New("no server endpoint configured and no persisted connection settings found")
+	}
+
+	connSettingsMgr.SetCurrent(connSettings)
 
 	// Initialize config manager
 	configMgr := configmanager.New(logger.Named("config"), configmanager.Config{
@@ -116,12 +156,16 @@ func New(logger *zap.Logger, cfg config.Config) (*Supervisor, error) {
 	})
 
 	return &Supervisor{
-		logger:        logger,
-		cfg:           cfg,
-		instanceUID:   uid,
-		authManager:   authMgr,
-		configManager: configMgr,
-		healthMonitor: healthMon,
+		logger:                    logger,
+		agentCfg:                  cfg.Agent,
+		authCfg:                   cfg.Server.Auth,
+		localServerCfg:            cfg.LocalServer,
+		persistenceDir:            cfg.Persistence.Dir,
+		instanceUID:               uid,
+		authManager:               authMgr,
+		configManager:             configMgr,
+		healthMonitor:             healthMon,
+		connectionSettingsManager: connSettingsMgr,
 	}, nil
 }
 
@@ -160,7 +204,7 @@ func (s *Supervisor) Start(ctx context.Context) error {
 
 	s.logger.Info("Starting supervisor",
 		zap.String("instance_uid", s.instanceUID),
-		zap.String("endpoint", s.cfg.Server.Endpoint),
+		zap.String("endpoint", s.connectionSettingsManager.GetCurrent().Endpoint),
 	)
 
 	// Initialize authentication
@@ -170,27 +214,27 @@ func (s *Supervisor) Start(ctx context.Context) error {
 
 	// Determine effective config path
 	// TODO: Write actual merged config when remote config handling is implemented
-	configPath := filepath.Join(s.cfg.Persistence.Dir, "effective.yaml")
+	configPath := filepath.Join(s.persistenceDir, "effective.yaml")
 
 	// Expand template variables in agent args
-	expandedArgs, err := s.expandArgs(s.cfg.Agent.Args, configPath)
+	expandedArgs, err := s.expandArgs(s.agentCfg.Args, configPath)
 	if err != nil {
 		return fmt.Errorf("failed to expand agent args: %w", err)
 	}
 
 	// Create commander for agent process management
-	cmd, err := keen.New(s.logger, s.cfg.Persistence.Dir, keen.Config{
-		Executable:      s.cfg.Agent.Executable,
+	cmd, err := keen.New(s.logger, s.persistenceDir, keen.Config{
+		Executable:      s.agentCfg.Executable,
 		Args:            expandedArgs,
-		Env:             s.cfg.Agent.Env,
-		PassthroughLogs: s.cfg.Agent.PassthroughLogs,
+		Env:             s.agentCfg.Env,
+		PassthroughLogs: s.agentCfg.PassthroughLogs,
 	}, keen.NewBackoff(keen.BackoffConfig{
-		InitialInterval:     s.cfg.Agent.Restart.InitialInterval,
-		MaxInterval:         s.cfg.Agent.Restart.MaxInterval,
-		Multiplier:          s.cfg.Agent.Restart.Multiplier,
-		RandomizationFactor: s.cfg.Agent.Restart.RandomizationFactor,
-		MaxRetries:          s.cfg.Agent.Restart.MaxRetries,
-		StableAfter:         s.cfg.Agent.Restart.StableAfter,
+		InitialInterval:     s.agentCfg.Restart.InitialInterval,
+		MaxInterval:         s.agentCfg.Restart.MaxInterval,
+		Multiplier:          s.agentCfg.Restart.Multiplier,
+		RandomizationFactor: s.agentCfg.Restart.RandomizationFactor,
+		MaxRetries:          s.agentCfg.Restart.MaxRetries,
+		StableAfter:         s.agentCfg.Restart.StableAfter,
 	}))
 	if err != nil {
 		return err
@@ -208,7 +252,7 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	}
 
 	opampServer, err := opamp.NewServer(s.logger, opamp.ServerConfig{
-		ListenEndpoint: s.cfg.LocalServer.Endpoint,
+		ListenEndpoint: s.localServerCfg.Endpoint,
 	}, serverCallbacks)
 	if err != nil {
 		return err
@@ -220,17 +264,13 @@ func (s *Supervisor) Start(ctx context.Context) error {
 		return err
 	}
 
-	// Load any persisted connection settings from previous server interactions
-	if err := s.loadPersistedConnectionSettings(); err != nil {
-		s.logger.Warn("Failed to load persisted connection settings", zap.Error(err))
-		// Continue with initial config if persisted settings fail to load
-	}
-
 	// Create and start OpAMP client for upstream server
-	opampClient, err := s.createAndStartClient(ctx)
+	opampClient, err := s.createAndStartClient(ctx, s.connectionSettingsManager.GetCurrent())
 	if err != nil {
-		s.opampServer.Stop(ctx)
-		return fmt.Errorf("create opamp client: %w", err)
+		if err := s.opampServer.Stop(ctx); err != nil {
+			s.logger.Warn("Failed to stop local OpAMP server", zap.Error(err))
+		}
+		return fmt.Errorf("create OpAMP client: %w", err)
 	}
 	s.opampClient = opampClient
 
@@ -353,7 +393,7 @@ func (s *Supervisor) createAgentDescription() *protobufs.AgentDescription {
 // This is a best-effort operation - failures are logged but don't prevent startup.
 func (s *Supervisor) discoverComponents(ctx context.Context) *protobufs.AvailableComponents {
 	cfg := components.DiscoverConfig{
-		Executable: s.cfg.Agent.Executable,
+		Executable: s.agentCfg.Executable,
 		Timeout:    10 * time.Second,
 	}
 
@@ -375,18 +415,25 @@ func (s *Supervisor) discoverComponents(ctx context.Context) *protobufs.Availabl
 
 // createAndStartClient creates a new OpAMP client with current config, sets it up, and starts it.
 // This is used when reconnecting with new or restored connection settings.
-func (s *Supervisor) createAndStartClient(ctx context.Context) (*opamp.Client, error) {
-	headers, err := s.buildAuthHeaders()
+func (s *Supervisor) createAndStartClient(ctx context.Context, settings connection.Settings) (*opamp.Client, error) {
+	headers, err := s.buildAuthHeaders(settings)
 	if err != nil {
 		return nil, fmt.Errorf("build auth headers: %w", err)
 	}
 
+	minVersion, maxVersion, err := settings.TLS.ToTLSMinMaxVersion()
+	if err != nil {
+		return nil, fmt.Errorf("invalid TLS settings: %w", err)
+	}
+
 	client, err := opamp.NewClient(s.logger, opamp.ClientConfig{
-		Endpoint:    s.cfg.Server.Endpoint,
+		Endpoint:    settings.Endpoint,
 		InstanceUID: s.instanceUID,
 		Headers:     headers,
 		TLSConfig: &tls.Config{
-			InsecureSkipVerify: s.cfg.IsInsecure(),
+			InsecureSkipVerify: settings.TLS.Insecure,
+			MinVersion:         minVersion,
+			MaxVersion:         maxVersion,
 		},
 		Capabilities: opamp.Capabilities{
 			AcceptsRemoteConfig:            true,
@@ -456,15 +503,15 @@ func (s *Supervisor) initAuth(ctx context.Context) error {
 	}
 
 	// Need to enroll - prepare the CSR
-	if s.cfg.Server.Auth.EnrollmentEndpoint == "" {
+	if s.authCfg.EnrollmentEndpoint == "" {
 		return fmt.Errorf("not enrolled and no enrollment URL configured")
 	}
-	if s.cfg.Server.Auth.EnrollmentToken == "" {
+	if s.authCfg.EnrollmentToken == "" {
 		return fmt.Errorf("not enrolled and no enrollment token configured")
 	}
 
 	s.logger.Info("Preparing enrollment")
-	result, err := s.authManager.PrepareEnrollment(ctx, s.cfg.Server.Auth.EnrollmentEndpoint, s.cfg.Server.Auth.EnrollmentToken, s.instanceUID)
+	result, err := s.authManager.PrepareEnrollment(ctx, s.authCfg.EnrollmentEndpoint, s.authCfg.EnrollmentToken, s.instanceUID)
 	if err != nil {
 		return fmt.Errorf("enrollment preparation failed: %w", err)
 	}
@@ -479,11 +526,19 @@ func (s *Supervisor) initAuth(ctx context.Context) error {
 	return nil
 }
 
+func toHTTPHeaders(headers map[string]string) http.Header {
+	h := make(http.Header)
+	for k, v := range headers {
+		h.Set(k, v)
+	}
+	return h
+}
+
 // buildAuthHeaders creates HTTP headers including authentication.
 // During enrollment, uses the enrollment JWT as bearer token.
 // After enrollment, generates a new JWT signed with the client certificate.
-func (s *Supervisor) buildAuthHeaders() (http.Header, error) {
-	headers := s.cfg.Server.ToHTTPHeaders()
+func (s *Supervisor) buildAuthHeaders(settings connection.Settings) (http.Header, error) {
+	headers := toHTTPHeaders(settings.Headers)
 
 	// If we're not enrolled yet, use the enrollment JWT
 	if !s.authManager.IsEnrolled() {
@@ -502,13 +557,33 @@ func (s *Supervisor) buildAuthHeaders() (http.Header, error) {
 	return headers, nil
 }
 
-// extractHostFromEndpoint extracts the host from the server endpoint URL.
-func (s *Supervisor) extractHostFromEndpoint() string {
-	u, err := url.Parse(s.cfg.Server.Endpoint)
-	if err != nil {
-		return ""
+func (s *Supervisor) reconnectClient(ctx context.Context, settings connection.Settings) error {
+	s.mu.Lock()
+	client := s.opampClient
+	s.mu.Unlock()
+
+	if client == nil {
+		return fmt.Errorf("OpAMP client not initialized")
 	}
-	return u.Host
+
+	// Stop the current client
+	s.logger.Info("Stopping OpAMP client for connection settings update")
+	if err := client.Stop(ctx); err != nil {
+		return fmt.Errorf("failed to stop client: %w", err)
+	}
+
+	// Create and start new client with updated settings
+	s.logger.Info("Starting OpAMP client with new connection settings", zap.String("endpoint", settings.Endpoint))
+	newClient, err := s.createAndStartClient(ctx, settings)
+	if err != nil {
+		return fmt.Errorf("apply connection settings: %w", err)
+	}
+
+	s.mu.Lock()
+	s.opampClient = newClient
+	s.mu.Unlock()
+
+	return nil
 }
 
 // handleConnectionSettings processes connection settings updates from the server.
@@ -548,35 +623,67 @@ func (s *Supervisor) handleConnectionSettings(ctx context.Context, settings *pro
 	}
 
 	// Check if any settings require reconnection
-	if !s.connectionSettingsChanged(settings) && !newlyEnrolled {
+	newSettings, changed := s.connectionSettingsManager.SettingsChanged(settings)
+	if !changed && !newlyEnrolled {
 		s.logger.Debug("No connection settings changes requiring reconnection")
 		s.reportConnectionSettingsStatus(true, "")
 		return
 	}
 
-	// Capture current state for rollback
-	s.captureConnectionSnapshot()
+	// Persist new settings but don't replace the old ones yet.
+	stagedFile, err := s.connectionSettingsManager.StageNext(newSettings)
+	if err != nil {
+		s.logger.Warn("Failed to persist new connection settings", zap.Error(err))
+		s.reportConnectionSettingsStatus(false, fmt.Sprintf("failed to persist new settings: %v", err))
+		return
+	}
+
+	// Capture current settings for potential rollback if reconnection with new settings fails.
+	oldSettings := s.connectionSettingsManager.GetCurrent()
 
 	// Apply new settings with reconnection
-	if err := s.applyConnectionSettings(ctx, settings); err != nil {
-		s.logger.Error("Failed to apply connection settings, rolling back", zap.Error(err))
-		if rollbackErr := s.rollbackConnectionSettings(ctx); rollbackErr != nil {
-			s.logger.Error("Rollback also failed", zap.Error(rollbackErr))
+	if err := s.reconnectClient(ctx, newSettings); err != nil {
+		s.logger.Error("Failed to connect with new settings, rolling back", zap.Error(err))
+
+		if cleanupErr := stagedFile.Cleanup(); cleanupErr != nil {
+			s.logger.Error("Failed to clean up staged connection settings file after failed apply", zap.Error(cleanupErr))
 		}
+
+		if reconnectErr := s.reconnectClient(ctx, oldSettings); reconnectErr != nil {
+			s.logger.Error("Rollback also failed", zap.Error(reconnectErr))
+		}
+
 		s.reportConnectionSettingsStatus(false, fmt.Sprintf("failed to apply settings: %v", err))
 		return
 	}
 
-	// Persist settings after successful reconnection
-	if err := s.persistConnectionSettings(settings); err != nil {
-		s.logger.Warn("Failed to persist connection settings", zap.Error(err))
-		// Don't fail - we're already connected with new settings
-	}
+	if err := stagedFile.Commit(); err != nil {
+		// The following error handling is a best effort attempt to recover and keep the supervisor in a consistent
+		// state after a failed commit of the new settings. It hopefully should not be needed in normal operation,
+		// and if it does get triggered, it indicates an underlying issue with the filesystem or environment that
+		// needs attention.
+		s.logger.Error("Failed to commit staged connection settings file", zap.Error(err))
 
-	// Clear snapshot after successful application
-	s.mu.Lock()
-	s.connSettingsSnapshot = nil
-	s.mu.Unlock()
+		// Reconnect again to make sure we're back to old settings because persisting the new settings failed, and we
+		// might be in an inconsistent state now.
+		if reconnectErr := s.reconnectClient(ctx, oldSettings); reconnectErr != nil {
+			s.logger.Error("Rollback after persistence error failed", zap.Error(reconnectErr))
+
+			// If rollback to old settings fails, try reconnecting to the new settings again to keep runtime and in-memory
+			// state consistent.
+			if recoverErr := s.reconnectClient(ctx, newSettings); recoverErr != nil {
+				s.logger.Error("Recovery with new settings also failed", zap.Error(recoverErr))
+			} else {
+				s.connectionSettingsManager.SetCurrent(newSettings)
+				if persistErr := s.connectionSettingsManager.Persist(newSettings); persistErr != nil {
+					s.logger.Error("Recovery succeeded but persisting new settings still failed", zap.Error(persistErr))
+				}
+			}
+		}
+
+		s.reportConnectionSettingsStatus(false, fmt.Sprintf("failed to persist settings: %v", err))
+		return
+	}
 
 	s.reportConnectionSettingsStatus(true, "")
 	s.logger.Info("Connection settings applied successfully")
@@ -651,8 +758,7 @@ func (s *Supervisor) reportConnectionSettingsStatus(success bool, errorMsg strin
 func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 	return &opamp.Callbacks{
 		OnConnect: func(ctx context.Context) {
-			s.logger.Info("Connected to OpAMP server", zap.String("endpoint", s.cfg.Server.Endpoint))
-
+			s.logger.Info("Connected to OpAMP server", zap.String("endpoint", s.connectionSettingsManager.GetCurrent().Endpoint))
 		},
 		OnConnectFailed: func(ctx context.Context, err error) {
 			s.logger.Error("Failed to connect to OpAMP server", zap.Error(err))
@@ -745,29 +851,4 @@ func (s *Supervisor) forwardCustomMessage(ctx context.Context, customMessage *pr
 	// Broadcast to all connected collectors (typically just one)
 	server.Broadcast(ctx, msg)
 	s.logger.Debug("Forwarded custom message to collector")
-}
-
-// convertProtoHeaders converts protobufs.Headers to map[string]string.
-func convertProtoHeaders(h *protobufs.Headers) map[string]string {
-	if h == nil {
-		return nil
-	}
-	result := make(map[string]string, len(h.Headers))
-	for _, header := range h.Headers {
-		result[header.Key] = header.Value
-	}
-	return result
-}
-
-// headersEqual compares two header maps for equality.
-func headersEqual(a, b map[string]string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for k, v := range a {
-		if bv, ok := b[k]; !ok || bv != v {
-			return false
-		}
-	}
-	return true
 }

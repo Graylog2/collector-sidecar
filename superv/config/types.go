@@ -19,7 +19,6 @@ package config
 
 import (
 	"crypto/tls"
-	"net/http"
 	"time"
 )
 
@@ -47,11 +46,12 @@ type ServerConfig struct {
 
 // TLSConfig configures TLS for server connection.
 type TLSConfig struct {
-	Insecure   bool   `koanf:"insecure"`
+	Insecure   *bool  `koanf:"insecure"`
 	CACert     string `koanf:"ca_cert"`
 	ClientCert string `koanf:"client_cert"`
 	ClientKey  string `koanf:"client_key"`
 	MinVersion string `koanf:"min_version"`
+	MaxVersion string `koanf:"max_version"`
 }
 
 // ConnectionConfig configures connection retry behavior.
@@ -68,10 +68,11 @@ type BackoffConfig struct {
 
 // AuthConfig configures authentication.
 type AuthConfig struct {
-	EnrollmentEndpoint string        `koanf:"enrollment_endpoint"`
-	EnrollmentToken    string        `koanf:"enrollment_token"`
-	InsecureTLS        bool          `koanf:"insecure_tls"`
-	JWTLifetime        time.Duration `koanf:"jwt_lifetime"`
+	EnrollmentEndpoint string            `koanf:"enrollment_endpoint"`
+	EnrollmentToken    string            `koanf:"enrollment_token"`
+	EnrollmentHeaders  map[string]string `koanf:"enrollment_headers"`
+	InsecureTLS        bool              `koanf:"insecure_tls"`
+	JWTLifetime        time.Duration     `koanf:"jwt_lifetime"`
 }
 
 // KeysConfig configures key storage.
@@ -271,19 +272,10 @@ func DefaultConfig() Config {
 	}
 }
 
-// ToHTTPHeaders converts config headers to http.Header.
-func (s ServerConfig) ToHTTPHeaders() http.Header {
-	h := make(http.Header)
-	for k, v := range s.Headers {
-		h.Set(k, v)
-	}
-	return h
-}
-
 // ToTLSConfig converts TLSConfig to *tls.Config.
 // Returns nil if TLS is not configured.
 func (t TLSConfig) ToTLSConfig() (*tls.Config, error) {
-	if t.Insecure {
+	if t.Insecure != nil && *t.Insecure {
 		return nil, nil
 	}
 	// TODO: Implement full TLS config loading
@@ -295,10 +287,14 @@ func (t TLSConfig) ToTLSConfig() (*tls.Config, error) {
 // SetInsecure configures the supervisor to not validate TLS certificates.
 func (c *Config) SetInsecure() {
 	c.Server.Auth.InsecureTLS = true
-	c.Server.TLS.Insecure = true
+	c.Server.TLS.Insecure = new(true)
 }
 
 // IsInsecure returns true if any of the TLS verification settings is disabled.
 func (c *Config) IsInsecure() bool {
-	return c.Server.Auth.InsecureTLS || c.Server.TLS.Insecure
+	// TODO: We might want to refactor this to only have a single source of truth for TLS insecurity.
+	if c.Server.TLS.Insecure != nil {
+		return c.Server.Auth.InsecureTLS || *c.Server.TLS.Insecure
+	}
+	return c.Server.Auth.InsecureTLS
 }
