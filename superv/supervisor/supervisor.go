@@ -501,11 +501,15 @@ func (s *Supervisor) createAndStartClient(ctx context.Context, settings connecti
 			MaxVersion:         maxVersion,
 		},
 		Capabilities: opamp.Capabilities{
-			AcceptsRemoteConfig:             true,
-			ReportsEffectiveConfig:          true,
-			ReportsHealth:                   true,
-			AcceptsOpAMPConnectionSettings:  true,
-			ReportsConnectionSettingsStatus: true,
+			AcceptsRemoteConfig:            true,
+			ReportsEffectiveConfig:         true,
+			ReportsHealth:                  true,
+			AcceptsOpAMPConnectionSettings: true,
+			// ReportsConnectionSettingsStatus is disabled because opamp-go schedules APPLIED immediately after the callback
+			// returns, but the actual reconnect happens asynchronously on the worker. The sender's in-flight status POST races
+			// with client.Stop(), producing a spurious "context canceled" error. Enable once opamp-go exposes a public
+			// SetConnectionSettingsStatus API so we can report the outcome after the async reconnect completes.
+			ReportsConnectionSettingsStatus: false,
 			AcceptsRestartCommand:           true,
 			ReportsHeartbeat:                true,
 			ReportsAvailableComponents:      true,

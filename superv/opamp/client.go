@@ -396,36 +396,6 @@ func (c *Client) SetHeartbeatInterval(interval time.Duration) {
 	c.heartbeatInterval = interval
 }
 
-// SetConnectionSettingsStatus reports the status of applying connection settings.
-// Note: The current opamp-go library does not expose SetConnectionSettingsStatus on the
-// public client interface. This method is a placeholder that will automatically work
-// if/when opamp-go adds this capability. For now, status is logged for debugging.
-func (c *Client) SetConnectionSettingsStatus(status *protobufs.ConnectionSettingsStatus) error {
-	if c.opampClient == nil {
-		// Client not started, just log
-		c.logger.Debug("Connection settings status set before client started",
-			zap.String("status", status.GetStatus().String()),
-			zap.String("error", status.GetErrorMessage()),
-		)
-		return nil
-	}
-
-	// Check if opamp-go client supports SetConnectionSettingsStatus.
-	// Currently it does not, but this will work automatically if added in the future.
-	if setter, ok := c.opampClient.(interface {
-		SetConnectionSettingsStatus(*protobufs.ConnectionSettingsStatus) error
-	}); ok {
-		return setter.SetConnectionSettingsStatus(status)
-	}
-
-	// Log the status for debugging since we can't report it to the server yet
-	c.logger.Debug("Connection settings status (opamp-go does not support reporting)",
-		zap.String("status", status.GetStatus().String()),
-		zap.String("error", status.GetErrorMessage()),
-	)
-	return nil
-}
-
 // parseInstanceUID parses a string as a UUID and returns a 16-byte InstanceUid.
 // Returns an error if the input is not a valid UUID.
 func parseInstanceUID(s string) (types.InstanceUid, error) {

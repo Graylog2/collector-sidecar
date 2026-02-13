@@ -115,8 +115,7 @@ func TestCapabilitiesToProto_AllCapabilities(t *testing.T) {
 		ReportsOwnMetrics:               true,
 		ReportsOwnLogs:                  true,
 		AcceptsOpAMPConnectionSettings:  true,
-		ReportsConnectionSettingsStatus: true,
-		AcceptsRestartCommand:           true,
+		AcceptsRestartCommand: true,
 		ReportsHealth:                   true,
 		ReportsRemoteConfig:             true,
 		ReportsHeartbeat:                true,
@@ -133,7 +132,6 @@ func TestCapabilitiesToProto_AllCapabilities(t *testing.T) {
 	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsOwnMetrics != 0)
 	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsOwnLogs != 0)
 	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_AcceptsOpAMPConnectionSettings != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsConnectionSettingsStatus != 0)
 	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_AcceptsRestartCommand != 0)
 	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsHealth != 0)
 	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsRemoteConfig != 0)
@@ -596,36 +594,6 @@ func TestClient_SetHeartbeatInterval(t *testing.T) {
 
 	client.SetHeartbeatInterval(45 * time.Second)
 	require.Equal(t, 45*time.Second, client.HeartbeatInterval())
-}
-
-func TestClient_SetConnectionSettingsStatus(t *testing.T) {
-	logger := zaptest.NewLogger(t)
-	cfg := ClientConfig{
-		Endpoint:    "ws://localhost:4320/v1/opamp",
-		InstanceUID: "550e8400-e29b-41d4-a716-446655440000",
-	}
-
-	client, err := NewClient(logger, cfg, nil)
-	require.NoError(t, err)
-
-	// Before Start, should not error (just logs)
-	status := &protobufs.ConnectionSettingsStatus{
-		Status:       protobufs.ConnectionSettingsStatuses_ConnectionSettingsStatuses_FAILED,
-		ErrorMessage: "test error",
-	}
-	err = client.SetConnectionSettingsStatus(status)
-	require.NoError(t, err)
-}
-
-func TestCapabilities_ToProto_ReportsConnectionSettingsStatus(t *testing.T) {
-	caps := Capabilities{
-		ReportsConnectionSettingsStatus: true,
-	}
-	proto := caps.ToProto()
-
-	expected := protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus |
-		protobufs.AgentCapabilities_AgentCapabilities_ReportsConnectionSettingsStatus
-	require.Equal(t, expected, proto)
 }
 
 func TestCapabilitiesToProto_ReportsAvailableComponents(t *testing.T) {
