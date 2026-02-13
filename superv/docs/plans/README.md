@@ -4,7 +4,6 @@
 
 | Plan | Status | Description |
 |------|--------|-------------|
-| [Phase 3](2026-01-29-opamp-supervisor-phase3.md) | TODO | Operational robustness (crash recovery, cert renewal) |
 | [Phase 4](2026-01-29-opamp-supervisor-phase4.md) | TODO | Package management |
 
 ## Reference Documents
@@ -25,6 +24,9 @@ Executed plans are archived in [`completed/`](completed/):
 | [CSR Trust Bootstrap](completed/2026-01-29-csr-trust-bootstrap-design.md) | Authentication design |
 | [Config Merge](completed/2026-01-30-config-merge-implementation.md) | Custom merge for service.extensions concatenation |
 | [Health Deduplication](completed/2026-01-30-health-deduplication.md) | Deduplicate health status emissions |
+| [Phase 3](completed/2026-01-29-opamp-supervisor-phase3.md) | Operational robustness (crash recovery, cert renewal) |
+| [OpAMP Spec Compliance](completed/2026-02-02-opamp-spec-compliance-implementation.md) | Connection settings, heartbeat, components, custom messages |
+| [State Mutation Serialization](completed/2026-02-13-serialize-state-mutations-impl.md) | Serialize OpAMP callbacks via worker goroutine |
 
 ## Execution Order
 
@@ -33,7 +35,7 @@ Phase 1 (Foundation)     ✅ DONE
     ↓
 Phase 2 (Config/Health)  ✅ DONE
     ↓
-Phase 3 (Robustness)     ⏳ NEXT
+Phase 3 (Robustness)     ✅ DONE
     ↓
-Phase 4 (Packages)       📋 PLANNED
+Phase 4 (Packages)       ⏳ NEXT
 ```
