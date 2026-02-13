@@ -107,19 +107,20 @@ func TestCapabilitiesToProto(t *testing.T) {
 
 func TestCapabilitiesToProto_AllCapabilities(t *testing.T) {
 	caps := Capabilities{
-		AcceptsRemoteConfig:            true,
-		ReportsEffectiveConfig:         true,
-		AcceptsPackages:                true,
-		ReportsPackageStatuses:         true,
-		ReportsOwnTraces:               true,
-		ReportsOwnMetrics:              true,
-		ReportsOwnLogs:                 true,
-		AcceptsOpAMPConnectionSettings: true,
-		AcceptsRestartCommand:          true,
-		ReportsHealth:                  true,
-		ReportsRemoteConfig:            true,
-		ReportsHeartbeat:               true,
-		ReportsAvailableComponents:     true,
+		AcceptsRemoteConfig:             true,
+		ReportsEffectiveConfig:          true,
+		AcceptsPackages:                 true,
+		ReportsPackageStatuses:          true,
+		ReportsOwnTraces:                true,
+		ReportsOwnMetrics:               true,
+		ReportsOwnLogs:                  true,
+		AcceptsOpAMPConnectionSettings:  true,
+		ReportsConnectionSettingsStatus: true,
+		AcceptsRestartCommand:           true,
+		ReportsHealth:                   true,
+		ReportsRemoteConfig:             true,
+		ReportsHeartbeat:                true,
+		ReportsAvailableComponents:      true,
 	}
 
 	proto := caps.ToProto()
@@ -132,6 +133,7 @@ func TestCapabilitiesToProto_AllCapabilities(t *testing.T) {
 	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsOwnMetrics != 0)
 	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsOwnLogs != 0)
 	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_AcceptsOpAMPConnectionSettings != 0)
+	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsConnectionSettingsStatus != 0)
 	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_AcceptsRestartCommand != 0)
 	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsHealth != 0)
 	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsRemoteConfig != 0)
@@ -613,6 +615,17 @@ func TestClient_SetConnectionSettingsStatus(t *testing.T) {
 	}
 	err = client.SetConnectionSettingsStatus(status)
 	require.NoError(t, err)
+}
+
+func TestCapabilities_ToProto_ReportsConnectionSettingsStatus(t *testing.T) {
+	caps := Capabilities{
+		ReportsConnectionSettingsStatus: true,
+	}
+	proto := caps.ToProto()
+
+	expected := protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus |
+		protobufs.AgentCapabilities_AgentCapabilities_ReportsConnectionSettingsStatus
+	require.Equal(t, expected, proto)
 }
 
 func TestCapabilitiesToProto_ReportsAvailableComponents(t *testing.T) {

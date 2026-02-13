@@ -614,11 +614,11 @@ func TestSettingsManagerConcurrentAccess(t *testing.T) {
 	})
 
 	var wg sync.WaitGroup
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		wg.Add(1)
 		go func(worker int) {
 			defer wg.Done()
-			for j := 0; j < 200; j++ {
+			for j := range 200 {
 				if j%2 == 0 {
 					manager.SetCurrent(Settings{
 						Endpoint: fmt.Sprintf("wss://%d-%d.example.com/v1/opamp", worker, j),

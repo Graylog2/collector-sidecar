@@ -63,19 +63,20 @@ func (c ClientConfig) Validate() error {
 // Note: ReportsStatus is always enabled per the OpAMP specification and is not
 // included here as a configurable option.
 type Capabilities struct {
-	AcceptsRemoteConfig            bool
-	ReportsEffectiveConfig         bool
-	AcceptsPackages                bool
-	ReportsPackageStatuses         bool
-	ReportsOwnTraces               bool
-	ReportsOwnMetrics              bool
-	ReportsOwnLogs                 bool
-	AcceptsOpAMPConnectionSettings bool
-	AcceptsRestartCommand          bool
-	ReportsHealth                  bool
-	ReportsRemoteConfig            bool
-	ReportsHeartbeat               bool
-	ReportsAvailableComponents     bool
+	AcceptsRemoteConfig             bool
+	ReportsEffectiveConfig          bool
+	AcceptsPackages                 bool
+	ReportsPackageStatuses          bool
+	ReportsOwnTraces                bool
+	ReportsOwnMetrics               bool
+	ReportsOwnLogs                  bool
+	AcceptsOpAMPConnectionSettings  bool
+	ReportsConnectionSettingsStatus bool
+	AcceptsRestartCommand           bool
+	ReportsHealth                   bool
+	ReportsRemoteConfig             bool
+	ReportsHeartbeat                bool
+	ReportsAvailableComponents      bool
 }
 
 // ToProto converts capabilities to protobuf format.
@@ -107,6 +108,9 @@ func (c Capabilities) ToProto() protobufs.AgentCapabilities {
 	}
 	if c.AcceptsOpAMPConnectionSettings {
 		caps |= protobufs.AgentCapabilities_AgentCapabilities_AcceptsOpAMPConnectionSettings
+	}
+	if c.ReportsConnectionSettingsStatus {
+		caps |= protobufs.AgentCapabilities_AgentCapabilities_ReportsConnectionSettingsStatus
 	}
 	if c.AcceptsRestartCommand {
 		caps |= protobufs.AgentCapabilities_AgentCapabilities_AcceptsRestartCommand
@@ -213,10 +217,11 @@ func (c *Client) Start(ctx context.Context) error {
 	}
 
 	settings := types.StartSettings{
-		OpAMPServerURL: c.cfg.Endpoint,
-		InstanceUid:    instanceUID,
-		Callbacks:      c.callbacks.ToTypesCallbacks(),
-		Header:         c.cfg.Headers,
+		OpAMPServerURL:    c.cfg.Endpoint,
+		InstanceUid:       instanceUID,
+		Callbacks:         c.callbacks.ToTypesCallbacks(),
+		Header:            c.cfg.Headers,
+		HeartbeatInterval: &c.heartbeatInterval,
 	}
 
 	// opamp-go will fail if TLSConfig is set but the URL is not HTTPS/WSS

@@ -72,8 +72,19 @@ type Supervisor struct {
 	mu                        sync.RWMutex
 	running                   bool
 
+	// Serialized worker for state-mutating operations.
+	workQueue  chan workFunc
+	workCtx    context.Context
+	workCancel context.CancelFunc
+	workWg     sync.WaitGroup
+
 	// Pending enrollment CSR (set during enrollment, cleared after completion)
 	pendingCSR []byte
+
+	// createClientFunc creates and starts a new OpAMP client for the given
+	// settings. Defaults to createAndStartClient; overridden in tests for
+	// interleaving control.
+	createClientFunc func(ctx context.Context, settings connection.Settings) (*opamp.Client, error)
 }
 
 // New creates a new Supervisor instance.
@@ -155,7 +166,7 @@ func New(logger *zap.Logger, cfg config.Config) (*Supervisor, error) {
 		Interval: cfg.Agent.Health.Interval,
 	})
 
-	return &Supervisor{
+	s := &Supervisor{
 		logger:                    logger,
 		agentCfg:                  cfg.Agent,
 		authCfg:                   cfg.Server.Auth,
@@ -166,7 +177,9 @@ func New(logger *zap.Logger, cfg config.Config) (*Supervisor, error) {
 		configManager:             configMgr,
 		healthMonitor:             healthMon,
 		connectionSettingsManager: connSettingsMgr,
-	}, nil
+	}
+	s.createClientFunc = s.createAndStartClient
+	return s, nil
 }
 
 // InstanceUID returns the supervisor's unique instance identifier.
@@ -196,11 +209,17 @@ func (s *Supervisor) expandArgs(args []string, configPath string) ([]string, err
 // Start starts the supervisor and begins managing the collector.
 func (s *Supervisor) Start(ctx context.Context) error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	if s.running {
+		s.mu.Unlock()
 		return nil
 	}
+	s.mu.Unlock()
+
+	// Lock is released early because:
+	// 1. Start/Stop are never concurrent (lifecycle contract) — no race on s.running.
+	// 2. createAndStartClient acquires s.mu.RLock (for pendingCSR); holding Lock
+	//    would self-deadlock (RWMutex is not reentrant).
+	// 3. Cleanup calls opampClient.Stop which may wait for callbacks that take s.mu.
 
 	s.logger.Info("Starting supervisor",
 		zap.String("instance_uid", s.instanceUID),
@@ -264,15 +283,29 @@ func (s *Supervisor) Start(ctx context.Context) error {
 		return err
 	}
 
+	// Initialize and start the serialized worker. Must be running before
+	// the OpAMP client starts, otherwise early callbacks block on the
+	// unbuffered channel with no consumer.
+	s.workQueue = make(chan workFunc)
+	s.workCtx, s.workCancel = context.WithCancel(ctx)
+	s.workWg.Add(1)
+	go s.runWorker()
+
 	// Create and start OpAMP client for upstream server
-	opampClient, err := s.createAndStartClient(ctx, s.connectionSettingsManager.GetCurrent())
+	opampClient, err := s.createClientFunc(ctx, s.connectionSettingsManager.GetCurrent())
 	if err != nil {
-		if err := s.opampServer.Stop(ctx); err != nil {
-			s.logger.Warn("Failed to stop local OpAMP server", zap.Error(err))
+		s.workCancel()
+		s.workWg.Wait()
+		if stopErr := s.opampServer.Stop(ctx); stopErr != nil {
+			s.logger.Warn("Failed to stop local OpAMP server", zap.Error(stopErr))
 		}
 		return fmt.Errorf("create OpAMP client: %w", err)
 	}
+
+	// Publish opampClient under lock for visibility to health goroutine and callbacks.
+	s.mu.Lock()
 	s.opampClient = opampClient
+	s.mu.Unlock()
 
 	// Start health monitoring with a cancellable context
 	healthCtx, healthCancel := context.WithCancel(ctx)
@@ -283,10 +316,16 @@ func (s *Supervisor) Start(ctx context.Context) error {
 			// Only report health if we're enrolled - during enrollment we want to avoid sending multiple requests
 			// using the enrollment token.
 			if s.authManager.IsEnrolled() { // TODO: Check how expensive IsEnrolled is and if we can cache it after enrollment
-				// TODO: Pass commander as AgentStateProvider once it implements the interface
-				// This will enable accurate agent start time reporting per OpAMP spec
-				if err := s.opampClient.SetHealth(status.ToComponentHealth(nil)); err != nil {
-					s.logger.Warn("Failed to report health", zap.Error(err))
+				s.mu.RLock()
+				client := s.opampClient
+				s.mu.RUnlock()
+
+				if client != nil {
+					// TODO: Pass commander as AgentStateProvider once it implements the interface
+					// This will enable accurate agent start time reporting per OpAMP spec
+					if err := client.SetHealth(status.ToComponentHealth(nil)); err != nil {
+						s.logger.Warn("Failed to report health", zap.Error(err))
+					}
 				}
 			}
 		}
@@ -294,55 +333,81 @@ func (s *Supervisor) Start(ctx context.Context) error {
 
 	// Start the collector agent
 	if err := s.commander.Start(ctx); err != nil {
-		opampClient.Stop(ctx)
-		opampServer.Stop(ctx)
 		healthCancel()
+		s.healthWg.Wait()
+
+		// Nil out opampClient under lock (it was published above) before stopping,
+		// so the health goroutine (now drained) and callbacks see nil.
+		s.mu.Lock()
+		s.opampClient = nil
+		s.mu.Unlock()
+
+		s.workCancel()
+		opampClient.Stop(ctx)
+		s.workWg.Wait()
+		if stopErr := opampServer.Stop(ctx); stopErr != nil {
+			s.logger.Warn("Failed to stop local OpAMP server during cleanup", zap.Error(stopErr))
+		}
 		return fmt.Errorf("failed to start agent: %w", err)
 	}
 
+	s.mu.Lock()
 	s.running = true
+	s.mu.Unlock()
+
 	return nil
 }
 
 // Stop stops the supervisor and the managed collector.
 func (s *Supervisor) Stop(ctx context.Context) error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	if !s.running {
+		s.mu.Unlock()
 		return nil
 	}
+	s.running = false
+
+	// Snapshot and nil-out to prevent concurrent use after unlock.
+	client := s.opampClient
+	server := s.opampServer
+	s.opampClient = nil
+	s.opampServer = nil
+
+	// Cancel worker context while still holding mu. This ensures that
+	// reconnectClient (which checks workCtx.Err() under mu) cannot
+	// assign a new client after we've already snapshot s.opampClient.
+	s.workCancel()
+	s.mu.Unlock()
 
 	s.logger.Info("Stopping supervisor")
 
-	// Stop health monitoring
+	// Fields below (healthCancel, commander) are safe to read without mu because
+	// Start() and Stop() are never concurrent (see Lifecycle Contract in design doc).
 	if s.healthCancel != nil {
 		s.healthCancel()
 	}
 	s.healthWg.Wait()
 
-	// Stop commander (agent)
 	if s.commander != nil {
 		if err := s.commander.Stop(ctx); err != nil {
 			s.logger.Error("Error stopping agent", zap.Error(err))
 		}
 	}
 
-	// Stop OpAMP client
-	if s.opampClient != nil {
-		if err := s.opampClient.Stop(ctx); err != nil {
+	if client != nil {
+		if err := client.Stop(ctx); err != nil {
 			s.logger.Error("Error stopping OpAMP client", zap.Error(err))
 		}
 	}
 
-	// Stop OpAMP server
-	if s.opampServer != nil {
-		if err := s.opampServer.Stop(ctx); err != nil {
+	if server != nil {
+		if err := server.Stop(ctx); err != nil {
 			s.logger.Error("Error stopping OpAMP server", zap.Error(err))
 		}
 	}
 
-	s.running = false
+	s.workWg.Wait()
+
 	return nil
 }
 
@@ -436,13 +501,14 @@ func (s *Supervisor) createAndStartClient(ctx context.Context, settings connecti
 			MaxVersion:         maxVersion,
 		},
 		Capabilities: opamp.Capabilities{
-			AcceptsRemoteConfig:            true,
-			ReportsEffectiveConfig:         true,
-			ReportsHealth:                  true,
-			AcceptsOpAMPConnectionSettings: true,
-			AcceptsRestartCommand:          true,
-			ReportsHeartbeat:               true,
-			ReportsAvailableComponents:     true,
+			AcceptsRemoteConfig:             true,
+			ReportsEffectiveConfig:          true,
+			ReportsHealth:                   true,
+			AcceptsOpAMPConnectionSettings:  true,
+			ReportsConnectionSettingsStatus: true,
+			AcceptsRestartCommand:           true,
+			ReportsHeartbeat:                true,
+			ReportsAvailableComponents:      true,
 		},
 	}, s.createOpAMPCallbacks())
 	if err != nil {
@@ -462,10 +528,15 @@ func (s *Supervisor) createAndStartClient(ctx context.Context, settings connecti
 		return nil, fmt.Errorf("set available components: %w", err)
 	}
 
-	// We need this in the enrollment process
-	if len(s.pendingCSR) > 0 && client != nil {
+	// Read pendingCSR under RLock — handleEnrollmentCertificate (phase 1, on opamp-go
+	// goroutine) clears it under Lock concurrently with the worker calling this method.
+	s.mu.RLock()
+	csr := s.pendingCSR
+	s.mu.RUnlock()
+
+	if len(csr) > 0 {
 		s.logger.Info("Sending CSR for enrollment via OpAMP")
-		if err := client.RequestConnectionSettings(s.pendingCSR); err != nil {
+		if err := client.RequestConnectionSettings(csr); err != nil {
 			return nil, fmt.Errorf("request connection settings: %w", err)
 		}
 	}
@@ -560,132 +631,131 @@ func (s *Supervisor) buildAuthHeaders(settings connection.Settings) (http.Header
 func (s *Supervisor) reconnectClient(ctx context.Context, settings connection.Settings) error {
 	s.mu.Lock()
 	client := s.opampClient
+	s.opampClient = nil // Nil immediately so concurrent readers see nil, not stopped client.
 	s.mu.Unlock()
 
-	if client == nil {
-		return fmt.Errorf("OpAMP client not initialized")
+	// If client is nil, skip the stop step. This happens during rollback when a previous
+	// reconnect failed after nilling s.opampClient but before assigning a new client.
+	if client != nil {
+		s.logger.Info("Stopping OpAMP client for connection settings update")
+		if err := client.Stop(ctx); err != nil {
+			return fmt.Errorf("failed to stop client: %w", err)
+		}
 	}
 
-	// Stop the current client
-	s.logger.Info("Stopping OpAMP client for connection settings update")
-	if err := client.Stop(ctx); err != nil {
-		return fmt.Errorf("failed to stop client: %w", err)
-	}
-
-	// Create and start new client with updated settings
-	s.logger.Info("Starting OpAMP client with new connection settings", zap.String("endpoint", settings.Endpoint))
-	newClient, err := s.createAndStartClient(ctx, settings)
+	s.logger.Info("Starting OpAMP client with new connection settings",
+		zap.String("endpoint", settings.Endpoint))
+	newClient, err := s.createClientFunc(ctx, settings)
 	if err != nil {
 		return fmt.Errorf("apply connection settings: %w", err)
 	}
 
+	// Check workCtx under mu before assigning. Stop() cancels workCtx while
+	// holding mu, so this check-and-assign is atomic with respect to shutdown.
+	// We use workCtx instead of s.running because s.running is only set at the
+	// end of Start(), but reconnects can happen during the startup window.
 	s.mu.Lock()
+	if s.workCtx.Err() != nil {
+		s.mu.Unlock()
+		_ = newClient.Stop(ctx)
+		return fmt.Errorf("supervisor stopped during reconnect")
+	}
 	s.opampClient = newClient
 	s.mu.Unlock()
 
 	return nil
 }
 
-// handleConnectionSettings processes connection settings updates from the server.
-// This is called in a goroutine from the OnOpampConnectionSettings callback.
-// Note: ctx should be context.Background() since the callback context may be cancelled.
-func (s *Supervisor) handleConnectionSettings(ctx context.Context, settings *protobufs.OpAMPConnectionSettings) {
+// pendingReconnect holds state between prepareConnectionSettings (phase 1)
+// and applyConnectionSettings (phase 2).
+type pendingReconnect struct {
+	newSettings connection.Settings
+	oldSettings connection.Settings
+	stagedFile  persistence.StagedFile
+}
+
+// prepareConnectionSettings validates and stages new connection settings.
+// Runs synchronously in the OnOpampConnectionSettings callback so the return
+// value drives opamp-go's ConnectionSettingsStatus reporting.
+func (s *Supervisor) prepareConnectionSettings(
+	ctx context.Context,
+	settings *protobufs.OpAMPConnectionSettings,
+) (*pendingReconnect, error) {
 	if settings == nil {
-		s.logger.Debug("Received nil connection settings, ignoring")
-		return
+		return nil, nil
 	}
 
-	// Handle enrollment certificate first (doesn't require reconnection)
 	newlyEnrolled, err := s.handleEnrollmentCertificate(settings)
 	if err != nil {
-		s.logger.Error("Failed to handle enrollment certificate", zap.Error(err))
-		s.reportConnectionSettingsStatus(false, fmt.Sprintf("enrollment certificate handling failed: %v", err))
-		return
+		return nil, fmt.Errorf("enrollment certificate handling failed: %w", err)
 	}
 
-	// Handle heartbeat interval update (doesn't require reconnection)
+	// Update the wrapper's stored heartbeat interval for use when creating
+	// a new client after reconnect. Note: opamp-go already updated the
+	// sender's heartbeat interval in rcvOpampConnectionSettings before
+	// invoking this callback, so this only affects the wrapper's state.
 	if interval := settings.GetHeartbeatIntervalSeconds(); interval > 0 {
-		newInterval := time.Duration(interval) * time.Second
 		s.mu.RLock()
 		client := s.opampClient
 		s.mu.RUnlock()
 
 		if client != nil {
-			oldInterval := client.HeartbeatInterval()
-			if newInterval != oldInterval {
-				client.SetHeartbeatInterval(newInterval)
-				s.logger.Info("Updated heartbeat interval",
-					zap.Duration("old_interval", oldInterval),
-					zap.Duration("new_interval", newInterval),
-				)
-			}
+			client.SetHeartbeatInterval(time.Duration(interval) * time.Second)
 		}
 	}
 
-	// Check if any settings require reconnection
 	newSettings, changed := s.connectionSettingsManager.SettingsChanged(settings)
 	if !changed && !newlyEnrolled {
-		s.logger.Debug("No connection settings changes requiring reconnection")
-		s.reportConnectionSettingsStatus(true, "")
-		return
+		return nil, nil
 	}
 
-	// Persist new settings but don't replace the old ones yet.
 	stagedFile, err := s.connectionSettingsManager.StageNext(newSettings)
 	if err != nil {
-		s.logger.Warn("Failed to persist new connection settings", zap.Error(err))
-		s.reportConnectionSettingsStatus(false, fmt.Sprintf("failed to persist new settings: %v", err))
-		return
+		return nil, fmt.Errorf("failed to persist new settings: %w", err)
 	}
 
-	// Capture current settings for potential rollback if reconnection with new settings fails.
 	oldSettings := s.connectionSettingsManager.GetCurrent()
+	return &pendingReconnect{
+		newSettings: newSettings,
+		oldSettings: oldSettings,
+		stagedFile:  stagedFile,
+	}, nil
+}
 
-	// Apply new settings with reconnection
-	if err := s.reconnectClient(ctx, newSettings); err != nil {
+// applyConnectionSettings reconnects the OpAMP client with new settings.
+// Runs on the serialized worker goroutine. On failure, rolls back to old settings.
+func (s *Supervisor) applyConnectionSettings(ctx context.Context, pending *pendingReconnect) {
+	if err := s.reconnectClient(ctx, pending.newSettings); err != nil {
 		s.logger.Error("Failed to connect with new settings, rolling back", zap.Error(err))
-
-		if cleanupErr := stagedFile.Cleanup(); cleanupErr != nil {
-			s.logger.Error("Failed to clean up staged connection settings file after failed apply", zap.Error(cleanupErr))
+		if cleanupErr := pending.stagedFile.Cleanup(); cleanupErr != nil {
+			s.logger.Error("Failed to clean up staged settings file", zap.Error(cleanupErr))
 		}
-
-		if reconnectErr := s.reconnectClient(ctx, oldSettings); reconnectErr != nil {
-			s.logger.Error("Rollback also failed", zap.Error(reconnectErr))
+		if rollbackErr := s.reconnectClient(ctx, pending.oldSettings); rollbackErr != nil {
+			s.logger.Error("Rollback also failed", zap.Error(rollbackErr))
 		}
-
-		s.reportConnectionSettingsStatus(false, fmt.Sprintf("failed to apply settings: %v", err))
 		return
 	}
 
-	if err := stagedFile.Commit(); err != nil {
-		// The following error handling is a best effort attempt to recover and keep the supervisor in a consistent
-		// state after a failed commit of the new settings. It hopefully should not be needed in normal operation,
-		// and if it does get triggered, it indicates an underlying issue with the filesystem or environment that
-		// needs attention.
-		s.logger.Error("Failed to commit staged connection settings file", zap.Error(err))
+	if err := pending.stagedFile.Commit(); err != nil {
+		s.logger.Error("Failed to commit staged settings file", zap.Error(err))
 
-		// Reconnect again to make sure we're back to old settings because persisting the new settings failed, and we
-		// might be in an inconsistent state now.
-		if reconnectErr := s.reconnectClient(ctx, oldSettings); reconnectErr != nil {
+		// Reconnect to old settings since persisting the new settings failed.
+		if reconnectErr := s.reconnectClient(ctx, pending.oldSettings); reconnectErr != nil {
 			s.logger.Error("Rollback after persistence error failed", zap.Error(reconnectErr))
 
-			// If rollback to old settings fails, try reconnecting to the new settings again to keep runtime and in-memory
-			// state consistent.
-			if recoverErr := s.reconnectClient(ctx, newSettings); recoverErr != nil {
+			// If rollback fails, try new settings again for runtime consistency.
+			if recoverErr := s.reconnectClient(ctx, pending.newSettings); recoverErr != nil {
 				s.logger.Error("Recovery with new settings also failed", zap.Error(recoverErr))
 			} else {
-				s.connectionSettingsManager.SetCurrent(newSettings)
-				if persistErr := s.connectionSettingsManager.Persist(newSettings); persistErr != nil {
+				s.connectionSettingsManager.SetCurrent(pending.newSettings)
+				if persistErr := s.connectionSettingsManager.Persist(pending.newSettings); persistErr != nil {
 					s.logger.Error("Recovery succeeded but persisting new settings still failed", zap.Error(persistErr))
 				}
 			}
 		}
-
-		s.reportConnectionSettingsStatus(false, fmt.Sprintf("failed to persist settings: %v", err))
 		return
 	}
 
-	s.reportConnectionSettingsStatus(true, "")
 	s.logger.Info("Connection settings applied successfully")
 }
 
@@ -724,33 +794,6 @@ func (s *Supervisor) handleEnrollmentCertificate(settings *protobufs.OpAMPConnec
 	)
 
 	return true, nil
-}
-
-// reportConnectionSettingsStatus reports the result of applying connection settings.
-func (s *Supervisor) reportConnectionSettingsStatus(success bool, errorMsg string) {
-	s.mu.RLock()
-	client := s.opampClient
-	s.mu.RUnlock()
-
-	if client == nil {
-		return
-	}
-
-	var status protobufs.ConnectionSettingsStatuses
-	if success {
-		status = protobufs.ConnectionSettingsStatuses_ConnectionSettingsStatuses_APPLIED
-	} else {
-		status = protobufs.ConnectionSettingsStatuses_ConnectionSettingsStatuses_FAILED
-	}
-
-	statusMsg := &protobufs.ConnectionSettingsStatus{
-		Status:       status,
-		ErrorMessage: errorMsg,
-	}
-
-	if err := client.SetConnectionSettingsStatus(statusMsg); err != nil {
-		s.logger.Warn("Failed to report connection settings status", zap.Error(err))
-	}
 }
 
 // createOpAMPCallbacks creates the OpAMP client callbacks.
@@ -800,15 +843,41 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 		OnOpampConnectionSettings: func(ctx context.Context, settings *protobufs.OpAMPConnectionSettings) error {
 			s.logger.Info("Received connection settings update")
 
-			// Handle connection settings in a goroutine to avoid blocking the callback.
-			// Use a fresh context with timeout since the callback context may be cancelled
-			// after this function returns.
-			go func() {
-				ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-				defer cancel()
-				s.handleConnectionSettings(ctx, settings)
-			}()
+			// Phase 1: validate and prepare (synchronous, returns status to opamp-go)
+			pending, err := s.prepareConnectionSettings(ctx, settings)
+			if err != nil {
+				return err
+			}
+			if pending == nil {
+				s.logger.Debug("No connection settings changes requiring reconnection")
+				return nil // no reconnection needed
+			}
 
+			// Phase 2: reconnect (async on worker, can't block callback)
+			if !s.enqueueWork(ctx, func(wCtx context.Context) {
+				s.applyConnectionSettings(wCtx, pending)
+			}) {
+				// Enqueue failed (context cancelled during shutdown or opamp-go timeout).
+				// Commit staged file so new settings are persisted for next restart.
+				// The OpAMP spec says the server SHOULD NOT re-send unchanged settings.
+				s.logger.Warn("Failed to enqueue connection settings apply (context cancelled), persisting for next restart")
+				if commitErr := pending.stagedFile.Commit(); commitErr != nil {
+					s.logger.Error("Failed to commit staged settings file", zap.Error(commitErr))
+					if cleanupErr := pending.stagedFile.Cleanup(); cleanupErr != nil {
+						s.logger.Error("Failed to clean up staged settings file", zap.Error(cleanupErr))
+					}
+					return fmt.Errorf("failed to persist settings for deferred apply: %w", commitErr)
+				}
+
+				// Restore old settings as in-memory baseline since we're not applying
+				// the new settings at runtime. They're persisted on disk for next restart.
+				s.connectionSettingsManager.SetCurrent(pending.oldSettings)
+			}
+
+			// TODO: Returning nil here reports APPLIED to the server, but reconnect has not
+			// completed yet. This is optimistic — see "Status Reporting Limitations" in the
+			// design doc. Once opamp-go exposes a public SetConnectionSettingsStatus API,
+			// applyConnectionSettings should send late FAILED/APPLIED after async reconnect.
 			return nil
 		},
 		OnPackagesAvailable: func(ctx context.Context, packages *protobufs.PackagesAvailable) bool {
