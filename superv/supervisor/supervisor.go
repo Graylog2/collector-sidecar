@@ -524,7 +524,7 @@ func (s *Supervisor) createAndStartClient(ctx context.Context, settings connecti
 		return nil, fmt.Errorf("set agent description: %w", err)
 	}
 
-	if err := client.SetHealth(&protobufs.ComponentHealth{Healthy: true}); err != nil {
+	if err := client.SetHealth(s.initialComponentHealth()); err != nil {
 		return nil, fmt.Errorf("set health: %w", err)
 	}
 
@@ -551,6 +551,23 @@ func (s *Supervisor) createAndStartClient(ctx context.Context, settings connecti
 	}
 
 	return client, nil
+}
+
+// initialComponentHealth returns the latest known collector health to seed a new
+// OpAMP client. During first-time enrollment, health polling may observe failures
+// before enrollment completes; seeding reconnects from monitor state prevents that
+// latest status from being lost due to health deduplication.
+func (s *Supervisor) initialComponentHealth() *protobufs.ComponentHealth {
+	if s.healthMonitor == nil {
+		return &protobufs.ComponentHealth{Healthy: true}
+	}
+
+	status := s.healthMonitor.LastStatus()
+	if status == nil {
+		return &protobufs.ComponentHealth{Healthy: true}
+	}
+
+	return status.ToComponentHealth(nil)
 }
 
 // setClientAvailableComponents discovers and sets available components on the given client.
