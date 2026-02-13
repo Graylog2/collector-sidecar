@@ -180,32 +180,3 @@ func CertificateFingerprint(keysDir string) (string, error) {
 	hash := sha256.Sum256(cert.Raw)
 	return hex.EncodeToString(hash[:]), nil
 }
-
-// SaveBearerToken saves a bearer token to disk for collector OTLP auth.
-func SaveBearerToken(keysDir string, token string) error {
-	if err := os.MkdirAll(keysDir, 0700); err != nil {
-		return err
-	}
-
-	filePath := filepath.Join(keysDir, bearerTokenFile)
-	return os.WriteFile(filePath, []byte(token), 0600)
-}
-
-// LoadBearerToken loads a bearer token from disk.
-func LoadBearerToken(keysDir string) (string, error) {
-	filePath := filepath.Join(keysDir, bearerTokenFile)
-
-	content, err := os.ReadFile(filePath)
-	if err != nil {
-		return "", err
-	}
-
-	return string(content), nil
-}
-
-// BearerTokenExists returns true if the bearer token file exists.
-func BearerTokenExists(keysDir string) bool {
-	filePath := filepath.Join(keysDir, bearerTokenFile)
-	_, err := os.Stat(filePath)
-	return err == nil
-}

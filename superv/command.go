@@ -268,10 +268,8 @@ func runSupervisor(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to start supervisor: %w", err)
 	}
 
-	select {
-	case <-sigCtx.Done():
-		stop()
-	}
+	<-sigCtx.Done()
+	stop()
 
 	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancelShutdown()

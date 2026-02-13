@@ -110,11 +110,6 @@ func (s *Server) Addr() string {
 	return addr.String()
 }
 
-// SendToAgent sends a message to a connected agent.
-func (s *Server) SendToAgent(ctx context.Context, conn types.Connection, msg *protobufs.ServerToAgent) error {
-	return conn.Send(ctx, msg)
-}
-
 // Broadcast sends a message to all connected agents.
 func (s *Server) Broadcast(ctx context.Context, msg *protobufs.ServerToAgent) {
 	// Snapshot connections under lock, then send outside lock

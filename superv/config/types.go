@@ -18,7 +18,6 @@
 package config
 
 import (
-	"crypto/tls"
 	"time"
 )
 
@@ -270,18 +269,6 @@ func DefaultConfig() Config {
 			Level:  "info",
 		},
 	}
-}
-
-// ToTLSConfig converts TLSConfig to *tls.Config.
-// Returns nil if TLS is not configured.
-func (t TLSConfig) ToTLSConfig() (*tls.Config, error) {
-	if t.Insecure != nil && *t.Insecure {
-		return nil, nil
-	}
-	// TODO: Implement full TLS config loading
-	return &tls.Config{
-		MinVersion: tls.VersionTLS12,
-	}, nil
 }
 
 // SetInsecure configures the supervisor to not validate TLS certificates.

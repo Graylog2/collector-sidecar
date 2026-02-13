@@ -160,43 +160,6 @@ func TestCertificateFingerprint(t *testing.T) {
 	require.Len(t, fp, 64)
 }
 
-func TestSaveAndLoadBearerToken(t *testing.T) {
-	dir := t.TempDir()
-	keysDir := filepath.Join(dir, "keys")
-
-	token := "eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiJ0ZXN0In0.signature"
-
-	err := SaveBearerToken(keysDir, token)
-	require.NoError(t, err)
-
-	loaded, err := LoadBearerToken(keysDir)
-	require.NoError(t, err)
-	require.Equal(t, token, loaded)
-}
-
-func TestBearerTokenExists(t *testing.T) {
-	dir := t.TempDir()
-	keysDir := filepath.Join(dir, "keys")
-
-	require.False(t, BearerTokenExists(keysDir))
-
-	_ = SaveBearerToken(keysDir, "token")
-	require.True(t, BearerTokenExists(keysDir))
-}
-
-func TestSaveBearerToken_FilePermissions(t *testing.T) {
-	dir := t.TempDir()
-	keysDir := filepath.Join(dir, "keys")
-
-	err := SaveBearerToken(keysDir, "secret-token")
-	require.NoError(t, err)
-
-	filePath := filepath.Join(keysDir, "bearer_token")
-	info, err := os.Stat(filePath)
-	require.NoError(t, err)
-	require.Equal(t, os.FileMode(0600), info.Mode().Perm())
-}
-
 // createTestCertificate creates a self-signed certificate for testing
 func createTestCertificate(t *testing.T) *x509.Certificate {
 	t.Helper()

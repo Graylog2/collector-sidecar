@@ -21,13 +21,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/open-telemetry/opamp-go/protobufs"
 	"go.uber.org/zap"
 
 	"github.com/Graylog2/collector-sidecar/superv/configmerge"
-	"github.com/Graylog2/collector-sidecar/superv/configwriter"
+	"github.com/Graylog2/collector-sidecar/superv/persistence"
 )
 
 // Config holds the configuration for the config manager.
@@ -114,7 +115,7 @@ func (m *Manager) ApplyRemoteConfig(ctx context.Context, remote *protobufs.Agent
 
 	// Merge with local overrides
 	for _, overridePath := range m.cfg.LocalOverrides {
-		overrideContent, err := configwriter.ReadConfig(overridePath)
+		overrideContent, err := os.ReadFile(overridePath)
 		if err != nil {
 			m.logger.Warn("failed to read local override file, skipping",
 				zap.String("path", overridePath),
@@ -142,7 +143,7 @@ func (m *Manager) ApplyRemoteConfig(ctx context.Context, remote *protobufs.Agent
 	}
 
 	// Write result to OutputPath
-	if err := configwriter.WriteConfig(m.cfg.OutputPath, mergedConfig); err != nil {
+	if err := persistence.WriteFile(m.cfg.OutputPath, mergedConfig); err != nil {
 		return nil, fmt.Errorf("failed to write effective config: %w", err)
 	}
 	m.logger.Info("wrote effective config", zap.String("path", m.cfg.OutputPath))
@@ -176,7 +177,7 @@ func (m *Manager) storeRemoteConfigs(configMap map[string]*protobufs.AgentConfig
 		}
 
 		path := filepath.Join(remoteDir, name)
-		if err := configwriter.WriteConfig(path, cfg.GetBody()); err != nil {
+		if err := persistence.WriteFile(path, cfg.GetBody()); err != nil {
 			return fmt.Errorf("failed to store remote config %s: %w", name, err)
 		}
 	}
@@ -190,7 +191,7 @@ func (m *Manager) GetEffectiveConfig() ([]byte, error) {
 		return nil, fmt.Errorf("output path not configured")
 	}
 
-	content, err := configwriter.ReadConfig(m.cfg.OutputPath)
+	content, err := os.ReadFile(m.cfg.OutputPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read effective config: %w", err)
 	}
