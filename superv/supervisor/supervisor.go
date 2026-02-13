@@ -492,9 +492,10 @@ func (s *Supervisor) createAndStartClient(ctx context.Context, settings connecti
 	}
 
 	client, err := opamp.NewClient(s.logger, opamp.ClientConfig{
-		Endpoint:    settings.Endpoint,
-		InstanceUID: s.instanceUID,
-		Headers:     headers,
+		Endpoint:          settings.Endpoint,
+		InstanceUID:       s.instanceUID,
+		Headers:           headers,
+		HeartbeatInterval: settings.HeartbeatInterval,
 		TLSConfig: &tls.Config{
 			InsecureSkipVerify: settings.TLS.Insecure,
 			MinVersion:         minVersion,
@@ -692,20 +693,6 @@ func (s *Supervisor) prepareConnectionSettings(
 	newlyEnrolled, err := s.handleEnrollmentCertificate(settings)
 	if err != nil {
 		return nil, fmt.Errorf("enrollment certificate handling failed: %w", err)
-	}
-
-	// Update the wrapper's stored heartbeat interval for use when creating
-	// a new client after reconnect. Note: opamp-go already updated the
-	// sender's heartbeat interval in rcvOpampConnectionSettings before
-	// invoking this callback, so this only affects the wrapper's state.
-	if interval := settings.GetHeartbeatIntervalSeconds(); interval > 0 {
-		s.mu.RLock()
-		client := s.opampClient
-		s.mu.RUnlock()
-
-		if client != nil {
-			client.SetHeartbeatInterval(time.Duration(interval) * time.Second)
-		}
 	}
 
 	newSettings, changed := s.connectionSettingsManager.SettingsChanged(settings)

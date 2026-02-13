@@ -198,11 +198,15 @@ func TestClient_MethodsWithoutStart(t *testing.T) {
 	}, callbacks)
 	require.NoError(t, err)
 
-	// SetAgentDescription can be called before Start (stores for later)
-	err = client.SetAgentDescription(&protobufs.AgentDescription{})
+	// SetAgentDescription can be called before Start — opamp-go stores it internally
+	err = client.SetAgentDescription(&protobufs.AgentDescription{
+		IdentifyingAttributes: []*protobufs.KeyValue{
+			{Key: "service.name", Value: &protobufs.AnyValue{Value: &protobufs.AnyValue_StringValue{StringValue: "test"}}},
+		},
+	})
 	require.NoError(t, err)
 
-	// SetHealth can be called before Start (stores for later)
+	// SetHealth can be called before Start — opamp-go stores it internally
 	err = client.SetHealth(&protobufs.ComponentHealth{})
 	require.NoError(t, err)
 
@@ -252,19 +256,18 @@ func TestClient_SetEffectiveConfig_RespectsContext(t *testing.T) {
 	cancel()
 
 	logger := zaptest.NewLogger(t)
-	c := &Client{
-		logger:      logger,
-		opampClient: nil, // Not started
-	}
+	c, err := NewClient(logger, ClientConfig{
+		Endpoint:    "ws://localhost:4320/v1/opamp",
+		InstanceUID: "550e8400-e29b-41d4-a716-446655440000",
+	}, &Callbacks{})
+	require.NoError(t, err)
 
 	config := map[string]*protobufs.AgentConfigFile{
 		"test.yaml": {Body: []byte("test: config")},
 	}
 
-	// Should not hang or ignore context cancellation
-	err := c.SetEffectiveConfig(ctx, config)
-	// With nil opampClient, it stores config but doesn't call UpdateEffectiveConfig
-	// This test verifies the method signature accepts context
+	// Before Start(), stores config but doesn't call UpdateEffectiveConfig
+	err = c.SetEffectiveConfig(ctx, config)
 	require.NoError(t, err)
 }
 
@@ -563,11 +566,12 @@ func TestCapabilitiesToProto_ReportsHeartbeat(t *testing.T) {
 		"ReportsHeartbeat capability should be set")
 }
 
-func TestClient_HeartbeatInterval_Default(t *testing.T) {
+func TestClient_HeartbeatInterval_FromConfig(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	cfg := ClientConfig{
-		Endpoint:    "ws://localhost:4320/v1/opamp",
-		InstanceUID: "550e8400-e29b-41d4-a716-446655440000",
+		Endpoint:          "ws://localhost:4320/v1/opamp",
+		InstanceUID:       "550e8400-e29b-41d4-a716-446655440000",
+		HeartbeatInterval: 45 * time.Second,
 		Capabilities: Capabilities{
 			ReportsHeartbeat: true,
 		},
@@ -575,25 +579,7 @@ func TestClient_HeartbeatInterval_Default(t *testing.T) {
 
 	client, err := NewClient(logger, cfg, nil)
 	require.NoError(t, err)
-	require.Equal(t, 30*time.Second, client.HeartbeatInterval(),
-		"Default heartbeat interval should be 30 seconds")
-}
-
-func TestClient_SetHeartbeatInterval(t *testing.T) {
-	logger := zaptest.NewLogger(t)
-	cfg := ClientConfig{
-		Endpoint:    "ws://localhost:4320/v1/opamp",
-		InstanceUID: "550e8400-e29b-41d4-a716-446655440000",
-		Capabilities: Capabilities{
-			ReportsHeartbeat: true,
-		},
-	}
-
-	client, err := NewClient(logger, cfg, nil)
-	require.NoError(t, err)
-
-	client.SetHeartbeatInterval(45 * time.Second)
-	require.Equal(t, 45*time.Second, client.HeartbeatInterval())
+	require.Equal(t, 45*time.Second, client.cfg.HeartbeatInterval)
 }
 
 func TestCapabilitiesToProto_ReportsAvailableComponents(t *testing.T) {
@@ -619,7 +605,7 @@ func TestClient_SetAvailableComponents_BeforeStart(t *testing.T) {
 	}, &Callbacks{})
 	require.NoError(t, err)
 
-	// Set components before start should not error
+	// Set components before start should not error — opamp-go stores them internally
 	components := &protobufs.AvailableComponents{
 		Components: map[string]*protobufs.ComponentDetails{
 			"receiver/otlp": {},
@@ -628,8 +614,4 @@ func TestClient_SetAvailableComponents_BeforeStart(t *testing.T) {
 	}
 	err = client.SetAvailableComponents(components)
 	require.NoError(t, err)
-
-	// Verify the components were stored internally
-	require.NotNil(t, client.initialComponents)
-	require.Contains(t, client.initialComponents.Components, "receiver/otlp")
 }
