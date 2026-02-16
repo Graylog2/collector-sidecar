@@ -481,10 +481,7 @@ func (s *Supervisor) discoverComponents(ctx context.Context) *protobufs.Availabl
 // createAndStartClient creates a new OpAMP client with current config, sets it up, and starts it.
 // This is used when reconnecting with new or restored connection settings.
 func (s *Supervisor) createAndStartClient(ctx context.Context, settings connection.Settings) (*opamp.Client, error) {
-	headers, err := s.buildAuthHeaders(settings)
-	if err != nil {
-		return nil, fmt.Errorf("build auth headers: %w", err)
-	}
+	headers, headerFunc := s.buildAuthHeaders(settings)
 
 	minVersion, maxVersion, err := settings.TLS.ToTLSMinMaxVersion()
 	if err != nil {
@@ -495,6 +492,7 @@ func (s *Supervisor) createAndStartClient(ctx context.Context, settings connecti
 		Endpoint:          settings.Endpoint,
 		InstanceUID:       s.instanceUID,
 		Headers:           headers,
+		HeaderFunc:        headerFunc,
 		HeartbeatInterval: settings.HeartbeatInterval,
 		TLSConfig: &tls.Config{
 			InsecureSkipVerify: settings.TLS.Insecure,
@@ -627,13 +625,14 @@ func toHTTPHeaders(headers map[string]string) http.Header {
 	return h
 }
 
-// buildAuthHeaders creates HTTP headers including authentication.
-// During enrollment, uses the enrollment JWT as bearer token.
-// After enrollment, generates a new JWT signed with the client certificate.
-func (s *Supervisor) buildAuthHeaders(settings connection.Settings) (http.Header, error) {
+// buildAuthHeaders creates HTTP headers and an optional HeaderFunc for authentication.
+// During enrollment, the enrollment JWT is set as a static Authorization header.
+// After enrollment, a HeaderFunc is returned that generates a fresh JWT for each request,
+// ensuring the token doesn't expire during long-running connections.
+func (s *Supervisor) buildAuthHeaders(settings connection.Settings) (http.Header, func(http.Header) http.Header) {
 	headers := toHTTPHeaders(settings.Headers)
 
-	// If we're not enrolled yet, use the enrollment JWT
+	// If we're not enrolled yet, use the enrollment JWT as a static header.
 	if !s.authManager.IsEnrolled() {
 		if jwt := s.authManager.EnrollmentJWT(); jwt != "" {
 			headers.Set("Authorization", "Bearer "+jwt)
@@ -641,13 +640,19 @@ func (s *Supervisor) buildAuthHeaders(settings connection.Settings) (http.Header
 		return headers, nil
 	}
 
-	authHeader, err := s.authManager.GetAuthorizationHeader()
-	if err != nil {
-		return nil, err
+	// When enrolled, generate a fresh JWT before each HTTP request so the
+	// token never expires during long-running connections.
+	headerFunc := func(h http.Header) http.Header {
+		authHeader, err := s.authManager.GetAuthorizationHeader()
+		if err != nil {
+			s.logger.Error("Failed to generate JWT for OpAMP request", zap.Error(err))
+			return h
+		}
+		h.Set("Authorization", authHeader)
+		return h
 	}
-	headers.Set("Authorization", authHeader)
 
-	return headers, nil
+	return headers, headerFunc
 }
 
 func (s *Supervisor) reconnectClient(ctx context.Context, settings connection.Settings) error {

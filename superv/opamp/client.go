@@ -40,6 +40,7 @@ type ClientConfig struct {
 	Endpoint          string
 	InstanceUID       string
 	Headers           http.Header
+	HeaderFunc        func(http.Header) http.Header
 	TLSConfig         *tls.Config
 	Capabilities      Capabilities
 	HeartbeatInterval time.Duration // 0 uses opamp-go default (30s)
@@ -230,6 +231,7 @@ func (c *Client) Start(ctx context.Context) error {
 		InstanceUid:    instanceUID,
 		Callbacks:      c.callbacks.ToTypesCallbacks(),
 		Header:         c.cfg.Headers,
+		HeaderFunc:     c.cfg.HeaderFunc,
 	}
 
 	// Pass heartbeat interval to opamp-go if configured. When zero (default),

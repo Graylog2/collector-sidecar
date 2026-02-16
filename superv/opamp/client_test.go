@@ -20,6 +20,9 @@ package opamp
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -27,6 +30,7 @@ import (
 	"github.com/open-telemetry/opamp-go/protobufs"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestNewClient(t *testing.T) {
@@ -564,6 +568,57 @@ func TestCapabilitiesToProto_ReportsHeartbeat(t *testing.T) {
 
 	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsHeartbeat != 0,
 		"ReportsHeartbeat capability should be set")
+}
+
+func TestClient_HeaderFunc_InvokedPerHTTPRequest(t *testing.T) {
+	// Track how many times HeaderFunc is called.
+	var callCount atomic.Int32
+
+	// HTTP test server returns a minimal valid ServerToAgent protobuf response.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("X-Dynamic-Token") != "" {
+			callCount.Add(1)
+		}
+
+		resp := &protobufs.ServerToAgent{}
+		data, _ := proto.Marshal(resp)
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.Write(data)
+	}))
+	defer srv.Close()
+
+	logger := zaptest.NewLogger(t)
+	client, err := NewClient(logger, ClientConfig{
+		Endpoint:    srv.URL,
+		InstanceUID: "550e8400-e29b-41d4-a716-446655440000",
+		HeaderFunc: func(h http.Header) http.Header {
+			h.Set("X-Dynamic-Token", "fresh-value")
+			return h
+		},
+		HeartbeatInterval: 100 * time.Millisecond, // Fast polling for test
+		Capabilities: Capabilities{
+			ReportsHeartbeat: true,
+		},
+	}, &Callbacks{})
+	require.NoError(t, err)
+
+	err = client.SetAgentDescription(&protobufs.AgentDescription{
+		IdentifyingAttributes: []*protobufs.KeyValue{
+			{Key: "service.name", Value: &protobufs.AnyValue{Value: &protobufs.AnyValue_StringValue{StringValue: "test"}}},
+		},
+	})
+	require.NoError(t, err)
+
+	err = client.Start(t.Context())
+	require.NoError(t, err)
+
+	// Wait for at least two poll cycles to prove HeaderFunc is called per request.
+	require.Eventually(t, func() bool {
+		return callCount.Load() >= 2
+	}, 5*time.Second, 50*time.Millisecond,
+		"HeaderFunc should be invoked on each HTTP poll request")
+
+	require.NoError(t, client.Stop(t.Context()))
 }
 
 func TestClient_HeartbeatInterval_FromConfig(t *testing.T) {
