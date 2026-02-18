@@ -229,11 +229,11 @@ v2:
 v2all:
 	$(GO) generate .
 	$(GO) tool github.com/google/addlicense -check $(FMT_ARGS)
-	(cd builder && GOOS=linux GOARCH=amd64 $(GO) build -o ../graylog-collector-linux-amd64 .)
-	(cd builder && GOOS=linux GOARCH=arm64 $(GO) build -o ../graylog-collector-linux-arm64 .)
-	(cd builder && GOOS=darwin GOARCH=amd64 $(GO) build -o ../graylog-collector-darwin-amd64 .)
-	(cd builder && GOOS=darwin GOARCH=arm64 $(GO) build -o ../graylog-collector-darwin-arm64 .)
-	(cd builder && GOOS=windows GOARCH=amd64 $(GO) build -o ../graylog-collector-windows-amd64 .)
+	(cd builder && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 $(GO) build -o ../graylog-collector-linux-amd64 .)
+	(cd builder && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 $(GO) build -o ../graylog-collector-linux-arm64 .)
+	(cd builder && GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 $(GO) build -o ../graylog-collector-darwin-amd64 .)
+	(cd builder && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 $(GO) build -o ../graylog-collector-darwin-arm64 .)
+	(cd builder && GOOS=windows GOARCH=amd64 CGO_ENABLED=0 $(GO) build -o ../graylog-collector-windows-amd64 .)
 
 GOTEST_FLAGS := -vet=all -race
 ifdef CI
