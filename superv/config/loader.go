@@ -63,7 +63,7 @@ func Load(path string) (Config, error) {
 		TransformFunc: func(k, v string) (string, any) {
 			return strings.Replace(
 				strings.ToLower(strings.TrimPrefix(k, envPrefix)),
-				"_", "::", -1), v
+				"__", "::", -1), v
 		},
 	}), nil); err != nil {
 		return Config{}, err
