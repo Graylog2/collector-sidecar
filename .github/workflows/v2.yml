@@ -1,0 +1,54 @@
+name: "Build V2"
+
+on:
+  push:
+    branches: ["refactor/otel-collector-framework"]
+
+defaults:
+  run:
+    shell: "bash"
+
+jobs:
+  build:
+    runs-on: "ubuntu-slim"
+
+    steps:
+      - name: "Checkout repository"
+        uses: "actions/checkout@v6"
+        with:
+          persist-credentials: false
+
+      - name: "Setup Go environment"
+        uses: "actions/setup-go@v6"
+        with:
+          go-version: "1.26"
+
+      - name: "Run tests"
+        run: "make v2test"
+
+      - name: "Build binaries"
+        run: "make v2all"
+
+      - name: "Setup env"
+        run: |
+          echo "timestamp=$(date '+%F-%H-%M-%S')" | tee -a "$GITHUB_ENV"
+
+      - name: "Setup nFPM"
+        run: |
+          gh release download --repo goreleaser/nfpm -p "*amd64.deb" -O nfpm.deb
+          sudo apt-get install -y ./nfpm.deb
+
+      - name: "Build packages"
+        env:
+          TIMESTAMP: "${{ env.timestamp }}"
+        run: "nfpm package -f dist/v2/nfpm.yaml -p deb"
+
+      - name: "Upload build artifacts to S3"
+        env:
+          AWS_DEFAULT_REGION: "eu-west-1"
+          AWS_ACCESS_KEY_ID: "${{ secrets.AWS_S3_SNAPSHOTS_ACCESS_KEY_ID }}"
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_S3_SNAPSHOTS_SECRET_ACCESS_KEY }}
+          AWS_S3_BUCKET: "${{ secrets.AWS_S3_SNAPSHOTS_BUCKET }}"
+          TIMESTAMP: "${{ env.timestamp }}"
+        run: |
+          aws s3 cp --no-progress graylog-collector* "s3://${AWS_S3_BUCKET}/sidecar/v2/${TIMESTAMP}/"
