@@ -22,7 +22,7 @@ WINDOWS_INSTALLER_VERSION = $(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)$(subst -,
 # Removing the dot to comply with NuGet versioning (beta.1 -> beta2)
 CHOCOLATEY_VERSION = $(COLLECTOR_VERSION).$(COLLECTOR_REVISION)$(subst .,,$(COLLECTOR_VERSION_SUFFIX))
 
-FMT_ARGS = -f .license.template -ignore '{.github,.idea,changelog}/**' -ignore '**/*.{yml,yaml}' .
+FMT_ARGS = -f .license.template -ignore '{.github,.idea,changelog,dist/v2}/**' -ignore '**/*.{yml,yaml}' .
 
 .PHONY: all
 all: build
@@ -35,6 +35,7 @@ fmt: ## Run gofmt
 .PHONY: clean
 clean: ## Remove binaries
 	-rm -rf $(targets)
+	-rm -f graylog-collector*
 
 .PHONY: distclean
 distclean: clean
@@ -223,6 +224,16 @@ v2:
 	$(GO) generate .
 	$(GO) tool github.com/google/addlicense -check $(FMT_ARGS)
 	(cd builder && $(GO) build -o ../graylog-collector .)
+
+.PHONY: v2all
+v2all:
+	$(GO) generate .
+	$(GO) tool github.com/google/addlicense -check $(FMT_ARGS)
+	(cd builder && GOOS=linux GOARCH=amd64 $(GO) build -o ../graylog-collector-linux-amd64 .)
+	(cd builder && GOOS=linux GOARCH=arm64 $(GO) build -o ../graylog-collector-linux-arm64 .)
+	(cd builder && GOOS=darwin GOARCH=amd64 $(GO) build -o ../graylog-collector-darwin-amd64 .)
+	(cd builder && GOOS=darwin GOARCH=arm64 $(GO) build -o ../graylog-collector-darwin-arm64 .)
+	(cd builder && GOOS=windows GOARCH=amd64 $(GO) build -o ../graylog-collector-windows-amd64 .)
 
 GOTEST_FLAGS := -vet=all -race
 ifdef CI

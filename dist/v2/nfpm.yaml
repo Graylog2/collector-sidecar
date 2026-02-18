@@ -1,0 +1,46 @@
+name: "graylog-collector"
+description: "Graylog Collector"
+
+version: "2.0.0"
+release: "1.SNAPSHOT-${TIMESTAMP}"
+
+arch: "amd64"
+platform: "linux"
+
+section: "optional"
+priority: "extra"
+
+maintainer: "Graylog, Inc. <hello@graylog.org>"
+vendor: "Graylog"
+homepage: "https://www.graylog.org/"
+
+license: "SSPL-1"
+
+contents:
+  - src: "graylog-collector-linux-amd64"
+    dst: "/usr/bin/graylog-collector"
+    file_info:
+      owner: "root"
+      group: "root"
+      mode: 0555
+
+  - src: "dist/v2/graylog-collector.service"
+    dst: "/usr/lib/systemd/system/graylog-collector.service"
+    file_info:
+      owner: "root"
+      group: "root"
+      mode: 0444
+
+  - src: "dist/v2/enrollment.env.example"
+    dst: "/etc/graylog/collector/enrollment.env.example"
+    type: "config"
+    file_info:
+      owner: "root"
+      group: "root"
+      mode: 0444
+
+scripts:
+  preinstall: "dist/v2/preinstall.sh"
+  postinstall: "dist/v2/postinstall.sh"
+  preremove: "dist/v2/preremove.sh"
+  postremove: "dist/v2/postremove.sh"

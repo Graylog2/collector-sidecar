@@ -1,0 +1,28 @@
+# vim: ft=systemd
+[Unit]
+Description=Graylog Collector
+Documentation=http://docs.graylog.org/
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=10
+User=graylog-collector
+Group=graylog-collector
+LimitNOFILE=64000
+AmbientCapabilities=CAP_DAC_READ_SEARCH
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+EnvironmentFile=-/etc/graylog/collector/enrollment.env
+ExecStart=/usr/bin/graylog-collector supervisor
+
+# Make sure stderr/stdout is captured in the systemd journal.
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
