@@ -53,4 +53,6 @@ jobs:
           AWS_S3_BUCKET: "${{ secrets.AWS_S3_SNAPSHOTS_BUCKET }}"
           TIMESTAMP: "${{ env.timestamp }}"
         run: |
-          aws s3 cp --no-progress graylog-collector* "s3://${AWS_S3_BUCKET}/sidecar/v2/${TIMESTAMP}/"
+          for file in $(find . -maxdepth 1 -name 'graylog-collector*' -type f); do
+            aws s3 cp --no-progress "$file" "s3://${AWS_S3_BUCKET}/sidecar/v2/${TIMESTAMP}/"
+          done
