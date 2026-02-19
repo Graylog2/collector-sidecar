@@ -34,6 +34,8 @@ jobs:
           echo "timestamp=$(date '+%F-%H-%M-%S')" | tee -a "$GITHUB_ENV"
 
       - name: "Setup nFPM"
+        env:
+          GH_TOKEN: "${{ github.token }}"
         run: |
           gh release download --repo goreleaser/nfpm -p "*amd64.deb" -O nfpm.deb
           sudo apt-get install -y ./nfpm.deb
