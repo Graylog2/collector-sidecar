@@ -128,7 +128,11 @@ func New(logger *zap.Logger, cfg config.Config) (*Supervisor, error) {
 			connSettings.Headers = cfg.Server.Headers
 		} else {
 			if enrollEndpoint := cfg.Server.Auth.EnrollmentEndpoint; enrollEndpoint != "" {
-				connSettings.Endpoint = enrollEndpoint
+				endpoint, err := config.DeriveEnrollmentEndpoint(enrollEndpoint)
+				if err != nil {
+					return nil, fmt.Errorf("failed to derive enrollment endpoint: %w", err)
+				}
+				connSettings.Endpoint = endpoint
 				connSettings.Headers = cfg.Server.Auth.EnrollmentHeaders
 			} else if serverEndpoint := cfg.Server.Endpoint; serverEndpoint != "" {
 				connSettings.Endpoint = serverEndpoint

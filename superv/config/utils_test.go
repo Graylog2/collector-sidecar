@@ -37,6 +37,7 @@ func TestDeriveEnrollmentEndpoint(t *testing.T) {
 		{"https://example.com:1234", "https://example.com:1234/v1/opamp", false},
 		{"https://example.com/", "https://example.com/v1/opamp", false},
 		{"https://example.com/different/opamp", "https://example.com/different/opamp", false},
+		{"https://example.com/subpath/v1/opamp", "https://example.com/subpath/v1/opamp", false},
 		{"wss://example.com", "wss://example.com/v1/opamp", false},
 		{"ws://example.com", "ws://example.com/v1/opamp", false},
 		{"https://example", "https://example/v1/opamp", false},
@@ -57,5 +58,34 @@ func TestDeriveEnrollmentEndpoint(t *testing.T) {
 			}
 			assert.Equal(t, tt.output, output)
 		})
+	}
+}
+
+func TestServerBaseURL(t *testing.T) {
+	tests := []struct {
+		input     string
+		output    string
+		expectErr bool
+	}{
+		{"https://opamp.example.com/", "https://opamp.example.com", false},
+		{"https://opamp.example.com/v1/opamp", "https://opamp.example.com", false},
+		{"https://opamp.example.com/v1/opamp/", "https://opamp.example.com", false},
+		{"https://opamp.example.com:8443/v1/opamp", "https://opamp.example.com:8443", false},
+		{"https://opamp.example.com/graylog", "https://opamp.example.com/graylog", false},
+		{"https://opamp.example.com/graylog/v1/opamp", "https://opamp.example.com/graylog", false},
+		{"wss://opamp.example.com/v1/opamp", "wss://opamp.example.com", false},
+		{"", "", true},
+	}
+
+	for _, test := range tests {
+		url, err := ServerBaseURL(test.input)
+
+		assert.Equal(t, test.output, url, "Unexpected output for %q", test.input)
+
+		if test.expectErr {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+		}
 	}
 }

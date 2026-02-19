@@ -50,3 +50,21 @@ func DeriveEnrollmentEndpoint(enrollmentURL string) (string, error) {
 	}
 	return endpoint.String(), nil
 }
+
+// ServerBaseURL extracts the base URL (scheme + host) from an enrollment URL.
+func ServerBaseURL(enrollmentURL string) (string, error) {
+	if enrollmentURL == "" {
+		return "", errors.New("enrollment URL cannot be empty")
+	}
+
+	u, err := url.Parse(enrollmentURL)
+	if err != nil {
+		return "", fmt.Errorf("invalid enrollment URL: %w", err)
+	}
+
+	path := strings.TrimSuffix(strings.TrimSuffix(u.Path, "/"), DefaultOpAMPPath)
+	if path == "" || path == "/" {
+		return fmt.Sprintf("%s://%s", u.Scheme, u.Host), nil
+	}
+	return fmt.Sprintf("%s://%s%s", u.Scheme, u.Host, path), nil
+}

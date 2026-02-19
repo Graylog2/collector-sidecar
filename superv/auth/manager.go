@@ -28,6 +28,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Graylog2/collector-sidecar/superv/config"
 	"go.uber.org/zap"
 
 	"github.com/Graylog2/collector-sidecar/superv/persistence"
@@ -124,7 +125,7 @@ type EnrollmentResult struct {
 func (m *Manager) PrepareEnrollment(ctx context.Context, enrollmentEndpoint, enrollmentToken, instanceUID string) (*EnrollmentResult, error) {
 	m.logger.Info("Preparing enrollment", zap.String("instance_uid", instanceUID), zap.String("endpoint", enrollmentEndpoint))
 
-	baseURL, err := ServerBaseURL(enrollmentEndpoint)
+	baseURL, err := config.ServerBaseURL(enrollmentEndpoint)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get server base URL: %w", err)
 	}

@@ -27,16 +27,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestServerBaseURL(t *testing.T) {
-	url, err := ServerBaseURL("https://opamp.example.com/opamp/enroll/token")
-	require.NoError(t, err)
-	require.Equal(t, "https://opamp.example.com", url)
-
-	url, err = ServerBaseURL("https://opamp.example.com:8443/opamp/enroll/token")
-	require.NoError(t, err)
-	require.Equal(t, "https://opamp.example.com:8443", url)
-}
-
 func TestValidateEnrollmentJWT(t *testing.T) {
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	require.NoError(t, err)

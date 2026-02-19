@@ -111,19 +111,19 @@ func TestCapabilitiesToProto(t *testing.T) {
 
 func TestCapabilitiesToProto_AllCapabilities(t *testing.T) {
 	caps := Capabilities{
-		AcceptsRemoteConfig:             true,
-		ReportsEffectiveConfig:          true,
-		AcceptsPackages:                 true,
-		ReportsPackageStatuses:          true,
-		ReportsOwnTraces:                true,
-		ReportsOwnMetrics:               true,
-		ReportsOwnLogs:                  true,
-		AcceptsOpAMPConnectionSettings:  true,
-		AcceptsRestartCommand: true,
-		ReportsHealth:                   true,
-		ReportsRemoteConfig:             true,
-		ReportsHeartbeat:                true,
-		ReportsAvailableComponents:      true,
+		AcceptsRemoteConfig:            true,
+		ReportsEffectiveConfig:         true,
+		AcceptsPackages:                true,
+		ReportsPackageStatuses:         true,
+		ReportsOwnTraces:               true,
+		ReportsOwnMetrics:              true,
+		ReportsOwnLogs:                 true,
+		AcceptsOpAMPConnectionSettings: true,
+		AcceptsRestartCommand:          true,
+		ReportsHealth:                  true,
+		ReportsRemoteConfig:            true,
+		ReportsHeartbeat:               true,
+		ReportsAvailableComponents:     true,
 	}
 
 	proto := caps.ToProto()

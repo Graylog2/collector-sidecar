@@ -119,14 +119,10 @@ func buildConfig(cmd *cobra.Command) (config.Config, []func(logger *zap.Logger),
 	}
 	if cmd.Flag("enroll-endpoint").Changed {
 		enrollEndpoint, _ := cmd.Flags().GetString("enroll-endpoint")
-		endpoint, err := config.DeriveEnrollmentEndpoint(enrollEndpoint)
-		if err != nil {
-			return config.Config{}, nil, fmt.Errorf("invalid enrollment endpoint: %w", err)
-		}
-		cfg.Server.Auth.EnrollmentEndpoint = endpoint
+		cfg.Server.Auth.EnrollmentEndpoint = enrollEndpoint
 
 		events = append(events, func(logger *zap.Logger) {
-			logger.Debug("Using enrollment endpoint from command line flag", zap.String("endpoint", endpoint))
+			logger.Debug("Using enrollment endpoint from command line flag", zap.String("endpoint", enrollEndpoint))
 		})
 	}
 	if cmd.Flag("enroll-token").Changed {

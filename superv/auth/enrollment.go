@@ -20,7 +20,6 @@ package auth
 import (
 	"errors"
 	"fmt"
-	"net/url"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -40,20 +39,6 @@ func (c *EnrollmentClaims) IsExpired() bool {
 		return false
 	}
 	return time.Now().After(c.ExpiresAt.Time)
-}
-
-// ServerBaseURL extracts the base URL (scheme + host) from an enrollment URL.
-func ServerBaseURL(enrollmentURL string) (string, error) {
-	if enrollmentURL == "" {
-		return "", errors.New("enrollment URL cannot be empty")
-	}
-
-	u, err := url.Parse(enrollmentURL)
-	if err != nil {
-		return "", fmt.Errorf("invalid enrollment URL: %w", err)
-	}
-
-	return fmt.Sprintf("%s://%s", u.Scheme, u.Host), nil
 }
 
 // ValidateEnrollmentJWT validates an enrollment JWT against the JWKS.
