@@ -72,6 +72,7 @@ func TestServerBaseURL(t *testing.T) {
 		{"https://opamp.example.com/v1/opamp/", "https://opamp.example.com", false},
 		{"https://opamp.example.com:8443/v1/opamp", "https://opamp.example.com:8443", false},
 		{"https://opamp.example.com/graylog", "https://opamp.example.com/graylog", false},
+		{"https://opamp.example.com/graylog/", "https://opamp.example.com/graylog", false},
 		{"https://opamp.example.com/graylog/v1/opamp", "https://opamp.example.com/graylog", false},
 		{"wss://opamp.example.com/v1/opamp", "wss://opamp.example.com", false},
 		{"", "", true},
