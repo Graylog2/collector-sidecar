@@ -219,24 +219,26 @@ package-tar: ## Create tar archive for all platforms
 help:
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | $(AWK) 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
+V2_BUILD_OPTS = -ldflags "-s -X github.com/Graylog2/collector-sidecar/superv/version.version=$(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX) -X github.com/Graylog2/collector-sidecar/superv/version.commit=$(GIT_REV)"
+
 .PHONY: v2
 v2:
 	$(GO) generate .
 	$(GO) tool github.com/google/addlicense -check $(FMT_ARGS)
-	(cd builder && $(GO) build -o ../graylog-collector .)
+	(cd builder && $(GO) build $(V2_BUILD_OPTS) -o ../graylog-collector .)
 
 .PHONY: v2all
 v2all:
 	$(GO) generate .
 	$(GO) tool github.com/google/addlicense -check $(FMT_ARGS)
-	(cd builder && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 $(GO) build -o ../graylog-collector-linux-amd64 .)
-	(cd builder && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 $(GO) build -o ../graylog-collector-linux-arm64 .)
-	(cd builder && GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 $(GO) build -o ../graylog-collector-darwin-amd64 .)
-	(cd builder && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 $(GO) build -o ../graylog-collector-darwin-arm64 .)
+	(cd builder && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 $(GO) build $(V2_BUILD_OPTS) -o ../graylog-collector-linux-amd64 .)
+	(cd builder && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 $(GO) build $(V2_BUILD_OPTS) -o ../graylog-collector-linux-arm64 .)
+	(cd builder && GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 $(GO) build $(V2_BUILD_OPTS) -o ../graylog-collector-darwin-amd64 .)
+	(cd builder && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 $(GO) build $(V2_BUILD_OPTS) -o ../graylog-collector-darwin-arm64 .)
 	# Build with CGO enabled on Windows to avoid the problematic pure-go DNS resolver.
 	# See: https://github.com/prometheus/prometheus/issues/11480
 	#      https://pkg.go.dev/net#hdr-Name_Resolution
-	(cd builder && GOOS=windows GOARCH=amd64 CGO_ENABLED=1 $(GO) build -o ../graylog-collector-windows-amd64 .)
+	(cd builder && GOOS=windows GOARCH=amd64 CGO_ENABLED=1 $(GO) build $(V2_BUILD_OPTS) -o ../graylog-collector-windows-amd64 .)
 
 GOTEST_FLAGS := -vet=all -race
 ifdef CI
