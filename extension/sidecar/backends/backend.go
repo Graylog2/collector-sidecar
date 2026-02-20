@@ -30,6 +30,7 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/api/graylog"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/cfg"
+	"github.com/Graylog2/collector-sidecar/extension/sidecar/common"
 	"github.com/Graylog2/collector-sidecar/extension/sidecar/system"
 )
 
@@ -49,25 +50,34 @@ type Backend struct {
 	backendStatus        system.VerboseStatus
 }
 
-func BackendFromResponse(response graylog.ResponseCollectorBackend, configId string, ctx *cfg.Config) *Backend {
+func BackendFromResponse(response graylog.ResponseCollectorBackend, configId string, ctx *cfg.Config) (*Backend, error) {
+	safeName, err := common.SanitizePathComponent(response.Name)
+	if err != nil {
+		return nil, fmt.Errorf("backend name: %w", err)
+	}
+	safeConfigId, err := common.SanitizePathComponent(configId)
+	if err != nil {
+		return nil, fmt.Errorf("config ID: %w", err)
+	}
+
 	return &Backend{
 		Enabled:              helpers.NewTrue(),
-		Id:                   response.Id + "-" + configId,
+		Id:                   response.Id + "-" + safeConfigId,
 		CollectorId:          response.Id,
-		ConfigId:             configId,
-		Name:                 response.Name + "-" + configId,
+		ConfigId:             safeConfigId,
+		Name:                 safeName + "-" + safeConfigId,
 		ServiceType:          response.ServiceType,
 		OperatingSystem:      response.OperatingSystem,
 		ExecutablePath:       response.ExecutablePath,
-		ConfigurationPath:    BuildConfigurationPath(response, configId, ctx),
+		ConfigurationPath:    buildConfigurationPath(safeName, safeConfigId, ctx),
 		ExecuteParameters:    response.ExecuteParameters,
 		ValidationParameters: response.ValidationParameters,
 		backendStatus:        system.VerboseStatus{},
-	}
+	}, nil
 }
 
-func BuildConfigurationPath(response graylog.ResponseCollectorBackend, configId string, ctx *cfg.Config) string {
-	return filepath.Join(ctx.UserConfig.CollectorConfigurationDirectory, configId, response.Name+".conf")
+func buildConfigurationPath(name string, configId string, ctx *cfg.Config) string {
+	return filepath.Join(ctx.UserConfig.CollectorConfigurationDirectory, configId, name+".conf")
 }
 
 func (b *Backend) Equals(a *Backend) bool {

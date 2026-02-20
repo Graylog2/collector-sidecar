@@ -86,7 +86,12 @@ func StartPeriodicals(context *cfg.Config) {
 					configId := assignment.ConfigurationId
 					for _, backend := range lastBackendResponse.Backends {
 						if backend.Id == assignment.BackendId {
-							backendList = append(backendList, *backends.BackendFromResponse(backend, configId, context))
+							b, err := backends.BackendFromResponse(backend, configId, context)
+							if err != nil {
+								log.Errorf("Skipping backend with invalid path component: %s", err)
+								continue
+							}
+							backendList = append(backendList, *b)
 						}
 					}
 				}

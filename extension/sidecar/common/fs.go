@@ -16,6 +16,7 @@
 package common
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -23,6 +24,17 @@ import (
 )
 
 var log = logger.Log()
+
+// SanitizePathComponent returns the base name of s, stripping any directory
+// traversal. It returns an error if the result is empty, ".", "..", or a
+// filesystem root (e.g. "/" or "C:\").
+func SanitizePathComponent(s string) (string, error) {
+	base := filepath.Base(s)
+	if base == "" || base == "." || base == ".." || base == string(filepath.Separator) {
+		return "", fmt.Errorf("invalid path component: %q", s)
+	}
+	return base, nil
+}
 
 func FileExists(filePath string) error {
 	_, err := os.Stat(filePath)
