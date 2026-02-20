@@ -166,17 +166,29 @@ func (m *Manager) storeRemoteConfigs(configMap map[string]*protobufs.AgentConfig
 
 	remoteDir := filepath.Join(m.cfg.ConfigDir, "remote")
 
+	seen := make(map[string]string) // basename -> original name
+
 	for name, cfg := range configMap {
 		if cfg == nil {
 			continue
 		}
 
-		// Reject empty file names
-		if name == "" {
-			return fmt.Errorf("remote ConfigMap contains entry with empty name")
+		// Use only the base name — paths in filenames are not supported.
+		base := filepath.Base(name)
+		if base == "" || base == "." || base == ".." {
+			m.logger.Warn("Skipping remote config with invalid name", zap.String("name", name))
+			continue
 		}
 
-		path := filepath.Join(remoteDir, name)
+		if prev, ok := seen[base]; ok {
+			m.logger.Warn("Remote config basename collision, later entry overwrites earlier",
+				zap.String("basename", base),
+				zap.String("previous", prev),
+				zap.String("current", name))
+		}
+		seen[base] = name
+
+		path := filepath.Join(remoteDir, base)
 		if err := persistence.WriteFile(path, cfg.GetBody(), 0o600); err != nil {
 			return fmt.Errorf("failed to store remote config %s: %w", name, err)
 		}
