@@ -37,7 +37,7 @@ func TestLoadOrCreateInstanceUID_CreatesNew(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify file was created
-	filePath := filepath.Join(dir, "instance_uid.yaml")
+	filePath := filepath.Join(dir, "identity.yaml")
 	_, err = os.Stat(filePath)
 	require.NoError(t, err)
 }
@@ -62,7 +62,7 @@ func TestLoadOrCreateInstanceUID_FileIsReadOnly(t *testing.T) {
 	require.NoError(t, err)
 
 	// Check file permissions are read-only
-	filePath := filepath.Join(dir, "instance_uid.yaml")
+	filePath := filepath.Join(dir, "identity.yaml")
 	info, err := os.Stat(filePath)
 	require.NoError(t, err)
 	require.Equal(t, os.FileMode(0444), info.Mode().Perm())

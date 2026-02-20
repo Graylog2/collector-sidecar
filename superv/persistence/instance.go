@@ -19,6 +19,7 @@ package persistence
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -27,7 +28,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const instanceUIDFile = "instance_uid.yaml"
+const instanceUIDFile = "identity.yaml"
 
 // InstanceData represents the persisted instance identity.
 type InstanceData struct {
@@ -78,6 +79,14 @@ func LoadOrCreateInstanceUID(dir string) (string, error) {
 // LoadInstanceData loads the instance data from disk.
 func LoadInstanceData(dir string) (*InstanceData, error) {
 	filePath := filepath.Join(dir, instanceUIDFile)
+
+	// TODO: Remove legacy identity path handling!
+	legacyFilePath := filepath.Join(dir, "instance_uid.yaml")
+	if _, err := os.Stat(legacyFilePath); err == nil {
+		if err := os.Rename(legacyFilePath, filePath); err != nil {
+			return nil, fmt.Errorf("rename legacy file failed: %w", err)
+		}
+	}
 
 	content, err := os.ReadFile(filePath)
 	if err != nil {
