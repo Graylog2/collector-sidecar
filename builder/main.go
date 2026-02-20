@@ -18,7 +18,7 @@ func main() {
 	info := component.BuildInfo{
 		Command:     "graylog-collector",
 		Description: "Graylog Collector",
-		Version:     "2.0.0-alpha.0",
+		Version:     "2.0.0-SNAPSHOT",
 	}
 
 	set := otelcol.CollectorSettings{
