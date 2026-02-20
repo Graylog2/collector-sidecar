@@ -225,6 +225,7 @@ func DefaultConfig() Config {
 				MergeStrategy: "deep",
 			},
 			Health: HealthConfig{
+				// TODO: Check if we can switch to a UNIX socket instead of opening a network port.
 				Endpoint: "http://localhost:13133/health",
 				Interval: 10 * time.Second,
 				Timeout:  5 * time.Second,

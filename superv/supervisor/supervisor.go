@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -40,6 +41,7 @@ import (
 	"github.com/Graylog2/collector-sidecar/superv/components"
 	"github.com/Graylog2/collector-sidecar/superv/config"
 	"github.com/Graylog2/collector-sidecar/superv/configmanager"
+	"github.com/Graylog2/collector-sidecar/superv/configmerge"
 	"github.com/Graylog2/collector-sidecar/superv/healthmonitor"
 	"github.com/Graylog2/collector-sidecar/superv/keen"
 	"github.com/Graylog2/collector-sidecar/superv/opamp"
@@ -155,6 +157,23 @@ func New(logger *zap.Logger, cfg config.Config) (*Supervisor, error) {
 
 	connSettingsMgr.SetCurrent(connSettings)
 
+	// Parse the health monitor URL (e.g. "http://localhost:13133/health") into
+	// the host:port and path components that the OTel health_check extension expects.
+	healthCheck := configmerge.HealthCheckConfig{}
+	if cfg.Agent.Health.Endpoint != "" {
+		u, err := url.Parse(cfg.Agent.Health.Endpoint)
+		if err != nil {
+			return nil, fmt.Errorf("invalid health endpoint URL %q: %w", cfg.Agent.Health.Endpoint, err)
+		}
+		if u.Host == "" {
+			return nil, fmt.Errorf("invalid health endpoint URL %q: must be an absolute URL (e.g. http://localhost:13133/health)", cfg.Agent.Health.Endpoint)
+		}
+		healthCheck.Endpoint = u.Host
+		if u.Path != "" && u.Path != "/" {
+			healthCheck.Path = u.Path
+		}
+	}
+
 	// Initialize config manager
 	configMgr := configmanager.New(logger.Named("config"), configmanager.Config{
 		ConfigDir:      filepath.Join(cfg.Persistence.Dir, "config"),
@@ -162,6 +181,7 @@ func New(logger *zap.Logger, cfg config.Config) (*Supervisor, error) {
 		LocalOverrides: cfg.Agent.Config.LocalOverrides,
 		LocalEndpoint:  cfg.LocalServer.Endpoint,
 		InstanceUID:    uid,
+		HealthCheck:    healthCheck,
 	})
 
 	// Initialize health monitor
@@ -236,9 +256,9 @@ func (s *Supervisor) Start(ctx context.Context) error {
 		return fmt.Errorf("authentication initialization failed: %w", err)
 	}
 
-	// Determine effective config path
-	// TODO: Write actual merged config when remote config handling is implemented
-	configPath := filepath.Join(s.persistenceDir, "effective.yaml")
+	// Use the config manager's output path — this is where ApplyRemoteConfig writes
+	// the merged effective config that the collector should read.
+	configPath := s.configManager.OutputPath()
 
 	// Expand template variables in agent args
 	expandedArgs, err := s.expandArgs(s.agentCfg.Args, configPath)
@@ -522,6 +542,7 @@ func (s *Supervisor) createAndStartClient(ctx context.Context, settings connecti
 		Capabilities: opamp.Capabilities{
 			AcceptsRemoteConfig:            true,
 			ReportsEffectiveConfig:         true,
+			ReportsRemoteConfig:            true,
 			ReportsHealth:                  true,
 			AcceptsOpAMPConnectionSettings: true,
 			// ReportsConnectionSettingsStatus is disabled because opamp-go schedules APPLIED immediately after the callback
@@ -550,6 +571,14 @@ func (s *Supervisor) createAndStartClient(ctx context.Context, settings connecti
 
 	if err := client.SetHealth(s.initialComponentHealth()); err != nil {
 		return nil, fmt.Errorf("set health: %w", err)
+	}
+
+	// Restore persisted remote config status so the server knows our
+	// last config state after a supervisor restart.
+	if status, err := s.configManager.LoadRemoteConfigStatus(); err != nil {
+		s.logger.Warn("Failed to load persisted remote config status, starting with UNSET", zap.Error(err))
+	} else if status != nil {
+		client.SetInitialRemoteConfigStatus(status)
 	}
 
 	// Read pendingCSR under RLock — handleEnrollmentCertificate (phase 1, on opamp-go
@@ -832,6 +861,125 @@ func (s *Supervisor) handleEnrollmentCertificate(settings *protobufs.OpAMPConnec
 	return true, nil
 }
 
+// awaitCollectorHealthy polls the health monitor until the collector reports
+// healthy or the timeout expires. This is needed because Commander.Start()
+// returns immediately when crash recovery is enabled (MaxRetries >= 1).
+//
+// If the health HTTP endpoint is never reachable (only connection errors, never
+// an HTTP response) and the process is still running at timeout, we treat the
+// collector as healthy. This avoids false rollbacks when the health endpoint is
+// temporarily unavailable (e.g. slow bind, port conflict).
+//
+// However, if the endpoint IS reachable but returns non-2xx responses, that is a
+// definitive unhealthy signal and the process-alive fallback does not apply.
+func (s *Supervisor) awaitCollectorHealthy(ctx context.Context, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	var lastStatus *healthmonitor.HealthStatus
+	// Track whether we ever got an HTTP response (even an unhealthy one).
+	// The process-alive fallback only applies when the endpoint was never reachable.
+	endpointReached := false
+
+	for {
+		status, err := s.healthMonitor.CheckHealth(ctx)
+		if err == nil && status.Healthy {
+			return nil
+		}
+
+		if err == nil {
+			// Got an HTTP response but non-2xx — definitive unhealthy signal.
+			endpointReached = true
+			lastStatus = status
+		} else {
+			// Connection error — endpoint not reachable (yet).
+			if s.commander.IsRunning() {
+				s.logger.Debug("Health endpoint unreachable but process alive, waiting",
+					zap.Error(err))
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			// If the endpoint was reachable but consistently unhealthy, report failure.
+			if endpointReached {
+				if lastStatus != nil {
+					return fmt.Errorf("collector not healthy after %v: %s", timeout, lastStatus.ErrorMessage)
+				}
+				return fmt.Errorf("collector not healthy after %v", timeout)
+			}
+			// Endpoint was never reachable. Fall back to process-alive check.
+			if s.commander.IsRunning() {
+				s.logger.Warn("Health endpoint never became reachable, but process is running; treating as healthy")
+				return nil
+			}
+			return fmt.Errorf("collector not healthy after %v: health endpoint unreachable and process not running", timeout)
+		case <-ticker.C:
+		}
+	}
+}
+
+// rollbackAndRecover rolls back to the previous config and restarts the
+// collector. Used when the new config fails (either restart error or health
+// check failure). Reports FAILED status to the server.
+func (s *Supervisor) rollbackAndRecover(ctx context.Context, configHash []byte, originalErr error) {
+	if rbErr := s.configManager.RollbackConfig(); rbErr != nil {
+		s.logger.Error("Failed to roll back config, skipping recovery restart", zap.Error(rbErr))
+	} else {
+		// Restart with rolled-back config. The collector may be stopped
+		// (Restart = Stop + Start, failed Start leaves process down) or
+		// running with a bad config (health check failed).
+		if restartErr := s.commander.Restart(ctx); restartErr != nil {
+			s.logger.Error("Failed to restart collector after rollback", zap.Error(restartErr))
+		}
+	}
+
+	s.reportRemoteConfigStatus(ctx,
+		protobufs.RemoteConfigStatuses_RemoteConfigStatuses_FAILED,
+		fmt.Sprintf("config apply failed: %v", originalErr),
+		configHash,
+	)
+}
+
+// reportRemoteConfigStatus reports config status to the OpAMP server and persists it to disk.
+func (s *Supervisor) reportRemoteConfigStatus(_ context.Context, status protobufs.RemoteConfigStatuses, errMsg string, configHash []byte) {
+	s.mu.RLock()
+	client := s.opampClient
+	s.mu.RUnlock()
+
+	if client != nil {
+		if err := client.SetRemoteConfigStatus(&protobufs.RemoteConfigStatus{
+			Status:               status,
+			ErrorMessage:         errMsg,
+			LastRemoteConfigHash: configHash,
+		}); err != nil {
+			s.logger.Warn("Failed to report remote config status", zap.Error(err))
+		}
+	}
+
+	if err := s.configManager.SaveRemoteConfigStatus(status, errMsg, configHash); err != nil {
+		s.logger.Warn("Failed to persist remote config status", zap.Error(err))
+	}
+}
+
+// reportEffectiveConfig reports the effective config to the OpAMP server.
+func (s *Supervisor) reportEffectiveConfig(ctx context.Context, effectiveConfig []byte) {
+	s.mu.RLock()
+	client := s.opampClient
+	s.mu.RUnlock()
+
+	if client != nil {
+		if err := client.SetEffectiveConfig(ctx, map[string]*protobufs.AgentConfigFile{
+			"collector.yaml": {Body: effectiveConfig},
+		}); err != nil {
+			s.logger.Warn("Failed to report effective config", zap.Error(err))
+		}
+	}
+}
+
 // createOpAMPCallbacks creates the OpAMP client callbacks.
 // This is extracted to avoid duplication when recreating the client.
 func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
@@ -851,28 +999,48 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 			result, err := s.configManager.ApplyRemoteConfig(ctx, cfg)
 			if err != nil {
 				s.logger.Error("Failed to apply remote config", zap.Error(err))
+				s.reportRemoteConfigStatus(ctx,
+					protobufs.RemoteConfigStatuses_RemoteConfigStatuses_FAILED,
+					err.Error(),
+					cfg.GetConfigHash(),
+				)
 				return false
 			}
 
-			if result.Changed {
-				// TODO: Reload collector via commander when implemented
-				s.logger.Info("Config changed, collector reload needed")
-
-				s.mu.RLock()
-				client := s.opampClient
-				s.mu.RUnlock()
-
-				// Report effective config
-				if client != nil {
-					if err := client.SetEffectiveConfig(ctx, map[string]*protobufs.AgentConfigFile{
-						"collector.yaml": {
-							Body: result.EffectiveConfig,
-						},
-					}); err != nil {
-						s.logger.Warn("Failed to report effective config", zap.Error(err))
-					}
-				}
+			if !result.Changed {
+				return true
 			}
+
+			// Restart collector with new config.
+			// Restart = Stop + Start, so if Start fails the collector is down.
+			// On failure we roll back the config file and re-start the collector
+			// with the previous config to avoid leaving it stopped.
+			s.logger.Info("Config changed, restarting collector")
+			if err := s.commander.Restart(ctx); err != nil {
+				s.logger.Error("Failed to restart collector with new config", zap.Error(err))
+				s.rollbackAndRecover(ctx, cfg.GetConfigHash(), err)
+				return false
+			}
+
+			// Confirm the collector is healthy with the new config.
+			// Commander.Start() returns immediately when crash recovery is
+			// enabled (MaxRetries >= 1), so we must poll health to confirm
+			// the process actually started successfully.
+			if err := s.awaitCollectorHealthy(ctx, s.agentCfg.ConfigApplyTimeout); err != nil {
+				s.logger.Error("Collector unhealthy after restart", zap.Error(err))
+				s.rollbackAndRecover(ctx, cfg.GetConfigHash(), err)
+				return false
+			}
+
+			// Report effective config
+			s.reportEffectiveConfig(ctx, result.EffectiveConfig)
+
+			// Report success
+			s.reportRemoteConfigStatus(ctx,
+				protobufs.RemoteConfigStatuses_RemoteConfigStatuses_APPLIED,
+				"",
+				cfg.GetConfigHash(),
+			)
 
 			return true
 		},
@@ -933,6 +1101,18 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 
 			// Forward custom messages to the local OpAMP server (collector)
 			s.forwardCustomMessage(ctx, customMessage)
+		},
+		SaveRemoteConfigStatus: func(ctx context.Context, status *protobufs.RemoteConfigStatus) {
+			s.logger.Debug("SaveRemoteConfigStatus callback invoked",
+				zap.String("status", status.GetStatus().String()),
+			)
+			if err := s.configManager.SaveRemoteConfigStatus(
+				status.GetStatus(),
+				status.GetErrorMessage(),
+				status.GetLastRemoteConfigHash(),
+			); err != nil {
+				s.logger.Warn("Failed to persist remote config status from callback", zap.Error(err))
+			}
 		},
 	}
 }

@@ -160,12 +160,13 @@ var _ types.Logger = (*opampLogger)(nil)
 
 // Client wraps the opamp-go client with supervisor-specific functionality.
 type Client struct {
-	logger          *zap.Logger
-	cfg             ClientConfig
-	callbacks       *Callbacks
-	opampClient     client.OpAMPClient
-	effectiveConfig *protobufs.EffectiveConfig
-	started         atomic.Bool
+	logger             *zap.Logger
+	cfg                ClientConfig
+	callbacks          *Callbacks
+	opampClient        client.OpAMPClient
+	effectiveConfig    *protobufs.EffectiveConfig
+	remoteConfigStatus *protobufs.RemoteConfigStatus
+	started            atomic.Bool
 }
 
 // NewClient creates a new OpAMP client wrapper.
@@ -227,11 +228,12 @@ func (c *Client) Start(ctx context.Context) error {
 	}
 
 	settings := types.StartSettings{
-		OpAMPServerURL: c.cfg.Endpoint,
-		InstanceUid:    instanceUID,
-		Callbacks:      c.callbacks.ToTypesCallbacks(),
-		Header:         c.cfg.Headers,
-		HeaderFunc:     c.cfg.HeaderFunc,
+		OpAMPServerURL:     c.cfg.Endpoint,
+		InstanceUid:        instanceUID,
+		Callbacks:          c.callbacks.ToTypesCallbacks(),
+		Header:             c.cfg.Headers,
+		HeaderFunc:         c.cfg.HeaderFunc,
+		RemoteConfigStatus: c.remoteConfigStatus,
 	}
 
 	// Pass heartbeat interval to opamp-go if configured. When zero (default),
@@ -337,6 +339,13 @@ func (c *Client) SetRemoteConfigStatus(status *protobufs.RemoteConfigStatus) err
 		return errors.New("client not started")
 	}
 	return c.opampClient.SetRemoteConfigStatus(status)
+}
+
+// SetInitialRemoteConfigStatus sets the remote config status to include in
+// StartSettings. Must be called before Start(). This restores persisted status
+// so the server knows our last config state after a supervisor restart.
+func (c *Client) SetInitialRemoteConfigStatus(status *protobufs.RemoteConfigStatus) {
+	c.remoteConfigStatus = status
 }
 
 // RequestConnectionSettings sends a connection settings request to the server.

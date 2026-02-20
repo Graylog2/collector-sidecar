@@ -20,6 +20,8 @@ package configmanager
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -33,11 +35,12 @@ import (
 
 // Config holds the configuration for the config manager.
 type Config struct {
-	ConfigDir      string   // Directory to store remote configs
-	OutputPath     string   // Path to write final merged config
-	LocalOverrides []string // Paths to local override files
-	LocalEndpoint  string   // Local OpAMP server endpoint for injection
-	InstanceUID    string   // Instance UID for injection
+	ConfigDir      string                        // Directory to store remote configs
+	OutputPath     string                        // Path to write final merged config
+	LocalOverrides []string                      // Paths to local override files
+	LocalEndpoint  string                        // Local OpAMP server endpoint for injection
+	InstanceUID    string                        // Instance UID for injection
+	HealthCheck    configmerge.HealthCheckConfig // Health check extension injection settings
 }
 
 // ApplyResult contains the result of applying a remote config.
@@ -49,9 +52,10 @@ type ApplyResult struct {
 
 // Manager handles remote configuration from OpAMP server.
 type Manager struct {
-	logger   *zap.Logger
-	cfg      Config
-	lastHash []byte
+	logger       *zap.Logger
+	cfg          Config
+	lastHash     []byte
+	previousHash []byte
 }
 
 // New creates a new config manager.
@@ -142,6 +146,26 @@ func (m *Manager) ApplyRemoteConfig(ctx context.Context, remote *protobufs.Agent
 			zap.String("instanceUID", m.cfg.InstanceUID))
 	}
 
+	// Inject health_check extension to guarantee it stays reachable.
+	// This runs after merge so remote config cannot override the endpoint.
+	if m.cfg.HealthCheck.Endpoint != "" {
+		var err error
+		mergedConfig, err = configmerge.InjectHealthCheckExtension(mergedConfig, m.cfg.HealthCheck)
+		if err != nil {
+			return nil, fmt.Errorf("failed to inject health_check extension: %w", err)
+		}
+		m.logger.Debug("injected health_check extension",
+			zap.String("endpoint", m.cfg.HealthCheck.Endpoint))
+	}
+
+	// Back up current config for rollback (skip if no existing config)
+	if existing, err := os.ReadFile(m.cfg.OutputPath); err == nil {
+		if err := persistence.WriteFile(m.cfg.OutputPath+".prev", existing, 0o600); err != nil {
+			return nil, fmt.Errorf("failed to back up current config: %w", err)
+		}
+		m.logger.Debug("backed up current config", zap.String("path", m.cfg.OutputPath+".prev"))
+	}
+
 	// Write result to OutputPath
 	if err := persistence.WriteFile(m.cfg.OutputPath, mergedConfig, 0o600); err != nil {
 		return nil, fmt.Errorf("failed to write effective config: %w", err)
@@ -149,6 +173,7 @@ func (m *Manager) ApplyRemoteConfig(ctx context.Context, remote *protobufs.Agent
 	m.logger.Info("wrote effective config", zap.String("path", m.cfg.OutputPath))
 
 	// Update lastHash on success
+	m.previousHash = m.lastHash
 	m.lastHash = remote.GetConfigHash()
 
 	return &ApplyResult{
@@ -211,7 +236,92 @@ func (m *Manager) GetEffectiveConfig() ([]byte, error) {
 	return content, nil
 }
 
+// RollbackConfig restores the previous config from the backup file.
+// It resets lastHash to previousHash so the next remote config with
+// the old hash is not skipped by the deduplication check.
+func (m *Manager) RollbackConfig() error {
+	bakPath := m.cfg.OutputPath + ".prev"
+
+	bakContent, err := os.ReadFile(bakPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("no backup config to roll back to")
+		}
+		return fmt.Errorf("failed to read backup config: %w", err)
+	}
+
+	if err := persistence.WriteFile(m.cfg.OutputPath, bakContent, 0o600); err != nil {
+		return fmt.Errorf("failed to write rolled-back config: %w", err)
+	}
+
+	if err := os.Remove(bakPath); err != nil {
+		m.logger.Warn("failed to remove backup file after rollback", zap.Error(err))
+	}
+
+	m.lastHash = m.previousHash
+	m.previousHash = nil
+
+	m.logger.Info("rolled back to previous config", zap.String("path", m.cfg.OutputPath))
+	return nil
+}
+
 // GetConfigHash returns the hash of the last successfully applied config.
 func (m *Manager) GetConfigHash() []byte {
 	return m.lastHash
+}
+
+// OutputPath returns the path where the effective config is written.
+func (m *Manager) OutputPath() string {
+	return m.cfg.OutputPath
+}
+
+// remoteConfigStatusYAML is the on-disk YAML representation of RemoteConfigStatus.
+type remoteConfigStatusYAML struct {
+	Status         string `koanf:"status"`
+	ErrorMessage   string `koanf:"error_message"`
+	LastConfigHash string `koanf:"last_config_hash"` // base64-encoded
+}
+
+const remoteConfigStatusFile = "remote-config-status.yaml"
+
+// SaveRemoteConfigStatus persists the remote config status to disk as YAML.
+func (m *Manager) SaveRemoteConfigStatus(status protobufs.RemoteConfigStatuses, errorMessage string, configHash []byte) error {
+	data := remoteConfigStatusYAML{
+		Status:         status.String(),
+		ErrorMessage:   errorMessage,
+		LastConfigHash: base64.StdEncoding.EncodeToString(configHash),
+	}
+
+	path := filepath.Join(m.cfg.ConfigDir, remoteConfigStatusFile)
+	return persistence.WriteYAMLFile(".", path, data)
+}
+
+// LoadRemoteConfigStatus loads the persisted remote config status from disk.
+// Returns nil, nil if the file does not exist (fresh install).
+func (m *Manager) LoadRemoteConfigStatus() (*protobufs.RemoteConfigStatus, error) {
+	path := filepath.Join(m.cfg.ConfigDir, remoteConfigStatusFile)
+
+	var data remoteConfigStatusYAML
+	if err := persistence.LoadYAMLFile(".", path, &data); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to load remote config status: %w", err)
+	}
+
+	hash, err := base64.StdEncoding.DecodeString(data.LastConfigHash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode config hash: %w", err)
+	}
+
+	statusEnum, ok := protobufs.RemoteConfigStatuses_value[data.Status]
+	if !ok {
+		return nil, fmt.Errorf("unknown remote config status: %s", data.Status)
+	}
+
+	return &protobufs.RemoteConfigStatus{
+		Status:               protobufs.RemoteConfigStatuses(statusEnum),
+		ErrorMessage:         data.ErrorMessage,
+		LastRemoteConfigHash: hash,
+	}, nil
 }

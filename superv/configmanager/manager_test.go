@@ -28,6 +28,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
+
+	"github.com/Graylog2/collector-sidecar/superv/configmerge"
 )
 
 func createTestRemoteConfig(configName string, configBody []byte, hash []byte) *protobufs.AgentRemoteConfig {
@@ -506,4 +508,194 @@ func TestNew(t *testing.T) {
 	assert.Equal(t, logger, mgr.logger)
 	assert.Equal(t, cfg, mgr.cfg)
 	assert.Nil(t, mgr.lastHash)
+}
+
+func TestApplyRemoteConfig_CreatesBackupFile(t *testing.T) {
+	dir := t.TempDir()
+	outputPath := filepath.Join(dir, "config", "collector.yaml")
+
+	mgr := New(zaptest.NewLogger(t), Config{
+		ConfigDir:  filepath.Join(dir, "config"),
+		OutputPath: outputPath,
+	})
+
+	// First apply — no backup expected (nothing to back up)
+	cfg1 := createTestRemoteConfig("collector.yaml", []byte("receivers:\n  otlp:\n"), []byte("hash1"))
+	result1, err := mgr.ApplyRemoteConfig(context.Background(), cfg1)
+	require.NoError(t, err)
+	require.True(t, result1.Changed)
+
+	_, err = os.Stat(outputPath + ".prev")
+	require.ErrorIs(t, err, os.ErrNotExist, "no backup on first apply")
+
+	// Second apply — backup of first config expected
+	cfg2 := createTestRemoteConfig("collector.yaml", []byte("receivers:\n  otlp:\n  filelog:\n"), []byte("hash2"))
+	result2, err := mgr.ApplyRemoteConfig(context.Background(), cfg2)
+	require.NoError(t, err)
+	require.True(t, result2.Changed)
+
+	bakContent, err := os.ReadFile(outputPath + ".prev")
+	require.NoError(t, err)
+	require.Contains(t, string(bakContent), "otlp")
+	require.NotContains(t, string(bakContent), "filelog")
+}
+
+func TestApplyRemoteConfig_PreviousHashTracked(t *testing.T) {
+	dir := t.TempDir()
+	outputPath := filepath.Join(dir, "config", "collector.yaml")
+
+	mgr := New(zaptest.NewLogger(t), Config{
+		ConfigDir:  filepath.Join(dir, "config"),
+		OutputPath: outputPath,
+	})
+
+	// Apply first config
+	cfg1 := createTestRemoteConfig("collector.yaml", []byte("receivers:\n  otlp:\n"), []byte("hash1"))
+	_, err := mgr.ApplyRemoteConfig(context.Background(), cfg1)
+	require.NoError(t, err)
+	assert.Nil(t, mgr.previousHash, "previousHash should be nil after first apply")
+	assert.Equal(t, []byte("hash1"), mgr.lastHash)
+
+	// Apply second config
+	cfg2 := createTestRemoteConfig("collector.yaml", []byte("receivers:\n  filelog:\n"), []byte("hash2"))
+	_, err = mgr.ApplyRemoteConfig(context.Background(), cfg2)
+	require.NoError(t, err)
+	assert.Equal(t, []byte("hash1"), mgr.previousHash, "previousHash should be hash1 after second apply")
+	assert.Equal(t, []byte("hash2"), mgr.lastHash)
+}
+
+func TestRollbackConfig_RestoresPreviousConfig(t *testing.T) {
+	dir := t.TempDir()
+	outputPath := filepath.Join(dir, "config", "collector.yaml")
+
+	mgr := New(zaptest.NewLogger(t), Config{
+		ConfigDir:  filepath.Join(dir, "config"),
+		OutputPath: outputPath,
+	})
+
+	// Apply two configs so we have a .prev
+	cfg1 := createTestRemoteConfig("collector.yaml", []byte("version: 1\n"), []byte("hash1"))
+	_, err := mgr.ApplyRemoteConfig(context.Background(), cfg1)
+	require.NoError(t, err)
+
+	cfg2 := createTestRemoteConfig("collector.yaml", []byte("version: 2\n"), []byte("hash2"))
+	_, err = mgr.ApplyRemoteConfig(context.Background(), cfg2)
+	require.NoError(t, err)
+
+	// Rollback
+	err = mgr.RollbackConfig()
+	require.NoError(t, err)
+
+	// Output should contain version 1 config
+	content, err := os.ReadFile(outputPath)
+	require.NoError(t, err)
+	require.Contains(t, string(content), "version: 1")
+
+	// .prev should be removed
+	_, err = os.Stat(outputPath + ".prev")
+	require.ErrorIs(t, err, os.ErrNotExist)
+
+	// Hash should be reset so next apply with hash1 is not skipped
+	require.Equal(t, []byte("hash1"), mgr.GetConfigHash())
+}
+
+func TestRollbackConfig_ErrorsWhenNoBackup(t *testing.T) {
+	dir := t.TempDir()
+	outputPath := filepath.Join(dir, "config", "collector.yaml")
+
+	mgr := New(zaptest.NewLogger(t), Config{
+		ConfigDir:  filepath.Join(dir, "config"),
+		OutputPath: outputPath,
+	})
+
+	err := mgr.RollbackConfig()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "no backup")
+}
+
+func TestSaveAndLoadRemoteConfigStatus(t *testing.T) {
+	dir := t.TempDir()
+	mgr := New(zaptest.NewLogger(t), Config{
+		ConfigDir:  dir,
+		OutputPath: filepath.Join(dir, "collector.yaml"),
+	})
+
+	hash := []byte("abc123")
+	err := mgr.SaveRemoteConfigStatus(
+		protobufs.RemoteConfigStatuses_RemoteConfigStatuses_APPLIED,
+		"",
+		hash,
+	)
+	require.NoError(t, err)
+
+	status, err := mgr.LoadRemoteConfigStatus()
+	require.NoError(t, err)
+	require.NotNil(t, status)
+	require.Equal(t, protobufs.RemoteConfigStatuses_RemoteConfigStatuses_APPLIED, status.GetStatus())
+	require.Equal(t, hash, status.GetLastRemoteConfigHash())
+	require.Empty(t, status.GetErrorMessage())
+}
+
+func TestSaveAndLoadRemoteConfigStatus_Failed(t *testing.T) {
+	dir := t.TempDir()
+	mgr := New(zaptest.NewLogger(t), Config{
+		ConfigDir:  dir,
+		OutputPath: filepath.Join(dir, "collector.yaml"),
+	})
+
+	hash := []byte("abc123")
+	err := mgr.SaveRemoteConfigStatus(
+		protobufs.RemoteConfigStatuses_RemoteConfigStatuses_FAILED,
+		"restart failed: exit code 1",
+		hash,
+	)
+	require.NoError(t, err)
+
+	status, err := mgr.LoadRemoteConfigStatus()
+	require.NoError(t, err)
+	require.NotNil(t, status)
+	require.Equal(t, protobufs.RemoteConfigStatuses_RemoteConfigStatuses_FAILED, status.GetStatus())
+	require.Equal(t, "restart failed: exit code 1", status.GetErrorMessage())
+	require.Equal(t, hash, status.GetLastRemoteConfigHash())
+}
+
+func TestLoadRemoteConfigStatus_NoFile(t *testing.T) {
+	dir := t.TempDir()
+	mgr := New(zaptest.NewLogger(t), Config{
+		ConfigDir:  dir,
+		OutputPath: filepath.Join(dir, "collector.yaml"),
+	})
+
+	status, err := mgr.LoadRemoteConfigStatus()
+	require.NoError(t, err)
+	require.Nil(t, status)
+}
+
+func TestOutputPath(t *testing.T) {
+	mgr := New(zaptest.NewLogger(t), Config{
+		OutputPath: "/var/lib/superv/config/collector.yaml",
+	})
+	require.Equal(t, "/var/lib/superv/config/collector.yaml", mgr.OutputPath())
+}
+
+func TestApplyRemoteConfig_InjectsHealthCheckExtension(t *testing.T) {
+	dir := t.TempDir()
+	mgr := New(zaptest.NewLogger(t), Config{
+		ConfigDir:  filepath.Join(dir, "config"),
+		OutputPath: filepath.Join(dir, "config", "collector.yaml"),
+		HealthCheck: configmerge.HealthCheckConfig{
+			Endpoint: "localhost:13133",
+			Path:     "/health",
+		},
+	})
+
+	cfg := createTestRemoteConfig("collector.yaml", []byte("receivers:\n  otlp:\n"), []byte("hash1"))
+	result, err := mgr.ApplyRemoteConfig(context.Background(), cfg)
+	require.NoError(t, err)
+	require.True(t, result.Changed)
+
+	// Effective config should contain the health_check extension with correct settings
+	require.Contains(t, string(result.EffectiveConfig), "health_check")
+	require.Contains(t, string(result.EffectiveConfig), "localhost:13133")
+	require.Contains(t, string(result.EffectiveConfig), "/health")
 }

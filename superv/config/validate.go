@@ -108,6 +108,16 @@ func (a AgentConfig) Validate() error {
 		return fmt.Errorf("agent.reload.method: must be one of %v, got %q", validReloadMethods, a.Reload.Method)
 	}
 
+	if a.Health.Endpoint != "" {
+		u, err := url.Parse(a.Health.Endpoint)
+		if err != nil {
+			return fmt.Errorf("agent.health.endpoint: invalid URL %q: %w", a.Health.Endpoint, err)
+		}
+		if u.Host == "" {
+			return fmt.Errorf("agent.health.endpoint: must be an absolute URL (e.g. http://localhost:13133/health), got %q", a.Health.Endpoint)
+		}
+	}
+
 	return nil
 }
 

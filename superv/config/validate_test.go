@@ -63,6 +63,37 @@ func TestValidateAgentExecutable(t *testing.T) {
 	require.Contains(t, err.Error(), "agent.executable")
 }
 
+func TestValidateHealthEndpoint(t *testing.T) {
+	tests := []struct {
+		name      string
+		endpoint  string
+		expectErr bool
+	}{
+		{"valid_full_url", "http://localhost:13133/health", false},
+		{"valid_https", "https://localhost:13133/health", false},
+		{"valid_no_path", "http://localhost:13133", false},
+		{"empty_allowed", "", false},
+		{"missing_scheme", "localhost:13133/health", true},
+		{"bare_hostname", "localhost", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := DefaultConfig()
+			cfg.Server.Endpoint = "ws://localhost:4320"
+			cfg.Agent.Executable = "/bin/test"
+			cfg.Agent.Health.Endpoint = tt.endpoint
+			err := cfg.Validate()
+			if tt.expectErr {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "agent.health.endpoint")
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestValidateKeysConfig(t *testing.T) {
 	tests := []struct {
 		name       string

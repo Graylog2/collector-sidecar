@@ -670,3 +670,13 @@ func TestClient_SetAvailableComponents_BeforeStart(t *testing.T) {
 	err = client.SetAvailableComponents(components)
 	require.NoError(t, err)
 }
+
+func TestClient_SetInitialRemoteConfigStatus(t *testing.T) {
+	c := &Client{}
+	status := &protobufs.RemoteConfigStatus{
+		Status:               protobufs.RemoteConfigStatuses_RemoteConfigStatuses_APPLIED,
+		LastRemoteConfigHash: []byte("hash"),
+	}
+	c.SetInitialRemoteConfigStatus(status)
+	require.Equal(t, status, c.remoteConfigStatus)
+}
