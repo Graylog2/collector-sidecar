@@ -18,10 +18,10 @@
 package version
 
 var (
-	version = "0.1.0-dev"
+	version = "0.0.0"
 	commit  = "unknown"
 )
 
 func Version() string {
-	return version + " (" + commit + ")"
+	return version + "+" + commit
 }
