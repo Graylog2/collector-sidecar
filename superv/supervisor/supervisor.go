@@ -60,6 +60,7 @@ type Supervisor struct {
 	localServerCfg            config.LocalServer
 	persistenceDir            string
 	instanceUID               string
+	collectorVersion          string
 	authManager               *auth.Manager
 	connectionSettingsManager *connection.SettingsManager
 	configManager             *configmanager.Manager
@@ -437,30 +438,45 @@ func (s *Supervisor) createAgentDescription() *protobufs.AgentDescription {
 				Value: &protobufs.AnyValue{Value: &protobufs.AnyValue_StringValue{StringValue: s.instanceUID}},
 			},
 		},
-		NonIdentifyingAttributes: []*protobufs.KeyValue{
-			{
-				Key:   "service.version",
-				Value: &protobufs.AnyValue{Value: &protobufs.AnyValue_StringValue{StringValue: version.Version()}},
-			},
-			{
-				Key:   "host.name",
-				Value: &protobufs.AnyValue{Value: &protobufs.AnyValue_StringValue{StringValue: hostname}},
-			},
-			{
-				Key:   "os.type",
-				Value: &protobufs.AnyValue{Value: &protobufs.AnyValue_StringValue{StringValue: runtime.GOOS}},
-			},
-			{
-				Key:   "host.arch",
-				Value: &protobufs.AnyValue{Value: &protobufs.AnyValue_StringValue{StringValue: runtime.GOARCH}},
-			},
+		NonIdentifyingAttributes: s.nonIdentifyingAttributes(hostname),
+	}
+}
+
+// nonIdentifyingAttributes builds the list of non-identifying attributes for the agent description.
+func (s *Supervisor) nonIdentifyingAttributes(hostname string) []*protobufs.KeyValue {
+	attrs := []*protobufs.KeyValue{
+		{
+			Key:   "service.version",
+			Value: &protobufs.AnyValue{Value: &protobufs.AnyValue_StringValue{StringValue: version.Version()}},
+		},
+		{
+			Key:   "host.name",
+			Value: &protobufs.AnyValue{Value: &protobufs.AnyValue_StringValue{StringValue: hostname}},
+		},
+		{
+			Key:   "os.type",
+			Value: &protobufs.AnyValue{Value: &protobufs.AnyValue_StringValue{StringValue: runtime.GOOS}},
+		},
+		{
+			Key:   "host.arch",
+			Value: &protobufs.AnyValue{Value: &protobufs.AnyValue_StringValue{StringValue: runtime.GOARCH}},
 		},
 	}
+
+	if s.collectorVersion != "" {
+		attrs = append(attrs, &protobufs.KeyValue{
+			Key:   "collector.version",
+			Value: &protobufs.AnyValue{Value: &protobufs.AnyValue_StringValue{StringValue: s.collectorVersion}},
+		})
+	}
+
+	return attrs
 }
 
 // discoverComponents discovers available components from the collector.
 // This is a best-effort operation - failures are logged but don't prevent startup.
-func (s *Supervisor) discoverComponents(ctx context.Context) *protobufs.AvailableComponents {
+// Returns the protobuf representation and the collector's build version (if available).
+func (s *Supervisor) discoverComponents(ctx context.Context) (*protobufs.AvailableComponents, string) {
 	cfg := components.DiscoverConfig{
 		Executable: s.agentCfg.Executable,
 		Timeout:    10 * time.Second,
@@ -469,7 +485,7 @@ func (s *Supervisor) discoverComponents(ctx context.Context) *protobufs.Availabl
 	discovered, err := components.Discover(ctx, cfg)
 	if err != nil {
 		s.logger.Warn("Failed to discover components", zap.Error(err))
-		return nil
+		return nil, ""
 	}
 
 	s.logger.Info("Discovered available components",
@@ -479,7 +495,7 @@ func (s *Supervisor) discoverComponents(ctx context.Context) *protobufs.Availabl
 		zap.Int("extensions", len(discovered.Extensions)),
 	)
 
-	return discovered.ToProto()
+	return discovered.ToProto(), discovered.BuildInfo.Version
 }
 
 // createAndStartClient creates a new OpAMP client with current config, sets it up, and starts it.
@@ -522,17 +538,18 @@ func (s *Supervisor) createAndStartClient(ctx context.Context, settings connecti
 		return nil, fmt.Errorf("create client: %w", err)
 	}
 
+	// Discover and set available components first, so the collector version
+	// is available for the agent description below.
+	if err := s.setClientAvailableComponents(ctx, client); err != nil {
+		return nil, fmt.Errorf("set available components: %w", err)
+	}
+
 	if err := client.SetAgentDescription(s.createAgentDescription()); err != nil {
 		return nil, fmt.Errorf("set agent description: %w", err)
 	}
 
 	if err := client.SetHealth(s.initialComponentHealth()); err != nil {
 		return nil, fmt.Errorf("set health: %w", err)
-	}
-
-	// Discover and set available components (required before Start when capability is set)
-	if err := s.setClientAvailableComponents(ctx, client); err != nil {
-		return nil, fmt.Errorf("set available components: %w", err)
 	}
 
 	// Read pendingCSR under RLock — handleEnrollmentCertificate (phase 1, on opamp-go
@@ -573,12 +590,14 @@ func (s *Supervisor) initialComponentHealth() *protobufs.ComponentHealth {
 }
 
 // setClientAvailableComponents discovers and sets available components on the given client.
+// It also stores the discovered collector version for use in agent descriptions.
 func (s *Supervisor) setClientAvailableComponents(ctx context.Context, client *opamp.Client) error {
-	availableComponents := s.discoverComponents(ctx)
+	availableComponents, collectorVersion := s.discoverComponents(ctx)
 	if availableComponents == nil {
 		// Use empty components if discovery fails (still need valid hash for opamp-go)
 		availableComponents = (&components.Components{}).ToProto()
 	}
+	s.collectorVersion = collectorVersion
 	return client.SetAvailableComponents(availableComponents)
 }
 

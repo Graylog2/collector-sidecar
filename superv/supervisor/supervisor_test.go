@@ -232,6 +232,41 @@ func writePersistedConnectionSettings(t *testing.T, dir string, settings connect
 	require.NoError(t, stage.Commit())
 }
 
+func TestSupervisor_NonIdentifyingAttributes_WithCollectorVersion(t *testing.T) {
+	s := &Supervisor{
+		collectorVersion: "2.0.0-alpha.0",
+	}
+
+	attrs := s.nonIdentifyingAttributes("test-host")
+
+	attrMap := make(map[string]string)
+	for _, kv := range attrs {
+		attrMap[kv.Key] = kv.Value.GetStringValue()
+	}
+
+	require.Equal(t, "test-host", attrMap["host.name"])
+	require.NotEmpty(t, attrMap["service.version"])
+	require.NotEmpty(t, attrMap["os.type"])
+	require.NotEmpty(t, attrMap["host.arch"])
+	require.Equal(t, "2.0.0-alpha.0", attrMap["collector.version"])
+}
+
+func TestSupervisor_NonIdentifyingAttributes_WithoutCollectorVersion(t *testing.T) {
+	s := &Supervisor{}
+
+	attrs := s.nonIdentifyingAttributes("test-host")
+
+	attrMap := make(map[string]string)
+	for _, kv := range attrs {
+		attrMap[kv.Key] = kv.Value.GetStringValue()
+	}
+
+	require.Equal(t, "test-host", attrMap["host.name"])
+	require.NotEmpty(t, attrMap["service.version"])
+	_, hasCollectorVersion := attrMap["collector.version"]
+	require.False(t, hasCollectorVersion, "collector.version should not be present when empty")
+}
+
 func TestSupervisor_InitialComponentHealth_DefaultHealthyWithoutMonitor(t *testing.T) {
 	supervisor := &Supervisor{}
 
