@@ -8,7 +8,10 @@ require (
 	github.com/Graylog2/collector-sidecar/extension/sidecar v1.5.0
 	github.com/Graylog2/collector-sidecar/superv v0.0.0-00010101000000-000000000000
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampextension v0.146.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver v0.146.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver v0.146.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/macosunifiedloggingreceiver v0.146.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/windowseventlogreceiver v0.146.0
 	github.com/spf13/cobra v1.10.2
 	go.opentelemetry.io/collector/component v1.52.0
 	go.opentelemetry.io/collector/confmap v1.52.0
@@ -30,6 +33,7 @@ require (
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/bmatcuk/doublestar/v4 v4.10.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -62,6 +66,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.4 // indirect
 	github.com/hashicorp/go-version v1.8.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+	github.com/jonboulle/clockwork v0.5.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kardianos/service v1.2.2 // indirect
 	github.com/klauspost/compress v1.18.4 // indirect

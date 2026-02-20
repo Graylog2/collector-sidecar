@@ -14,7 +14,10 @@ exporters:
 
 receivers:
   - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.146.1
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver v0.146.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver v0.146.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/macosunifiedloggingreceiver v0.146.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/windowseventlogreceiver v0.146.0
 
 providers:
   - gomod: go.opentelemetry.io/collector/confmap/provider/envprovider v1.52.0
