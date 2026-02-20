@@ -15,7 +15,7 @@ import (
 	"go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/collector/receiver"
 	otlpreceiver "go.opentelemetry.io/collector/receiver/otlpreceiver"
-	"go.opentelemetry.io/collector/service/telemetry/otelconftelemetry"
+	otelconftelemetry "go.opentelemetry.io/collector/service/telemetry/otelconftelemetry"
 )
 
 type aliasProvider interface{ DeprecatedAlias() component.Type }
