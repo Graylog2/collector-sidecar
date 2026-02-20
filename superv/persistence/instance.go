@@ -37,7 +37,7 @@ type InstanceData struct {
 }
 
 // LoadOrCreateInstanceUID loads the instance UID from disk, or creates a new one
-// if it doesn't exist. The file is created with read-only permissions (0444).
+// if it doesn't exist. The file is created with read-only permissions (0o444).
 func LoadOrCreateInstanceUID(dir string) (string, error) {
 	filePath := filepath.Join(dir, instanceUIDFile)
 
@@ -57,11 +57,6 @@ func LoadOrCreateInstanceUID(dir string) (string, error) {
 		CreatedAt:   time.Now().UTC(),
 	}
 
-	// Ensure directory exists
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", err
-	}
-
 	// Marshal to YAML
 	content, err := yaml.Marshal(data)
 	if err != nil {
@@ -69,7 +64,7 @@ func LoadOrCreateInstanceUID(dir string) (string, error) {
 	}
 
 	// Write file with read-only permissions
-	if err := os.WriteFile(filePath, content, 0444); err != nil {
+	if err := WriteFile(filePath, content, 0o444); err != nil {
 		return "", err
 	}
 

@@ -143,7 +143,7 @@ func (m *Manager) ApplyRemoteConfig(ctx context.Context, remote *protobufs.Agent
 	}
 
 	// Write result to OutputPath
-	if err := persistence.WriteFile(m.cfg.OutputPath, mergedConfig); err != nil {
+	if err := persistence.WriteFile(m.cfg.OutputPath, mergedConfig, 0o600); err != nil {
 		return nil, fmt.Errorf("failed to write effective config: %w", err)
 	}
 	m.logger.Info("wrote effective config", zap.String("path", m.cfg.OutputPath))
@@ -177,7 +177,7 @@ func (m *Manager) storeRemoteConfigs(configMap map[string]*protobufs.AgentConfig
 		}
 
 		path := filepath.Join(remoteDir, name)
-		if err := persistence.WriteFile(path, cfg.GetBody()); err != nil {
+		if err := persistence.WriteFile(path, cfg.GetBody(), 0o600); err != nil {
 			return fmt.Errorf("failed to store remote config %s: %w", name, err)
 		}
 	}

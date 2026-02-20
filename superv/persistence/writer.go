@@ -34,26 +34,24 @@ type StagedFile interface {
 }
 
 // WriteFile writes content to the specified path atomically.
-// It creates parent directories if they don't exist.
+// It creates parent directories with 0o700 permissions if they don't exist.
 // Content is written to a temp file, fsynced, and renamed over the target.
-// File permissions are set to 0600.
-//
 // On Unix, this uses github.com/google/renameio/v2.
 // On Windows, this uses the winrenameio package (MoveFileExW with MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH).
-func WriteFile(path string, content []byte) error {
-	if err := ensurePath(path, 0700); err != nil {
+func WriteFile(path string, content []byte, perm os.FileMode) error {
+	if err := ensurePath(path, 0o700); err != nil {
 		return err
 	}
 
-	return writeFileAtomic(path, content, 0600)
+	return writeFileAtomic(path, content, perm)
 }
 
 func StageFile(path string, content []byte) (StagedFile, error) {
-	if err := ensurePath(path, 0700); err != nil {
+	if err := ensurePath(path, 0o700); err != nil {
 		return nil, err
 	}
 
-	staged, err := newStagedFile(path, content, 0600)
+	staged, err := newStagedFile(path, content, 0o600)
 	if err != nil {
 		return nil, err
 	}

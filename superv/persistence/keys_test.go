@@ -62,7 +62,7 @@ func TestSaveSigningKey_FilePermissions(t *testing.T) {
 	filePath := filepath.Join(keysDir, "signing.key")
 	info, err := os.Stat(filePath)
 	require.NoError(t, err)
-	require.Equal(t, os.FileMode(0600), info.Mode().Perm())
+	require.Equal(t, os.FileMode(0o600), info.Mode().Perm())
 }
 
 func TestLoadSigningKey_NotExists(t *testing.T) {
@@ -116,8 +116,8 @@ func TestSaveCertificate_FilePermissions(t *testing.T) {
 	filePath := filepath.Join(keysDir, "signing.crt")
 	info, err := os.Stat(filePath)
 	require.NoError(t, err)
-	// Certificates are public, so 0644 is fine
-	require.Equal(t, os.FileMode(0644), info.Mode().Perm())
+	// Certificates are public, so 0o644 is fine
+	require.Equal(t, os.FileMode(0o644), info.Mode().Perm())
 }
 
 func TestKeysExist(t *testing.T) {

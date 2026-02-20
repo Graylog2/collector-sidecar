@@ -31,7 +31,7 @@ func TestWriteFileCreatesParentDirsAndWritesContent(t *testing.T) {
 	filePath := filepath.Join(dir, "deep", "nested", "settings.txt")
 	content := []byte("atomic write content")
 
-	err := WriteFile(filePath, content)
+	err := WriteFile(filePath, content, 0o600)
 	require.NoError(t, err)
 
 	actual, err := os.ReadFile(filePath)
@@ -122,7 +122,7 @@ func TestWriteFileReturnsErrorWhenParentPathIsAFile(t *testing.T) {
 	err := os.WriteFile(blockedPath, []byte("not a directory"), 0o600)
 	require.NoError(t, err)
 
-	err = WriteFile(filepath.Join(blockedPath, "target.txt"), []byte("content"))
+	err = WriteFile(filepath.Join(blockedPath, "target.txt"), []byte("content"), 0o600)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "creating parent directories")
 }

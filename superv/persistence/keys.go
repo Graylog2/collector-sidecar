@@ -38,10 +38,6 @@ const (
 
 // SaveSigningKey saves an Ed25519 private key to disk in PEM format.
 func SaveSigningKey(keysDir string, key ed25519.PrivateKey) error {
-	if err := os.MkdirAll(keysDir, 0700); err != nil {
-		return err
-	}
-
 	// TODO: Implement password protection for PKCS#8 keys
 
 	pkcs8, err := x509.MarshalPKCS8PrivateKey(key)
@@ -55,7 +51,7 @@ func SaveSigningKey(keysDir string, key ed25519.PrivateKey) error {
 	}
 
 	filePath := filepath.Join(keysDir, signingKeyFile)
-	return os.WriteFile(filePath, pem.EncodeToMemory(block), 0600)
+	return WriteFile(filePath, pem.EncodeToMemory(block), 0o600)
 }
 
 // LoadSigningKey loads an Ed25519 private key from disk.
@@ -87,17 +83,13 @@ func LoadSigningKey(keysDir string) (ed25519.PrivateKey, error) {
 
 // SaveEncryptionKey saves an X25519 private key to disk in PEM format.
 func SaveEncryptionKey(keysDir string, key []byte) error {
-	if err := os.MkdirAll(keysDir, 0700); err != nil {
-		return err
-	}
-
 	block := &pem.Block{
 		Type:  "X25519 PRIVATE KEY",
 		Bytes: key,
 	}
 
 	filePath := filepath.Join(keysDir, encryptionKeyFile)
-	return os.WriteFile(filePath, pem.EncodeToMemory(block), 0600)
+	return WriteFile(filePath, pem.EncodeToMemory(block), 0o600)
 }
 
 // LoadEncryptionKey loads an X25519 private key from disk.
@@ -119,17 +111,13 @@ func LoadEncryptionKey(keysDir string) ([]byte, error) {
 
 // SaveCertificate saves an X.509 certificate to disk in PEM format.
 func SaveCertificate(keysDir string, cert *x509.Certificate) error {
-	if err := os.MkdirAll(keysDir, 0700); err != nil {
-		return err
-	}
-
 	block := &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: cert.Raw,
 	}
 
 	filePath := filepath.Join(keysDir, signingCertFile)
-	return os.WriteFile(filePath, pem.EncodeToMemory(block), 0644)
+	return WriteFile(filePath, pem.EncodeToMemory(block), 0o644)
 }
 
 // LoadCertificate loads an X.509 certificate from disk.

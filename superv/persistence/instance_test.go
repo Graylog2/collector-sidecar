@@ -65,7 +65,7 @@ func TestLoadOrCreateInstanceUID_FileIsReadOnly(t *testing.T) {
 	filePath := filepath.Join(dir, "identity.yaml")
 	info, err := os.Stat(filePath)
 	require.NoError(t, err)
-	require.Equal(t, os.FileMode(0444), info.Mode().Perm())
+	require.Equal(t, os.FileMode(0o444), info.Mode().Perm())
 }
 
 func TestLoadOrCreateInstanceUID_PreservesCreatedAt(t *testing.T) {

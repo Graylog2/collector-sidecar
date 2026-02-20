@@ -46,7 +46,7 @@ func WriteYAMLFile(delimiter string, filePath string, data any) error {
 		return err
 	}
 
-	if err := WriteFile(filePath, buf); err != nil {
+	if err := WriteFile(filePath, buf, 0o600); err != nil {
 		return err
 	}
 
