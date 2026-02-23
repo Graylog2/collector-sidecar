@@ -218,6 +218,7 @@ func DefaultConfig() Config {
 			Endpoint: "localhost:0", // port 0 = random free port
 		},
 		Agent: AgentConfig{
+			Args:               []string{"--config", "{{ .ConfigPath }}"},
 			ConfigApplyTimeout: 5 * time.Second,
 			BootstrapTimeout:   3 * time.Second,
 			PassthroughLogs:    false,

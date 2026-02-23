@@ -41,6 +41,7 @@ func TestConfigDefaults(t *testing.T) {
 
 	assert.Equal(t, "localhost:0", cfg.LocalServer.Endpoint)
 
+	assert.Equal(t, []string{"--config", "{{ .ConfigPath }}"}, cfg.Agent.Args)
 	assert.Greater(t, cfg.Agent.ConfigApplyTimeout, time.Duration(0))
 	assert.Greater(t, cfg.Agent.BootstrapTimeout, time.Duration(0))
 
