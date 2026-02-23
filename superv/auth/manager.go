@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/Graylog2/collector-sidecar/superv/config"
@@ -86,6 +87,16 @@ func NewManager(logger *zap.Logger, cfg ManagerConfig) *Manager {
 		httpClient:  httpClient,
 		jwtLifetime: jwtLifetime,
 	}
+}
+
+// GetSigningKeyPath returns the path to the signing key file.
+func (m *Manager) GetSigningKeyPath() string {
+	return filepath.Join(m.keysDir, persistence.SigningKeyFile)
+}
+
+// GetSigningCertPath returns the path to the signing cert file.
+func (m *Manager) GetSigningCertPath() string {
+	return filepath.Join(m.keysDir, persistence.SigningCertFile)
 }
 
 // IsEnrolled returns true if the supervisor has valid credentials.

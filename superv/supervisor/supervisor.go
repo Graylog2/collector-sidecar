@@ -22,6 +22,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/url"
 	"os"
@@ -231,6 +232,18 @@ func (s *Supervisor) expandArgs(args []string, configPath string) ([]string, err
 	return expanded, nil
 }
 
+// buildCollectorEnv builds the environment variables for the collector process.
+// It sets the TLS client key and cert paths from the auth manager, then merges
+// any user-configured env vars on top (allowing overrides).
+func (s *Supervisor) buildCollectorEnv() map[string]string {
+	env := map[string]string{
+		"GLC_INTERNAL_TLS_CLIENT_KEY_PATH":  s.authManager.GetSigningKeyPath(),
+		"GLC_INTERNAL_TLS_CLIENT_CERT_PATH": s.authManager.GetSigningCertPath(),
+	}
+	maps.Copy(env, s.agentCfg.Env)
+	return env
+}
+
 // Start starts the supervisor and begins managing the collector.
 func (s *Supervisor) Start(ctx context.Context) error {
 	s.mu.Lock()
@@ -270,7 +283,7 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	cmd, err := keen.New(s.logger, s.persistenceDir, keen.Config{
 		Executable:      s.agentCfg.Executable,
 		Args:            expandedArgs,
-		Env:             s.agentCfg.Env,
+		Env:             s.buildCollectorEnv(),
 		PassthroughLogs: s.agentCfg.PassthroughLogs,
 	}, keen.NewBackoff(keen.BackoffConfig{
 		InitialInterval:     s.agentCfg.Restart.InitialInterval,

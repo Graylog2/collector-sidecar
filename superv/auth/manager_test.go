@@ -40,6 +40,22 @@ import (
 	"github.com/Graylog2/collector-sidecar/superv/persistence"
 )
 
+func TestManager_GetSigningKeyPath(t *testing.T) {
+	logger := zaptest.NewLogger(t)
+	m := NewManager(logger, ManagerConfig{KeysDir: "/tmp/test-keys"})
+
+	got := m.GetSigningKeyPath()
+	require.Equal(t, filepath.Join("/tmp/test-keys", persistence.SigningKeyFile), got)
+}
+
+func TestManager_GetSigningCertPath(t *testing.T) {
+	logger := zaptest.NewLogger(t)
+	m := NewManager(logger, ManagerConfig{KeysDir: "/tmp/test-keys"})
+
+	got := m.GetSigningCertPath()
+	require.Equal(t, filepath.Join("/tmp/test-keys", persistence.SigningCertFile), got)
+}
+
 func TestManager_IsEnrolled(t *testing.T) {
 	dir := t.TempDir()
 	keysDir := filepath.Join(dir, "keys")

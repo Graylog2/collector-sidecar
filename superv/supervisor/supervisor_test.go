@@ -415,6 +415,55 @@ func TestBuildAuthHeaders_NotEnrolled_StaticEnrollmentJWT(t *testing.T) {
 	require.Nil(t, headerFunc)
 }
 
+func TestSupervisor_BuildCollectorEnv(t *testing.T) {
+	keysDir := "/tmp/test-keys"
+	authMgr := auth.NewManager(zaptest.NewLogger(t), auth.ManagerConfig{
+		KeysDir: keysDir,
+	})
+
+	t.Run("sets TLS paths from auth manager", func(t *testing.T) {
+		s := &Supervisor{
+			authManager: authMgr,
+			agentCfg:    config.AgentConfig{},
+		}
+
+		env := s.buildCollectorEnv()
+
+		require.Equal(t, authMgr.GetSigningKeyPath(), env["GLC_INTERNAL_TLS_CLIENT_KEY_PATH"])
+		require.Equal(t, authMgr.GetSigningCertPath(), env["GLC_INTERNAL_TLS_CLIENT_CERT_PATH"])
+	})
+
+	t.Run("merges user-configured env vars", func(t *testing.T) {
+		s := &Supervisor{
+			authManager: authMgr,
+			agentCfg: config.AgentConfig{
+				Env: map[string]string{"MY_VAR": "my-value"},
+			},
+		}
+
+		env := s.buildCollectorEnv()
+
+		require.Equal(t, "my-value", env["MY_VAR"])
+		require.Equal(t, authMgr.GetSigningKeyPath(), env["GLC_INTERNAL_TLS_CLIENT_KEY_PATH"])
+	})
+
+	t.Run("user env overrides TLS paths", func(t *testing.T) {
+		s := &Supervisor{
+			authManager: authMgr,
+			agentCfg: config.AgentConfig{
+				Env: map[string]string{
+					"GLC_INTERNAL_TLS_CLIENT_KEY_PATH": "/custom/key.pem",
+				},
+			},
+		}
+
+		env := s.buildCollectorEnv()
+
+		require.Equal(t, "/custom/key.pem", env["GLC_INTERNAL_TLS_CLIENT_KEY_PATH"])
+		require.Equal(t, authMgr.GetSigningCertPath(), env["GLC_INTERNAL_TLS_CLIENT_CERT_PATH"])
+	})
+}
+
 // createSelfSignedCert creates a minimal self-signed ed25519 certificate for testing.
 func createSelfSignedCert(t *testing.T, pub ed25519.PublicKey) *x509.Certificate {
 	t.Helper()

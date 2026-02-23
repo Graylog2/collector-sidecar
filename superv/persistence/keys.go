@@ -30,8 +30,8 @@ import (
 )
 
 const (
-	signingKeyFile    = "signing.key"
-	signingCertFile   = "signing.crt"
+	SigningKeyFile    = "signing.key"
+	SigningCertFile   = "signing.crt"
 	encryptionKeyFile = "encryption.key"
 	bearerTokenFile   = "bearer_token"
 )
@@ -50,13 +50,13 @@ func SaveSigningKey(keysDir string, key ed25519.PrivateKey) error {
 		Bytes: pkcs8,
 	}
 
-	filePath := filepath.Join(keysDir, signingKeyFile)
+	filePath := filepath.Join(keysDir, SigningKeyFile)
 	return WriteFile(filePath, pem.EncodeToMemory(block), 0o600)
 }
 
 // LoadSigningKey loads an Ed25519 private key from disk.
 func LoadSigningKey(keysDir string) (ed25519.PrivateKey, error) {
-	filePath := filepath.Join(keysDir, signingKeyFile)
+	filePath := filepath.Join(keysDir, SigningKeyFile)
 
 	content, err := os.ReadFile(filePath)
 	if err != nil {
@@ -116,13 +116,13 @@ func SaveCertificate(keysDir string, cert *x509.Certificate) error {
 		Bytes: cert.Raw,
 	}
 
-	filePath := filepath.Join(keysDir, signingCertFile)
+	filePath := filepath.Join(keysDir, SigningCertFile)
 	return WriteFile(filePath, pem.EncodeToMemory(block), 0o644)
 }
 
 // LoadCertificate loads an X.509 certificate from disk.
 func LoadCertificate(keysDir string) (*x509.Certificate, error) {
-	filePath := filepath.Join(keysDir, signingCertFile)
+	filePath := filepath.Join(keysDir, SigningCertFile)
 
 	content, err := os.ReadFile(filePath)
 	if err != nil {
@@ -139,7 +139,7 @@ func LoadCertificate(keysDir string) (*x509.Certificate, error) {
 
 // SigningKeyExists returns true if the signing key file exists.
 func SigningKeyExists(keysDir string) bool {
-	filePath := filepath.Join(keysDir, signingKeyFile)
+	filePath := filepath.Join(keysDir, SigningKeyFile)
 	_, err := os.Stat(filePath)
 	return err == nil
 }
@@ -153,7 +153,7 @@ func EncryptionKeyExists(keysDir string) bool {
 
 // CertificateExists returns true if the certificate file exists.
 func CertificateExists(keysDir string) bool {
-	filePath := filepath.Join(keysDir, signingCertFile)
+	filePath := filepath.Join(keysDir, SigningCertFile)
 	_, err := os.Stat(filePath)
 	return err == nil
 }
