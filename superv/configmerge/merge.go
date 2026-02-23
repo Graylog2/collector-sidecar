@@ -111,6 +111,19 @@ func MergeMultiple(configs ...[]byte) ([]byte, error) {
 	return k.Marshal(yaml.Parser())
 }
 
+// HasPipelines returns true if the config has at least one pipeline defined
+// under service.pipelines.
+func HasPipelines(config []byte) bool {
+	if len(config) == 0 {
+		return false
+	}
+	k := koanf.New("::")
+	if err := k.Load(rawbytes.Provider(config), yaml.Parser()); err != nil {
+		return false
+	}
+	return k.Exists("service::pipelines") && len(k.Cut("service::pipelines").Keys()) > 0
+}
+
 // InjectSettings injects supervisor settings into a collector config.
 func InjectSettings(config []byte, settings map[string]any) ([]byte, error) {
 	// TODO: Check how the reference implementation handles nested keys and arrays.

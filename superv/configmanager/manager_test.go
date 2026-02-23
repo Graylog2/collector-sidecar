@@ -699,3 +699,104 @@ func TestApplyRemoteConfig_InjectsHealthCheckExtension(t *testing.T) {
 	require.Contains(t, string(result.EffectiveConfig), "localhost:13133")
 	require.Contains(t, string(result.EffectiveConfig), "/health")
 }
+
+func TestSetLocalEndpoint(t *testing.T) {
+	mgr := New(zaptest.NewLogger(t), Config{
+		LocalEndpoint: "localhost:0",
+	})
+
+	mgr.SetLocalEndpoint("ws://127.0.0.1:54321/v1/opamp")
+	assert.Equal(t, "ws://127.0.0.1:54321/v1/opamp", mgr.cfg.LocalEndpoint)
+}
+
+func TestEnsureBootstrapConfig_WritesWhenMissing(t *testing.T) {
+	dir := t.TempDir()
+	outputPath := filepath.Join(dir, "config", "collector.yaml")
+
+	mgr := New(zaptest.NewLogger(t), Config{
+		ConfigDir:     filepath.Join(dir, "config"),
+		OutputPath:    outputPath,
+		LocalEndpoint: "ws://127.0.0.1:54321/v1/opamp",
+		InstanceUID:   "test-uid-bootstrap",
+		HealthCheck: configmerge.HealthCheckConfig{
+			Endpoint: "localhost:13133",
+			Path:     "/health",
+		},
+	})
+
+	err := mgr.EnsureBootstrapConfig()
+	require.NoError(t, err)
+
+	content, err := os.ReadFile(outputPath)
+	require.NoError(t, err)
+
+	s := string(content)
+	assert.Contains(t, s, "opamp")
+	assert.Contains(t, s, "ws://127.0.0.1:54321/v1/opamp")
+	assert.Contains(t, s, "test-uid-bootstrap")
+	assert.Contains(t, s, "health_check")
+	assert.Contains(t, s, "localhost:13133")
+
+	// Bootstrap includes a nop pipeline so the collector accepts the config
+	assert.Contains(t, s, "nop")
+	assert.Contains(t, s, "logs/bootstrap")
+}
+
+func TestEnsureBootstrapConfig_ReinjectsExtensionsWhenExists(t *testing.T) {
+	dir := t.TempDir()
+	configDir := filepath.Join(dir, "config")
+	outputPath := filepath.Join(configDir, "collector.yaml")
+
+	require.NoError(t, os.MkdirAll(configDir, 0o755))
+	// Cached config with an old OpAMP endpoint and a real pipeline (simulates port change on restart)
+	existing := []byte("extensions:\n  opamp:\n    server:\n      ws:\n        endpoint: ws://127.0.0.1:11111/v1/opamp\n    instance_uid: test-uid\nreceivers:\n  otlp:\n    protocols:\n      grpc: {}\nexporters:\n  debug: {}\nservice:\n  extensions:\n    - opamp\n  pipelines:\n    logs:\n      receivers:\n        - otlp\n      exporters:\n        - debug\n")
+	require.NoError(t, os.WriteFile(outputPath, existing, 0o600))
+
+	mgr := New(zaptest.NewLogger(t), Config{
+		ConfigDir:     configDir,
+		OutputPath:    outputPath,
+		LocalEndpoint: "ws://127.0.0.1:22222/v1/opamp",
+		InstanceUID:   "test-uid",
+		HealthCheck: configmerge.HealthCheckConfig{
+			Endpoint: "localhost:13133",
+		},
+	})
+
+	err := mgr.EnsureBootstrapConfig()
+	require.NoError(t, err)
+
+	content, err := os.ReadFile(outputPath)
+	require.NoError(t, err)
+
+	s := string(content)
+	// Should have the NEW endpoint, not the old one
+	assert.Contains(t, s, "ws://127.0.0.1:22222/v1/opamp")
+	assert.NotContains(t, s, "ws://127.0.0.1:11111/v1/opamp")
+	// Should also have health_check injected
+	assert.Contains(t, s, "health_check")
+	assert.Contains(t, s, "localhost:13133")
+	// Cached config should NOT get a nop bootstrap pipeline
+	assert.NotContains(t, s, "logs/bootstrap")
+}
+
+func TestEnsureBootstrapConfig_CreatesDirectory(t *testing.T) {
+	dir := t.TempDir()
+	// Nested dir that doesn't exist yet
+	outputPath := filepath.Join(dir, "deep", "nested", "collector.yaml")
+
+	mgr := New(zaptest.NewLogger(t), Config{
+		ConfigDir:     filepath.Join(dir, "deep", "nested"),
+		OutputPath:    outputPath,
+		LocalEndpoint: "ws://127.0.0.1:9999/v1/opamp",
+		InstanceUID:   "test-uid-dir",
+		HealthCheck: configmerge.HealthCheckConfig{
+			Endpoint: "localhost:13133",
+		},
+	})
+
+	err := mgr.EnsureBootstrapConfig()
+	require.NoError(t, err)
+
+	_, err = os.Stat(outputPath)
+	require.NoError(t, err)
+}

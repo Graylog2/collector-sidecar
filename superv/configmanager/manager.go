@@ -275,6 +275,94 @@ func (m *Manager) OutputPath() string {
 	return m.cfg.OutputPath
 }
 
+// SetLocalEndpoint updates the local OpAMP endpoint used for extension injection.
+// Call this after the local OpAMP server starts, to replace the static config
+// value (which may be "localhost:0") with the actual bound address.
+func (m *Manager) SetLocalEndpoint(endpoint string) {
+	m.cfg.LocalEndpoint = endpoint
+}
+
+// EnsureBootstrapConfig ensures a valid collector config exists at OutputPath
+// before the collector starts.
+//
+// If no config file exists (first run), it writes a minimal bootstrap config
+// containing only the opamp and health_check extensions.
+//
+// If a config file already exists (cached from a previous run), it re-injects
+// the opamp and health_check extensions to update the local OpAMP endpoint,
+// which may have changed if the local server binds to an ephemeral port.
+func (m *Manager) EnsureBootstrapConfig() error {
+	// Ensure the config directory exists.
+	dir := filepath.Dir(m.cfg.OutputPath)
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		return fmt.Errorf("failed to create config directory %s: %w", dir, err)
+	}
+
+	// Load existing config or start from empty.
+	config, err := os.ReadFile(m.cfg.OutputPath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("failed to read existing config %s: %w", m.cfg.OutputPath, err)
+	}
+
+	bootstrap := len(config) == 0
+	if bootstrap {
+		if errors.Is(err, os.ErrNotExist) {
+			m.logger.Info("no existing config found, writing bootstrap config",
+				zap.String("path", m.cfg.OutputPath))
+		} else {
+			m.logger.Info("existing config is empty, writing bootstrap config",
+				zap.String("path", m.cfg.OutputPath))
+		}
+	} else {
+		m.logger.Info("re-injecting extensions into cached config",
+			zap.String("path", m.cfg.OutputPath))
+	}
+
+	// Inject OpAMP extension (updates endpoint on every start).
+	if m.cfg.LocalEndpoint != "" && m.cfg.InstanceUID != "" {
+		config, err = configmerge.InjectOpAMPExtension(config, m.cfg.LocalEndpoint, m.cfg.InstanceUID)
+		if err != nil {
+			return fmt.Errorf("failed to inject OpAMP extension: %w", err)
+		}
+	}
+
+	// Inject health_check extension.
+	if m.cfg.HealthCheck.Endpoint != "" {
+		config, err = configmerge.InjectHealthCheckExtension(config, m.cfg.HealthCheck)
+		if err != nil {
+			return fmt.Errorf("failed to inject health_check extension: %w", err)
+		}
+	}
+
+	// The collector requires at least one pipeline. If the config has none
+	// (fresh bootstrap or a cached config without pipelines), inject a
+	// minimal nop pipeline so the collector can start.
+	if !configmerge.HasPipelines(config) {
+		config, err = configmerge.InjectSettings(config, map[string]any{
+			"receivers::nop":  nil,
+			"exporters::nop":  nil,
+			"service::pipelines::logs/bootstrap": map[string]any{
+				"receivers": []string{"nop"},
+				"exporters": []string{"nop"},
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to inject bootstrap pipeline: %w", err)
+		}
+	}
+
+	if err := persistence.WriteFile(m.cfg.OutputPath, config, 0o600); err != nil {
+		return fmt.Errorf("failed to write config: %w", err)
+	}
+
+	if bootstrap {
+		m.logger.Info("wrote bootstrap config", zap.String("path", m.cfg.OutputPath))
+	} else {
+		m.logger.Info("updated cached config with current extensions", zap.String("path", m.cfg.OutputPath))
+	}
+	return nil
+}
+
 // remoteConfigStatusYAML is the on-disk YAML representation of RemoteConfigStatus.
 type remoteConfigStatusYAML struct {
 	Status         string `koanf:"status"`

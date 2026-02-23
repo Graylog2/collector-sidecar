@@ -146,6 +146,8 @@ github.com/oklog/ulid/v2 v2.1.1 h1:suPZ4ARWLOJLegGFiZZ1dFAkqzhMjL3J1TzI+5wHz8s=
 github.com/oklog/ulid/v2 v2.1.1/go.mod h1:rcEKHmBBKfef9DhnvX7y1HZBYxjXb0cP5ExxNsTT1QQ=
 github.com/open-telemetry/opamp-go v0.23.0 h1:k7h7w/muprut9/DAhUC4anX4v7hIdgO02gIsSjV4uq0=
 github.com/open-telemetry/opamp-go v0.23.0/go.mod h1:DIIVdkLefdqPW5L+4I2twmAicVrTB0Bp5XJAfedZzAM=
+github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.146.0 h1:n+wGPCxLc3RbZ9dm5OgVt26q6yyECnAtXPi1TicdQGE=
+github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.146.0/go.mod h1:g/pD4HRhyKJcx74+CmqQK9Mf64CDFnE3k4RUuoMDXYs=
 github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampcustommessages v0.146.0 h1:XC7g7bpbO4ycrKW8jnayBpofHNlpL/JnGUdmUQAp2sg=
 github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampcustommessages v0.146.0/go.mod h1:tJj0KS2qoCnWu+0KstD3dBfrhatF1PPhzn7HrHJg47o=
 github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampextension v0.146.0 h1:s+XGiVMt28TYHKcIsZMHR8CuZ7VXzFwBCm7whcAcLhI=
@@ -156,6 +158,8 @@ github.com/open-telemetry/opentelemetry-collector-contrib/internal/common v0.146
 github.com/open-telemetry/opentelemetry-collector-contrib/internal/common v0.146.0/go.mod h1:eGrGLstyHjcvZUcvwIHozDw2HQoeGDU/p9RSV+A3cN4=
 github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal v0.146.0 h1:kE2ftRFmsorf3fK4JQS6rEq2h6yTLhV+QmzO46xI8ck=
 github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal v0.146.0/go.mod h1:+3Bt6ZyvHjlviCDgvvn8COjIdHRn88+lpGQSgE51uvs=
+github.com/open-telemetry/opentelemetry-collector-contrib/internal/healthcheck v0.146.0 h1:CL8zepUOE6cvs6yjPGE3hSFC+In/oHLm3GpK8I5F1vg=
+github.com/open-telemetry/opentelemetry-collector-contrib/internal/healthcheck v0.146.0/go.mod h1:iarU6UmdtWrM4VxGAtoIBM+wDhqwRYtDrXh/mJ+ZATQ=
 github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatatest v0.146.0 h1:KJgIRtjbUVh73pYjSy5IB8ey4pnTrjwfWQghIRYXD38=
 github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatatest v0.146.0/go.mod h1:gPJiIQKJOi01p4kVBRrXR9PyBvNxbfIL37943khkNNI=
 github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatautil v0.146.0 h1:4ECxx5C6LLZaLUfNApaw/bC/AxxBIewns2MvgalKxH0=
@@ -296,6 +300,8 @@ go.opentelemetry.io/collector/exporter/exporterhelper/xexporterhelper v0.146.1 h
 go.opentelemetry.io/collector/exporter/exporterhelper/xexporterhelper v0.146.1/go.mod h1:8KusPStOCZDU9q4Ub5eZohZDhNdtoLf050DA9oj2m/o=
 go.opentelemetry.io/collector/exporter/exportertest v0.146.1 h1:/GI0b7Z7tDwxyK07o8vf1JSOK3N2pm9sr6qAK5D0txc=
 go.opentelemetry.io/collector/exporter/exportertest v0.146.1/go.mod h1:uR+vWaiRtLAXHbalnLcnuBAK7+1ZjhWgc6Tfc9GbJsE=
+go.opentelemetry.io/collector/exporter/nopexporter v0.146.1 h1:iDQVyc0CsJ5ndxTm5+kFU7QMHGX05gniazWcbG7F+as=
+go.opentelemetry.io/collector/exporter/nopexporter v0.146.1/go.mod h1:hh8p7jXRkszYL4t+zEuAhVj7Vf6DponJvt7yS1hJpn4=
 go.opentelemetry.io/collector/exporter/xexporter v0.146.1 h1:EP/j7UI5+W00NL2wL1VjRCA3tgSdnIq3mAhHHfotW58=
 go.opentelemetry.io/collector/exporter/xexporter v0.146.1/go.mod h1:Isu4I8eouDwQoL9NHTXGRbTFgGrfzmYbCALtVRuB970=
 go.opentelemetry.io/collector/extension v1.52.0 h1:ICPmYnAkFhaKOM/J8vai0za826ezgZZvVXc5sTQPbTg=
@@ -350,6 +356,8 @@ go.opentelemetry.io/collector/processor/xprocessor v0.146.1 h1:5w8BVZv6jrOviQ2cd
 go.opentelemetry.io/collector/processor/xprocessor v0.146.1/go.mod h1:1zTeAGtpb+v6Eit6t4JY8fAML9Elb0yN6TXFoG9Ldnw=
 go.opentelemetry.io/collector/receiver v1.52.0 h1:gU5wBK3vKx/2uUDvi4RpYSqpNwBMOX+nkweiS8BZeIg=
 go.opentelemetry.io/collector/receiver v1.52.0/go.mod h1:xcAUjy9rjaE2SJrn7L7lDSmrTflKR1uCXKfV+u0/msM=
+go.opentelemetry.io/collector/receiver/nopreceiver v0.146.1 h1:2YzWmIjV5ONPJSPmxSWPHiQnhTRNRA+oKU4x504DJJI=
+go.opentelemetry.io/collector/receiver/nopreceiver v0.146.1/go.mod h1:T9xGQJZ8Ozgp8YQkU95AYvWj2+QccSzRVe5sTKeImW0=
 go.opentelemetry.io/collector/receiver/otlpreceiver v0.146.1 h1:CwSyUTa35b2aPtgN18EUN2lOpHpLL9kw9K5mILkJy5M=
 go.opentelemetry.io/collector/receiver/otlpreceiver v0.146.1/go.mod h1:eXonkPhXEEBc6OQoadDWqdx7kWH+bqDFL0jf/DhIdwY=
 go.opentelemetry.io/collector/receiver/receiverhelper v0.146.1 h1:HE4dIOJieSCPGHZM9uCuT8JN9/R6QiNk5fVwsOALBLU=

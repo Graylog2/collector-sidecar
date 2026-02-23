@@ -308,6 +308,30 @@ func (s *Supervisor) Start(ctx context.Context) error {
 		return err
 	}
 
+	// Resolve the runtime-bound local OpAMP endpoint and update the config
+	// manager. This replaces the static config value (e.g. "localhost:0") with
+	// the actual ws:// URL, used by both EnsureBootstrapConfig and
+	// ApplyRemoteConfig for extension injection.
+	localEndpoint, err := resolveLocalEndpoint(s.opampServer.Addr())
+	if err != nil {
+		if stopErr := s.opampServer.Stop(ctx); stopErr != nil {
+			s.logger.Warn("Failed to stop local OpAMP server", zap.Error(stopErr))
+		}
+		return fmt.Errorf("failed to resolve local OpAMP endpoint: %w", err)
+	}
+	s.configManager.SetLocalEndpoint(localEndpoint)
+
+	// Ensure a valid config exists before starting the collector. On first run
+	// this writes a minimal bootstrap config; on subsequent runs it re-injects
+	// the opamp and health_check extensions to update the local endpoint
+	// (which may have changed if the server binds to an ephemeral port).
+	if err := s.configManager.EnsureBootstrapConfig(); err != nil {
+		if stopErr := s.opampServer.Stop(ctx); stopErr != nil {
+			s.logger.Warn("Failed to stop local OpAMP server", zap.Error(stopErr))
+		}
+		return fmt.Errorf("failed to ensure bootstrap config: %w", err)
+	}
+
 	// Initialize and start the serialized worker. Must be running before
 	// the OpAMP client starts, otherwise early callbacks block on the
 	// unbuffered channel with no consumer.

@@ -7,6 +7,7 @@ go 1.26.0
 require (
 	github.com/Graylog2/collector-sidecar/extension/sidecar v1.5.0
 	github.com/Graylog2/collector-sidecar/superv v0.0.0-00010101000000-000000000000
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.146.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampextension v0.146.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver v0.146.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver v0.146.0
@@ -21,10 +22,12 @@ require (
 	go.opentelemetry.io/collector/connector v0.146.1
 	go.opentelemetry.io/collector/exporter v1.52.0
 	go.opentelemetry.io/collector/exporter/debugexporter v0.146.1
+	go.opentelemetry.io/collector/exporter/nopexporter v0.146.1
 	go.opentelemetry.io/collector/extension v1.52.0
 	go.opentelemetry.io/collector/otelcol v0.146.1
 	go.opentelemetry.io/collector/processor v1.52.0
 	go.opentelemetry.io/collector/receiver v1.52.0
+	go.opentelemetry.io/collector/receiver/nopreceiver v0.146.1
 	go.opentelemetry.io/collector/receiver/otlpreceiver v0.146.1
 	go.opentelemetry.io/collector/service v0.146.1
 	go.uber.org/zap v1.27.1
@@ -93,7 +96,9 @@ require (
 	github.com/oklog/ulid/v2 v2.1.1 // indirect
 	github.com/open-telemetry/opamp-go v0.23.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampcustommessages v0.146.0 // indirect
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/common v0.146.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal v0.146.0 // indirect
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/healthcheck v0.146.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza v0.146.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/status v0.146.0 // indirect
 	github.com/pborman/uuid v1.2.1 // indirect

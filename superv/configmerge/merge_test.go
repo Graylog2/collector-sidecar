@@ -283,6 +283,64 @@ service:
 	require.ElementsMatch(t, []any{"opamp"}, extensions)
 }
 
+func TestHasPipelines(t *testing.T) {
+	tests := []struct {
+		name   string
+		config []byte
+		want   bool
+	}{
+		{
+			name:   "nil input",
+			config: nil,
+			want:   false,
+		},
+		{
+			name:   "empty input",
+			config: []byte{},
+			want:   false,
+		},
+		{
+			name:   "no service key",
+			config: []byte("receivers:\n  otlp: {}\n"),
+			want:   false,
+		},
+		{
+			name:   "service without pipelines",
+			config: []byte("service:\n  extensions:\n    - opamp\n"),
+			want:   false,
+		},
+		{
+			name:   "empty pipelines map",
+			config: []byte("service:\n  pipelines: {}\n"),
+			want:   false,
+		},
+		{
+			name:   "one pipeline",
+			config: []byte("service:\n  pipelines:\n    logs:\n      receivers:\n        - otlp\n      exporters:\n        - debug\n"),
+			want:   true,
+		},
+		{
+			name:   "multiple pipelines",
+			config: []byte("service:\n  pipelines:\n    logs:\n      receivers: [otlp]\n      exporters: [debug]\n    metrics:\n      receivers: [otlp]\n      exporters: [debug]\n"),
+			want:   true,
+		},
+		{
+			name:   "malformed YAML returns false",
+			config: []byte(":\n  :\n  - [invalid"),
+			want:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := HasPipelines(tt.config)
+			if got != tt.want {
+				t.Errorf("HasPipelines() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestMergeConfigs_EmptyExtensionsList(t *testing.T) {
 	base := []byte(`
 service:

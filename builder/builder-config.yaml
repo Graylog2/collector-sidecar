@@ -7,12 +7,15 @@ dist:
 
 extensions:
   - gomod: github.com/Graylog2/collector-sidecar/extension/sidecar v1.5.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.146.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampextension v0.146.0
 
 exporters:
   - gomod: go.opentelemetry.io/collector/exporter/debugexporter v0.146.1
+  - gomod: go.opentelemetry.io/collector/exporter/nopexporter v0.146.1
 
 receivers:
+  - gomod: go.opentelemetry.io/collector/receiver/nopreceiver v0.146.1
   - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.146.1
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver v0.146.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver v0.146.0
