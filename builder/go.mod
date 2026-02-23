@@ -23,6 +23,8 @@ require (
 	go.opentelemetry.io/collector/exporter v1.52.0
 	go.opentelemetry.io/collector/exporter/debugexporter v0.146.1
 	go.opentelemetry.io/collector/exporter/nopexporter v0.146.1
+	go.opentelemetry.io/collector/exporter/otlpexporter v0.146.1
+	go.opentelemetry.io/collector/exporter/otlphttpexporter v0.146.1
 	go.opentelemetry.io/collector/extension v1.52.0
 	go.opentelemetry.io/collector/otelcol v0.146.1
 	go.opentelemetry.io/collector/processor v1.52.0
