@@ -339,8 +339,8 @@ func (m *Manager) EnsureBootstrapConfig() error {
 	// minimal nop pipeline so the collector can start.
 	if !configmerge.HasPipelines(config) {
 		config, err = configmerge.InjectSettings(config, map[string]any{
-			"receivers::nop":  nil,
-			"exporters::nop":  nil,
+			"receivers::nop": nil,
+			"exporters::nop": nil,
 			"service::pipelines::logs/bootstrap": map[string]any{
 				"receivers": []string{"nop"},
 				"exporters": []string{"nop"},
