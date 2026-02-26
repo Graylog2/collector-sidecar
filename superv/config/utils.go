@@ -41,6 +41,8 @@ func DeriveEnrollmentEndpoint(enrollmentURL string) (string, error) {
 	}
 	if path == "" || path == "/" {
 		path = DefaultOpAMPPath
+	} else if !strings.HasSuffix(path, DefaultOpAMPPath) {
+		path = strings.TrimSuffix(path, "/") + DefaultOpAMPPath
 	}
 
 	endpoint := &url.URL{
