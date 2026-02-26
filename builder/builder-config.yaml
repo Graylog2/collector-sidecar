@@ -24,6 +24,10 @@ receivers:
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/macosunifiedloggingreceiver v0.146.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/windowseventlogreceiver v0.146.0
 
+processors:
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.146.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.146.0
+
 providers:
   - gomod: go.opentelemetry.io/collector/confmap/provider/envprovider v1.52.0
   - gomod: go.opentelemetry.io/collector/confmap/provider/fileprovider v1.52.0
