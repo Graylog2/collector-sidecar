@@ -237,6 +237,7 @@ func (s *Supervisor) expandArgs(args []string, configPath string) ([]string, err
 // any user-configured env vars on top (allowing overrides).
 func (s *Supervisor) buildCollectorEnv() map[string]string {
 	env := map[string]string{
+		"GLC_INTERNAL_INSTANCE_UID":         s.instanceUID,
 		"GLC_INTERNAL_TLS_CLIENT_KEY_PATH":  s.authManager.GetSigningKeyPath(),
 		"GLC_INTERNAL_TLS_CLIENT_CERT_PATH": s.authManager.GetSigningCertPath(),
 	}

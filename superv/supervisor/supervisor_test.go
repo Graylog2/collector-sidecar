@@ -30,6 +30,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
@@ -420,15 +421,19 @@ func TestSupervisor_BuildCollectorEnv(t *testing.T) {
 	authMgr := auth.NewManager(zaptest.NewLogger(t), auth.ManagerConfig{
 		KeysDir: keysDir,
 	})
+	instanceUid, err := uuid.NewV7()
+	require.NoError(t, err)
 
 	t.Run("sets TLS paths from auth manager", func(t *testing.T) {
 		s := &Supervisor{
 			authManager: authMgr,
 			agentCfg:    config.AgentConfig{},
+			instanceUID: instanceUid.String(),
 		}
 
 		env := s.buildCollectorEnv()
 
+		require.Equal(t, instanceUid.String(), env["GLC_INTERNAL_INSTANCE_UID"])
 		require.Equal(t, authMgr.GetSigningKeyPath(), env["GLC_INTERNAL_TLS_CLIENT_KEY_PATH"])
 		require.Equal(t, authMgr.GetSigningCertPath(), env["GLC_INTERNAL_TLS_CLIENT_CERT_PATH"])
 	})
