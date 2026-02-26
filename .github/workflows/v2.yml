@@ -2,7 +2,7 @@ name: "Build V2"
 
 on:
   push:
-    branches: ["refactor/otel-collector-framework"]
+    branches: ["v2"]
 
 defaults:
   run:
