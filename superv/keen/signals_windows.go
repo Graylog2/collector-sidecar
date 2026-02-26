@@ -23,6 +23,8 @@ import (
 	"errors"
 	"os"
 	"syscall"
+
+	"golang.org/x/sys/windows"
 )
 
 func sysProcAttrs() *syscall.SysProcAttr {
@@ -32,8 +34,11 @@ func sysProcAttrs() *syscall.SysProcAttr {
 }
 
 func sendShutdownSignal(process *os.Process) error {
-	// On Windows, we use CTRL_BREAK_EVENT to signal shutdown
-	return process.Signal(os.Interrupt)
+	// os.Process.Signal(os.Interrupt) is not supported on Windows.
+	// Since we create the process with CREATE_NEW_PROCESS_GROUP,
+	// we send CTRL_BREAK_EVENT to the process group to trigger
+	// graceful shutdown.
+	return windows.GenerateConsoleCtrlEvent(windows.CTRL_BREAK_EVENT, uint32(process.Pid))
 }
 
 func sendReloadSignal(process *os.Process) error {
