@@ -238,7 +238,7 @@ v2all:
 	# Build with CGO enabled on Windows to avoid the problematic pure-go DNS resolver.
 	# See: https://github.com/prometheus/prometheus/issues/11480
 	#      https://pkg.go.dev/net#hdr-Name_Resolution
-	(cd builder && GOOS=windows GOARCH=amd64 CGO_ENABLED=1 $(GO) build $(V2_BUILD_OPTS) -o ../graylog-collector-windows-amd64 .)
+	(cd builder && GOOS=windows GOARCH=amd64 CGO_ENABLED=1 $(GO) build $(V2_BUILD_OPTS) -o ../graylog-collector-windows-amd64.exe .)
 
 GOTEST_FLAGS := -vet=all -race
 ifdef CI
