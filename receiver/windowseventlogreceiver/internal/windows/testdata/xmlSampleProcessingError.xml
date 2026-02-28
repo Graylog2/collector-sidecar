@@ -1,0 +1,20 @@
+<!--
+ Copyright The OpenTelemetry Authors
+ SPDX-License-Identifier: Apache-2.0
+-->
+
+<Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+  <System>
+    <Provider Name="TestProvider"/>
+    <EventID>1000</EventID>
+    <Level>4</Level>
+    <Channel>Application</Channel>
+    <Computer>test</Computer>
+    <TimeCreated SystemTime="2024-01-15T10:00:00.000Z"/>
+    <EventRecordID>1</EventRecordID>
+  </System>
+  <ProcessingErrorData>
+    <ErrorCode>15027</ErrorCode>
+    <DataItemName>message</DataItemName>
+  </ProcessingErrorData>
+</Event>
