@@ -99,8 +99,6 @@ func parseKeywordBits(keywords []string) uint64 {
 
 // formattedBody will parse a body from the event.
 func formattedBody(e *EventXML) map[string]any {
-	message, details := parseMessage(e.Channel, e.Message)
-
 	level := e.RenderedLevel
 	if level == "" {
 		level = e.Level
@@ -126,26 +124,18 @@ func formattedBody(e *EventXML) map[string]any {
 			"qualifiers": e.EventID.Qualifiers,
 			"id":         e.EventID.ID,
 		},
-		"provider": map[string]any{
-			"name":         e.Provider.Name,
-			"guid":         e.Provider.GUID,
-			"event_source": e.Provider.EventSourceName,
-		},
+		"provider": providerMap(e.Provider),
 		"system_time": e.TimeCreated.SystemTime,
 		"computer":    e.Computer,
 		"channel":     e.Channel,
 		"record_id":   e.RecordID,
 		"level":       level,
-		"message":     message,
+		"message":     e.Message,
 		"task":        task,
 		"opcode":      opcode,
 		"keywords":    keywords,
 		"event_data":  parseEventData(e.EventData),
 		"version":     e.Version,
-	}
-
-	if len(details) > 0 {
-		body["details"] = details
 	}
 
 	if e.Security != nil && e.Security.UserID != "" {
@@ -159,14 +149,22 @@ func formattedBody(e *EventXML) map[string]any {
 	}
 
 	if e.Correlation != nil {
-		body["correlation"] = e.Correlation.asMap()
+		if cm := e.Correlation.asMap(); len(cm) > 0 {
+			body["correlation"] = cm
+		}
 	}
 
 	if e.UserData != nil && len(e.UserData.Data) > 0 {
 		ud := map[string]any{}
 		ud["xml_name"] = e.UserData.Name.Local
 		for _, d := range e.UserData.Data {
-			ud[d.XMLName.Local] = d.Value
+			if d.Value == "" {
+				continue
+			}
+			key := d.XMLName.Local
+			if _, exists := ud[key]; !exists {
+				ud[key] = d.Value
+			}
 		}
 		body["user_data"] = ud
 	}
@@ -192,39 +190,35 @@ func formattedBody(e *EventXML) map[string]any {
 	return body
 }
 
-// parseMessage will attempt to parse a message into a message and details
-func parseMessage(channel, message string) (string, map[string]any) {
-	switch channel {
-	case "Security":
-		return parseSecurity(message)
-	default:
-		return message, nil
-	}
-}
-
-// parse event data into a map[string]interface
+// parseEventData converts EventData to a flat map, matching winlogbeat's behavior:
+// - Named entries become direct key-value pairs (first occurrence wins for duplicates)
+// - Unnamed entries get synthetic keys "param1", "param2", etc. (1-based position index)
+// - Empty values are dropped
+// - <Binary> is stored as "Binary" in the same map
+// - The <EventData Name="..."> attribute is not preserved
+//
 // see: https://learn.microsoft.com/en-us/windows/win32/wes/eventschema-datafieldtype-complextype
 func parseEventData(eventData EventData) map[string]any {
-	outputMap := make(map[string]any, 3)
-	if eventData.Name != "" {
-		outputMap["name"] = eventData.Name
-	}
-	if eventData.Binary != "" {
-		outputMap["binary"] = eventData.Binary
-	}
+	outputMap := make(map[string]any, len(eventData.Data)+1)
 
-	if len(eventData.Data) == 0 {
-		return outputMap
-	}
-
-	dataMaps := make([]any, len(eventData.Data))
 	for i, data := range eventData.Data {
-		dataMaps[i] = map[string]any{
-			data.Name: data.Value,
+		if data.Value == "" {
+			continue
+		}
+		key := data.Name
+		if key == "" {
+			key = fmt.Sprintf("param%d", i+1)
+		}
+		if _, exists := outputMap[key]; !exists {
+			outputMap[key] = data.Value
 		}
 	}
 
-	outputMap["data"] = dataMaps
+	if eventData.Binary != "" {
+		if _, exists := outputMap["Binary"]; !exists {
+			outputMap["Binary"] = eventData.Binary
+		}
+	}
 
 	return outputMap
 }
@@ -281,6 +275,19 @@ type Provider struct {
 	Name            string `xml:"Name,attr"`
 	GUID            string `xml:"Guid,attr"`
 	EventSourceName string `xml:"EventSourceName,attr"`
+}
+
+func providerMap(p Provider) map[string]any {
+	m := map[string]any{
+		"name": p.Name,
+	}
+	if p.GUID != "" {
+		m["guid"] = p.GUID
+	}
+	if p.EventSourceName != "" {
+		m["event_source"] = p.EventSourceName
+	}
+	return m
 }
 
 type EventData struct {

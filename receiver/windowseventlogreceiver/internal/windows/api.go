@@ -28,6 +28,8 @@ var (
 	openEventMetadataEnumProc    SyscallProc = api.NewProc("EvtOpenEventMetadataEnum")
 	nextEventMetadataProc        SyscallProc = api.NewProc("EvtNextEventMetadata")
 	getEventMetadataPropertyProc SyscallProc = api.NewProc("EvtGetEventMetadataProperty")
+	openChannelEnumProc          SyscallProc = api.NewProc("EvtOpenChannelEnum")
+	nextChannelPathProc          SyscallProc = api.NewProc("EvtNextChannelPath")
 )
 
 // SyscallProc is a syscall procedure.

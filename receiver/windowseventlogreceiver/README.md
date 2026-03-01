@@ -125,7 +125,6 @@ following fields:
 | `security.user_type`           | string            | Account type: User, Group, WellKnownGroup, Computer, etc.                   |
 | `execution`                    | map               | Process/thread info (`process_id`, `thread_id`, etc.)                       |
 | `correlation`                  | map               | Activity and related activity IDs (when present)                            |
-| `details`                      | map               | Parsed Security channel message details (when applicable)                   |
 | `outcome`                      | string            | `"success"` or `"failure"` derived from audit keyword bits (Security events) |
 | `error.code`                   | uint32            | Windows rendering error code (when `ProcessingErrorData` is present)        |
 | `error.data_item_name`         | string            | Name of the field that failed rendering (when `ProcessingErrorData` is present) |

@@ -85,11 +85,11 @@ func (s *Subscription) Close() error {
 		return nil
 	}
 
-	if err := evtClose(s.handle); err != nil {
+	err := evtClose(s.handle)
+	s.handle = 0
+	if err != nil {
 		return fmt.Errorf("failed to close subscription handle: %w", err)
 	}
-
-	s.handle = 0
 	return nil
 }
 

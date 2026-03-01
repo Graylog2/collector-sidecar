@@ -14,6 +14,9 @@ func validateConfig(c *Config) error {
 	if c.Channel == "" && c.Query == nil {
 		return errors.New("either `channel` or `query` must be set")
 	}
+	if c.Query != nil && *c.Query == "" {
+		return errors.New("the `query` field must not be empty when set")
+	}
 	if c.Channel != "" && c.Query != nil {
 		return errors.New("either `channel` or `query` must be set, but not both")
 	}
@@ -22,6 +25,9 @@ func validateConfig(c *Config) error {
 	}
 	if c.StartAt != "end" && c.StartAt != "beginning" {
 		return errors.New("the `start_at` field must be set to `beginning` or `end`")
+	}
+	if c.SIDCacheSize < 0 {
+		return errors.New("the `sid_cache_size` field must not be negative")
 	}
 	if c.Query != nil {
 		if err := validateQueryXML(*c.Query); err != nil {
@@ -33,9 +39,6 @@ func validateConfig(c *Config) error {
 
 // validateQueryXML checks that the query string is valid XML.
 func validateQueryXML(query string) error {
-	if query == "" {
-		return nil
-	}
 	if err := xml.Unmarshal([]byte(query), &struct {
 		XMLName xml.Name
 	}{}); err != nil {

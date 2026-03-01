@@ -84,6 +84,9 @@ func (c *sidCache) resolve(sid string) (*SIDInfo, error) {
 }
 
 func (c *sidCache) putLocked(sid string, info *SIDInfo, err error) {
+	if c.maxSize <= 0 {
+		return // caching disabled, resolve-only mode
+	}
 	entry := &sidCacheEntry{
 		sid:       sid,
 		info:      info,

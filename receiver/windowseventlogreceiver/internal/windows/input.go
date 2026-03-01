@@ -58,6 +58,16 @@ func isNonTransientError(err error) bool {
 	return true // assume non-transient if we can't identify the error
 }
 
+// errIsChannelError checks if the error is specifically a channel-related error
+// (e.g. channel not found), as opposed to other non-transient errors like access denied.
+func errIsChannelError(err error) bool {
+	var errno syscall.Errno
+	if errors.As(err, &errno) {
+		return isChannelError(uint32(errno))
+	}
+	return false
+}
+
 // Start will start reading events from a subscription.
 func (i *Input) Start(persister operator.Persister) error {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -87,10 +97,10 @@ func (i *Input) Start(persister operator.Persister) error {
 	subscription := NewSubscription()
 	if err := subscription.Open(i.startAt, i.channel, i.query, i.bookmark); err != nil {
 		if isNonTransientError(err) {
-			if !i.ignoreChannelErrors {
+			if !i.ignoreChannelErrors || !errIsChannelError(err) {
 				return fmt.Errorf("failed to open local subscription: %w", err)
 			}
-			i.Logger().Warn("Non-transient error opening subscription, not starting", zap.Error(err))
+			i.Logger().Warn("Channel not found, not starting", zap.Error(err))
 			return nil
 		}
 		i.Logger().Warn("Transient error opening subscription, will retry with backoff", zap.Error(err))
@@ -144,37 +154,73 @@ func (i *Input) pollAndRead(ctx context.Context) {
 			case <-time.After(delay):
 			}
 			if err := i.subscription.Open(i.startAt, i.channel, i.query, i.bookmark); err != nil {
-				i.Logger().Warn("Failed to reopen subscription", zap.Error(err))
+				if isNonTransientError(err) {
+					if i.ignoreChannelErrors && errIsChannelError(err) {
+						i.Logger().Warn("Channel not found on reopen, giving up", zap.Error(err))
+					} else {
+						i.Logger().Error("Non-transient error reopening subscription, stopping", zap.Error(err))
+					}
+					return
+				}
+				i.Logger().Warn("Transient error reopening subscription, will retry", zap.Error(err))
 				continue
 			}
 			i.subscriptionOpen = true
-			bo.reset()
 		}
 
 		select {
 		case <-ctx.Done():
 			return
 		case <-time.After(i.pollInterval):
-			i.read(ctx)
-		}
-	}
-}
-
-func (i *Input) read(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			if !i.readBatch(ctx) {
+			switch i.read(ctx) {
+			case readOK:
+				bo.reset()
+			case readFatal:
 				return
 			}
 		}
 	}
 }
 
-// readBatch will read events from the subscription.
-func (i *Input) readBatch(ctx context.Context) bool {
+// readResult describes the outcome of a read cycle.
+type readResult int
+
+const (
+	readOK    readResult = iota // at least one event was read
+	readEmpty                   // no events (or recoverable error triggering reopen)
+	readFatal                   // non-recoverable error, stop the receiver
+)
+
+// read drains all available events.
+func (i *Input) read(ctx context.Context) readResult {
+	hadEvents := false
+	for {
+		select {
+		case <-ctx.Done():
+			if hadEvents {
+				return readOK
+			}
+			return readEmpty
+		default:
+			more, fatal := i.readBatch(ctx)
+			if more {
+				hadEvents = true
+			}
+			if fatal {
+				return readFatal
+			}
+			if !more {
+				if hadEvents {
+					return readOK
+				}
+				return readEmpty
+			}
+		}
+	}
+}
+
+// readBatch reads one batch of events. Returns (moreEvents, fatalError).
+func (i *Input) readBatch(ctx context.Context) (bool, bool) {
 	events, actualMaxReads, err := i.subscription.Read(i.currentMaxReads)
 
 	// Update the current max reads if it changed
@@ -184,28 +230,45 @@ func (i *Input) readBatch(ctx context.Context) bool {
 	}
 
 	if err != nil {
+		// Handle not-open sentinel: trigger reopen
+		if errors.Is(err, errSubscriptionHandleNotOpen) {
+			i.Logger().Warn("Subscription handle not open, will reopen")
+			i.subscriptionOpen = false
+			return false, false
+		}
+
 		var errno syscall.Errno
-		if errors.As(err, &errno) && uint32(errno) == errorInvalidHandle {
-			i.Logger().Warn("Subscription handle invalid, closing and reopening")
+		if errors.As(err, &errno) && isRecoverableError(uint32(errno)) {
+			i.Logger().Warn("Recoverable read error, closing and reopening subscription", zap.Error(err))
 			_ = i.subscription.Close()
 			i.subscriptionOpen = false
-			return false
+			return false, false
 		}
-		i.Logger().Error("Failed to read events from subscription", zap.Error(err))
-		return false
+
+		// Non-recoverable: if it's a channel error and ignoreChannelErrors is set,
+		// close and let the reopen loop handle it instead of stopping.
+		if i.ignoreChannelErrors && errors.As(err, &errno) && isChannelError(uint32(errno)) {
+			i.Logger().Warn("Channel error during read, closing and will retry", zap.Error(err))
+			_ = i.subscription.Close()
+			i.subscriptionOpen = false
+			return false, false
+		}
+		i.Logger().Error("Fatal read error, stopping", zap.Error(err))
+		return false, true
 	}
 
-	for n, event := range events {
+	seenFailure := false
+	for _, event := range events {
 		if err := i.processEvent(ctx, event); err != nil {
 			i.Logger().Error("process event", zap.Error(err))
-		}
-		if len(events) == n+1 {
+			seenFailure = true
+		} else if !seenFailure {
 			i.updateBookmarkOffset(ctx, event)
 		}
 		event.Close()
 	}
 
-	return len(events) != 0
+	return len(events) != 0, false
 }
 
 func (i *Input) getPublisherName(event Event) (name string, excluded bool) {
@@ -309,10 +372,18 @@ func (i *Input) applyTemplateFallback(eventXML *EventXML, entry *publisherEntry)
 
 // sendEventWithEnrichment applies %%ID expansion and SID resolution before sending.
 func (i *Input) sendEventWithEnrichment(ctx context.Context, eventXML *EventXML, entry *publisherEntry) error {
-	// Apply %%ID expansion to message
+	// Apply %%ID expansion to message, EventData, and UserData values
 	if entry != nil && entry.publisher.Valid() {
 		resolver := newPublisherParamResolver(entry.publisher, entry.paramMessages)
 		eventXML.Message = expandParamMessages(eventXML.Message, resolver)
+		for idx := range eventXML.EventData.Data {
+			eventXML.EventData.Data[idx].Value = expandParamMessages(eventXML.EventData.Data[idx].Value, resolver)
+		}
+		if eventXML.UserData != nil {
+			for idx := range eventXML.UserData.Data {
+				eventXML.UserData.Data[idx].Value = expandParamMessages(eventXML.UserData.Data[idx].Value, resolver)
+			}
+		}
 	}
 
 	return i.sendEvent(ctx, eventXML)

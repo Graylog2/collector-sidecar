@@ -4,6 +4,7 @@
 package windows
 
 import (
+	"encoding/xml"
 	"os"
 	"path/filepath"
 	"testing"
@@ -106,10 +107,8 @@ func TestParseBody(t *testing.T) {
 		"opcode":      "rendered_opcode",
 		"keywords":    []string{"RenderedKeywords"},
 		"event_data": map[string]any{
-			"data": []any{
-				map[string]any{"1st_name": "value"},
-				map[string]any{"2nd_name": "another_value"},
-			},
+			"1st_name": "value",
+			"2nd_name": "another_value",
 		},
 		"version": uint8(0),
 	}
@@ -183,10 +182,8 @@ func TestParseBodySecurityExecution(t *testing.T) {
 			"user_id": "my-user-id",
 		},
 		"event_data": map[string]any{
-			"data": []any{
-				map[string]any{"name": "value"},
-				map[string]any{"another_name": "another_value"},
-			},
+			"name": "value",
+			"another_name": "another_value",
 		},
 		"version": uint8(0),
 	}
@@ -276,10 +273,8 @@ func TestParseBodyFullExecution(t *testing.T) {
 			"user_id": "my-user-id",
 		},
 		"event_data": map[string]any{
-			"data": []any{
-				map[string]any{"name": "value"},
-				map[string]any{"another_name": "another_value"},
-			},
+			"name": "value",
+			"another_name": "another_value",
 		},
 		"version": uint8(0),
 	}
@@ -345,10 +340,8 @@ func TestParseBodyCorrelation(t *testing.T) {
 		"opcode":      "rendered_opcode",
 		"keywords":    []string{"RenderedKeywords"},
 		"event_data": map[string]any{
-			"data": []any{
-				map[string]any{"1st_name": "value"},
-				map[string]any{"2nd_name": "another_value"},
-			},
+			"1st_name": "value",
+			"2nd_name": "another_value",
 		},
 		"correlation": map[string]any{
 			"activity_id":         "{11111111-1111-1111-1111-111111111111}",
@@ -408,10 +401,8 @@ func TestParseNoRendered(t *testing.T) {
 		"opcode":      "opcode",
 		"keywords":    []string{"keyword"},
 		"event_data": map[string]any{
-			"data": []any{
-				map[string]any{"name": "value"},
-				map[string]any{"another_name": "another_value"},
-			},
+			"name": "value",
+			"another_name": "another_value",
 		},
 		"version": uint8(0),
 	}
@@ -471,10 +462,8 @@ func TestParseBodySecurity(t *testing.T) {
 		"opcode":      "rendered_opcode",
 		"keywords":    []string{"RenderedKeywords"},
 		"event_data": map[string]any{
-			"data": []any{
-				map[string]any{"name": "value"},
-				map[string]any{"another_name": "another_value"},
-			},
+			"name": "value",
+			"another_name": "another_value",
 		},
 		"version": uint8(0),
 	}
@@ -483,6 +472,7 @@ func TestParseBodySecurity(t *testing.T) {
 }
 
 func TestParseEventData(t *testing.T) {
+	// Named entries with Binary — EventData Name attribute is not preserved (matches winlogbeat)
 	xmlMap := &EventXML{
 		EventData: EventData{
 			Name:   "EVENT_DATA",
@@ -493,14 +483,12 @@ func TestParseEventData(t *testing.T) {
 
 	parsed := formattedBody(xmlMap)
 	expectedMap := map[string]any{
-		"name": "EVENT_DATA",
-		"data": []any{
-			map[string]any{"name": "value"},
-		},
-		"binary": "2D20",
+		"name":   "value",
+		"Binary": "2D20",
 	}
 	require.Equal(t, expectedMap, parsed["event_data"])
 
+	// Mixed named and unnamed — unnamed get paramN keys (1-based index)
 	xmlMixed := &EventXML{
 		EventData: EventData{
 			Data: []Data{{Name: "name", Value: "value"}, {Value: "no_name"}},
@@ -508,13 +496,37 @@ func TestParseEventData(t *testing.T) {
 	}
 
 	parsed = formattedBody(xmlMixed)
-	expectedSlice := map[string]any{
-		"data": []any{
-			map[string]any{"name": "value"},
-			map[string]any{"": "no_name"},
+	expectedMixed := map[string]any{
+		"name":   "value",
+		"param2": "no_name",
+	}
+	require.Equal(t, expectedMixed, parsed["event_data"])
+
+	// Empty values are dropped
+	xmlEmpty := &EventXML{
+		EventData: EventData{
+			Data: []Data{{Name: "name", Value: ""}, {Name: "other", Value: "kept"}},
 		},
 	}
-	require.Equal(t, expectedSlice, parsed["event_data"])
+
+	parsed = formattedBody(xmlEmpty)
+	expectedEmpty := map[string]any{
+		"other": "kept",
+	}
+	require.Equal(t, expectedEmpty, parsed["event_data"])
+
+	// Duplicate keys — first occurrence wins
+	xmlDup := &EventXML{
+		EventData: EventData{
+			Data: []Data{{Name: "key", Value: "first"}, {Name: "key", Value: "second"}},
+		},
+	}
+
+	parsed = formattedBody(xmlDup)
+	expectedDup := map[string]any{
+		"key": "first",
+	}
+	require.Equal(t, expectedDup, parsed["event_data"])
 }
 
 func TestUnmarshalEventXML_InvalidChars(t *testing.T) {
@@ -775,4 +787,55 @@ func TestFormattedBodyWithUserData(t *testing.T) {
 	require.Equal(t, "0xa8bb72", ud["SubjectLogonId"])
 	require.Equal(t, "4536", ud["ClientProcessId"])
 	require.Equal(t, "17732923532772643", ud["ClientProcessStartKey"])
+}
+
+func TestFormattedBodyUserData_EmptyValuesDropped(t *testing.T) {
+	event := &EventXML{
+		UserData: &UserData{
+			Name: xml.Name{Local: "TestEvent"},
+			Data: []UserDataEntry{
+				{XMLName: xml.Name{Local: "Key1"}, Value: "val1"},
+				{XMLName: xml.Name{Local: "Key2"}, Value: ""},
+				{XMLName: xml.Name{Local: "Key3"}, Value: "val3"},
+			},
+		},
+	}
+	body := formattedBody(event)
+	ud := body["user_data"].(map[string]any)
+	require.Equal(t, "TestEvent", ud["xml_name"])
+	require.Equal(t, "val1", ud["Key1"])
+	require.Equal(t, "val3", ud["Key3"])
+	_, hasKey2 := ud["Key2"]
+	require.False(t, hasKey2, "empty values should be dropped")
+}
+
+func TestFormattedBodyUserData_DuplicateKeysFirstWins(t *testing.T) {
+	event := &EventXML{
+		UserData: &UserData{
+			Name: xml.Name{Local: "TestEvent"},
+			Data: []UserDataEntry{
+				{XMLName: xml.Name{Local: "Key"}, Value: "first"},
+				{XMLName: xml.Name{Local: "Key"}, Value: "second"},
+			},
+		},
+	}
+	body := formattedBody(event)
+	ud := body["user_data"].(map[string]any)
+	require.Equal(t, "first", ud["Key"])
+}
+
+func TestFormattedBodyUserData_AllEmptyNoUserData(t *testing.T) {
+	event := &EventXML{
+		UserData: &UserData{
+			Name: xml.Name{Local: "TestEvent"},
+			Data: []UserDataEntry{
+				{XMLName: xml.Name{Local: "Key1"}, Value: ""},
+			},
+		},
+	}
+	body := formattedBody(event)
+	// UserData still present because Data slice is non-empty (even though all values empty)
+	ud := body["user_data"].(map[string]any)
+	require.Equal(t, "TestEvent", ud["xml_name"])
+	require.Len(t, ud, 1, "only xml_name should remain")
 }

@@ -249,5 +249,6 @@ endif
 v2test:
 	(cd builder && $(GO) test $(GOTEST_FLAGS) $(GOTEST_CI_FLAGS) ./...)
 	(cd superv && $(GO) test $(GOTEST_FLAGS) $(GOTEST_CI_FLAGS) ./...)
+	(cd receiver/windowseventlogreceiver && $(GO) test $(GOTEST_FLAGS) $(GOTEST_CI_FLAGS) ./...)
 
 .DEFAULT_GOAL := all

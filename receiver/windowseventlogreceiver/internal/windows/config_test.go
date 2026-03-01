@@ -24,7 +24,7 @@ func TestValidateQueryXML_Malformed(t *testing.T) {
 
 func TestValidateQueryXML_Empty(t *testing.T) {
 	err := validateQueryXML("")
-	require.NoError(t, err) // empty is fine, means not set
+	require.Error(t, err) // empty string is invalid XML
 }
 
 func TestValidateConfig(t *testing.T) {
@@ -66,6 +66,16 @@ func TestValidateConfig(t *testing.T) {
 			name: "start_at beginning",
 			cfg:  Config{Channel: "Application", MaxReads: 100, StartAt: "beginning"},
 		},
+		{
+			name:    "empty query string",
+			cfg:     Config{Query: ptrString(""), MaxReads: 100, StartAt: "end"},
+			wantErr: "the `query` field must not be empty when set",
+		},
+		{
+			name:    "negative sid_cache_size",
+			cfg:     Config{Channel: "Application", MaxReads: 100, StartAt: "end", SIDCacheSize: -1},
+			wantErr: "the `sid_cache_size` field must not be negative",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -78,6 +88,8 @@ func TestValidateConfig(t *testing.T) {
 		})
 	}
 }
+
+func ptrString(s string) *string { return &s }
 
 func TestNewConfig_Defaults(t *testing.T) {
 	cfg := NewConfig()

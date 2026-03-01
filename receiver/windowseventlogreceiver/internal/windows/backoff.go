@@ -50,6 +50,14 @@ const (
 	evtChannelNotFound = 15007
 )
 
+// isChannelError checks if a Windows error code is a channel-related error
+// (e.g. the channel does not exist). This is used to scope ignore_channel_errors
+// so it only suppresses channel-specific failures, not unrelated errors like
+// access denied.
+func isChannelError(code uint32) bool {
+	return code == evtChannelNotFound
+}
+
 // isRecoverableError checks if a Windows error code is transient/recoverable.
 func isRecoverableError(code uint32) bool {
 	switch code {
