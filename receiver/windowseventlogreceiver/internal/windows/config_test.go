@@ -68,7 +68,7 @@ func TestValidateConfig(t *testing.T) {
 		},
 		{
 			name:    "empty query string",
-			cfg:     Config{Query: ptrString(""), MaxReads: 100, StartAt: "end"},
+			cfg:     Config{Query: new(""), MaxReads: 100, StartAt: "end"},
 			wantErr: "the `query` field must not be empty when set",
 		},
 		{
@@ -89,7 +89,8 @@ func TestValidateConfig(t *testing.T) {
 	}
 }
 
-func ptrString(s string) *string { return &s }
+//go:fix inline
+func ptrString(s string) *string { return new(s) }
 
 func TestNewConfig_Defaults(t *testing.T) {
 	cfg := NewConfig()

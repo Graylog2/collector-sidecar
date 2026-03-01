@@ -124,7 +124,7 @@ func formattedBody(e *EventXML) map[string]any {
 			"qualifiers": e.EventID.Qualifiers,
 			"id":         e.EventID.ID,
 		},
-		"provider": providerMap(e.Provider),
+		"provider":    providerMap(e.Provider),
 		"system_time": e.TimeCreated.SystemTime,
 		"computer":    e.Computer,
 		"channel":     e.Channel,

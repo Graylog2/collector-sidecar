@@ -42,7 +42,7 @@ type Config struct {
 	SuppressRenderingInfo    bool          `mapstructure:"suppress_rendering_info,omitempty"`
 	ExcludeProviders         []string      `mapstructure:"exclude_providers,omitempty"`
 	Query                    *string       `mapstructure:"query,omitempty"`
-	ResolveSIDs  bool   `mapstructure:"resolve_sids,omitempty"`
-	SIDCacheSize int    `mapstructure:"sid_cache_size,omitempty"`
-	Language     uint32 `mapstructure:"language,omitempty"`
+	ResolveSIDs              bool          `mapstructure:"resolve_sids,omitempty"`
+	SIDCacheSize             int           `mapstructure:"sid_cache_size,omitempty"`
+	Language                 uint32        `mapstructure:"language,omitempty"`
 }

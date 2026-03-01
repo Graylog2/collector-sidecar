@@ -182,7 +182,7 @@ func TestParseBodySecurityExecution(t *testing.T) {
 			"user_id": "my-user-id",
 		},
 		"event_data": map[string]any{
-			"name": "value",
+			"name":         "value",
 			"another_name": "another_value",
 		},
 		"version": uint8(0),
@@ -273,7 +273,7 @@ func TestParseBodyFullExecution(t *testing.T) {
 			"user_id": "my-user-id",
 		},
 		"event_data": map[string]any{
-			"name": "value",
+			"name":         "value",
 			"another_name": "another_value",
 		},
 		"version": uint8(0),
@@ -401,7 +401,7 @@ func TestParseNoRendered(t *testing.T) {
 		"opcode":      "opcode",
 		"keywords":    []string{"keyword"},
 		"event_data": map[string]any{
-			"name": "value",
+			"name":         "value",
 			"another_name": "another_value",
 		},
 		"version": uint8(0),
@@ -462,7 +462,7 @@ func TestParseBodySecurity(t *testing.T) {
 		"opcode":      "rendered_opcode",
 		"keywords":    []string{"RenderedKeywords"},
 		"event_data": map[string]any{
-			"name": "value",
+			"name":         "value",
 			"another_name": "another_value",
 		},
 		"version": uint8(0),
