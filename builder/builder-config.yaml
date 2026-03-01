@@ -22,7 +22,7 @@ receivers:
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver v0.146.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver v0.146.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/macosunifiedloggingreceiver v0.146.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/windowseventlogreceiver v0.146.0
+  - gomod: github.com/Graylog2/collector-sidecar/receiver/windowseventlogreceiver v0.0.0
 
 processors:
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.146.0
@@ -35,4 +35,5 @@ providers:
 
 replaces:
   - github.com/Graylog2/collector-sidecar/extension/sidecar => ../extension/sidecar
+  - github.com/Graylog2/collector-sidecar/receiver/windowseventlogreceiver => ../receiver/windowseventlogreceiver
   - github.com/Graylog2/collector-sidecar/superv => ../superv

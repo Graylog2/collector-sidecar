@@ -4,6 +4,7 @@ package main
 
 import (
 	sidecar "github.com/Graylog2/collector-sidecar/extension/sidecar"
+	windowseventlogreceiver "github.com/Graylog2/collector-sidecar/receiver/windowseventlogreceiver"
 	healthcheckextension "github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension"
 	opampextension "github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampextension"
 	resourcedetectionprocessor "github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor"
@@ -11,7 +12,6 @@ import (
 	filelogreceiver "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver"
 	journaldreceiver "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver"
 	macosunifiedloggingreceiver "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/macosunifiedloggingreceiver"
-	windowseventlogreceiver "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/windowseventlogreceiver"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/connector"
 	"go.opentelemetry.io/collector/exporter"
@@ -79,7 +79,7 @@ func components() (otelcol.Factories, error) {
 		filelogreceiver.NewFactory().Type():             "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver v0.146.0",
 		journaldreceiver.NewFactory().Type():            "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver v0.146.0",
 		macosunifiedloggingreceiver.NewFactory().Type(): "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/macosunifiedloggingreceiver v0.146.0",
-		windowseventlogreceiver.NewFactory().Type():     "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/windowseventlogreceiver v0.146.0",
+		windowseventlogreceiver.NewFactory().Type():     "github.com/Graylog2/collector-sidecar/receiver/windowseventlogreceiver v0.0.0",
 	})
 
 	factories.Exporters, err = otelcol.MakeFactoryMap[exporter.Factory](
