@@ -53,10 +53,10 @@ func (c *publisherCache) get(provider string) (Publisher, error) {
 	return newEntry.publisher, err
 }
 
-func (c *publisherCache) getEntry(provider string) *publisherEntry {
+func (c *publisherCache) getEntry(provider string) (*publisherEntry, error) {
 	// Ensure the entry exists via get (which handles first-open)
-	_, _ = c.get(provider)
-	return c.cache[provider]
+	_, err := c.get(provider)
+	return c.cache[provider], err
 }
 
 func (c *publisherCache) evictAll() error {

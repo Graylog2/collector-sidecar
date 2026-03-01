@@ -74,8 +74,7 @@ func (b *Buffer) SizeWide() uint32 {
 }
 
 // FirstByte will return a pointer to the first byte.
-// Panics if the buffer is empty; callers should ensure the buffer
-// has been initialized via NewBuffer or UpdateSizeBytes with size > 0.
+// If the buffer is empty, it is automatically initialized to defaultBufferSize.
 func (b *Buffer) FirstByte() *byte {
 	if len(b.buffer) == 0 {
 		b.buffer = make([]byte, defaultBufferSize)

@@ -309,7 +309,10 @@ func (i *Input) processEventWithRenderingInfo(ctx context.Context, event Event) 
 		return nil
 	}
 
-	entry := i.publisherCache.getEntry(providerName)
+	entry, err := i.publisherCache.getEntry(providerName)
+	if err != nil {
+		i.Logger().Debug("Failed to open publisher metadata", zap.String("provider", providerName), zap.Error(err))
+	}
 	if entry == nil || !entry.publisher.Valid() {
 		return i.renderSimpleAndSend(ctx, event)
 	}
