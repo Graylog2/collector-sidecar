@@ -16,6 +16,10 @@ import (
 type WindowsLogConfig struct {
 	windows.Config     `mapstructure:",squash"`
 	adapter.BaseConfig `mapstructure:",squash"`
+
+	// Deprecated: MaxEventsPerPoll is no longer used but kept for backwards
+	// compatibility so that older configurations do not fail to unmarshal.
+	MaxEventsPerPoll any `mapstructure:"max_events_per_poll,omitempty"`
 }
 
 func createDefaultConfig() component.Config {
