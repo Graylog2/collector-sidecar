@@ -23,6 +23,7 @@ WINDOWS_INSTALLER_VERSION = $(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)$(subst -,
 CHOCOLATEY_VERSION = $(COLLECTOR_VERSION).$(COLLECTOR_REVISION)$(subst .,,$(COLLECTOR_VERSION_SUFFIX))
 
 FMT_ARGS = -f .license.template -ignore '{.github,.idea,changelog,dist/v2}/**' -ignore '**/*.{yml,yaml}' .
+FMT_ARGS_OTEL = -f .license.template.otel -ignore '**/*.{yml,yaml}' receiver/windowseventlogreceiver
 
 .PHONY: all
 all: build
@@ -30,6 +31,7 @@ all: build
 .PHONY: fmt
 fmt: ## Run gofmt
 	$(GOFMT) -w -s -l .
+	$(GO) tool github.com/google/addlicense $(FMT_ARGS_OTEL)
 	$(GO) tool github.com/google/addlicense $(FMT_ARGS)
 
 .PHONY: clean

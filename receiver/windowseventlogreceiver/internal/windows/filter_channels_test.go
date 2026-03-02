@@ -1,4 +1,4 @@
-// Copyright (C) 2026 Graylog, Inc.
+// Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
 // filter_channels_test.go
