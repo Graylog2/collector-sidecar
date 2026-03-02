@@ -45,12 +45,12 @@ func TestValidateConfig(t *testing.T) {
 		{
 			name:    "neither channel nor query",
 			cfg:     Config{MaxReads: 100, StartAt: "end"},
-			wantErr: "either `channel` or `query` must be set",
+			wantErr: "either `channel`, `channel_list`, or `query` must be set",
 		},
 		{
 			name:    "both channel and query",
 			cfg:     Config{Channel: "Application", Query: &validQuery, MaxReads: 100, StartAt: "end"},
-			wantErr: "either `channel` or `query` must be set, but not both",
+			wantErr: "only one of `channel`, `channel_list`, or `query` may be set",
 		},
 		{
 			name:    "max_reads zero",
@@ -76,6 +76,34 @@ func TestValidateConfig(t *testing.T) {
 			cfg:     Config{Channel: "Application", MaxReads: 100, StartAt: "end", SIDCacheSize: -1},
 			wantErr: "the `sid_cache_size` field must not be negative",
 		},
+		{
+			name: "valid channel_list",
+			cfg:  Config{ChannelList: []string{"Security", "Application"}, MaxReads: 100, StartAt: "end"},
+		},
+		{
+			name:    "channel and channel_list",
+			cfg:     Config{Channel: "Security", ChannelList: []string{"Application"}, MaxReads: 100, StartAt: "end"},
+			wantErr: "only one of `channel`, `channel_list`, or `query` may be set",
+		},
+		{
+			name:    "channel_list and query",
+			cfg:     Config{ChannelList: []string{"Security"}, Query: &validQuery, MaxReads: 100, StartAt: "end"},
+			wantErr: "only one of `channel`, `channel_list`, or `query` may be set",
+		},
+		{
+			name:    "empty channel_list",
+			cfg:     Config{ChannelList: []string{}, MaxReads: 100, StartAt: "end"},
+			wantErr: "either `channel`, `channel_list`, or `query` must be set",
+		},
+		{
+			name:    "whitespace-only channel_list rejected after canonicalization",
+			cfg:     Config{ChannelList: []string{"   ", "", "\t"}, MaxReads: 100, StartAt: "end"},
+			wantErr: "either `channel`, `channel_list`, or `query` must be set",
+		},
+		{
+			name: "channel_list with duplicates canonicalized",
+			cfg:  Config{ChannelList: []string{"Security", "security", "SECURITY"}, MaxReads: 100, StartAt: "end"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -100,5 +128,6 @@ func TestNewConfig_Defaults(t *testing.T) {
 	require.Equal(t, 1024, cfg.SIDCacheSize)
 	require.Equal(t, "", cfg.Channel)
 	require.Nil(t, cfg.Query)
+	require.Nil(t, cfg.ChannelList)
 	require.False(t, cfg.Raw)
 }

@@ -11,14 +11,30 @@ import (
 
 // validateConfig validates the Config fields that don't require Windows APIs.
 func validateConfig(c *Config) error {
-	if c.Channel == "" && c.Query == nil {
-		return errors.New("either `channel` or `query` must be set")
+	// Canonicalize channel_list in-place before validation so that
+	// whitespace-only or duplicate entries don't pass validation
+	// only to produce an empty list at runtime.
+	c.ChannelList = canonicalizeChannelList(c.ChannelList)
+
+	sources := 0
+	if c.Channel != "" {
+		sources++
+	}
+	if len(c.ChannelList) > 0 {
+		sources++
+	}
+	if c.Query != nil {
+		sources++
+	}
+
+	if sources == 0 {
+		return errors.New("either `channel`, `channel_list`, or `query` must be set")
+	}
+	if sources > 1 {
+		return errors.New("only one of `channel`, `channel_list`, or `query` may be set")
 	}
 	if c.Query != nil && *c.Query == "" {
 		return errors.New("the `query` field must not be empty when set")
-	}
-	if c.Channel != "" && c.Query != nil {
-		return errors.New("either `channel` or `query` must be set, but not both")
 	}
 	if c.MaxReads < 1 {
 		return errors.New("the `max_reads` field must be greater than zero")

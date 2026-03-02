@@ -26,10 +26,30 @@ func (c *Config) Build(set component.TelemetrySettings) (operator.Operator, erro
 		return nil, err
 	}
 
+	// Normalize single channel to channel_list.
+	// Note: channel_list is already canonicalized by validateConfig().
+	channelList := c.ChannelList
+	if c.Channel != "" {
+		channelList = []string{c.Channel}
+	}
+
+	// Compute persist key from the original configured list (before runtime
+	// filtering removes channels that don't exist on this machine). This
+	// ensures the bookmark key is stable across restarts regardless of which
+	// channels happen to be available.
+	var persistKey string
+	if c.Query != nil {
+		persistKey = *c.Query
+	} else {
+		persistKey = channelListPersistKey(channelList)
+	}
+
 	input := &Input{
 		InputOperator:            inputOperator,
 		buffer:                   NewBuffer(),
-		channel:                  c.Channel,
+		channelList:              channelList,
+		persistKey:               persistKey,
+		listChannels:             ListChannels,
 		ignoreChannelErrors:      c.IgnoreChannelErrors,
 		maxReads:                 c.MaxReads,
 		currentMaxReads:          c.MaxReads,

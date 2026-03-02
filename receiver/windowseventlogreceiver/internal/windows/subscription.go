@@ -67,6 +67,9 @@ func (s *Subscription) Open(startAt string, channel string, query *string, bookm
 				return fmt.Errorf("failed to subscribe after stale bookmark recovery: %w", err)
 			}
 		} else {
+			if query != nil {
+				return fmt.Errorf("failed to subscribe with query: %w", err)
+			}
 			return fmt.Errorf("failed to subscribe to %s channel: %w", channel, err)
 		}
 	}

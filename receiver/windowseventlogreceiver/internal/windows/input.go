@@ -26,7 +26,9 @@ type Input struct {
 	helper.InputOperator
 	bookmark                 *Bookmark
 	buffer                   *Buffer
-	channel                  string
+	channelList              []string
+	persistKey               string
+	listChannels             func() ([]string, error)
 	ignoreChannelErrors      bool
 	query                    *string
 	maxReads                 int
@@ -94,8 +96,28 @@ func (i *Input) Start(persister operator.Persister) error {
 		i.sidCache = newSIDCache(i.sidCacheSize, 5*time.Minute, defaultSIDLookup)
 	}
 
+	// Filter channel_list to only channels that exist on this machine.
+	if i.query == nil {
+		filtered, skipped, err := applyChannelFilter(i.channelList, i.listChannels)
+		if err != nil {
+			return err
+		}
+		for _, ch := range skipped {
+			i.Logger().Warn("Configured channel not found on this machine, skipping", zap.String("channel", ch))
+		}
+		if len(filtered) == 0 {
+			if i.ignoreChannelErrors {
+				i.Logger().Warn("No configured channels found on this machine, not starting")
+				return nil
+			}
+			return fmt.Errorf("none of the configured channels exist on this machine: %v", i.channelList)
+		}
+		i.channelList = filtered
+	}
+
 	subscription := NewSubscription()
-	if err := subscription.Open(i.startAt, i.channel, i.query, i.bookmark); err != nil {
+	query := i.effectiveQuery()
+	if err := subscription.Open(i.startAt, "", query, i.bookmark); err != nil {
 		if isNonTransientError(err) {
 			if !i.ignoreChannelErrors || !errIsChannelError(err) {
 				return fmt.Errorf("failed to open local subscription: %w", err)
@@ -153,7 +175,8 @@ func (i *Input) pollAndRead(ctx context.Context) {
 				return
 			case <-time.After(delay):
 			}
-			if err := i.subscription.Open(i.startAt, i.channel, i.query, i.bookmark); err != nil {
+			query := i.effectiveQuery()
+			if err := i.subscription.Open(i.startAt, "", query, i.bookmark); err != nil {
 				if isNonTransientError(err) {
 					if i.ignoreChannelErrors && errIsChannelError(err) {
 						i.Logger().Warn("Channel not found on reopen, giving up", zap.Error(err))
@@ -458,9 +481,13 @@ func (i *Input) updateBookmarkOffset(ctx context.Context, event Event) {
 }
 
 func (i *Input) getPersistKey() string {
-	if i.query != nil {
-		return *i.query
-	}
+	return i.persistKey
+}
 
-	return i.channel
+func (i *Input) effectiveQuery() *string {
+	if i.query != nil {
+		return i.query
+	}
+	q := buildQueryFromChannels(i.channelList)
+	return &q
 }

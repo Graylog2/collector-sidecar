@@ -33,6 +33,7 @@ func NewConfigWithID(operatorID string) *Config {
 type Config struct {
 	helper.InputConfig       `mapstructure:",squash"`
 	Channel                  string        `mapstructure:"channel"`
+	ChannelList              []string      `mapstructure:"channel_list,omitempty"`
 	IgnoreChannelErrors      bool          `mapstructure:"ignore_channel_errors,omitempty"`
 	MaxReads                 int           `mapstructure:"max_reads,omitempty"`
 	StartAt                  string        `mapstructure:"start_at,omitempty"`
