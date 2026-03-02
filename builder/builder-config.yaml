@@ -25,7 +25,9 @@ receivers:
   - gomod: github.com/Graylog2/collector-sidecar/receiver/windowseventlogreceiver v0.0.0
 
 processors:
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.146.0
+  # TODO: This processor pulls in tons of dependency and lets the binary size
+  #       increase by ~80 MB
+  #- gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.146.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.146.0
 
 providers:
