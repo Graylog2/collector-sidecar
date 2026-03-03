@@ -29,6 +29,7 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/Graylog2/collector-sidecar/superv/config"
+	"github.com/Graylog2/collector-sidecar/superv/ownlogs"
 	"github.com/Graylog2/collector-sidecar/superv/supervisor"
 	"github.com/Graylog2/collector-sidecar/superv/version"
 )
@@ -108,11 +109,39 @@ func main() {
 		logger.Fatal("Invalid configuration", zap.Error(err))
 	}
 
+	// Create own logs manager for OTLP export
+	ownLogsManager := ownlogs.NewManager()
+
+	// Tee stderr core with the swappable OTLP core, preserving
+	// all original logger options (development mode, caller, stacktrace threshold).
+	logger = logger.WithOptions(zap.WrapCore(func(original zapcore.Core) zapcore.Core {
+		return zapcore.NewTee(original, ownLogsManager.Core())
+	}))
+
+	// Restore persisted own_logs settings
+	ownLogsPersist := ownlogs.NewPersistence(cfg.Persistence.Dir)
+	if settings, exists, loadErr := ownLogsPersist.Load(); loadErr != nil {
+		logger.Warn("Failed to load persisted own_logs settings", zap.Error(loadErr))
+	} else if exists {
+		logger.Info("Restoring OTLP log export from persisted settings",
+			zap.String("endpoint", settings.Endpoint),
+		)
+		// Build a basic resource with service.name and service.version.
+		// service.instance.id is not yet available (assigned after OpAMP connects),
+		// so we use what we have. The resource will be fully populated on the next
+		// Apply() triggered by the OpAMP own_logs callback.
+		res := ownlogs.BuildResource("opamp-supervisor", version.Version(), "")
+		if applyErr := ownLogsManager.Apply(context.Background(), settings, res); applyErr != nil {
+			logger.Warn("Failed to restore OTLP log export", zap.Error(applyErr))
+		}
+	}
+
 	// Create supervisor
 	sup, err := supervisor.New(logger, cfg)
 	if err != nil {
 		logger.Fatal("Failed to create supervisor", zap.Error(err))
 	}
+	sup.SetOwnLogs(ownLogsManager, ownLogsPersist)
 
 	// Setup signal handling
 	ctx, cancel := context.WithCancel(context.Background())
@@ -140,6 +169,10 @@ func main() {
 	if err := sup.Stop(shutdownCtx); err != nil {
 		logger.Error("Error during shutdown", zap.Error(err))
 	}
+
+	// Flush own logs after supervisor stop (supervisor.Stop already calls ownLogsManager.Shutdown,
+	// but this is a safety net in case the supervisor was never started or stop was interrupted).
+	_ = ownLogsManager.Shutdown(shutdownCtx)
 
 	logger.Info("Supervisor stopped")
 }

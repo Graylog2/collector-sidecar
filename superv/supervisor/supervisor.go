@@ -46,6 +46,7 @@ import (
 	"github.com/Graylog2/collector-sidecar/superv/healthmonitor"
 	"github.com/Graylog2/collector-sidecar/superv/keen"
 	"github.com/Graylog2/collector-sidecar/superv/opamp"
+	"github.com/Graylog2/collector-sidecar/superv/ownlogs"
 	"github.com/Graylog2/collector-sidecar/superv/persistence"
 	"github.com/Graylog2/collector-sidecar/superv/version"
 )
@@ -89,6 +90,10 @@ type Supervisor struct {
 	// settings. Defaults to createAndStartClient; overridden in tests for
 	// interleaving control.
 	createClientFunc func(ctx context.Context, settings connection.Settings) (*opamp.Client, error)
+
+	// ownLogsManager manages OTLP export of the supervisor's own logs.
+	ownLogsManager     *ownlogs.Manager
+	ownLogsPersistence *ownlogs.Persistence
 }
 
 // New creates a new Supervisor instance.
@@ -473,7 +478,21 @@ func (s *Supervisor) Stop(ctx context.Context) error {
 
 	s.workWg.Wait()
 
+	// Shut down own logs OTLP export last, so shutdown log messages are still exported.
+	if s.ownLogsManager != nil {
+		if err := s.ownLogsManager.Shutdown(ctx); err != nil {
+			s.logger.Error("Error shutting down own logs exporter", zap.Error(err))
+		}
+	}
+
 	return nil
+}
+
+// SetOwnLogs configures the own-logs manager and persistence for OTLP log export.
+// Must be called before Start.
+func (s *Supervisor) SetOwnLogs(manager *ownlogs.Manager, persistence *ownlogs.Persistence) {
+	s.ownLogsManager = manager
+	s.ownLogsPersistence = persistence
 }
 
 // IsRunning returns true if the supervisor is running.
@@ -591,6 +610,7 @@ func (s *Supervisor) createAndStartClient(ctx context.Context, settings connecti
 			// SetConnectionSettingsStatus API so we can report the outcome after the async reconnect completes.
 			ReportsConnectionSettingsStatus: false,
 			AcceptsRestartCommand:           true,
+			ReportsOwnLogs:                  s.ownLogsManager != nil,
 			ReportsHeartbeat:                true,
 			ReportsAvailableComponents:      true,
 		},
@@ -1158,6 +1178,39 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 
 			// Forward custom messages to the local OpAMP server (collector)
 			s.forwardCustomMessage(ctx, customMessage)
+		},
+		OnOwnLogs: func(ctx context.Context, settings *protobufs.TelemetryConnectionSettings) {
+			if s.ownLogsManager == nil {
+				s.logger.Warn("Received own_logs settings but own logs manager is not configured")
+				return
+			}
+			s.logger.Info("Received own_logs connection settings",
+				zap.String("endpoint", settings.GetDestinationEndpoint()),
+			)
+
+			converted, err := ownlogs.ConvertSettings(settings)
+			if err != nil {
+				s.logger.Error("Failed to convert own_logs settings", zap.Error(err))
+				return
+			}
+
+			res := ownlogs.BuildResource("opamp-supervisor", version.Version(), s.instanceUID)
+
+			if err := s.ownLogsManager.Apply(ctx, converted, res); err != nil {
+				s.logger.Error("Failed to apply own_logs settings", zap.Error(err))
+				return
+			}
+
+			// Persist for restart
+			if s.ownLogsPersistence != nil {
+				if err := s.ownLogsPersistence.Save(converted); err != nil {
+					s.logger.Error("Failed to persist own_logs settings", zap.Error(err))
+				}
+			}
+
+			s.logger.Info("Own logs OTLP export enabled",
+				zap.String("endpoint", converted.Endpoint),
+			)
 		},
 		SaveRemoteConfigStatus: func(ctx context.Context, status *protobufs.RemoteConfigStatus) {
 			s.logger.Debug("SaveRemoteConfigStatus callback invoked",
