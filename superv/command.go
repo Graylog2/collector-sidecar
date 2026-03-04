@@ -29,7 +29,9 @@ import (
 	"time"
 
 	"github.com/Graylog2/collector-sidecar/superv/config"
+	"github.com/Graylog2/collector-sidecar/superv/ownlogs"
 	"github.com/Graylog2/collector-sidecar/superv/supervisor"
+	"github.com/Graylog2/collector-sidecar/superv/version"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -245,14 +247,38 @@ func runSupervisor(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create logger: %w", err)
 	}
 
+	// Create own logs manager for OTLP export
+	ownLogsManager := ownlogs.NewManager()
+
+	// Tee stderr core with the swappable OTLP core, preserving
+	// all original logger options (development mode, caller, stacktrace threshold).
+	logger = logger.WithOptions(zap.WrapCore(func(original zapcore.Core) zapcore.Core {
+		return zapcore.NewTee(original, ownLogsManager.Core())
+	}))
+
 	for _, event := range events {
 		event(logger)
+	}
+
+	// Restore persisted own_logs settings
+	ownLogsPersist := ownlogs.NewPersistence(cfg.Persistence.Dir)
+	if settings, exists, loadErr := ownLogsPersist.Load(); loadErr != nil {
+		logger.Warn("Failed to load persisted own_logs settings", zap.Error(loadErr))
+	} else if exists {
+		logger.Info("Restoring OTLP log export from persisted settings",
+			zap.String("endpoint", settings.Endpoint),
+		)
+		res := ownlogs.BuildResource("opamp-supervisor", version.Version(), "")
+		if applyErr := ownLogsManager.Apply(context.Background(), settings, res); applyErr != nil {
+			logger.Warn("Failed to restore OTLP log export", zap.Error(applyErr))
+		}
 	}
 
 	sv, err := supervisor.New(logger.Named("supervisor"), cfg)
 	if err != nil {
 		return fmt.Errorf("failed to create supervisor: %w", err)
 	}
+	sv.SetOwnLogs(ownLogsManager, ownLogsPersist)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -272,6 +298,9 @@ func runSupervisor(cmd *cobra.Command, args []string) error {
 	if err := sv.Stop(shutdownCtx); err != nil {
 		return fmt.Errorf("shutdown timeout: %w", err)
 	}
+
+	// Safety net: flush own logs in case supervisor stop was interrupted.
+	_ = ownLogsManager.Shutdown(shutdownCtx)
 
 	return nil
 }
