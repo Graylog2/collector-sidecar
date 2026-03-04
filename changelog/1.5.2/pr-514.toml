@@ -1,5 +1,4 @@
 type = "c"
-message = "Update filebeat/winlogbeat/auditbeat versions."
+message = "Update filebeat, winlogbeat, and auditbeat versions. (8.19.7 / 7.17.29)"
 
-issues = ["502"]
 pulls = ["514"]

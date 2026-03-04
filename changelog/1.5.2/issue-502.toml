@@ -1,0 +1,5 @@
+type = "c"
+message = "Fix collector getting stuck in `STOPPING` state by updating to a newer winlogbeat version."
+
+issues = ["502"]
+pulls = ["514"]
