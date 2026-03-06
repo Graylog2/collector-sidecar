@@ -128,6 +128,26 @@ func (s *Server) Broadcast(ctx context.Context, msg *protobufs.ServerToAgent) {
 	}
 }
 
+// DisconnectAll cleanly closes all active agent connections. Closing the
+// underlying network connection from the server side causes the read loop
+// to exit without logging an error (as opposed to the agent process dying
+// with an unclean WebSocket close). Safe to call on a nil receiver.
+func (s *Server) DisconnectAll() {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	conns := make([]types.Connection, 0, len(s.connections))
+	for conn := range s.connections {
+		conns = append(conns, conn)
+	}
+	s.mu.Unlock()
+
+	for _, conn := range conns {
+		_ = conn.Disconnect()
+	}
+}
+
 // Server callback implementations
 
 func (s *Server) onConnecting(request *http.Request) types.ConnectionResponse {

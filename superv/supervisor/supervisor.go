@@ -451,6 +451,8 @@ func (s *Supervisor) Stop(ctx context.Context) error {
 	}
 	s.healthWg.Wait()
 
+	server.DisconnectAll()
+
 	if s.commander != nil {
 		if err := s.commander.Stop(ctx); err != nil {
 			s.logger.Error("Error stopping agent", zap.Error(err))
@@ -970,6 +972,7 @@ func (s *Supervisor) rollbackAndRecover(ctx context.Context, configHash []byte, 
 		// Restart with rolled-back config. The collector may be stopped
 		// (Restart = Stop + Start, failed Start leaves process down) or
 		// running with a bad config (health check failed).
+		s.opampServer.DisconnectAll()
 		if restartErr := s.commander.Restart(ctx); restartErr != nil {
 			s.logger.Error("Failed to restart collector after rollback", zap.Error(restartErr))
 		}
@@ -1054,6 +1057,7 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 			// On failure we roll back the config file and re-start the collector
 			// with the previous config to avoid leaving it stopped.
 			s.logger.Info("Config changed, restarting collector")
+			s.opampServer.DisconnectAll()
 			if err := s.commander.Restart(ctx); err != nil {
 				s.logger.Error("Failed to restart collector with new config", zap.Error(err))
 				s.rollbackAndRecover(ctx, cfg.GetConfigHash(), err)
