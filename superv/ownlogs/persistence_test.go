@@ -77,6 +77,54 @@ func TestPersistence_SaveAndLoad_WithTLS(t *testing.T) {
 	assert.Len(t, loaded.TLSConfig.Certificates, 1)
 }
 
+func TestPersistence_SaveAndLoad_WithSystemCACertsPool(t *testing.T) {
+	dir := t.TempDir()
+	p := NewPersistence(dir)
+
+	caCertPEM, _ := generateTestCA(t)
+
+	settings := Settings{
+		Endpoint:                 "https://example.com:4318/v1/logs",
+		CACertPEM:                caCertPEM,
+		IncludeSystemCACertsPool: true,
+	}
+
+	err := p.Save(settings)
+	require.NoError(t, err)
+
+	loaded, exists, err := p.Load()
+	require.NoError(t, err)
+	require.True(t, exists)
+	assert.True(t, loaded.IncludeSystemCACertsPool)
+	require.NotNil(t, loaded.TLSConfig)
+	assert.NotNil(t, loaded.TLSConfig.RootCAs)
+}
+
+func TestPersistence_SaveAndLoad_WithDualCASources(t *testing.T) {
+	dir := t.TempDir()
+	p := NewPersistence(dir)
+
+	caCertPEM, _ := generateTestCA(t)
+	tlsCAPEM, _ := generateTestCA(t) // second, distinct CA
+
+	settings := Settings{
+		Endpoint:         "https://example.com:4318/v1/logs",
+		CACertPEM:        caCertPEM,
+		TLSCAPemContents: string(tlsCAPEM),
+	}
+
+	err := p.Save(settings)
+	require.NoError(t, err)
+
+	loaded, exists, err := p.Load()
+	require.NoError(t, err)
+	require.True(t, exists)
+	assert.Equal(t, caCertPEM, loaded.CACertPEM)
+	assert.Equal(t, string(tlsCAPEM), loaded.TLSCAPemContents)
+	require.NotNil(t, loaded.TLSConfig)
+	assert.NotNil(t, loaded.TLSConfig.RootCAs)
+}
+
 func TestPersistence_Load_NoFile(t *testing.T) {
 	dir := t.TempDir()
 	p := NewPersistence(dir)
@@ -84,6 +132,26 @@ func TestPersistence_Load_NoFile(t *testing.T) {
 	_, exists, err := p.Load()
 	require.NoError(t, err)
 	assert.False(t, exists)
+}
+
+func TestPersistence_SaveAndLoad_WithProxy(t *testing.T) {
+	dir := t.TempDir()
+	p := NewPersistence(dir)
+
+	settings := Settings{
+		Endpoint:     "https://example.com:4318/v1/logs",
+		ProxyURL:     "http://proxy:8080",
+		ProxyHeaders: map[string]string{"Proxy-Authorization": "Basic abc"},
+	}
+
+	err := p.Save(settings)
+	require.NoError(t, err)
+
+	loaded, exists, err := p.Load()
+	require.NoError(t, err)
+	require.True(t, exists)
+	assert.Equal(t, "http://proxy:8080", loaded.ProxyURL)
+	assert.Equal(t, "Basic abc", loaded.ProxyHeaders["Proxy-Authorization"])
 }
 
 func TestPersistence_FileLocation(t *testing.T) {

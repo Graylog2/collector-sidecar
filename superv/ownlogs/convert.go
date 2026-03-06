@@ -68,9 +68,22 @@ func ConvertSettings(proto *protobufs.TelemetryConnectionSettings) (Settings, er
 		s.TLSMinVersion = tlsSettings.GetMinVersion()
 		s.TLSMaxVersion = tlsSettings.GetMaxVersion()
 		s.InsecureSkipVerify = tlsSettings.GetInsecureSkipVerify()
-		// CaPemContents from TLS settings is also stored for persistence
-		if len(s.CACertPEM) == 0 && tlsSettings.GetCaPemContents() != "" {
-			s.CACertPEM = []byte(tlsSettings.GetCaPemContents())
+		s.IncludeSystemCACertsPool = tlsSettings.GetIncludeSystemCaCertsPool()
+		if caPEM := tlsSettings.GetCaPemContents(); caPEM != "" {
+			s.TLSCAPemContents = caPEM
+		}
+	}
+
+	// Convert proxy settings
+	if proxy := proto.GetProxy(); proxy != nil {
+		if proxyURL := proxy.GetUrl(); proxyURL != "" {
+			s.ProxyURL = proxyURL
+		}
+		if proxyHeaders := proxy.GetConnectHeaders(); proxyHeaders != nil && len(proxyHeaders.Headers) > 0 {
+			s.ProxyHeaders = make(map[string]string, len(proxyHeaders.Headers))
+			for _, header := range proxyHeaders.Headers {
+				s.ProxyHeaders[header.Key] = header.Value
+			}
 		}
 	}
 

@@ -21,6 +21,8 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 
@@ -45,12 +47,17 @@ type Settings struct {
 
 	// Persisted TLS material for restart recovery. These are the raw PEM bytes
 	// from TelemetryConnectionSettings so we can rebuild TLSConfig on restore.
-	CertPEM            []byte
-	KeyPEM             []byte
-	CACertPEM          []byte
-	TLSMinVersion      string
-	TLSMaxVersion      string
-	InsecureSkipVerify bool
+	CertPEM                  []byte
+	KeyPEM                   []byte
+	CACertPEM                []byte
+	TLSMinVersion            string
+	TLSMaxVersion            string
+	InsecureSkipVerify       bool
+	IncludeSystemCACertsPool bool
+	TLSCAPemContents         string // from TLSConnectionSettings.CaPemContents (separate from CACertPEM which comes from TLSCertificate.CaCert)
+
+	ProxyURL     string
+	ProxyHeaders map[string]string
 }
 
 // Manager manages the lifecycle of the OTel log exporter and provider.
@@ -148,6 +155,15 @@ func (m *Manager) buildHTTPExporter(ctx context.Context, s Settings) (sdklog.Exp
 	}
 	if len(s.Headers) > 0 {
 		opts = append(opts, otlploghttp.WithHeaders(s.Headers))
+	}
+	// Only the proxy URL is applied here. ProxyHeaders (CONNECT headers) cannot be
+	// wired without a custom http.Transport; gRPC also has no proxy support.
+	if s.ProxyURL != "" {
+		proxyURL, err := url.Parse(s.ProxyURL)
+		if err != nil {
+			return nil, fmt.Errorf("parse proxy URL: %w", err)
+		}
+		opts = append(opts, otlploghttp.WithProxy(http.ProxyURL(proxyURL)))
 	}
 	return otlploghttp.New(ctx, opts...)
 }

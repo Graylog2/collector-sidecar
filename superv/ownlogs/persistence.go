@@ -34,9 +34,10 @@ import (
 func rebuildTLSConfigFromPEM(s Settings) (*tls.Config, error) {
 	hasCert := len(s.CertPEM) > 0 && len(s.KeyPEM) > 0
 	hasCA := len(s.CACertPEM) > 0
-	hasTLSSettings := s.TLSMinVersion != "" || s.TLSMaxVersion != "" || s.InsecureSkipVerify
+	hasTLSCA := s.TLSCAPemContents != ""
+	hasTLSSettings := s.TLSMinVersion != "" || s.TLSMaxVersion != "" || s.InsecureSkipVerify || s.IncludeSystemCACertsPool
 
-	if !hasCert && !hasCA && !hasTLSSettings {
+	if !hasCert && !hasCA && !hasTLSCA && !hasTLSSettings {
 		return nil, nil
 	}
 
@@ -58,6 +59,9 @@ func rebuildTLSConfigFromPEM(s Settings) (*tls.Config, error) {
 		}
 		cfg.MaxVersion = v
 	}
+	if cfg.MinVersion != 0 && cfg.MaxVersion != 0 && cfg.MinVersion > cfg.MaxVersion {
+		return nil, fmt.Errorf("TLS min version (%d) is greater than max version (%d)", cfg.MinVersion, cfg.MaxVersion)
+	}
 
 	if hasCert {
 		clientCert, err := tls.X509KeyPair(s.CertPEM, s.KeyPEM)
@@ -67,10 +71,27 @@ func rebuildTLSConfigFromPEM(s Settings) (*tls.Config, error) {
 		cfg.Certificates = []tls.Certificate{clientCert}
 	}
 
-	if hasCA {
-		pool := x509.NewCertPool()
-		if !pool.AppendCertsFromPEM(s.CACertPEM) {
-			return nil, fmt.Errorf("failed to parse CA certificate")
+	// Build CA pool: mirror the merge logic from buildTLSConfig in convert.go
+	if hasCA || hasTLSCA || s.IncludeSystemCACertsPool {
+		var pool *x509.CertPool
+		if s.IncludeSystemCACertsPool {
+			var err error
+			pool, err = x509.SystemCertPool()
+			if err != nil {
+				pool = x509.NewCertPool()
+			}
+		} else {
+			pool = x509.NewCertPool()
+		}
+		if hasCA {
+			if !pool.AppendCertsFromPEM(s.CACertPEM) {
+				return nil, fmt.Errorf("failed to parse CA certificate")
+			}
+		}
+		if hasTLSCA {
+			if !pool.AppendCertsFromPEM([]byte(s.TLSCAPemContents)) {
+				return nil, fmt.Errorf("failed to parse TLS CA certificate")
+			}
 		}
 		cfg.RootCAs = pool
 	}
@@ -83,15 +104,19 @@ const ownLogsFileName = "own_logs.yaml"
 // persistedSettings is the on-disk representation including TLS material
 // so OTLP export survives restarts in mTLS/custom-CA deployments.
 type persistedSettings struct {
-	Endpoint           string            `koanf:"endpoint"`
-	Headers            map[string]string `koanf:"headers,omitempty"`
-	Insecure           bool              `koanf:"insecure,omitempty"`
-	CertPEM            []byte            `koanf:"cert_pem,omitempty"`
-	KeyPEM             []byte            `koanf:"key_pem,omitempty"`
-	CACertPEM          []byte            `koanf:"ca_cert_pem,omitempty"`
-	TLSMinVersion      string            `koanf:"tls_min_version,omitempty"`
-	TLSMaxVersion      string            `koanf:"tls_max_version,omitempty"`
-	InsecureSkipVerify bool              `koanf:"insecure_skip_verify,omitempty"`
+	Endpoint                 string            `koanf:"endpoint"`
+	Headers                  map[string]string `koanf:"headers,omitempty"`
+	Insecure                 bool              `koanf:"insecure,omitempty"`
+	CertPEM                  []byte            `koanf:"cert_pem,omitempty"`
+	KeyPEM                   []byte            `koanf:"key_pem,omitempty"`
+	CACertPEM                []byte            `koanf:"ca_cert_pem,omitempty"`
+	TLSMinVersion            string            `koanf:"tls_min_version,omitempty"`
+	TLSMaxVersion            string            `koanf:"tls_max_version,omitempty"`
+	InsecureSkipVerify       bool              `koanf:"insecure_skip_verify,omitempty"`
+	IncludeSystemCACertsPool bool              `koanf:"include_system_ca_certs_pool,omitempty"`
+	TLSCAPemContents         string            `koanf:"tls_ca_pem_contents,omitempty"`
+	ProxyURL                 string            `koanf:"proxy_url,omitempty"`
+	ProxyHeaders             map[string]string `koanf:"proxy_headers,omitempty"`
 }
 
 // Persistence handles saving and loading own_logs settings to disk.
@@ -109,15 +134,19 @@ func NewPersistence(dataDir string) *Persistence {
 // Save persists the settings to disk including TLS material.
 func (p *Persistence) Save(s Settings) error {
 	ps := persistedSettings{
-		Endpoint:           s.Endpoint,
-		Headers:            s.Headers,
-		Insecure:           s.Insecure,
-		CertPEM:            s.CertPEM,
-		KeyPEM:             s.KeyPEM,
-		CACertPEM:          s.CACertPEM,
-		TLSMinVersion:      s.TLSMinVersion,
-		TLSMaxVersion:      s.TLSMaxVersion,
-		InsecureSkipVerify: s.InsecureSkipVerify,
+		Endpoint:                 s.Endpoint,
+		Headers:                  s.Headers,
+		Insecure:                 s.Insecure,
+		CertPEM:                  s.CertPEM,
+		KeyPEM:                   s.KeyPEM,
+		CACertPEM:                s.CACertPEM,
+		TLSMinVersion:            s.TLSMinVersion,
+		TLSMaxVersion:            s.TLSMaxVersion,
+		InsecureSkipVerify:       s.InsecureSkipVerify,
+		IncludeSystemCACertsPool: s.IncludeSystemCACertsPool,
+		TLSCAPemContents:         s.TLSCAPemContents,
+		ProxyURL:                 s.ProxyURL,
+		ProxyHeaders:             s.ProxyHeaders,
 	}
 	return persistence.WriteYAMLFile(".", p.filePath, &ps)
 }
@@ -135,15 +164,19 @@ func (p *Persistence) Load() (Settings, bool, error) {
 	}
 
 	s := Settings{
-		Endpoint:           ps.Endpoint,
-		Headers:            ps.Headers,
-		Insecure:           ps.Insecure,
-		CertPEM:            ps.CertPEM,
-		KeyPEM:             ps.KeyPEM,
-		CACertPEM:          ps.CACertPEM,
-		TLSMinVersion:      ps.TLSMinVersion,
-		TLSMaxVersion:      ps.TLSMaxVersion,
-		InsecureSkipVerify: ps.InsecureSkipVerify,
+		Endpoint:                 ps.Endpoint,
+		Headers:                  ps.Headers,
+		Insecure:                 ps.Insecure,
+		CertPEM:                  ps.CertPEM,
+		KeyPEM:                   ps.KeyPEM,
+		CACertPEM:                ps.CACertPEM,
+		TLSMinVersion:            ps.TLSMinVersion,
+		TLSMaxVersion:            ps.TLSMaxVersion,
+		InsecureSkipVerify:       ps.InsecureSkipVerify,
+		IncludeSystemCACertsPool: ps.IncludeSystemCACertsPool,
+		TLSCAPemContents:         ps.TLSCAPemContents,
+		ProxyURL:                 ps.ProxyURL,
+		ProxyHeaders:             ps.ProxyHeaders,
 	}
 
 	// Rebuild TLSConfig from persisted PEM material

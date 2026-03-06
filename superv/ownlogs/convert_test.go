@@ -185,6 +185,29 @@ func TestConvertSettings_TLSConnectionSettings(t *testing.T) {
 	assert.NotNil(t, s.TLSConfig.RootCAs)
 }
 
+func TestConvertSettings_BothCASources(t *testing.T) {
+	caCertPEM, _ := generateTestCA(t)
+	tlsCAPEM, _ := generateTestCA(t)
+
+	proto := &protobufs.TelemetryConnectionSettings{
+		DestinationEndpoint: "https://example.com:4318/v1/logs",
+		Certificate: &protobufs.TLSCertificate{
+			CaCert: caCertPEM,
+		},
+		Tls: &protobufs.TLSConnectionSettings{
+			CaPemContents:            string(tlsCAPEM),
+			IncludeSystemCaCertsPool: true,
+		},
+	}
+	s, err := ConvertSettings(proto)
+	require.NoError(t, err)
+	assert.Equal(t, caCertPEM, s.CACertPEM)
+	assert.Equal(t, string(tlsCAPEM), s.TLSCAPemContents)
+	assert.True(t, s.IncludeSystemCACertsPool)
+	require.NotNil(t, s.TLSConfig)
+	assert.NotNil(t, s.TLSConfig.RootCAs)
+}
+
 func TestConvertSettings_InvalidClientCertificate(t *testing.T) {
 	proto := &protobufs.TelemetryConnectionSettings{
 		DestinationEndpoint: "https://example.com:4318/v1/logs",
@@ -278,4 +301,32 @@ func TestConvertSettings_EmptyEndpoint(t *testing.T) {
 	proto := &protobufs.TelemetryConnectionSettings{}
 	_, err := ConvertSettings(proto)
 	require.Error(t, err)
+}
+
+func TestConvertSettings_Proxy(t *testing.T) {
+	proto := &protobufs.TelemetryConnectionSettings{
+		DestinationEndpoint: "https://example.com:4318/v1/logs",
+		Proxy: &protobufs.ProxyConnectionSettings{
+			Url: "http://proxy:8080",
+			ConnectHeaders: &protobufs.Headers{
+				Headers: []*protobufs.Header{
+					{Key: "Proxy-Authorization", Value: "Basic abc123"},
+				},
+			},
+		},
+	}
+	s, err := ConvertSettings(proto)
+	require.NoError(t, err)
+	assert.Equal(t, "http://proxy:8080", s.ProxyURL)
+	assert.Equal(t, "Basic abc123", s.ProxyHeaders["Proxy-Authorization"])
+}
+
+func TestConvertSettings_ProxyNil(t *testing.T) {
+	proto := &protobufs.TelemetryConnectionSettings{
+		DestinationEndpoint: "https://example.com:4318/v1/logs",
+	}
+	s, err := ConvertSettings(proto)
+	require.NoError(t, err)
+	assert.Empty(t, s.ProxyURL)
+	assert.Nil(t, s.ProxyHeaders)
 }
