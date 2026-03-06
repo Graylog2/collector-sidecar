@@ -134,8 +134,6 @@ func TestSettingsEqual(t *testing.T) {
 }
 
 func TestToTLSVersion(t *testing.T) {
-	var s TLSSettings
-
 	tests := []struct {
 		input     string
 		expected  uint16
@@ -151,7 +149,7 @@ func TestToTLSVersion(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		version, err := s.ToTLSVersion(test.input)
+		version, err := ToTLSVersion(test.input)
 
 		if test.expectErr {
 			assert.Error(t, err)

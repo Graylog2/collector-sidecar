@@ -84,7 +84,7 @@ type TLSSettings struct {
 	CAPEMContents string `koanf:"ca_pem_contents,omitempty"`
 }
 
-func (t TLSSettings) ToTLSVersion(version string) (uint16, error) {
+func ToTLSVersion(version string) (uint16, error) {
 	switch strings.TrimSpace(version) {
 	case "TLSv1.2", "1.2":
 		return tls.VersionTLS12, nil
@@ -98,7 +98,7 @@ func (t TLSSettings) ToTLSVersion(version string) (uint16, error) {
 func (t TLSSettings) ToTLSMinMaxVersion() (uint16, uint16, error) {
 	var minVersion uint16
 	if t.MinVersion != "" {
-		parsedMin, err := t.ToTLSVersion(t.MinVersion)
+		parsedMin, err := ToTLSVersion(t.MinVersion)
 		if err != nil {
 			return 0, 0, fmt.Errorf("parse TLS min version: %w", err)
 		}
@@ -107,7 +107,7 @@ func (t TLSSettings) ToTLSMinMaxVersion() (uint16, uint16, error) {
 
 	var maxVersion uint16
 	if t.MaxVersion != "" {
-		parsedMax, err := t.ToTLSVersion(t.MaxVersion)
+		parsedMax, err := ToTLSVersion(t.MaxVersion)
 		if err != nil {
 			return 0, 0, fmt.Errorf("parse TLS max version: %w", err)
 		}

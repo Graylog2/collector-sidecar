@@ -141,14 +141,14 @@ func buildTLSConfig(cert *protobufs.TLSCertificate, tlsSettings *protobufs.TLSCo
 
 		// Min/max TLS version
 		if v := tlsSettings.GetMinVersion(); v != "" {
-			parsed, err := parseTLSVersion(v)
+			parsed, err := connection.ToTLSVersion(v)
 			if err != nil {
 				return nil, fmt.Errorf("parse TLS min version: %w", err)
 			}
 			cfg.MinVersion = parsed
 		}
 		if v := tlsSettings.GetMaxVersion(); v != "" {
-			parsed, err := parseTLSVersion(v)
+			parsed, err := connection.ToTLSVersion(v)
 			if err != nil {
 				return nil, fmt.Errorf("parse TLS max version: %w", err)
 			}
@@ -160,11 +160,4 @@ func buildTLSConfig(cert *protobufs.TLSCertificate, tlsSettings *protobufs.TLSCo
 	}
 
 	return cfg, nil
-}
-
-// parseTLSVersion reuses connection.TLSSettings.ToTLSVersion which accepts
-// both "TLSv1.2" and "1.2" forms, trims whitespace, rejects TLS < 1.2,
-// and returns an error for unsupported values.
-func parseTLSVersion(v string) (uint16, error) {
-	return connection.TLSSettings{}.ToTLSVersion(v)
 }

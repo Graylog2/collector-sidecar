@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 
 	"github.com/Graylog2/collector-sidecar/superv/persistence"
+	"github.com/Graylog2/collector-sidecar/superv/supervisor/connection"
 )
 
 // rebuildTLSConfigFromPEM reconstructs a *tls.Config from the raw PEM bytes
@@ -44,14 +45,14 @@ func rebuildTLSConfigFromPEM(s Settings) (*tls.Config, error) {
 	}
 
 	if s.TLSMinVersion != "" {
-		v, err := parseTLSVersion(s.TLSMinVersion)
+		v, err := connection.ToTLSVersion(s.TLSMinVersion)
 		if err != nil {
 			return nil, fmt.Errorf("parse TLS min version: %w", err)
 		}
 		cfg.MinVersion = v
 	}
 	if s.TLSMaxVersion != "" {
-		v, err := parseTLSVersion(s.TLSMaxVersion)
+		v, err := connection.ToTLSVersion(s.TLSMaxVersion)
 		if err != nil {
 			return nil, fmt.Errorf("parse TLS max version: %w", err)
 		}
