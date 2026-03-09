@@ -36,12 +36,14 @@ func rebuildTLSConfigFromPEM(s Settings) (*tls.Config, error) {
 	hasCA := len(s.CACertPEM) > 0
 	hasTLSCA := s.TLSCAPemContents != ""
 	hasTLSSettings := s.TLSMinVersion != "" || s.TLSMaxVersion != "" || s.InsecureSkipVerify || s.IncludeSystemCACertsPool
+	hasServerName := s.TLSServerName != ""
 
-	if !hasCert && !hasCA && !hasTLSCA && !hasTLSSettings {
+	if !hasCert && !hasCA && !hasTLSCA && !hasTLSSettings && !hasServerName {
 		return nil, nil
 	}
 
 	cfg := &tls.Config{
+		ServerName:         s.TLSServerName,
 		InsecureSkipVerify: s.InsecureSkipVerify,
 	}
 
@@ -99,7 +101,7 @@ func rebuildTLSConfigFromPEM(s Settings) (*tls.Config, error) {
 	return cfg, nil
 }
 
-const ownLogsFileName = "own_logs.yaml"
+const ownLogsFileName = "own-logs.yaml"
 
 // persistedSettings is the on-disk representation including TLS material
 // so OTLP export survives restarts in mTLS/custom-CA deployments.
@@ -115,20 +117,36 @@ type persistedSettings struct {
 	InsecureSkipVerify       bool              `koanf:"insecure_skip_verify,omitempty"`
 	IncludeSystemCACertsPool bool              `koanf:"include_system_ca_certs_pool,omitempty"`
 	TLSCAPemContents         string            `koanf:"tls_ca_pem_contents,omitempty"`
+	TLSServerName            string            `koanf:"tls_server_name,omitempty"`
 	ProxyURL                 string            `koanf:"proxy_url,omitempty"`
 	ProxyHeaders             map[string]string `koanf:"proxy_headers,omitempty"`
 }
 
 // Persistence handles saving and loading own_logs settings to disk.
 type Persistence struct {
-	filePath string
+	filePath       string
+	clientCertPath string
+	clientKeyPath  string
 }
 
 // NewPersistence creates a Persistence that stores settings in dataDir.
-func NewPersistence(dataDir string) *Persistence {
+// clientCertPath and clientKeyPath are the paths to the mTLS client certificate
+// and key files that will be loaded when restoring settings from disk.
+func NewPersistence(dataDir, clientCertPath, clientKeyPath string) *Persistence {
 	return &Persistence{
-		filePath: filepath.Join(dataDir, ownLogsFileName),
+		filePath:       filepath.Join(dataDir, ownLogsFileName),
+		clientCertPath: clientCertPath,
+		clientKeyPath:  clientKeyPath,
 	}
+}
+
+// Delete removes the persisted settings file. It is not an error if the file
+// does not exist.
+func (p *Persistence) Delete() error {
+	if err := os.Remove(p.filePath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return nil
 }
 
 // Save persists the settings to disk including TLS material.
@@ -145,6 +163,7 @@ func (p *Persistence) Save(s Settings) error {
 		InsecureSkipVerify:       s.InsecureSkipVerify,
 		IncludeSystemCACertsPool: s.IncludeSystemCACertsPool,
 		TLSCAPemContents:         s.TLSCAPemContents,
+		TLSServerName:            s.TLSServerName,
 		ProxyURL:                 s.ProxyURL,
 		ProxyHeaders:             s.ProxyHeaders,
 	}
@@ -175,6 +194,7 @@ func (p *Persistence) Load() (Settings, bool, error) {
 		InsecureSkipVerify:       ps.InsecureSkipVerify,
 		IncludeSystemCACertsPool: ps.IncludeSystemCACertsPool,
 		TLSCAPemContents:         ps.TLSCAPemContents,
+		TLSServerName:            ps.TLSServerName,
 		ProxyURL:                 ps.ProxyURL,
 		ProxyHeaders:             ps.ProxyHeaders,
 	}
@@ -185,6 +205,11 @@ func (p *Persistence) Load() (Settings, bool, error) {
 		return Settings{}, true, fmt.Errorf("rebuild TLS config: %w", err)
 	}
 	s.TLSConfig = tlsCfg
+
+	// Load mTLS client certificate from file paths
+	if err := s.LoadClientCert(p.clientCertPath, p.clientKeyPath); err != nil {
+		return Settings{}, true, fmt.Errorf("load client certificate: %w", err)
+	}
 
 	return s, true, nil
 }

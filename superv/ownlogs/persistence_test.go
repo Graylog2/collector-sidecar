@@ -27,7 +27,8 @@ import (
 
 func TestPersistence_SaveAndLoad(t *testing.T) {
 	dir := t.TempDir()
-	p := NewPersistence(dir)
+	certPath, keyPath := writeTestClientCert(t)
+	p := NewPersistence(dir, certPath, keyPath)
 
 	settings := Settings{
 		Endpoint: "https://example.com:4318/v1/logs",
@@ -43,11 +44,15 @@ func TestPersistence_SaveAndLoad(t *testing.T) {
 	require.True(t, exists)
 	assert.Equal(t, settings.Endpoint, loaded.Endpoint)
 	assert.Equal(t, settings.Headers["Authorization"], loaded.Headers["Authorization"])
+	// Client cert should be loaded from file paths
+	require.NotNil(t, loaded.TLSConfig)
+	assert.Len(t, loaded.TLSConfig.Certificates, 1)
 }
 
 func TestPersistence_SaveAndLoad_WithTLS(t *testing.T) {
 	dir := t.TempDir()
-	p := NewPersistence(dir)
+	certPath, keyPath := writeTestClientCert(t)
+	p := NewPersistence(dir, certPath, keyPath)
 
 	caCertPEM, caKeyPEM := generateTestCA(t)
 	clientCertPEM, clientKeyPEM := generateTestCert(t, caCertPEM, caKeyPEM)
@@ -79,7 +84,8 @@ func TestPersistence_SaveAndLoad_WithTLS(t *testing.T) {
 
 func TestPersistence_SaveAndLoad_WithSystemCACertsPool(t *testing.T) {
 	dir := t.TempDir()
-	p := NewPersistence(dir)
+	certPath, keyPath := writeTestClientCert(t)
+	p := NewPersistence(dir, certPath, keyPath)
 
 	caCertPEM, _ := generateTestCA(t)
 
@@ -102,7 +108,8 @@ func TestPersistence_SaveAndLoad_WithSystemCACertsPool(t *testing.T) {
 
 func TestPersistence_SaveAndLoad_WithDualCASources(t *testing.T) {
 	dir := t.TempDir()
-	p := NewPersistence(dir)
+	certPath, keyPath := writeTestClientCert(t)
+	p := NewPersistence(dir, certPath, keyPath)
 
 	caCertPEM, _ := generateTestCA(t)
 	tlsCAPEM, _ := generateTestCA(t) // second, distinct CA
@@ -125,9 +132,61 @@ func TestPersistence_SaveAndLoad_WithDualCASources(t *testing.T) {
 	assert.NotNil(t, loaded.TLSConfig.RootCAs)
 }
 
+func TestPersistence_SaveAndLoad_WithTLSServerName(t *testing.T) {
+	dir := t.TempDir()
+	certPath, keyPath := writeTestClientCert(t)
+	p := NewPersistence(dir, certPath, keyPath)
+
+	settings := Settings{
+		Endpoint:      "https://example.com:4318/v1/logs",
+		TLSServerName: "my-cluster-id",
+	}
+
+	err := p.Save(settings)
+	require.NoError(t, err)
+
+	loaded, exists, err := p.Load()
+	require.NoError(t, err)
+	require.True(t, exists)
+	assert.Equal(t, "my-cluster-id", loaded.TLSServerName)
+	require.NotNil(t, loaded.TLSConfig)
+	assert.Equal(t, "my-cluster-id", loaded.TLSConfig.ServerName)
+}
+
+func TestPersistence_Delete(t *testing.T) {
+	dir := t.TempDir()
+	certPath, keyPath := writeTestClientCert(t)
+	p := NewPersistence(dir, certPath, keyPath)
+
+	// Save then delete
+	err := p.Save(Settings{Endpoint: "https://example.com:4318/v1/logs"})
+	require.NoError(t, err)
+	assert.FileExists(t, filepath.Join(dir, ownLogsFileName))
+
+	err = p.Delete()
+	require.NoError(t, err)
+	assert.NoFileExists(t, filepath.Join(dir, ownLogsFileName))
+
+	// Load should report no file
+	_, exists, err := p.Load()
+	require.NoError(t, err)
+	assert.False(t, exists)
+}
+
+func TestPersistence_Delete_NoFile(t *testing.T) {
+	dir := t.TempDir()
+	certPath, keyPath := writeTestClientCert(t)
+	p := NewPersistence(dir, certPath, keyPath)
+
+	// Deleting when no file exists should not error
+	err := p.Delete()
+	require.NoError(t, err)
+}
+
 func TestPersistence_Load_NoFile(t *testing.T) {
 	dir := t.TempDir()
-	p := NewPersistence(dir)
+	certPath, keyPath := writeTestClientCert(t)
+	p := NewPersistence(dir, certPath, keyPath)
 
 	_, exists, err := p.Load()
 	require.NoError(t, err)
@@ -136,7 +195,8 @@ func TestPersistence_Load_NoFile(t *testing.T) {
 
 func TestPersistence_SaveAndLoad_WithProxy(t *testing.T) {
 	dir := t.TempDir()
-	p := NewPersistence(dir)
+	certPath, keyPath := writeTestClientCert(t)
+	p := NewPersistence(dir, certPath, keyPath)
 
 	settings := Settings{
 		Endpoint:     "https://example.com:4318/v1/logs",
@@ -156,7 +216,8 @@ func TestPersistence_SaveAndLoad_WithProxy(t *testing.T) {
 
 func TestPersistence_FileLocation(t *testing.T) {
 	dir := t.TempDir()
-	p := NewPersistence(dir)
+	certPath, keyPath := writeTestClientCert(t)
+	p := NewPersistence(dir, certPath, keyPath)
 
 	err := p.Save(Settings{Endpoint: "https://example.com:4318/v1/logs"})
 	require.NoError(t, err)

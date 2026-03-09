@@ -21,6 +21,8 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"net/url"
+	"os"
 	"strings"
 
 	"github.com/Graylog2/collector-sidecar/superv/supervisor/connection"
@@ -28,7 +30,10 @@ import (
 )
 
 // ConvertSettings converts OpAMP TelemetryConnectionSettings to ownlogs.Settings.
-func ConvertSettings(proto *protobufs.TelemetryConnectionSettings) (Settings, error) {
+// clientCertPath and clientKeyPath are the paths to the mTLS client certificate
+// and key files (e.g. the sidecar's signing cert/key). The exporter will not
+// start if the files cannot be loaded.
+func ConvertSettings(proto *protobufs.TelemetryConnectionSettings, clientCertPath, clientKeyPath string) (Settings, error) {
 	if proto == nil {
 		return Settings{}, fmt.Errorf("nil TelemetryConnectionSettings")
 	}
@@ -36,9 +41,25 @@ func ConvertSettings(proto *protobufs.TelemetryConnectionSettings) (Settings, er
 		return Settings{}, fmt.Errorf("empty destination endpoint")
 	}
 
+	endpoint := proto.DestinationEndpoint
+	var tlsServerName string
+
+	// Extract ?tls_server_name=<value> from the endpoint URL. This allows
+	// the OpAMP server to specify a TLS ServerName override (e.g. a cluster
+	// ID) when the server certificate CN/SAN doesn't match the hostname.
+	if u, err := url.Parse(endpoint); err == nil {
+		if sn := u.Query().Get("tls_server_name"); sn != "" {
+			tlsServerName = sn
+			q := u.Query()
+			q.Del("tls_server_name")
+			u.RawQuery = q.Encode()
+			endpoint = u.String()
+		}
+	}
+
 	s := Settings{
-		Endpoint: proto.DestinationEndpoint,
-		Insecure: strings.HasPrefix(proto.DestinationEndpoint, "http://"),
+		Endpoint: endpoint,
+		Insecure: strings.HasPrefix(endpoint, "http://"),
 	}
 
 	// Convert headers
@@ -50,13 +71,14 @@ func ConvertSettings(proto *protobufs.TelemetryConnectionSettings) (Settings, er
 	}
 
 	// Build TLS config from Certificate and/or TLSConnectionSettings
-	tlsCfg, err := buildTLSConfig(proto.GetCertificate(), proto.GetTls())
+	tlsCfg, err := buildTLSConfig(proto.GetCertificate(), proto.GetTls(), tlsServerName)
 	if err != nil {
 		return Settings{}, fmt.Errorf("build TLS config: %w", err)
 	}
 	if tlsCfg != nil {
 		s.TLSConfig = tlsCfg
 	}
+	s.TLSServerName = tlsServerName
 
 	// Preserve raw PEM material for persistence
 	if cert := proto.GetCertificate(); cert != nil {
@@ -87,15 +109,49 @@ func ConvertSettings(proto *protobufs.TelemetryConnectionSettings) (Settings, er
 		}
 	}
 
+	// LoadClientCert overwrites any client certificate from the proto with the
+	// sidecar's signing cert/key for mTLS.
+	if err := s.LoadClientCert(clientCertPath, clientKeyPath); err != nil {
+		return Settings{}, fmt.Errorf("load client certificate: %w", err)
+	}
+
 	return s, nil
 }
 
-func buildTLSConfig(cert *protobufs.TLSCertificate, tlsSettings *protobufs.TLSConnectionSettings) (*tls.Config, error) {
-	if cert == nil && tlsSettings == nil {
+// LoadClientCert reads a client certificate and key from the given file paths
+// and adds them to the TLS config for mTLS. The file contents are not stored
+// in the settings, so they are not persisted.
+func (s *Settings) LoadClientCert(certPath, keyPath string) error {
+	if certPath == "" || keyPath == "" {
+		return fmt.Errorf("client cert path and key path must not be empty")
+	}
+	certPEM, err := os.ReadFile(certPath)
+	if err != nil {
+		return fmt.Errorf("read client cert %s: %w", certPath, err)
+	}
+	keyPEM, err := os.ReadFile(keyPath)
+	if err != nil {
+		return fmt.Errorf("read client key %s: %w", keyPath, err)
+	}
+	clientCert, err := tls.X509KeyPair(certPEM, keyPEM)
+	if err != nil {
+		return fmt.Errorf("parse client certificate: %w", err)
+	}
+	if s.TLSConfig == nil {
+		s.TLSConfig = &tls.Config{}
+	}
+	s.TLSConfig.Certificates = []tls.Certificate{clientCert}
+	return nil
+}
+
+func buildTLSConfig(cert *protobufs.TLSCertificate, tlsSettings *protobufs.TLSConnectionSettings, serverName string) (*tls.Config, error) {
+	if cert == nil && tlsSettings == nil && serverName == "" {
 		return nil, nil
 	}
 
-	cfg := &tls.Config{}
+	cfg := &tls.Config{
+		ServerName: serverName,
+	}
 
 	// Client certificate from TLSCertificate
 	if cert != nil {

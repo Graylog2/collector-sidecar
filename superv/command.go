@@ -30,6 +30,7 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/superv/config"
 	"github.com/Graylog2/collector-sidecar/superv/ownlogs"
+	"github.com/Graylog2/collector-sidecar/superv/persistence"
 	"github.com/Graylog2/collector-sidecar/superv/supervisor"
 	"github.com/Graylog2/collector-sidecar/superv/version"
 	"github.com/spf13/cobra"
@@ -261,7 +262,9 @@ func runSupervisor(cmd *cobra.Command, args []string) error {
 	}
 
 	// Restore persisted own_logs settings
-	ownLogsPersist := ownlogs.NewPersistence(cfg.Persistence.Dir)
+	certPath := filepath.Join(cfg.Keys.Dir, persistence.SigningCertFile)
+	keyPath := filepath.Join(cfg.Keys.Dir, persistence.SigningKeyFile)
+	ownLogsPersist := ownlogs.NewPersistence(cfg.Persistence.Dir, certPath, keyPath)
 	if settings, exists, loadErr := ownLogsPersist.Load(); loadErr != nil {
 		logger.Warn("Failed to load persisted own_logs settings", zap.Error(loadErr))
 	} else if exists {

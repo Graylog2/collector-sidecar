@@ -55,6 +55,7 @@ type Settings struct {
 	InsecureSkipVerify       bool
 	IncludeSystemCACertsPool bool
 	TLSCAPemContents         string // from TLSConnectionSettings.CaPemContents (separate from CACertPEM which comes from TLSCertificate.CaCert)
+	TLSServerName            string // override from ?tls_server_name query param on DestinationEndpoint
 
 	ProxyURL     string
 	ProxyHeaders map[string]string
@@ -144,8 +145,14 @@ func (m *Manager) buildExporter(ctx context.Context, s Settings) (sdklog.Exporte
 }
 
 func (m *Manager) buildHTTPExporter(ctx context.Context, s Settings) (sdklog.Exporter, error) {
+	endpoint := s.Endpoint
+	// WithEndpointURL uses the path from the URL as-is and does not append
+	// "/v1/logs". Ensure the OTLP log path is present.
+	if !strings.HasSuffix(endpoint, "/v1/logs") {
+		endpoint = strings.TrimRight(endpoint, "/") + "/v1/logs"
+	}
 	opts := []otlploghttp.Option{
-		otlploghttp.WithEndpointURL(s.Endpoint),
+		otlploghttp.WithEndpointURL(endpoint),
 	}
 	if s.Insecure {
 		opts = append(opts, otlploghttp.WithInsecure())
