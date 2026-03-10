@@ -194,7 +194,11 @@ type TelemetryConfig struct {
 
 // TelemetryLogsConfig configures own-log export via OTLP.
 type TelemetryLogsConfig struct {
-	Batch BatchConfig `koanf:"batch"`
+	// DefaultLevel is the minimum log level to export unless overridden
+	// by the OpAMP server. Default: "info".
+	// Valid values: debug, info, warn, error.
+	DefaultLevel string `koanf:"default_level"`
+	Batch    BatchConfig `koanf:"batch"`
 }
 
 // BatchConfig configures the OTel SDK BatchProcessor.
@@ -294,6 +298,7 @@ func DefaultConfig() Config {
 		},
 		Telemetry: TelemetryConfig{
 			Logs: TelemetryLogsConfig{
+				DefaultLevel: "info",
 				Batch: BatchConfig{
 					MaxQueueSize:       2048,
 					ExportMaxBatchSize: 512,

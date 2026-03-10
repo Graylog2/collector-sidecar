@@ -43,6 +43,7 @@ func (c *Config) Validate() error {
 		c.Keys.Validate(),
 		c.Agent.Validate(),
 		c.Logging.Validate(),
+		c.Telemetry.Logs.Validate(),
 	)
 }
 
@@ -118,6 +119,14 @@ func (a AgentConfig) Validate() error {
 		}
 	}
 
+	return nil
+}
+
+// Validate checks TelemetryLogsConfig for errors.
+func (t TelemetryLogsConfig) Validate() error {
+	if !slices.Contains(validLogLevels, t.DefaultLevel) {
+		return fmt.Errorf("telemetry.logs.default_level: must be one of %v, got %q", validLogLevels, t.DefaultLevel)
+	}
 	return nil
 }
 

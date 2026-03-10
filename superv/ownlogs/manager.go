@@ -66,17 +66,22 @@ type Settings struct {
 // It exposes a zapcore.Core that can be tee'd with the stderr core.
 type Manager struct {
 	sc       *swappableCore
-	batch    config.BatchConfig
+	cfg      config.TelemetryLogsConfig
+	minLevel zapcore.Level
 	mu       sync.Mutex // protects provider
 	provider *sdklog.LoggerProvider
 }
 
 // NewManager creates a Manager with an initially disabled (nop) core.
-// The batch config controls the OTel BatchProcessor; zero values use SDK defaults.
-func NewManager(batch config.BatchConfig) *Manager {
+func NewManager(cfg config.TelemetryLogsConfig) *Manager {
+	var lvl zapcore.Level
+	if err := lvl.UnmarshalText([]byte(cfg.DefaultLevel)); err != nil {
+		lvl = zapcore.InfoLevel
+	}
 	return &Manager{
-		sc:    newSwappableCore(),
-		batch: batch,
+		sc:       newSwappableCore(),
+		cfg:      cfg,
+		minLevel: lvl,
 	}
 }
 
@@ -101,9 +106,14 @@ func (m *Manager) Apply(ctx context.Context, settings Settings, res *resource.Re
 	}
 	newProvider := sdklog.NewLoggerProvider(opts...)
 
-	newCore := otelzap.NewCore(instrumentationName,
+	otelCore := otelzap.NewCore(instrumentationName,
 		otelzap.WithLoggerProvider(newProvider),
 	)
+	newCore, err := zapcore.NewIncreaseLevelCore(otelCore, m.minLevel)
+	if err != nil {
+		// Only fails if minLevel < otelCore's level (DebugLevel), which can't happen.
+		return fmt.Errorf("apply min level filter: %w", err)
+	}
 
 	// Swap core and provider atomically under the same lock to prevent
 	// Apply/Disable interleaving from leaving a stale core pointing at
@@ -197,17 +207,17 @@ func (m *Manager) buildGRPCExporter(ctx context.Context, s Settings) (sdklog.Exp
 
 func (m *Manager) batchProcessorOpts() []sdklog.BatchProcessorOption {
 	var opts []sdklog.BatchProcessorOption
-	if m.batch.MaxQueueSize > 0 {
-		opts = append(opts, sdklog.WithMaxQueueSize(m.batch.MaxQueueSize))
+	if m.cfg.Batch.MaxQueueSize > 0 {
+		opts = append(opts, sdklog.WithMaxQueueSize(m.cfg.Batch.MaxQueueSize))
 	}
-	if m.batch.ExportMaxBatchSize > 0 {
-		opts = append(opts, sdklog.WithExportMaxBatchSize(m.batch.ExportMaxBatchSize))
+	if m.cfg.Batch.ExportMaxBatchSize > 0 {
+		opts = append(opts, sdklog.WithExportMaxBatchSize(m.cfg.Batch.ExportMaxBatchSize))
 	}
-	if m.batch.ExportInterval > 0 {
-		opts = append(opts, sdklog.WithExportInterval(m.batch.ExportInterval))
+	if m.cfg.Batch.ExportInterval > 0 {
+		opts = append(opts, sdklog.WithExportInterval(m.cfg.Batch.ExportInterval))
 	}
-	if m.batch.ExportTimeout > 0 {
-		opts = append(opts, sdklog.WithExportTimeout(m.batch.ExportTimeout))
+	if m.cfg.Batch.ExportTimeout > 0 {
+		opts = append(opts, sdklog.WithExportTimeout(m.cfg.Batch.ExportTimeout))
 	}
 	return opts
 }

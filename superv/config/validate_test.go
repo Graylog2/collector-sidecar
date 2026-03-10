@@ -126,6 +126,37 @@ func TestValidateKeysConfig(t *testing.T) {
 	}
 }
 
+func TestValidateTelemetryLogsDefaultLevel(t *testing.T) {
+	tests := []struct {
+		name      string
+		level     string
+		expectErr bool
+	}{
+		{"debug", "debug", false},
+		{"info", "info", false},
+		{"warn", "warn", false},
+		{"error", "error", false},
+		{"empty", "", true},
+		{"invalid", "trace", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := DefaultConfig()
+			cfg.Server.Endpoint = "ws://localhost:4320"
+			cfg.Agent.Executable = "/bin/test"
+			cfg.Telemetry.Logs.DefaultLevel = tt.level
+			err := cfg.Validate()
+			if tt.expectErr {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "telemetry.logs.default_level")
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestValidateLoggingLevel(t *testing.T) {
 	tests := []struct {
 		name      string

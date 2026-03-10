@@ -249,7 +249,7 @@ func runSupervisor(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create own logs manager for OTLP export
-	ownLogsManager := ownlogs.NewManager(cfg.Telemetry.Logs.Batch)
+	ownLogsManager := ownlogs.NewManager(cfg.Telemetry.Logs)
 
 	// Tee stderr core with the swappable OTLP core, preserving
 	// all original logger options (development mode, caller, stacktrace threshold).

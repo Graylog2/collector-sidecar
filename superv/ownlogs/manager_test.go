@@ -28,13 +28,13 @@ import (
 )
 
 func TestManager_Core_InitiallyDisabled(t *testing.T) {
-	m := NewManager(config.BatchConfig{})
+	m := NewManager(config.TelemetryLogsConfig{})
 	core := m.Core()
 	assert.False(t, core.Enabled(zapcore.InfoLevel))
 }
 
 func TestManager_Shutdown_WhenNeverApplied(t *testing.T) {
-	m := NewManager(config.BatchConfig{})
+	m := NewManager(config.TelemetryLogsConfig{})
 	err := m.Shutdown(context.Background())
 	require.NoError(t, err)
 }
