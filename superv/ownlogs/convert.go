@@ -43,15 +43,32 @@ func ConvertSettings(proto *protobufs.TelemetryConnectionSettings, clientCertPat
 
 	endpoint := proto.DestinationEndpoint
 	var tlsServerName string
+	var logLevel string
 
-	// Extract ?tls_server_name=<value> from the endpoint URL. This allows
-	// the OpAMP server to specify a TLS ServerName override (e.g. a cluster
-	// ID) when the server certificate CN/SAN doesn't match the hostname.
+	// Extract custom query parameters from the endpoint URL.
+	// These allow the OpAMP server to pass settings that don't have
+	// dedicated fields in TelemetryConnectionSettings.
 	if u, err := url.Parse(endpoint); err == nil {
-		if sn := u.Query().Get("tls_server_name"); sn != "" {
+		q := u.Query()
+		changed := false
+
+		// ?tls_server_name=<value> — TLS ServerName override (e.g. a cluster
+		// ID) when the server certificate CN/SAN doesn't match the hostname.
+		if sn := q.Get("tls_server_name"); sn != "" {
 			tlsServerName = sn
-			q := u.Query()
 			q.Del("tls_server_name")
+			changed = true
+		}
+
+		// ?log_level=<value> — minimum log level to export, overriding
+		// the local default_level config.
+		if ll := q.Get("log_level"); ll != "" {
+			logLevel = ll
+			q.Del("log_level")
+			changed = true
+		}
+
+		if changed {
 			u.RawQuery = q.Encode()
 			endpoint = u.String()
 		}
@@ -79,6 +96,7 @@ func ConvertSettings(proto *protobufs.TelemetryConnectionSettings, clientCertPat
 		s.TLSConfig = tlsCfg
 	}
 	s.TLSServerName = tlsServerName
+	s.LogLevel = logLevel
 
 	// Preserve raw PEM material for persistence
 	if cert := proto.GetCertificate(); cert != nil {

@@ -386,6 +386,40 @@ func TestConvertSettings_NoTLSServerName(t *testing.T) {
 	assert.Empty(t, s.TLSServerName)
 }
 
+func TestConvertSettings_LogLevel(t *testing.T) {
+	certPath, keyPath := writeTestClientCert(t)
+	proto := &protobufs.TelemetryConnectionSettings{
+		DestinationEndpoint: "https://example.com:4318/v1/logs?log_level=debug",
+	}
+	s, err := ConvertSettings(proto, certPath, keyPath)
+	require.NoError(t, err)
+	assert.Equal(t, "https://example.com:4318/v1/logs", s.Endpoint)
+	assert.Equal(t, "debug", s.LogLevel)
+}
+
+func TestConvertSettings_LogLevelWithOtherParams(t *testing.T) {
+	certPath, keyPath := writeTestClientCert(t)
+	proto := &protobufs.TelemetryConnectionSettings{
+		DestinationEndpoint: "https://example.com:4318/v1/logs?foo=bar&log_level=warn&baz=qux",
+	}
+	s, err := ConvertSettings(proto, certPath, keyPath)
+	require.NoError(t, err)
+	assert.Equal(t, "warn", s.LogLevel)
+	assert.NotContains(t, s.Endpoint, "log_level")
+	assert.Contains(t, s.Endpoint, "foo=bar")
+	assert.Contains(t, s.Endpoint, "baz=qux")
+}
+
+func TestConvertSettings_NoLogLevel(t *testing.T) {
+	certPath, keyPath := writeTestClientCert(t)
+	proto := &protobufs.TelemetryConnectionSettings{
+		DestinationEndpoint: "https://example.com:4318/v1/logs",
+	}
+	s, err := ConvertSettings(proto, certPath, keyPath)
+	require.NoError(t, err)
+	assert.Empty(t, s.LogLevel)
+}
+
 func TestLoadClientCert(t *testing.T) {
 	certPath, keyPath := writeTestClientCert(t)
 

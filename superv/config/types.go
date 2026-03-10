@@ -197,8 +197,8 @@ type TelemetryLogsConfig struct {
 	// DefaultLevel is the minimum log level to export unless overridden
 	// by the OpAMP server. Default: "info".
 	// Valid values: debug, info, warn, error.
-	DefaultLevel string `koanf:"default_level"`
-	Batch    BatchConfig `koanf:"batch"`
+	DefaultLevel string      `koanf:"default_level"`
+	Batch        BatchConfig `koanf:"batch"`
 }
 
 // BatchConfig configures the OTel SDK BatchProcessor.

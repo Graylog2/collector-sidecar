@@ -120,6 +120,7 @@ type persistedSettings struct {
 	TLSServerName            string            `koanf:"tls_server_name,omitempty"`
 	ProxyURL                 string            `koanf:"proxy_url,omitempty"`
 	ProxyHeaders             map[string]string `koanf:"proxy_headers,omitempty"`
+	LogLevel                 string            `koanf:"log_level,omitempty"`
 }
 
 // Persistence handles saving and loading own_logs settings to disk.
@@ -166,6 +167,7 @@ func (p *Persistence) Save(s Settings) error {
 		TLSServerName:            s.TLSServerName,
 		ProxyURL:                 s.ProxyURL,
 		ProxyHeaders:             s.ProxyHeaders,
+		LogLevel:                 s.LogLevel,
 	}
 	return persistence.WriteYAMLFile(".", p.filePath, &ps)
 }
@@ -197,6 +199,7 @@ func (p *Persistence) Load() (Settings, bool, error) {
 		TLSServerName:            ps.TLSServerName,
 		ProxyURL:                 ps.ProxyURL,
 		ProxyHeaders:             ps.ProxyHeaders,
+		LogLevel:                 ps.LogLevel,
 	}
 
 	// Rebuild TLSConfig from persisted PEM material

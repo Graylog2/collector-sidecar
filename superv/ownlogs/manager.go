@@ -60,6 +60,10 @@ type Settings struct {
 
 	ProxyURL     string
 	ProxyHeaders map[string]string
+
+	// LogLevel overrides the configured default level when set via
+	// ?log_level=<level> on the DestinationEndpoint URL.
+	LogLevel string
 }
 
 // Manager manages the lifecycle of the OTel log exporter and provider.
@@ -67,7 +71,7 @@ type Settings struct {
 type Manager struct {
 	sc       *swappableCore
 	cfg      config.TelemetryLogsConfig
-	minLevel zapcore.Level
+	defaultLevel zapcore.Level
 	mu       sync.Mutex // protects provider
 	provider *sdklog.LoggerProvider
 }
@@ -81,7 +85,7 @@ func NewManager(cfg config.TelemetryLogsConfig) *Manager {
 	return &Manager{
 		sc:       newSwappableCore(),
 		cfg:      cfg,
-		minLevel: lvl,
+		defaultLevel: lvl,
 	}
 }
 
@@ -109,9 +113,20 @@ func (m *Manager) Apply(ctx context.Context, settings Settings, res *resource.Re
 	otelCore := otelzap.NewCore(instrumentationName,
 		otelzap.WithLoggerProvider(newProvider),
 	)
-	newCore, err := zapcore.NewIncreaseLevelCore(otelCore, m.minLevel)
+
+	// Use server-provided log_level if valid, otherwise fall back to the configured default.
+	// TODO: An invalid log_level is silently ignored here because Manager has no logger.
+	// Consider adding a logger to surface this as a warning.
+	lvl := m.defaultLevel
+	if settings.LogLevel != "" {
+		var parsed zapcore.Level
+		if err := parsed.UnmarshalText([]byte(settings.LogLevel)); err == nil {
+			lvl = parsed
+		}
+	}
+	newCore, err := zapcore.NewIncreaseLevelCore(otelCore, lvl)
 	if err != nil {
-		// Only fails if minLevel < otelCore's level (DebugLevel), which can't happen.
+		// Only fails if lvl < otelCore's level (DebugLevel), which can't happen.
 		return fmt.Errorf("apply min level filter: %w", err)
 	}
 
