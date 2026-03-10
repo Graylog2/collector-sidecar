@@ -20,6 +20,7 @@ package ownlogs
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
 )
@@ -30,6 +31,8 @@ func BuildResource(serviceName, serviceVersion, instanceID string) *resource.Res
 	attrs := []resource.Option{
 		resource.WithAttributes(
 			semconv.ServiceName(serviceName),
+			// Required to let the server correctly process the log record.
+			attribute.String("collector.receiver.type", "collector_log"),
 		),
 	}
 	if serviceVersion != "" {
