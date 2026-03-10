@@ -100,14 +100,9 @@ type Supervisor struct {
 	ownLogsPersistence *ownlogs.Persistence
 }
 
-// New creates a new Supervisor instance.
-func New(logger *zap.Logger, cfg config.Config) (*Supervisor, error) {
-	// Load or create instance UID
-	uid, err := persistence.LoadOrCreateInstanceUID(cfg.Persistence.Dir)
-	if err != nil {
-		return nil, err
-	}
-
+// New creates a new Supervisor instance. The instanceUID must be obtained from
+// [persistence.LoadOrCreateInstanceUID] before calling New.
+func New(logger *zap.Logger, cfg config.Config, instanceUID string) (*Supervisor, error) {
 	// Create auth manager
 	authMgr := auth.NewManager(logger.Named("auth"), auth.ManagerConfig{
 		KeysDir:     cfg.Keys.Dir,
@@ -190,7 +185,7 @@ func New(logger *zap.Logger, cfg config.Config) (*Supervisor, error) {
 		OutputPath:     filepath.Join(cfg.Persistence.Dir, "config", "collector.yaml"),
 		LocalOverrides: cfg.Agent.Config.LocalOverrides,
 		LocalEndpoint:  cfg.LocalServer.Endpoint,
-		InstanceUID:    uid,
+		InstanceUID:    instanceUID,
 		HealthCheck:    healthCheck,
 	})
 
@@ -223,7 +218,7 @@ func New(logger *zap.Logger, cfg config.Config) (*Supervisor, error) {
 		authCfg:                   cfg.Server.Auth,
 		localServerCfg:            cfg.LocalServer,
 		persistenceDir:            cfg.Persistence.Dir,
-		instanceUID:               uid,
+		instanceUID:               instanceUID,
 		authManager:               authMgr,
 		configManager:             configMgr,
 		healthMonitor:             healthMon,

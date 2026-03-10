@@ -120,6 +120,12 @@ func main() {
 		return zapcore.NewTee(original, ownLogsManager.Core())
 	}))
 
+	// Load or create instance UID early so it's available for own_logs restore.
+	instanceUID, err := persistence.LoadOrCreateInstanceUID(cfg.Persistence.Dir)
+	if err != nil {
+		logger.Fatal("Failed to load instance UID", zap.Error(err))
+	}
+
 	// Restore persisted own_logs settings
 	certPath := filepath.Join(cfg.Keys.Dir, persistence.SigningCertFile)
 	keyPath := filepath.Join(cfg.Keys.Dir, persistence.SigningKeyFile)
@@ -130,18 +136,14 @@ func main() {
 		logger.Info("Restoring OTLP log export from persisted settings",
 			zap.String("endpoint", settings.Endpoint),
 		)
-		// Build a basic resource with service.name and service.version.
-		// service.instance.id is not yet available (assigned after OpAMP connects),
-		// so we use what we have. The resource will be fully populated on the next
-		// Apply() triggered by the OpAMP own_logs callback.
-		res := ownlogs.BuildResource(supervisor.ServiceName, version.Version(), "")
+		res := ownlogs.BuildResource(supervisor.ServiceName, version.Version(), instanceUID)
 		if applyErr := ownLogsManager.Apply(context.Background(), settings, res); applyErr != nil {
 			logger.Warn("Failed to restore OTLP log export", zap.Error(applyErr))
 		}
 	}
 
 	// Create supervisor
-	sup, err := supervisor.New(logger, cfg)
+	sup, err := supervisor.New(logger, cfg, instanceUID)
 	if err != nil {
 		logger.Fatal("Failed to create supervisor", zap.Error(err))
 	}

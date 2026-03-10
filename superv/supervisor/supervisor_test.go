@@ -49,7 +49,7 @@ func TestNewSupervisor(t *testing.T) {
 	cfg.Agent.Executable = "/bin/echo"
 	cfg.Persistence.Dir = t.TempDir()
 
-	sup, err := New(logger, cfg)
+	sup, err := New(logger, cfg, uuid.New().String())
 	require.NoError(t, err)
 	require.NotNil(t, sup)
 }
@@ -61,15 +61,12 @@ func TestSupervisor_GetInstanceUID(t *testing.T) {
 	cfg.Agent.Executable = "/bin/echo"
 	cfg.Persistence.Dir = t.TempDir()
 
-	sup, err := New(logger, cfg)
+	testUID := uuid.New().String()
+	sup, err := New(logger, cfg, testUID)
 	require.NoError(t, err)
 
 	uid := sup.InstanceUID()
-	require.NotEmpty(t, uid)
-
-	// Second call should return same UID
-	uid2 := sup.InstanceUID()
-	require.Equal(t, uid, uid2)
+	require.Equal(t, testUID, uid)
 }
 
 func TestSupervisor_IsRunning(t *testing.T) {
@@ -79,24 +76,11 @@ func TestSupervisor_IsRunning(t *testing.T) {
 	cfg.Agent.Executable = "/bin/echo"
 	cfg.Persistence.Dir = t.TempDir()
 
-	sup, err := New(logger, cfg)
+	sup, err := New(logger, cfg, uuid.New().String())
 	require.NoError(t, err)
 
 	// Initially not running
 	require.False(t, sup.IsRunning())
-}
-
-func TestNewSupervisor_PersistenceError(t *testing.T) {
-	logger := zaptest.NewLogger(t)
-	cfg := config.DefaultConfig()
-	cfg.Server.Endpoint = "ws://localhost:4320/v1/opamp"
-	cfg.Agent.Executable = "/bin/echo"
-	// Set to a path that won't be writable
-	cfg.Persistence.Dir = "/nonexistent/path/that/should/fail"
-
-	sup, err := New(logger, cfg)
-	require.Error(t, err)
-	require.Nil(t, sup)
 }
 
 func TestSupervisor_ConfigManagerIntegration(t *testing.T) {
@@ -124,7 +108,7 @@ func TestSupervisor_ConfigManagerIntegration(t *testing.T) {
 		},
 	}
 
-	supervisor, err := New(logger, cfg)
+	supervisor, err := New(logger, cfg, uuid.New().String())
 	require.NoError(t, err)
 	require.NotNil(t, supervisor)
 
@@ -155,7 +139,7 @@ func TestNewSupervisor_ConnectionSettingsBootstrap(t *testing.T) {
 		cfg.Agent.Executable = "/bin/echo"
 		cfg.Server.Endpoint = ""
 
-		sup, err := New(logger, cfg)
+		sup, err := New(logger, cfg, uuid.New().String())
 		require.NoError(t, err)
 
 		current := sup.connectionSettingsManager.GetCurrent()
@@ -178,7 +162,7 @@ func TestNewSupervisor_ConnectionSettingsBootstrap(t *testing.T) {
 		cfg.Server.Endpoint = "wss://configured.example.com/v1/opamp"
 		cfg.Server.Headers = map[string]string{"X-Configured": "true"}
 
-		sup, err := New(logger, cfg)
+		sup, err := New(logger, cfg, uuid.New().String())
 		require.NoError(t, err)
 
 		current := sup.connectionSettingsManager.GetCurrent()
@@ -197,7 +181,7 @@ func TestNewSupervisor_ConnectionSettingsBootstrap(t *testing.T) {
 		cfg.Server.Auth.EnrollmentEndpoint = "wss://enroll.example.com/v1/opamp"
 		cfg.Server.Auth.EnrollmentHeaders = map[string]string{"X-Enrollment": "true"}
 
-		sup, err := New(logger, cfg)
+		sup, err := New(logger, cfg, uuid.New().String())
 		require.NoError(t, err)
 
 		current := sup.connectionSettingsManager.GetCurrent()
@@ -215,7 +199,7 @@ func TestNewSupervisor_ConnectionSettingsBootstrap(t *testing.T) {
 		cfg.Server.Endpoint = ""
 		cfg.Server.Auth.EnrollmentEndpoint = ""
 
-		sup, err := New(logger, cfg)
+		sup, err := New(logger, cfg, uuid.New().String())
 		require.Error(t, err)
 		require.Nil(t, sup)
 		require.ErrorContains(t, err, "no server endpoint configured and no persisted connection settings found")
