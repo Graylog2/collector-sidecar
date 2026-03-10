@@ -196,13 +196,13 @@ func (m *Monitor) StartPolling(ctx context.Context) <-chan *HealthStatus {
 		// Wait for the startup grace period before the first health check,
 		// giving the collector time to bind its health endpoint.
 		if m.cfg.StartupGracePeriod > 0 {
-			m.logger.Debug("waiting for startup grace period", zap.Duration("duration", m.cfg.StartupGracePeriod))
+			m.logger.Debug("Waiting for startup grace period", zap.Duration("duration", m.cfg.StartupGracePeriod))
 			timer := time.NewTimer(m.cfg.StartupGracePeriod)
 			defer timer.Stop()
 			select {
 			case <-timer.C:
 			case <-ctx.Done():
-				m.logger.Debug("context cancelled during startup grace period")
+				m.logger.Debug("Context cancelled during startup grace period")
 				return
 			}
 		}
@@ -210,14 +210,14 @@ func (m *Monitor) StartPolling(ctx context.Context) <-chan *HealthStatus {
 		// Perform initial check
 		status, err := m.CheckHealth(ctx)
 		if err != nil {
-			m.logger.Debug("initial health check failed", zap.Error(err))
+			m.logger.Debug("Initial health check failed", zap.Error(err))
 		}
 		// Always send initial status
 		select {
 		case ch <- status:
 			m.setLastSent(status)
 		case <-ctx.Done():
-			m.logger.Debug("context cancelled")
+			m.logger.Debug("Context cancelled")
 			return
 		}
 
@@ -231,7 +231,7 @@ func (m *Monitor) StartPolling(ctx context.Context) <-chan *HealthStatus {
 			case <-ticker.C:
 				status, err := m.CheckHealth(ctx)
 				if err != nil {
-					m.logger.Debug("health check failed", zap.Error(err))
+					m.logger.Debug("Health check failed", zap.Error(err))
 				}
 				// Only send if status changed
 				if !status.Equal(m.LastSent()) {
@@ -239,7 +239,7 @@ func (m *Monitor) StartPolling(ctx context.Context) <-chan *HealthStatus {
 					case ch <- status:
 						m.setLastSent(status)
 					case <-ctx.Done():
-						m.logger.Debug("context cancelled")
+						m.logger.Debug("Context cancelled")
 						return
 					}
 				}

@@ -264,7 +264,7 @@ func (c *Client) Start(ctx context.Context) error {
 	// Trigger effective config update if we have an initial config
 	if c.effectiveConfig != nil {
 		if err := c.opampClient.UpdateEffectiveConfig(ctx); err != nil {
-			c.logger.Warn("failed to send initial effective config", zap.Error(err))
+			c.logger.Warn("Failed to send initial effective config", zap.Error(err))
 		}
 	}
 

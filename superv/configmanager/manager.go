@@ -76,7 +76,7 @@ func (m *Manager) ApplyRemoteConfig(ctx context.Context, remote *protobufs.Agent
 
 	// Check if config hash is unchanged
 	if bytes.Equal(m.lastHash, remote.GetConfigHash()) && len(m.lastHash) > 0 {
-		m.logger.Debug("config hash unchanged, skipping apply")
+		m.logger.Debug("Config hash unchanged, skipping apply")
 		return &ApplyResult{
 			Changed:    false,
 			ConfigHash: m.lastHash,
@@ -110,7 +110,7 @@ func (m *Manager) ApplyRemoteConfig(ctx context.Context, remote *protobufs.Agent
 
 	// Store raw remote configs to ConfigDir/remote/ for debugging
 	if err := m.storeRemoteConfigs(configMapEntries); err != nil {
-		m.logger.Warn("failed to store remote configs for debugging", zap.Error(err))
+		m.logger.Warn("Failed to store remote configs for debugging", zap.Error(err))
 		// Continue processing, this is not critical
 	}
 
@@ -121,7 +121,7 @@ func (m *Manager) ApplyRemoteConfig(ctx context.Context, remote *protobufs.Agent
 	for _, overridePath := range m.cfg.LocalOverrides {
 		overrideContent, err := os.ReadFile(overridePath)
 		if err != nil {
-			m.logger.Warn("failed to read local override file, skipping",
+			m.logger.Warn("Failed to read local override file, skipping",
 				zap.String("path", overridePath),
 				zap.Error(err))
 			continue
@@ -131,7 +131,7 @@ func (m *Manager) ApplyRemoteConfig(ctx context.Context, remote *protobufs.Agent
 		if err != nil {
 			return nil, fmt.Errorf("failed to merge with override %s: %w", overridePath, err)
 		}
-		m.logger.Debug("merged local override", zap.String("path", overridePath))
+		m.logger.Debug("Merged local override", zap.String("path", overridePath))
 	}
 
 	// Inject OpAMP extension
@@ -141,7 +141,7 @@ func (m *Manager) ApplyRemoteConfig(ctx context.Context, remote *protobufs.Agent
 		if err != nil {
 			return nil, fmt.Errorf("failed to inject OpAMP extension: %w", err)
 		}
-		m.logger.Debug("injected OpAMP extension",
+		m.logger.Debug("Injected OpAMP extension",
 			zap.String("endpoint", m.cfg.LocalEndpoint),
 			zap.String("instanceUID", m.cfg.InstanceUID))
 	}
@@ -154,7 +154,7 @@ func (m *Manager) ApplyRemoteConfig(ctx context.Context, remote *protobufs.Agent
 		if err != nil {
 			return nil, fmt.Errorf("failed to inject health_check extension: %w", err)
 		}
-		m.logger.Debug("injected health_check extension",
+		m.logger.Debug("Injected health_check extension",
 			zap.String("endpoint", m.cfg.HealthCheck.Endpoint))
 	}
 
@@ -163,14 +163,14 @@ func (m *Manager) ApplyRemoteConfig(ctx context.Context, remote *protobufs.Agent
 		if err := persistence.WriteFile(m.cfg.OutputPath+".prev", existing, 0o600); err != nil {
 			return nil, fmt.Errorf("failed to back up current config: %w", err)
 		}
-		m.logger.Debug("backed up current config", zap.String("path", m.cfg.OutputPath+".prev"))
+		m.logger.Debug("Backed up current config", zap.String("path", m.cfg.OutputPath+".prev"))
 	}
 
 	// Write result to OutputPath
 	if err := persistence.WriteFile(m.cfg.OutputPath, mergedConfig, 0o600); err != nil {
 		return nil, fmt.Errorf("failed to write effective config: %w", err)
 	}
-	m.logger.Info("wrote effective config", zap.String("path", m.cfg.OutputPath))
+	m.logger.Info("Wrote effective config", zap.String("path", m.cfg.OutputPath))
 
 	// Update lastHash on success
 	m.previousHash = m.lastHash
@@ -255,13 +255,13 @@ func (m *Manager) RollbackConfig() error {
 	}
 
 	if err := os.Remove(bakPath); err != nil {
-		m.logger.Warn("failed to remove backup file after rollback", zap.Error(err))
+		m.logger.Warn("Failed to remove backup file after rollback", zap.Error(err))
 	}
 
 	m.lastHash = m.previousHash
 	m.previousHash = nil
 
-	m.logger.Info("rolled back to previous config", zap.String("path", m.cfg.OutputPath))
+	m.logger.Info("Rolled back to previous config", zap.String("path", m.cfg.OutputPath))
 	return nil
 }
 
@@ -315,14 +315,14 @@ func (m *Manager) EnsureBootstrapConfig() error {
 	bootstrap := len(config) == 0
 	if bootstrap {
 		if errors.Is(err, os.ErrNotExist) {
-			m.logger.Info("no existing config found, writing bootstrap config",
+			m.logger.Info("No existing config found, writing bootstrap config",
 				zap.String("path", m.cfg.OutputPath))
 		} else {
-			m.logger.Info("existing config is empty, writing bootstrap config",
+			m.logger.Info("Existing config is empty, writing bootstrap config",
 				zap.String("path", m.cfg.OutputPath))
 		}
 	} else {
-		m.logger.Info("re-injecting extensions into cached config",
+		m.logger.Info("Re-injecting extensions into cached config",
 			zap.String("path", m.cfg.OutputPath))
 	}
 
@@ -364,9 +364,9 @@ func (m *Manager) EnsureBootstrapConfig() error {
 	}
 
 	if bootstrap {
-		m.logger.Info("wrote bootstrap config", zap.String("path", m.cfg.OutputPath))
+		m.logger.Info("Wrote bootstrap config", zap.String("path", m.cfg.OutputPath))
 	} else {
-		m.logger.Info("updated cached config with current extensions", zap.String("path", m.cfg.OutputPath))
+		m.logger.Info("Updated cached config with current extensions", zap.String("path", m.cfg.OutputPath))
 	}
 	return nil
 }
