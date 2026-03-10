@@ -117,9 +117,10 @@ type AgentConfigMerge struct {
 
 // HealthConfig configures health monitoring.
 type HealthConfig struct {
-	Endpoint string        `koanf:"endpoint"`
-	Interval time.Duration `koanf:"interval"`
-	Timeout  time.Duration `koanf:"timeout"`
+	Endpoint           string        `koanf:"endpoint"`
+	Interval           time.Duration `koanf:"interval"`
+	Timeout            time.Duration `koanf:"timeout"`
+	StartupGracePeriod time.Duration `koanf:"startup_grace_period"`
 }
 
 // ReloadConfig configures config reload behavior.
@@ -227,9 +228,10 @@ func DefaultConfig() Config {
 			},
 			Health: HealthConfig{
 				// TODO: Check if we can switch to a UNIX socket instead of opening a network port.
-				Endpoint: "http://localhost:13133/health",
-				Interval: 10 * time.Second,
-				Timeout:  5 * time.Second,
+				Endpoint:           "http://localhost:13133/health",
+				Interval:           10 * time.Second,
+				Timeout:            5 * time.Second,
+				StartupGracePeriod: 3 * time.Second,
 			},
 			Reload: ReloadConfig{
 				Method:                 "auto",

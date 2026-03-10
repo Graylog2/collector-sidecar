@@ -59,9 +59,10 @@ type AgentStateProvider interface {
 
 // Config holds configuration for the health monitor.
 type Config struct {
-	Endpoint string
-	Timeout  time.Duration
-	Interval time.Duration
+	Endpoint           string
+	Timeout            time.Duration
+	Interval           time.Duration
+	StartupGracePeriod time.Duration
 }
 
 // HealthStatus represents the health state of the collector.
@@ -192,7 +193,21 @@ func (m *Monitor) StartPolling(ctx context.Context) <-chan *HealthStatus {
 	go func() {
 		defer close(ch)
 
-		// Perform initial check immediately
+		// Wait for the startup grace period before the first health check,
+		// giving the collector time to bind its health endpoint.
+		if m.cfg.StartupGracePeriod > 0 {
+			m.logger.Debug("waiting for startup grace period", zap.Duration("duration", m.cfg.StartupGracePeriod))
+			timer := time.NewTimer(m.cfg.StartupGracePeriod)
+			defer timer.Stop()
+			select {
+			case <-timer.C:
+			case <-ctx.Done():
+				m.logger.Debug("context cancelled during startup grace period")
+				return
+			}
+		}
+
+		// Perform initial check
 		status, err := m.CheckHealth(ctx)
 		if err != nil {
 			m.logger.Debug("initial health check failed", zap.Error(err))

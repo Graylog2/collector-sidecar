@@ -187,9 +187,10 @@ func New(logger *zap.Logger, cfg config.Config) (*Supervisor, error) {
 
 	// Initialize health monitor
 	healthMon := healthmonitor.New(logger.Named("health"), healthmonitor.Config{
-		Endpoint: cfg.Agent.Health.Endpoint,
-		Timeout:  cfg.Agent.Health.Timeout,
-		Interval: cfg.Agent.Health.Interval,
+		Endpoint:           cfg.Agent.Health.Endpoint,
+		Timeout:            cfg.Agent.Health.Timeout,
+		Interval:           cfg.Agent.Health.Interval,
+		StartupGracePeriod: cfg.Agent.Health.StartupGracePeriod,
 	})
 
 	s := &Supervisor{
@@ -370,7 +371,26 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	s.opampClient = opampClient
 	s.mu.Unlock()
 
-	// Start health monitoring with a cancellable context
+	// Start the collector agent
+	if err := s.commander.Start(ctx); err != nil {
+		// Nil out opampClient under lock (it was published above) before stopping,
+		// so callbacks see nil.
+		s.mu.Lock()
+		s.opampClient = nil
+		s.mu.Unlock()
+
+		s.workCancel()
+		opampClient.Stop(ctx)
+		s.workWg.Wait()
+		if stopErr := opampServer.Stop(ctx); stopErr != nil {
+			s.logger.Warn("Failed to stop local OpAMP server during cleanup", zap.Error(stopErr))
+		}
+		return fmt.Errorf("failed to start agent: %w", err)
+	}
+
+	// Start health monitoring after the collector is running.
+	// The monitor's startup grace period gives the collector time to bind
+	// its health endpoint before the first check.
 	healthCtx, healthCancel := context.WithCancel(ctx)
 	s.healthCancel = healthCancel
 	healthUpdates := s.healthMonitor.StartPolling(healthCtx)
@@ -393,26 +413,6 @@ func (s *Supervisor) Start(ctx context.Context) error {
 			}
 		}
 	})
-
-	// Start the collector agent
-	if err := s.commander.Start(ctx); err != nil {
-		healthCancel()
-		s.healthWg.Wait()
-
-		// Nil out opampClient under lock (it was published above) before stopping,
-		// so the health goroutine (now drained) and callbacks see nil.
-		s.mu.Lock()
-		s.opampClient = nil
-		s.mu.Unlock()
-
-		s.workCancel()
-		opampClient.Stop(ctx)
-		s.workWg.Wait()
-		if stopErr := opampServer.Stop(ctx); stopErr != nil {
-			s.logger.Warn("Failed to stop local OpAMP server during cleanup", zap.Error(stopErr))
-		}
-		return fmt.Errorf("failed to start agent: %w", err)
-	}
 
 	s.mu.Lock()
 	s.running = true
@@ -915,6 +915,21 @@ func (s *Supervisor) handleEnrollmentCertificate(settings *protobufs.OpAMPConnec
 func (s *Supervisor) awaitCollectorHealthy(ctx context.Context, timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
+
+	// Wait for startup grace period before polling, giving the collector
+	// time to bind its health endpoint after a restart. This mirrors the
+	// same delay used by the background health monitor (StartPolling).
+	if grace := s.agentCfg.Health.StartupGracePeriod; grace > 0 {
+		s.logger.Debug("Waiting for startup grace period before health polling",
+			zap.Duration("duration", grace))
+		timer := time.NewTimer(grace)
+		defer timer.Stop()
+		select {
+		case <-timer.C:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
 
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
