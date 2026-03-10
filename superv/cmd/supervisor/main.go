@@ -134,7 +134,7 @@ func main() {
 		// service.instance.id is not yet available (assigned after OpAMP connects),
 		// so we use what we have. The resource will be fully populated on the next
 		// Apply() triggered by the OpAMP own_logs callback.
-		res := ownlogs.BuildResource("opamp-supervisor", version.Version(), "")
+		res := ownlogs.BuildResource(supervisor.ServiceName, version.Version(), "")
 		if applyErr := ownLogsManager.Apply(context.Background(), settings, res); applyErr != nil {
 			logger.Warn("Failed to restore OTLP log export", zap.Error(applyErr))
 		}

@@ -271,7 +271,7 @@ func runSupervisor(cmd *cobra.Command, args []string) error {
 		logger.Info("Restoring OTLP log export from persisted settings",
 			zap.String("endpoint", settings.Endpoint),
 		)
-		res := ownlogs.BuildResource("opamp-supervisor", version.Version(), "")
+		res := ownlogs.BuildResource(supervisor.ServiceName, version.Version(), "")
 		if applyErr := ownLogsManager.Apply(context.Background(), settings, res); applyErr != nil {
 			logger.Warn("Failed to restore OTLP log export", zap.Error(applyErr))
 		}

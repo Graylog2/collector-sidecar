@@ -51,6 +51,10 @@ import (
 	"github.com/Graylog2/collector-sidecar/superv/version"
 )
 
+const (
+	ServiceName = "collector-supervisor"
+)
+
 // templateVars holds variables available for template expansion in agent args.
 type templateVars struct {
 	ConfigPath string
@@ -525,7 +529,7 @@ func (s *Supervisor) createAgentDescription() *protobufs.AgentDescription {
 		IdentifyingAttributes: []*protobufs.KeyValue{
 			{
 				Key:   "service.name",
-				Value: &protobufs.AnyValue{Value: &protobufs.AnyValue_StringValue{StringValue: "opamp-supervisor"}},
+				Value: &protobufs.AnyValue{Value: &protobufs.AnyValue_StringValue{StringValue: ServiceName}},
 			},
 			{
 				Key:   "service.instance.id",
@@ -1227,7 +1231,7 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 				return
 			}
 
-			res := ownlogs.BuildResource("opamp-supervisor", version.Version(), s.instanceUID)
+			res := ownlogs.BuildResource(ServiceName, version.Version(), s.instanceUID)
 
 			if err := s.ownLogsManager.Apply(ctx, converted, res); err != nil {
 				s.logger.Error("Failed to apply own_logs settings", zap.Error(err))
