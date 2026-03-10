@@ -21,19 +21,20 @@ import (
 	"context"
 	"testing"
 
+	"github.com/Graylog2/collector-sidecar/superv/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zapcore"
 )
 
 func TestManager_Core_InitiallyDisabled(t *testing.T) {
-	m := NewManager()
+	m := NewManager(config.BatchConfig{})
 	core := m.Core()
 	assert.False(t, core.Enabled(zapcore.InfoLevel))
 }
 
 func TestManager_Shutdown_WhenNeverApplied(t *testing.T) {
-	m := NewManager()
+	m := NewManager(config.BatchConfig{})
 	err := m.Shutdown(context.Background())
 	require.NoError(t, err)
 }

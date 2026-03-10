@@ -30,6 +30,7 @@ type Config struct {
 	Packages    PackagesConfig    `koanf:"packages"`
 	Persistence PersistenceConfig `koanf:"persistence"`
 	Logging     LoggingConfig     `koanf:"logging"`
+	Telemetry   TelemetryConfig   `koanf:"telemetry"`
 	Debug       bool              `koanf:"debug"`
 }
 
@@ -186,6 +187,29 @@ type PersistenceConfig struct {
 	Dir string `koanf:"dir"`
 }
 
+// TelemetryConfig configures the supervisor's own telemetry export.
+type TelemetryConfig struct {
+	Logs TelemetryLogsConfig `koanf:"logs"`
+}
+
+// TelemetryLogsConfig configures own-log export via OTLP.
+type TelemetryLogsConfig struct {
+	Batch BatchConfig `koanf:"batch"`
+}
+
+// BatchConfig configures the OTel SDK BatchProcessor.
+// Zero values use SDK defaults.
+type BatchConfig struct {
+	// MaxQueueSize is the ring buffer capacity. Default: 2048.
+	MaxQueueSize int `koanf:"max_queue_size"`
+	// ExportMaxBatchSize is the maximum number of records per export. Default: 512.
+	ExportMaxBatchSize int `koanf:"export_max_batch_size"`
+	// ExportInterval is how often batches are flushed. Default: 1s.
+	ExportInterval time.Duration `koanf:"export_interval"`
+	// ExportTimeout is the per-export timeout. Default: 30s.
+	ExportTimeout time.Duration `koanf:"export_timeout"`
+}
+
 // LoggingConfig configures logging.
 type LoggingConfig struct {
 	Format string `koanf:"format"` // json | text
@@ -267,6 +291,16 @@ func DefaultConfig() Config {
 		Persistence: PersistenceConfig{
 			// TODO: Branding
 			Dir: "/var/lib/graylog-collector/supervisor",
+		},
+		Telemetry: TelemetryConfig{
+			Logs: TelemetryLogsConfig{
+				Batch: BatchConfig{
+					MaxQueueSize:       2048,
+					ExportMaxBatchSize: 512,
+					ExportInterval:     1 * time.Second,
+					ExportTimeout:      30 * time.Second,
+				},
+			},
 		},
 		Logging: LoggingConfig{
 			Format: "json",

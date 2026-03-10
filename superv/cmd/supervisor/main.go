@@ -112,7 +112,7 @@ func main() {
 	}
 
 	// Create own logs manager for OTLP export
-	ownLogsManager := ownlogs.NewManager()
+	ownLogsManager := ownlogs.NewManager(cfg.Telemetry.Logs.Batch)
 
 	// Tee stderr core with the swappable OTLP core, preserving
 	// all original logger options (development mode, caller, stacktrace threshold).

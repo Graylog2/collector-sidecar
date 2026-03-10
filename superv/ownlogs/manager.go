@@ -26,6 +26,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/Graylog2/collector-sidecar/superv/config"
 	"go.opentelemetry.io/contrib/bridges/otelzap"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
@@ -65,14 +66,17 @@ type Settings struct {
 // It exposes a zapcore.Core that can be tee'd with the stderr core.
 type Manager struct {
 	sc       *swappableCore
+	batch    config.BatchConfig
 	mu       sync.Mutex // protects provider
 	provider *sdklog.LoggerProvider
 }
 
 // NewManager creates a Manager with an initially disabled (nop) core.
-func NewManager() *Manager {
+// The batch config controls the OTel BatchProcessor; zero values use SDK defaults.
+func NewManager(batch config.BatchConfig) *Manager {
 	return &Manager{
-		sc: newSwappableCore(),
+		sc:    newSwappableCore(),
+		batch: batch,
 	}
 }
 
@@ -90,7 +94,7 @@ func (m *Manager) Apply(ctx context.Context, settings Settings, res *resource.Re
 	}
 
 	opts := []sdklog.LoggerProviderOption{
-		sdklog.WithProcessor(sdklog.NewBatchProcessor(exporter)),
+		sdklog.WithProcessor(sdklog.NewBatchProcessor(exporter, m.batchProcessorOpts()...)),
 	}
 	if res != nil {
 		opts = append(opts, sdklog.WithResource(res))
@@ -189,6 +193,23 @@ func (m *Manager) buildGRPCExporter(ctx context.Context, s Settings) (sdklog.Exp
 		opts = append(opts, otlploggrpc.WithHeaders(s.Headers))
 	}
 	return otlploggrpc.New(ctx, opts...)
+}
+
+func (m *Manager) batchProcessorOpts() []sdklog.BatchProcessorOption {
+	var opts []sdklog.BatchProcessorOption
+	if m.batch.MaxQueueSize > 0 {
+		opts = append(opts, sdklog.WithMaxQueueSize(m.batch.MaxQueueSize))
+	}
+	if m.batch.ExportMaxBatchSize > 0 {
+		opts = append(opts, sdklog.WithExportMaxBatchSize(m.batch.ExportMaxBatchSize))
+	}
+	if m.batch.ExportInterval > 0 {
+		opts = append(opts, sdklog.WithExportInterval(m.batch.ExportInterval))
+	}
+	if m.batch.ExportTimeout > 0 {
+		opts = append(opts, sdklog.WithExportTimeout(m.batch.ExportTimeout))
+	}
+	return opts
 }
 
 // isGRPC detects whether the endpoint should use gRPC based on the URL.
