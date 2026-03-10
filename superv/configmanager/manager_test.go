@@ -700,6 +700,49 @@ func TestApplyRemoteConfig_InjectsHealthCheckExtension(t *testing.T) {
 	require.Contains(t, string(result.EffectiveConfig), "/health")
 }
 
+func TestSetLastConfigHash_SkipsUnchangedConfig(t *testing.T) {
+	dir := t.TempDir()
+	outputPath := filepath.Join(dir, "config", "collector.yaml")
+
+	mgr := New(zaptest.NewLogger(t), Config{
+		ConfigDir:  filepath.Join(dir, "config"),
+		OutputPath: outputPath,
+	})
+
+	// Simulate restoring the hash from persisted RemoteConfigStatus
+	mgr.SetLastConfigHash([]byte("hash1"))
+
+	// ApplyRemoteConfig with the same hash should be a no-op
+	cfg := createTestRemoteConfig("collector.yaml", []byte("receivers:\n  otlp:\n"), []byte("hash1"))
+	result, err := mgr.ApplyRemoteConfig(context.Background(), cfg)
+	require.NoError(t, err)
+	require.False(t, result.Changed, "config with same hash should not be re-applied")
+
+	// ApplyRemoteConfig with a different hash should apply
+	cfg2 := createTestRemoteConfig("collector.yaml", []byte("receivers:\n  filelog:\n"), []byte("hash2"))
+	result2, err := mgr.ApplyRemoteConfig(context.Background(), cfg2)
+	require.NoError(t, err)
+	require.True(t, result2.Changed, "config with different hash should be applied")
+}
+
+func TestSetLastConfigHash_NotRestoredAfterFailure(t *testing.T) {
+	dir := t.TempDir()
+	outputPath := filepath.Join(dir, "config", "collector.yaml")
+
+	mgr := New(zaptest.NewLogger(t), Config{
+		ConfigDir:  filepath.Join(dir, "config"),
+		OutputPath: outputPath,
+	})
+
+	// Without SetLastConfigHash (simulating a restart after a failed apply
+	// where the hash is NOT restored), the same config hash should be
+	// re-applied so the server gets a fresh attempt.
+	cfg := createTestRemoteConfig("collector.yaml", []byte("receivers:\n  otlp:\n"), []byte("hash1"))
+	result, err := mgr.ApplyRemoteConfig(context.Background(), cfg)
+	require.NoError(t, err)
+	require.True(t, result.Changed, "config should be applied when lastHash is not set")
+}
+
 func TestSetLocalEndpoint(t *testing.T) {
 	mgr := New(zaptest.NewLogger(t), Config{
 		LocalEndpoint: "localhost:0",

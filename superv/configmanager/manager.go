@@ -265,6 +265,14 @@ func (m *Manager) RollbackConfig() error {
 	return nil
 }
 
+// SetLastConfigHash restores the hash of the last successfully applied config.
+// This should be called on startup with the hash from the persisted
+// RemoteConfigStatus so that ApplyRemoteConfig can skip unchanged configs
+// across supervisor restarts.
+func (m *Manager) SetLastConfigHash(hash []byte) {
+	m.lastHash = hash
+}
+
 // GetConfigHash returns the hash of the last successfully applied config.
 func (m *Manager) GetConfigHash() []byte {
 	return m.lastHash

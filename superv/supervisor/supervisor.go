@@ -190,6 +190,21 @@ func New(logger *zap.Logger, cfg config.Config) (*Supervisor, error) {
 		HealthCheck:    healthCheck,
 	})
 
+	// Restore the last applied config hash so ApplyRemoteConfig can skip
+	// unchanged configs across supervisor restarts, avoiding unnecessary
+	// collector restarts and duplicate APPLIED status messages.
+	// Only restore when the last status was APPLIED — if the config failed
+	// or was rolled back, the server may resend the same hash expecting a
+	// retry, so we must not skip it.
+	if status, err := configMgr.LoadRemoteConfigStatus(); err != nil {
+		logger.Warn("Failed to load persisted config hash", zap.Error(err))
+	} else if status != nil &&
+		status.GetStatus() == protobufs.RemoteConfigStatuses_RemoteConfigStatuses_APPLIED &&
+		len(status.GetLastRemoteConfigHash()) > 0 {
+		configMgr.SetLastConfigHash(status.GetLastRemoteConfigHash())
+		logger.Debug("Restored last config hash from persisted status")
+	}
+
 	// Initialize health monitor
 	healthMon := healthmonitor.New(logger.Named("health"), healthmonitor.Config{
 		Endpoint:           cfg.Agent.Health.Endpoint,
