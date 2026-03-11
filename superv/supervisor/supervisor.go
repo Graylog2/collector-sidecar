@@ -100,6 +100,7 @@ type Supervisor struct {
 	// ownLogsManager manages OTLP export of the supervisor's own logs.
 	ownLogsManager     *ownlogs.Manager
 	ownLogsPersistence *ownlogs.Persistence
+	currentOwnLogs     *ownlogs.Settings
 }
 
 // New creates a new Supervisor instance. The instanceUID must be obtained from
@@ -519,9 +520,13 @@ func (s *Supervisor) Stop(ctx context.Context) error {
 
 // SetOwnLogs configures the own-logs manager and persistence for OTLP log export.
 // Must be called before Start.
-func (s *Supervisor) SetOwnLogs(manager *ownlogs.Manager, persistence *ownlogs.Persistence) {
+func (s *Supervisor) SetOwnLogs(manager *ownlogs.Manager, persistence *ownlogs.Persistence, current *ownlogs.Settings) {
 	s.ownLogsManager = manager
 	s.ownLogsPersistence = persistence
+	if current != nil {
+		settingsCopy := *current
+		s.currentOwnLogs = &settingsCopy
+	}
 }
 
 // IsRunning returns true if the supervisor is running.
@@ -1036,7 +1041,6 @@ func (s *Supervisor) rollbackAndRecover(ctx context.Context, configHash []byte, 
 		// Restart with rolled-back config. The collector may be stopped
 		// (Restart = Stop + Start, failed Start leaves process down) or
 		// running with a bad config (health check failed).
-		s.opampServer.DisconnectAll()
 		if restartErr := s.commander.Restart(ctx); restartErr != nil {
 			s.logger.Error("Failed to restart collector after rollback", zap.Error(restartErr))
 		}
@@ -1121,7 +1125,6 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 			// On failure we roll back the config file and re-start the collector
 			// with the previous config to avoid leaving it stopped.
 			s.logger.Info("Config changed, restarting collector")
-			s.opampServer.DisconnectAll()
 			if err := s.commander.Restart(ctx); err != nil {
 				s.logger.Error("Failed to restart collector with new config", zap.Error(err))
 				s.rollbackAndRecover(ctx, cfg.GetConfigHash(), err)
@@ -1208,7 +1211,13 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 			// Forward custom messages to the local OpAMP server (collector)
 			s.forwardCustomMessage(ctx, customMessage)
 		},
-		OnOwnLogs: s.handleOwnLogs,
+		OnOwnLogs: func(ctx context.Context, settings *protobufs.TelemetryConnectionSettings) {
+			if !s.enqueueWork(ctx, func(wCtx context.Context) {
+				s.handleOwnLogs(wCtx, settings)
+			}) {
+				s.logger.Warn("Failed to enqueue own_logs apply")
+			}
+		},
 		SaveRemoteConfigStatus: func(ctx context.Context, status *protobufs.RemoteConfigStatus) {
 			s.logger.Debug("SaveRemoteConfigStatus callback invoked",
 				zap.String("status", status.GetStatus().String()),
@@ -1256,6 +1265,19 @@ func (s *Supervisor) handleOwnLogs(ctx context.Context, settings *protobufs.Tele
 
 	// Empty endpoint signals "stop sending own logs".
 	if settings.GetDestinationEndpoint() == "" {
+		shouldDisable := s.currentOwnLogs != nil
+		if !shouldDisable && s.ownLogsPersistence != nil {
+			_, exists, err := s.ownLogsPersistence.Load()
+			if err != nil {
+				s.logger.Error("Failed to load persisted own_logs settings during disable", zap.Error(err))
+				return
+			}
+			shouldDisable = exists
+		}
+		if !shouldDisable {
+			s.logger.Debug("Own logs already disabled, skipping apply")
+			return
+		}
 		s.logger.Info("Received own_logs with empty endpoint, disabling OTLP log export")
 		if err := s.ownLogsManager.Disable(ctx); err != nil {
 			s.logger.Error("Failed to disable own_logs export", zap.Error(err))
@@ -1266,6 +1288,7 @@ func (s *Supervisor) handleOwnLogs(ctx context.Context, settings *protobufs.Tele
 				return
 			}
 		}
+		s.currentOwnLogs = nil
 		// TODO: If own_logs and a config change arrive close together, the collector
 		// may be restarted twice. This is harmless but wasteful. Consider coalescing
 		// restarts in the future.
@@ -1286,6 +1309,11 @@ func (s *Supervisor) handleOwnLogs(ctx context.Context, settings *protobufs.Tele
 		return
 	}
 
+	if s.currentOwnLogs != nil && s.currentOwnLogs.Equal(converted) {
+		s.logger.Debug("Own logs settings unchanged, skipping apply")
+		return
+	}
+
 	res := ownlogs.BuildResource(ServiceName, version.Version(), s.instanceUID)
 
 	if err := s.ownLogsManager.Apply(ctx, converted, res); err != nil {
@@ -1301,6 +1329,8 @@ func (s *Supervisor) handleOwnLogs(ctx context.Context, settings *protobufs.Tele
 			return
 		}
 	}
+	settingsCopy := converted
+	s.currentOwnLogs = &settingsCopy
 
 	s.logger.Info("Own logs OTLP export enabled",
 		zap.String("endpoint", converted.Endpoint),

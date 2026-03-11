@@ -185,6 +185,21 @@ func TestReconnectClient_StopCompletesBeforeAssign(t *testing.T) {
 	s.mu.RUnlock()
 }
 
+// TestEnqueueWork_WorkerStopped verifies that enqueueWork returns false
+// promptly once the serialized worker context has been cancelled.
+func TestEnqueueWork_WorkerStopped(t *testing.T) {
+	s := newTestSupervisor(t)
+
+	s.workCancel()
+	<-s.workCtx.Done()
+
+	ok := s.enqueueWork(context.Background(), func(context.Context) {
+		t.Fatal("work item should not run after worker shutdown")
+	})
+
+	assert.False(t, ok)
+}
+
 // TestIntegration_StopDuringConnectionSettingsUpdate exercises the Stop-during-
 // reconnect interleaving with a real OpAMP client talking to a real testserver.
 // Unlike the unit tests (which use stub clients where Stop is a no-op), this

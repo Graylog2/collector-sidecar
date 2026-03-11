@@ -271,6 +271,7 @@ func runSupervisor(cmd *cobra.Command, args []string) error {
 	certPath := filepath.Join(cfg.Keys.Dir, persistence.SigningCertFile)
 	keyPath := filepath.Join(cfg.Keys.Dir, persistence.SigningKeyFile)
 	ownLogsPersist := ownlogs.NewPersistence(cfg.Persistence.Dir, certPath, keyPath)
+	var restoredOwnLogs *ownlogs.Settings
 	if settings, exists, loadErr := ownLogsPersist.Load(); loadErr != nil {
 		logger.Warn("Failed to load persisted own_logs settings", zap.Error(loadErr))
 	} else if exists {
@@ -280,6 +281,9 @@ func runSupervisor(cmd *cobra.Command, args []string) error {
 		res := ownlogs.BuildResource(supervisor.ServiceName, version.Version(), instanceUID)
 		if applyErr := ownLogsManager.Apply(context.Background(), settings, res); applyErr != nil {
 			logger.Warn("Failed to restore OTLP log export", zap.Error(applyErr))
+		} else {
+			settingsCopy := settings
+			restoredOwnLogs = &settingsCopy
 		}
 	}
 
@@ -287,7 +291,7 @@ func runSupervisor(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create supervisor: %w", err)
 	}
-	sv.SetOwnLogs(ownLogsManager, ownLogsPersist)
+	sv.SetOwnLogs(ownLogsManager, ownLogsPersist, restoredOwnLogs)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

@@ -39,13 +39,16 @@ func (s *Supervisor) runWorker() {
 }
 
 // enqueueWork sends a work item to the worker. Returns true if enqueued,
-// false if ctx was cancelled before the worker accepted the item.
+// false if ctx was cancelled or the worker has already stopped before the
+// worker accepted the item.
 // The unbuffered channel provides natural back-pressure: if the worker is
 // busy, the caller blocks until the current item completes.
 func (s *Supervisor) enqueueWork(ctx context.Context, fn workFunc) bool {
 	select {
 	case s.workQueue <- fn:
 		return true
+	case <-s.workCtx.Done():
+		return false
 	case <-ctx.Done():
 		return false
 	}

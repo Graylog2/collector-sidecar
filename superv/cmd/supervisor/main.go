@@ -130,6 +130,7 @@ func main() {
 	certPath := filepath.Join(cfg.Keys.Dir, persistence.SigningCertFile)
 	keyPath := filepath.Join(cfg.Keys.Dir, persistence.SigningKeyFile)
 	ownLogsPersist := ownlogs.NewPersistence(cfg.Persistence.Dir, certPath, keyPath)
+	var restoredOwnLogs *ownlogs.Settings
 	if settings, exists, loadErr := ownLogsPersist.Load(); loadErr != nil {
 		logger.Warn("Failed to load persisted own_logs settings", zap.Error(loadErr))
 	} else if exists {
@@ -139,6 +140,9 @@ func main() {
 		res := ownlogs.BuildResource(supervisor.ServiceName, version.Version(), instanceUID)
 		if applyErr := ownLogsManager.Apply(context.Background(), settings, res); applyErr != nil {
 			logger.Warn("Failed to restore OTLP log export", zap.Error(applyErr))
+		} else {
+			settingsCopy := settings
+			restoredOwnLogs = &settingsCopy
 		}
 	}
 
@@ -147,7 +151,7 @@ func main() {
 	if err != nil {
 		logger.Fatal("Failed to create supervisor", zap.Error(err))
 	}
-	sup.SetOwnLogs(ownLogsManager, ownLogsPersist)
+	sup.SetOwnLogs(ownLogsManager, ownLogsPersist, restoredOwnLogs)
 
 	// Setup signal handling
 	ctx, cancel := context.WithCancel(context.Background())

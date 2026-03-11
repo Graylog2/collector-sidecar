@@ -18,9 +18,11 @@
 package ownlogs
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/url"
 	"strings"
@@ -64,6 +66,27 @@ type Settings struct {
 	// LogLevel overrides the configured default level when set via
 	// ?log_level=<level> on the DestinationEndpoint URL.
 	LogLevel string
+}
+
+// Equal reports whether two settings describe the same logical own-logs
+// configuration. It intentionally ignores TLSConfig because that is derived
+// runtime state rebuilt from the persisted raw TLS material.
+func (s Settings) Equal(other Settings) bool {
+	return s.Endpoint == other.Endpoint &&
+		maps.Equal(s.Headers, other.Headers) &&
+		s.Insecure == other.Insecure &&
+		bytes.Equal(s.CertPEM, other.CertPEM) &&
+		bytes.Equal(s.KeyPEM, other.KeyPEM) &&
+		bytes.Equal(s.CACertPEM, other.CACertPEM) &&
+		s.TLSMinVersion == other.TLSMinVersion &&
+		s.TLSMaxVersion == other.TLSMaxVersion &&
+		s.InsecureSkipVerify == other.InsecureSkipVerify &&
+		s.IncludeSystemCACertsPool == other.IncludeSystemCACertsPool &&
+		s.TLSCAPemContents == other.TLSCAPemContents &&
+		s.TLSServerName == other.TLSServerName &&
+		s.ProxyURL == other.ProxyURL &&
+		maps.Equal(s.ProxyHeaders, other.ProxyHeaders) &&
+		s.LogLevel == other.LogLevel
 }
 
 // Manager manages the lifecycle of the OTel log exporter and provider.

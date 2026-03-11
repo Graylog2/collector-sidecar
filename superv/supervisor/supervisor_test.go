@@ -101,6 +101,60 @@ func TestSupervisor_ShouldAcceptLocalCollectorConnection(t *testing.T) {
 	require.False(t, s.shouldAcceptLocalCollectorConnection())
 }
 
+func TestCreateOpAMPCallbacks_OnOwnLogs_EnqueuesWork(t *testing.T) {
+	core, observed := observer.New(zap.WarnLevel)
+	logger := zap.New(core)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	s := &Supervisor{
+		logger:     logger,
+		workQueue:  make(chan workFunc),
+		workCtx:    ctx,
+		workCancel: cancel,
+	}
+	s.workWg.Add(1)
+	go s.runWorker()
+	defer func() {
+		cancel()
+		s.workWg.Wait()
+	}()
+
+	callbacks := s.createOpAMPCallbacks()
+	callbacks.OnOwnLogs(context.Background(), &protobufs.TelemetryConnectionSettings{
+		DestinationEndpoint: "https://example.com:4318/v1/logs",
+	})
+
+	require.Eventually(t, func() bool {
+		return observed.FilterMessage("Received own_logs settings but own logs manager is not configured").Len() == 1
+	}, time.Second, 10*time.Millisecond)
+}
+
+func TestCreateOpAMPCallbacks_OnOwnLogs_EnqueueFailsAfterWorkerStop(t *testing.T) {
+	core, observed := observer.New(zap.WarnLevel)
+	logger := zap.New(core)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	s := &Supervisor{
+		logger:     logger,
+		workQueue:  make(chan workFunc),
+		workCtx:    ctx,
+		workCancel: cancel,
+	}
+	s.workWg.Add(1)
+	go s.runWorker()
+
+	cancel()
+	s.workWg.Wait()
+
+	callbacks := s.createOpAMPCallbacks()
+	callbacks.OnOwnLogs(context.Background(), &protobufs.TelemetryConnectionSettings{
+		DestinationEndpoint: "https://example.com:4318/v1/logs",
+	})
+
+	msgs := observed.FilterMessage("Failed to enqueue own_logs apply")
+	require.Equal(t, 1, msgs.Len())
+}
+
 func TestSupervisor_ConfigManagerIntegration(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	dir := t.TempDir()
@@ -566,6 +620,30 @@ func TestSupervisor_HandleOwnLogs(t *testing.T) {
 		// Verify restart was attempted (log message present)
 		msgs := observed.FilterMessage("Restarting collector to apply own_logs changes")
 		require.Equal(t, 1, msgs.Len(), "expected restart log message")
+	})
+
+	t.Run("unchanged settings do not restart collector again", func(t *testing.T) {
+		core, observed := observer.New(zap.DebugLevel)
+		logger := zap.New(core)
+		s := newSupervisorWithCommander(t, logger)
+
+		ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer ts.Close()
+
+		settings := &protobufs.TelemetryConnectionSettings{
+			DestinationEndpoint: ts.URL + "/v1/logs?log_level=info",
+		}
+
+		s.handleOwnLogs(context.Background(), settings)
+		s.handleOwnLogs(context.Background(), settings)
+
+		restarts := observed.FilterMessage("Restarting collector to apply own_logs changes")
+		require.Equal(t, 1, restarts.Len(), "expected only one restart for unchanged own_logs settings")
+
+		skips := observed.FilterMessage("Own logs settings unchanged, skipping apply")
+		require.Equal(t, 1, skips.Len(), "expected unchanged own_logs settings to be skipped")
 	})
 
 	t.Run("no own logs manager logs warning", func(t *testing.T) {
