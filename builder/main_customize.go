@@ -72,6 +72,11 @@ func customizeSettings(params *otelcol.CollectorSettings) {
 func customizeCommand(params *otelcol.CollectorSettings, cmd *cobra.Command) {
 	cmd.AddCommand(superv.GetCommand())
 	if ownLogsShutdown != nil {
+		// Best-effort flush: PersistentPostRun only fires when RunE succeeds.
+		// Cobra skips all post-run hooks on error (command.go:1009), so on
+		// error exits the batch processor's periodic export (~1s) is the only
+		// flush mechanism. This is accepted — see the "Shutdown — Best-Effort
+		// Flush" section in the design spec.
 		cmd.PersistentPostRun = func(cmd *cobra.Command, args []string) {
 			ownLogsShutdown(cmd.Context())
 		}
