@@ -150,6 +150,7 @@ func (m *Manager) Apply(ctx context.Context, settings Settings, res *resource.Re
 	newCore, err := zapcore.NewIncreaseLevelCore(otelCore, lvl)
 	if err != nil {
 		// Only fails if lvl < otelCore's level (DebugLevel), which can't happen.
+		_ = newProvider.Shutdown(ctx)
 		return fmt.Errorf("apply min level filter: %w", err)
 	}
 
@@ -299,7 +300,7 @@ func isGRPC(endpoint string) bool {
 	if strings.Contains(endpoint, "/v1/logs") {
 		return false
 	}
-	if strings.Contains(endpoint, ":4317") {
+	if strings.HasSuffix(endpoint, ":4317") || strings.Contains(endpoint, ":4317/") {
 		return true
 	}
 	// Default to HTTP per the OpAMP spec.

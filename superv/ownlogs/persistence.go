@@ -175,12 +175,11 @@ func (p *Persistence) Save(s Settings) error {
 // Load reads persisted settings from disk and rebuilds the TLS config.
 // Returns (settings, exists, error).
 func (p *Persistence) Load() (Settings, bool, error) {
-	if _, err := os.Stat(p.filePath); errors.Is(err, os.ErrNotExist) {
-		return Settings{}, false, nil
-	}
-
 	var ps persistedSettings
 	if err := persistence.LoadYAMLFile(".", p.filePath, &ps); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return Settings{}, false, nil
+		}
 		return Settings{}, true, err
 	}
 

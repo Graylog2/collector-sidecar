@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 )
 
@@ -56,8 +57,9 @@ func FetchJWKS(client *http.Client, baseURL string) ([]JWK, error) {
 		return nil, fmt.Errorf("JWKS request failed with status %d", resp.StatusCode)
 	}
 
+	const maxJWKSSize = 1 << 20 // 1 MB
 	var jwks jwksResponse
-	if err := json.NewDecoder(resp.Body).Decode(&jwks); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxJWKSSize)).Decode(&jwks); err != nil {
 		return nil, fmt.Errorf("failed to decode JWKS: %w", err)
 	}
 
@@ -80,6 +82,10 @@ func FetchJWKS(client *http.Client, baseURL string) ([]JWK, error) {
 			KeyID:     entry.Kid,
 			PublicKey: pubBytes,
 		})
+	}
+
+	if len(keys) == 0 {
+		return nil, errors.New("no valid Ed25519 keys found in JWKS")
 	}
 
 	return keys, nil

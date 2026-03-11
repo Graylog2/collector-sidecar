@@ -19,6 +19,7 @@ package healthmonitor
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -113,6 +114,9 @@ type Monitor struct {
 
 // New creates a new health monitor with an HTTP client using the configured timeout.
 func New(logger *zap.Logger, cfg Config) *Monitor {
+	if cfg.Interval <= 0 {
+		cfg.Interval = 10 * time.Second
+	}
 	return &Monitor{
 		logger: logger,
 		cfg:    cfg,
@@ -142,7 +146,10 @@ func (m *Monitor) CheckHealth(ctx context.Context) (*HealthStatus, error) {
 		m.setLastStatus(status)
 		return status, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+	}()
 
 	status.StatusCode = resp.StatusCode
 	status.Healthy = resp.StatusCode >= 200 && resp.StatusCode < 300

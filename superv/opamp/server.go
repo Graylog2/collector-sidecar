@@ -76,7 +76,7 @@ func NewServer(logger *zap.Logger, cfg ServerConfig, callbacks *ServerCallbacks)
 
 // Start starts the local OpAMP server.
 func (s *Server) Start(_ context.Context) error {
-	s.opampServer = server.New(newLoggerFromZap(s.logger))
+	srv := server.New(newLoggerFromZap(s.logger))
 
 	settings := server.StartSettings{
 		Settings: server.Settings{
@@ -87,23 +87,39 @@ func (s *Server) Start(_ context.Context) error {
 		ListenEndpoint: s.cfg.ListenEndpoint,
 	}
 
-	return s.opampServer.Start(settings)
+	if err := srv.Start(settings); err != nil {
+		return err
+	}
+
+	s.mu.Lock()
+	s.opampServer = srv
+	s.mu.Unlock()
+
+	return nil
 }
 
 // Stop stops the local OpAMP server.
 func (s *Server) Stop(ctx context.Context) error {
-	if s.opampServer == nil {
+	s.mu.RLock()
+	srv := s.opampServer
+	s.mu.RUnlock()
+
+	if srv == nil {
 		return nil
 	}
-	return s.opampServer.Stop(ctx)
+	return srv.Stop(ctx)
 }
 
 // Addr returns the server's listen address.
 func (s *Server) Addr() string {
-	if s.opampServer == nil {
+	s.mu.RLock()
+	srv := s.opampServer
+	s.mu.RUnlock()
+
+	if srv == nil {
 		return ""
 	}
-	addr := s.opampServer.Addr()
+	addr := srv.Addr()
 	if addr == nil {
 		return ""
 	}

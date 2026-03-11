@@ -228,7 +228,7 @@ func initLogger(loggingCfg config.LoggingConfig, debug bool) (*zap.Logger, error
 		cfg = zap.NewDevelopmentConfig()
 	}
 	cfg.Level = zap.NewAtomicLevelAt(zapLevel)
-	cfg.DisableStacktrace = debug
+	cfg.DisableStacktrace = !debug
 
 	if loggingCfg.Color {
 		cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder

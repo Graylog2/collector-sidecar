@@ -50,8 +50,12 @@ func (c *Config) Validate() error {
 func RenderErrors(err error) string {
 	var sb strings.Builder
 
-	for _, e := range err.(interface{ Unwrap() []error }).Unwrap() {
-		sb.WriteString(fmt.Sprintf("  - %v\n", e))
+	if joined, ok := err.(interface{ Unwrap() []error }); ok {
+		for _, e := range joined.Unwrap() {
+			sb.WriteString(fmt.Sprintf("  - %v\n", e))
+		}
+	} else {
+		sb.WriteString(fmt.Sprintf("  - %v\n", err))
 	}
 
 	return sb.String()

@@ -1195,11 +1195,11 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 		},
 		OnPackagesAvailable: func(ctx context.Context, packages *protobufs.PackagesAvailable) bool {
 			// TODO: Implement package handling - opamp-go/client/types.PackagesSyncer
-			s.logger.Warn("TODO: Received packages available: %s", zap.String("packages", fmt.Sprintf("%v", packages.GetPackages())))
+			s.logger.Warn("TODO: Received packages available", zap.String("packages", fmt.Sprintf("%v", packages.GetPackages())))
 			return false
 		},
 		OnCommand: func(ctx context.Context, command *protobufs.ServerToAgentCommand) error {
-			s.logger.Warn("TODO: Received command: %s", zap.String("type", command.GetType().String()))
+			s.logger.Warn("TODO: Received command", zap.String("type", command.GetType().String()))
 			return nil
 		},
 		OnCustomMessage: func(ctx context.Context, customMessage *protobufs.CustomMessage) {

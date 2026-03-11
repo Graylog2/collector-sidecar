@@ -164,7 +164,7 @@ type Client struct {
 	cfg                ClientConfig
 	callbacks          *Callbacks
 	opampClient        client.OpAMPClient
-	effectiveConfig    *protobufs.EffectiveConfig
+	effectiveConfig    atomic.Pointer[protobufs.EffectiveConfig]
 	remoteConfigStatus *protobufs.RemoteConfigStatus
 	started            atomic.Bool
 }
@@ -206,7 +206,7 @@ func NewClient(logger *zap.Logger, cfg ClientConfig, callbacks *Callbacks) (*Cli
 	// This overrides any caller-provided callback because the wrapper owns
 	// effective config management via SetEffectiveConfig.
 	callbacks.GetEffectiveConfig = func(_ context.Context) (*protobufs.EffectiveConfig, error) {
-		return c.effectiveConfig, nil
+		return c.effectiveConfig.Load(), nil
 	}
 
 	// Set default health so opamp-go has valid state before Start().
@@ -262,7 +262,7 @@ func (c *Client) Start(ctx context.Context) error {
 	c.started.Store(true)
 
 	// Trigger effective config update if we have an initial config
-	if c.effectiveConfig != nil {
+	if c.effectiveConfig.Load() != nil {
 		if err := c.opampClient.UpdateEffectiveConfig(ctx); err != nil {
 			c.logger.Warn("Failed to send initial effective config", zap.Error(err))
 		}
@@ -311,11 +311,11 @@ func (c *Client) SetAvailableComponents(components *protobufs.AvailableComponent
 // SetEffectiveConfig updates the effective configuration reported to the server.
 // Can be called before Start() to set the initial effective config.
 func (c *Client) SetEffectiveConfig(ctx context.Context, config map[string]*protobufs.AgentConfigFile) error {
-	c.effectiveConfig = &protobufs.EffectiveConfig{
+	c.effectiveConfig.Store(&protobufs.EffectiveConfig{
 		ConfigMap: &protobufs.AgentConfigMap{
 			ConfigMap: config,
 		},
-	}
+	})
 
 	if !c.started.Load() {
 		return nil

@@ -62,7 +62,7 @@ func NewCoreFromFile(persistenceDir, clientCertPath, clientKeyPath string, res *
 	)
 
 	// Apply log level filter if configured.
-	var lvl zapcore.Level
+	lvl := zapcore.InfoLevel
 	if s.LogLevel != "" {
 		if err := lvl.UnmarshalText([]byte(s.LogLevel)); err != nil {
 			lvl = zapcore.InfoLevel

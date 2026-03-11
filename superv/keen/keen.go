@@ -47,6 +47,7 @@ type Commander struct {
 	logger  *zap.Logger
 	logsDir string
 	cfg     Config
+	mu      sync.Mutex // protects cmd, recoveryDone, stopRecovery
 	cmd     *exec.Cmd
 	running atomic.Bool
 	doneCh  chan struct{}
@@ -82,11 +83,11 @@ func (c *Commander) Start(ctx context.Context) error {
 		return c.start(ctx)
 	}
 
+	c.mu.Lock()
 	c.recoveryDone = make(chan struct{})
-
-	// Create a cancellable context for the recovery loop
 	recoveryCtx, cancel := context.WithCancel(ctx)
 	c.stopRecovery = cancel
+	c.mu.Unlock()
 
 	go c.recoveryLoop(recoveryCtx)
 
@@ -110,9 +111,13 @@ func (c *Commander) start(ctx context.Context) error {
 
 	c.logger.Debug("Starting agent", zap.String("executable", c.cfg.Executable))
 
-	c.cmd = exec.CommandContext(ctx, c.cfg.Executable, c.cfg.Args...)
-	c.cmd.Env = c.buildEnv()
-	c.cmd.SysProcAttr = sysProcAttrs()
+	cmd := exec.CommandContext(ctx, c.cfg.Executable, c.cfg.Args...)
+	cmd.Env = c.buildEnv()
+	cmd.SysProcAttr = sysProcAttrs()
+
+	c.mu.Lock()
+	c.cmd = cmd
+	c.mu.Unlock()
 
 	if c.cfg.PassthroughLogs {
 		return c.startWithPassthroughLogging()
@@ -238,18 +243,23 @@ func (c *Commander) watch() {
 // Stop stops the agent process gracefully.
 func (c *Commander) Stop(ctx context.Context) error {
 	// Cancel recovery loop if running
-	if c.stopRecovery != nil {
-		c.stopRecovery()
+	c.mu.Lock()
+	stopRecovery := c.stopRecovery
+	cmd := c.cmd
+	c.mu.Unlock()
+
+	if stopRecovery != nil {
+		stopRecovery()
 	}
 
 	if !c.running.Load() {
 		return nil
 	}
 
-	pid := c.cmd.Process.Pid
+	pid := cmd.Process.Pid
 	c.logger.Debug("Stopping agent process", zap.Int("pid", pid))
 
-	if err := sendShutdownSignal(c.cmd.Process); err != nil {
+	if err := sendShutdownSignal(cmd.Process); err != nil {
 		return err
 	}
 
@@ -261,7 +271,7 @@ func (c *Commander) Stop(ctx context.Context) error {
 		<-waitCtx.Done()
 		if errors.Is(waitCtx.Err(), context.DeadlineExceeded) {
 			c.logger.Debug("Agent not responding to SIGTERM, sending SIGKILL", zap.Int("pid", pid))
-			c.cmd.Process.Kill()
+			cmd.Process.Kill()
 		}
 	}()
 
@@ -286,10 +296,14 @@ func (c *Commander) Restart(ctx context.Context) error {
 
 // ReloadConfig sends SIGHUP to the agent to reload configuration.
 func (c *Commander) ReloadConfig() error {
-	if c.cmd == nil || c.cmd.Process == nil {
+	c.mu.Lock()
+	cmd := c.cmd
+	c.mu.Unlock()
+
+	if cmd == nil || cmd.Process == nil {
 		return errors.New("agent process is not running")
 	}
-	return sendReloadSignal(c.cmd.Process)
+	return sendReloadSignal(cmd.Process)
 }
 
 // Exited returns a channel that signals when the agent process exits.
@@ -299,18 +313,26 @@ func (c *Commander) Exited() <-chan struct{} {
 
 // Pid returns the agent process PID, or 0 if not running.
 func (c *Commander) Pid() int {
-	if c.cmd == nil || c.cmd.Process == nil {
+	c.mu.Lock()
+	cmd := c.cmd
+	c.mu.Unlock()
+
+	if cmd == nil || cmd.Process == nil {
 		return 0
 	}
-	return c.cmd.Process.Pid
+	return cmd.Process.Pid
 }
 
 // ExitCode returns the agent process exit code, or 0 if not exited.
 func (c *Commander) ExitCode() int {
-	if c.cmd == nil || c.cmd.ProcessState == nil {
+	c.mu.Lock()
+	cmd := c.cmd
+	c.mu.Unlock()
+
+	if cmd == nil || cmd.ProcessState == nil {
 		return 0
 	}
-	return c.cmd.ProcessState.ExitCode()
+	return cmd.ProcessState.ExitCode()
 }
 
 // IsRunning returns true if the agent process is running.
@@ -341,7 +363,9 @@ func (c *Commander) recoveryLoop(ctx context.Context) {
 			// Context cancelled, stop the process and exit
 			c.logger.Debug("Recovery loop context cancelled")
 			stopCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			c.Stop(stopCtx)
+			if err := c.Stop(stopCtx); err != nil {
+				c.logger.Warn("Failed to stop agent during recovery shutdown", zap.Error(err))
+			}
 			cancel()
 			return
 
@@ -411,8 +435,12 @@ func (c *Commander) CrashCount() int {
 // This happens when max retries are exhausted, the process exits cleanly,
 // or the recovery is stopped.
 func (c *Commander) Done() <-chan struct{} {
-	if c.recoveryDone != nil {
-		return c.recoveryDone
+	c.mu.Lock()
+	rd := c.recoveryDone
+	c.mu.Unlock()
+
+	if rd != nil {
+		return rd
 	}
 	// Return exitCh if not using recovery
 	return c.exitCh
