@@ -19,12 +19,8 @@ package ownlogs
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 
-	"github.com/Graylog2/collector-sidecar/superv/persistence"
 	"go.opentelemetry.io/contrib/bridges/otelzap"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -38,45 +34,13 @@ import (
 // Callers must treat errors as non-fatal: a failure here must never prevent
 // the collector from starting. Log the error and proceed without the OTLP tee.
 func NewCoreFromFile(persistenceDir, clientCertPath, clientKeyPath string, res *resource.Resource) (zapcore.Core, func(context.Context), error) {
-	filePath := filepath.Join(persistenceDir, ownLogsFileName)
-	if _, err := os.Stat(filePath); err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, nil, nil
-		}
-		return nil, nil, fmt.Errorf("stat %s: %w", ownLogsFileName, err)
-	}
-
-	var ps persistedSettings
-	if err := persistence.LoadYAMLFile(".", filePath, &ps); err != nil {
-		return nil, nil, fmt.Errorf("load %s: %w", ownLogsFileName, err)
-	}
-
-	s := Settings{
-		Endpoint:                 ps.Endpoint,
-		Headers:                  ps.Headers,
-		Insecure:                 ps.Insecure,
-		CertPEM:                  ps.CertPEM,
-		KeyPEM:                   ps.KeyPEM,
-		CACertPEM:                ps.CACertPEM,
-		TLSMinVersion:            ps.TLSMinVersion,
-		TLSMaxVersion:            ps.TLSMaxVersion,
-		InsecureSkipVerify:       ps.InsecureSkipVerify,
-		IncludeSystemCACertsPool: ps.IncludeSystemCACertsPool,
-		TLSCAPemContents:         ps.TLSCAPemContents,
-		TLSServerName:            ps.TLSServerName,
-		ProxyURL:                 ps.ProxyURL,
-		ProxyHeaders:             ps.ProxyHeaders,
-		LogLevel:                 ps.LogLevel,
-	}
-
-	tlsCfg, err := rebuildTLSConfigFromPEM(s)
+	p := NewPersistence(persistenceDir, clientCertPath, clientKeyPath)
+	s, exists, err := p.Load()
 	if err != nil {
-		return nil, nil, fmt.Errorf("rebuild TLS config: %w", err)
+		return nil, nil, err
 	}
-	s.TLSConfig = tlsCfg
-
-	if err := s.LoadClientCert(clientCertPath, clientKeyPath); err != nil {
-		return nil, nil, fmt.Errorf("load client certificate: %w", err)
+	if !exists {
+		return nil, nil, nil
 	}
 
 	ctx := context.Background()
