@@ -19,6 +19,7 @@ package keen
 
 import (
 	"context"
+	"os/exec"
 	"runtime"
 	"testing"
 	"time"
@@ -221,6 +222,41 @@ func TestCommander_CrashRecovery_GracefulExit(t *testing.T) {
 
 	// No crash should be counted for clean exit
 	require.Equal(t, 0, cmd.CrashCount())
+}
+
+func TestCommander_Stop_DuringAsyncStartup(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows")
+	}
+
+	logger := zaptest.NewLogger(t)
+
+	// Use a command that takes time to start (sleep simulates a slow startup).
+	// With recovery enabled, Start() returns immediately and start() runs
+	// asynchronously. Calling Stop() before cmd.Start() populates cmd.Process
+	// must not panic.
+	cmd, err := New(logger, t.TempDir(), Config{
+		Executable: "/bin/sleep",
+		Args:       []string{"60"},
+	}, NewBackoff(BackoffConfig{
+		InitialInterval:     10 * time.Millisecond,
+		RandomizationFactor: 0,
+		MaxRetries:          1,
+	}))
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	// Simulate the race: set cmd (as start() does) but leave Process nil
+	// (as it would be before exec.Cmd.Start() completes).
+	cmd.mu.Lock()
+	cmd.running.Store(true)
+	cmd.cmd = &exec.Cmd{} // Process is nil
+	cmd.mu.Unlock()
+
+	// Stop must not panic on nil cmd.Process
+	err = cmd.Stop(ctx)
+	require.NoError(t, err)
 }
 
 func TestCommander_CrashRecovery_StopDuringRecovery(t *testing.T) {

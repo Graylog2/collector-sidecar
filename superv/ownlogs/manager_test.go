@@ -65,6 +65,31 @@ func TestNewHTTPClient_RejectsHeadersWithoutProxyURL(t *testing.T) {
 	assert.Contains(t, err.Error(), "proxy headers require a proxy URL")
 }
 
+func TestIsGRPC(t *testing.T) {
+	tests := []struct {
+		endpoint string
+		want     bool
+	}{
+		{"https://host:4317", true},
+		{"https://host:4317/", true},
+		{"https://host:4317?foo=bar", true},
+		{"https://host:4317/?foo=bar", true},
+		{"https://host:4317/v1/logs", false},
+		{"https://host:43170", false},
+		{"https://host:43179", false},
+		{"https://host:4318", false},
+		{"https://host:4318/v1/logs", false},
+		{"https://host:443/v1/logs", false},
+		{"https://host", false},
+		{"", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.endpoint, func(t *testing.T) {
+			assert.Equal(t, tt.want, isGRPC(tt.endpoint), "isGRPC(%q)", tt.endpoint)
+		})
+	}
+}
+
 func TestBuildGRPCExporter_RejectsProxySettings(t *testing.T) {
 	_, err := buildGRPCExporter(context.Background(), Settings{
 		Endpoint:  "https://example.com:4317",
