@@ -39,8 +39,11 @@ import (
 // the collector from starting. Log the error and proceed without the OTLP tee.
 func NewCoreFromFile(persistenceDir, clientCertPath, clientKeyPath string, res *resource.Resource) (zapcore.Core, func(context.Context), error) {
 	filePath := filepath.Join(persistenceDir, ownLogsFileName)
-	if _, err := os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
-		return nil, nil, nil
+	if _, err := os.Stat(filePath); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil, nil
+		}
+		return nil, nil, fmt.Errorf("stat %s: %w", ownLogsFileName, err)
 	}
 
 	var ps persistedSettings

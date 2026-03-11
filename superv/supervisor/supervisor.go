@@ -1194,69 +1194,7 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 			// Forward custom messages to the local OpAMP server (collector)
 			s.forwardCustomMessage(ctx, customMessage)
 		},
-		OnOwnLogs: func(ctx context.Context, settings *protobufs.TelemetryConnectionSettings) {
-			if s.ownLogsManager == nil {
-				s.logger.Warn("Received own_logs settings but own logs manager is not configured")
-				return
-			}
-
-			// Empty endpoint signals "stop sending own logs".
-			if settings.GetDestinationEndpoint() == "" {
-				s.logger.Info("Received own_logs with empty endpoint, disabling OTLP log export")
-				if err := s.ownLogsManager.Disable(ctx); err != nil {
-					s.logger.Error("Failed to disable own_logs export", zap.Error(err))
-				}
-				if s.ownLogsPersistence != nil {
-					if err := s.ownLogsPersistence.Delete(); err != nil {
-						s.logger.Error("Failed to delete persisted own_logs settings", zap.Error(err))
-					}
-				}
-				// TODO: If own_logs and a config change arrive close together, the collector
-				// may be restarted twice. This is harmless but wasteful. Consider coalescing
-				// restarts in the future.
-				s.logger.Info("Restarting collector to apply own_logs changes")
-				if err := s.commander.Restart(ctx); err != nil {
-					s.logger.Error("Failed to restart collector after own_logs change", zap.Error(err))
-				}
-				return
-			}
-
-			s.logger.Info("Received own_logs connection settings",
-				zap.String("endpoint", settings.GetDestinationEndpoint()),
-			)
-
-			converted, err := ownlogs.ConvertSettings(settings,
-				s.authManager.GetSigningCertPath(),
-				s.authManager.GetSigningKeyPath(),
-			)
-			if err != nil {
-				s.logger.Error("Failed to convert own_logs settings", zap.Error(err))
-				return
-			}
-
-			res := ownlogs.BuildResource(ServiceName, version.Version(), s.instanceUID)
-
-			if err := s.ownLogsManager.Apply(ctx, converted, res); err != nil {
-				s.logger.Error("Failed to apply own_logs settings", zap.Error(err))
-				return
-			}
-
-			// Persist for restart
-			if s.ownLogsPersistence != nil {
-				if err := s.ownLogsPersistence.Save(converted); err != nil {
-					s.logger.Error("Failed to persist own_logs settings", zap.Error(err))
-				}
-			}
-
-			s.logger.Info("Own logs OTLP export enabled",
-				zap.String("endpoint", converted.Endpoint),
-			)
-			// Restart collector so it picks up the new own-logs.yaml at startup.
-			s.logger.Info("Restarting collector to apply own_logs changes")
-			if err := s.commander.Restart(ctx); err != nil {
-				s.logger.Error("Failed to restart collector after own_logs change", zap.Error(err))
-			}
-		},
+		OnOwnLogs: s.handleOwnLogs,
 		SaveRemoteConfigStatus: func(ctx context.Context, status *protobufs.RemoteConfigStatus) {
 			s.logger.Debug("SaveRemoteConfigStatus callback invoked",
 				zap.String("status", status.GetStatus().String()),
@@ -1291,4 +1229,74 @@ func (s *Supervisor) forwardCustomMessage(ctx context.Context, customMessage *pr
 	// Broadcast to all connected collectors (typically just one)
 	server.Broadcast(ctx, msg)
 	s.logger.Debug("Forwarded custom message to collector")
+}
+
+// handleOwnLogs processes own_logs connection settings from the OpAMP server.
+// It applies settings to the supervisor's own logger, persists them, and restarts
+// the collector so it picks up the new own-logs.yaml at startup.
+func (s *Supervisor) handleOwnLogs(ctx context.Context, settings *protobufs.TelemetryConnectionSettings) {
+	if s.ownLogsManager == nil {
+		s.logger.Warn("Received own_logs settings but own logs manager is not configured")
+		return
+	}
+
+	// Empty endpoint signals "stop sending own logs".
+	if settings.GetDestinationEndpoint() == "" {
+		s.logger.Info("Received own_logs with empty endpoint, disabling OTLP log export")
+		if err := s.ownLogsManager.Disable(ctx); err != nil {
+			s.logger.Error("Failed to disable own_logs export", zap.Error(err))
+		}
+		if s.ownLogsPersistence != nil {
+			if err := s.ownLogsPersistence.Delete(); err != nil {
+				s.logger.Error("Failed to delete persisted own_logs settings", zap.Error(err))
+			}
+		}
+		// TODO: If own_logs and a config change arrive close together, the collector
+		// may be restarted twice. This is harmless but wasteful. Consider coalescing
+		// restarts in the future.
+		s.restartCollector(ctx)
+		return
+	}
+
+	s.logger.Info("Received own_logs connection settings",
+		zap.String("endpoint", settings.GetDestinationEndpoint()),
+	)
+
+	converted, err := ownlogs.ConvertSettings(settings,
+		s.authManager.GetSigningCertPath(),
+		s.authManager.GetSigningKeyPath(),
+	)
+	if err != nil {
+		s.logger.Error("Failed to convert own_logs settings", zap.Error(err))
+		return
+	}
+
+	res := ownlogs.BuildResource(ServiceName, version.Version(), s.instanceUID)
+
+	if err := s.ownLogsManager.Apply(ctx, converted, res); err != nil {
+		s.logger.Error("Failed to apply own_logs settings", zap.Error(err))
+		return
+	}
+
+	// Persist for restart
+	if s.ownLogsPersistence != nil {
+		if err := s.ownLogsPersistence.Save(converted); err != nil {
+			s.logger.Error("Failed to persist own_logs settings", zap.Error(err))
+		}
+	}
+
+	s.logger.Info("Own logs OTLP export enabled",
+		zap.String("endpoint", converted.Endpoint),
+	)
+	// Restart collector so it picks up the new own-logs.yaml at startup.
+	s.restartCollector(ctx)
+}
+
+// restartCollector restarts the collector process. Errors are logged but not returned
+// because own_logs settings do not affect collector health.
+func (s *Supervisor) restartCollector(ctx context.Context) {
+	s.logger.Info("Restarting collector to apply own_logs changes")
+	if err := s.commander.Restart(ctx); err != nil {
+		s.logger.Error("Failed to restart collector after own_logs change", zap.Error(err))
+	}
 }
