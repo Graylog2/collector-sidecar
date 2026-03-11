@@ -52,7 +52,7 @@ import (
 )
 
 const (
-	ServiceName = "collector-supervisor"
+	ServiceName = "supervisor"
 )
 
 // templateVars holds variables available for template expansion in agent args.
