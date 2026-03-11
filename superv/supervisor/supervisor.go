@@ -1295,8 +1295,10 @@ func (s *Supervisor) handleOwnLogs(ctx context.Context, settings *protobufs.Tele
 	s.restartCollector(ctx)
 }
 
-// restartCollector restarts the collector process. Errors are logged but not returned
-// because own_logs settings do not affect collector health.
+// restartCollector restarts the collector process as a best-effort follow-up
+// to own_logs changes. Failures are logged but not returned because own_logs
+// updates are handled asynchronously and have no status/error response path
+// back to the OpAMP server.
 func (s *Supervisor) restartCollector(ctx context.Context) {
 	s.logger.Info("Restarting collector to apply own_logs changes")
 	if err := s.commander.Restart(ctx); err != nil {
