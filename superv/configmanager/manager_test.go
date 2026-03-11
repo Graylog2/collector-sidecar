@@ -867,6 +867,50 @@ func TestEnsureBootstrapConfig_RecoversFromCachedRemoteConfig(t *testing.T) {
 	assert.Contains(t, s, "health_check")
 }
 
+func TestEnsureBootstrapConfig_RebuildsCachedRemoteWithLocalOverrides(t *testing.T) {
+	dir := t.TempDir()
+	configDir := filepath.Join(dir, "config")
+	outputPath := filepath.Join(configDir, "collector.yaml")
+
+	remoteDir := filepath.Join(configDir, "remote")
+	require.NoError(t, os.MkdirAll(remoteDir, 0o755))
+	cachedRemote := []byte("receivers:\n  otlp:\n    protocols:\n      grpc: {}\nexporters:\n  debug: {}\nservice:\n  pipelines:\n    logs:\n      receivers:\n        - otlp\n      exporters:\n        - debug\n")
+	require.NoError(t, os.WriteFile(filepath.Join(remoteDir, "collector.yaml"), cachedRemote, 0o600))
+
+	// Simulate a stale rendered config from a previous override value.
+	staleRendered := []byte("processors:\n  batch:\n    timeout: 5s\n")
+	require.NoError(t, os.WriteFile(outputPath, staleRendered, 0o600))
+
+	overridePath := filepath.Join(dir, "override.yaml")
+	override := []byte("processors:\n  batch:\n    timeout: 10s\n")
+	require.NoError(t, os.WriteFile(overridePath, override, 0o600))
+
+	mgr := New(zaptest.NewLogger(t), Config{
+		ConfigDir:      configDir,
+		OutputPath:     outputPath,
+		LocalOverrides: []string{overridePath},
+		LocalEndpoint:  "ws://127.0.0.1:54321/v1/opamp",
+		InstanceUID:    "test-uid-rebuild",
+		HealthCheck: configmerge.HealthCheckConfig{
+			Endpoint: "localhost:13133",
+			Path:     "/health",
+		},
+	})
+	require.NoError(t, mgr.SaveRemoteConfigStatus(
+		protobufs.RemoteConfigStatuses_RemoteConfigStatuses_APPLIED, "", []byte("hash")))
+
+	err := mgr.EnsureBootstrapConfig()
+	require.NoError(t, err)
+
+	content, err := os.ReadFile(outputPath)
+	require.NoError(t, err)
+
+	s := string(content)
+	assert.Contains(t, s, "timeout: 10s")
+	assert.NotContains(t, s, "timeout: 5s")
+	assert.Contains(t, s, "ws://127.0.0.1:54321/v1/opamp")
+}
+
 func TestEnsureBootstrapConfig_DoesNotRecoverFailedRemoteConfig(t *testing.T) {
 	dir := t.TempDir()
 	configDir := filepath.Join(dir, "config")

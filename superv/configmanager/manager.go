@@ -114,48 +114,9 @@ func (m *Manager) ApplyRemoteConfig(ctx context.Context, remote *protobufs.Agent
 		// Continue processing, this is not critical
 	}
 
-	// Start with the remote config as the base
-	mergedConfig := remoteConfig
-
-	// Merge with local overrides
-	for _, overridePath := range m.cfg.LocalOverrides {
-		overrideContent, err := os.ReadFile(overridePath)
-		if err != nil {
-			m.logger.Warn("Failed to read local override file, skipping",
-				zap.String("path", overridePath),
-				zap.Error(err))
-			continue
-		}
-
-		mergedConfig, err = configmerge.MergeConfigs(mergedConfig, overrideContent)
-		if err != nil {
-			return nil, fmt.Errorf("failed to merge with override %s: %w", overridePath, err)
-		}
-		m.logger.Debug("Merged local override", zap.String("path", overridePath))
-	}
-
-	// Inject OpAMP extension
-	if m.cfg.LocalEndpoint != "" && m.cfg.InstanceUID != "" {
-		var err error
-		mergedConfig, err = configmerge.InjectOpAMPExtension(mergedConfig, m.cfg.LocalEndpoint, m.cfg.InstanceUID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to inject OpAMP extension: %w", err)
-		}
-		m.logger.Debug("Injected OpAMP extension",
-			zap.String("endpoint", m.cfg.LocalEndpoint),
-			zap.String("instanceUID", m.cfg.InstanceUID))
-	}
-
-	// Inject health_check extension to guarantee it stays reachable.
-	// This runs after merge so remote config cannot override the endpoint.
-	if m.cfg.HealthCheck.Endpoint != "" {
-		var err error
-		mergedConfig, err = configmerge.InjectHealthCheckExtension(mergedConfig, m.cfg.HealthCheck)
-		if err != nil {
-			return nil, fmt.Errorf("failed to inject health_check extension: %w", err)
-		}
-		m.logger.Debug("Injected health_check extension",
-			zap.String("endpoint", m.cfg.HealthCheck.Endpoint))
+	mergedConfig, err := m.buildEffectiveConfig(remoteConfig)
+	if err != nil {
+		return nil, err
 	}
 
 	// Back up current config for rollback (skip if no existing config)
@@ -312,20 +273,16 @@ func (m *Manager) EnsureBootstrapConfig() error {
 		return fmt.Errorf("failed to read existing config %s: %w", m.cfg.OutputPath, err)
 	}
 
-	// If the effective config is missing or empty, try to recover from the
-	// cached remote config. This handles the case where collector.yaml was
-	// deleted but the last-known-good remote config is still available.
-	// Only recover if the last remote config was successfully applied —
-	// a FAILED status means the cached remote config is known-bad.
-	if len(config) == 0 && m.cfg.ConfigDir != "" {
-		if m.remoteConfigWasApplied() {
-			remotePath := filepath.Join(m.cfg.ConfigDir, "remote", filepath.Base(m.cfg.OutputPath))
-			if cached, cerr := os.ReadFile(remotePath); cerr == nil && len(cached) > 0 {
-				m.logger.Info("Recovered config from cached remote config",
-					zap.String("remote_path", remotePath))
-				config = cached
-			}
-		}
+	// Prefer rebuilding from the cached raw remote config when the last
+	// applied status is APPLIED. This keeps the effective config in sync with
+	// current local overrides across restarts instead of reusing a stale
+	// previously rendered collector.yaml.
+	usedCachedRemote := false
+	if cached, ok := m.loadCachedRemoteConfig(); ok {
+		m.logger.Info("Rebuilding config from cached remote config",
+			zap.String("remote_path", filepath.Join(m.cfg.ConfigDir, "remote", filepath.Base(m.cfg.OutputPath))))
+		config = cached
+		usedCachedRemote = true
 	}
 
 	bootstrap := len(config) == 0
@@ -337,25 +294,22 @@ func (m *Manager) EnsureBootstrapConfig() error {
 			m.logger.Info("Existing config is empty, writing bootstrap config",
 				zap.String("path", m.cfg.OutputPath))
 		}
-	} else {
+	} else if !usedCachedRemote {
 		m.logger.Info("Re-injecting extensions into cached config",
 			zap.String("path", m.cfg.OutputPath))
 	}
 
-	// Inject OpAMP extension (updates endpoint on every start).
-	if m.cfg.LocalEndpoint != "" && m.cfg.InstanceUID != "" {
-		config, err = configmerge.InjectOpAMPExtension(config, m.cfg.LocalEndpoint, m.cfg.InstanceUID)
+	if usedCachedRemote {
+		config, err = m.mergeLocalOverrides(config)
 		if err != nil {
-			return fmt.Errorf("failed to inject OpAMP extension: %w", err)
+			return fmt.Errorf("failed to rebuild cached remote config with local overrides: %w", err)
 		}
 	}
 
-	// Inject health_check extension.
-	if m.cfg.HealthCheck.Endpoint != "" {
-		config, err = configmerge.InjectHealthCheckExtension(config, m.cfg.HealthCheck)
-		if err != nil {
-			return fmt.Errorf("failed to inject health_check extension: %w", err)
-		}
+	// Inject OpAMP extension (updates endpoint on every start).
+	config, err = m.injectExtensions(config)
+	if err != nil {
+		return err
 	}
 
 	// The collector requires at least one pipeline. If the config has none
@@ -385,6 +339,85 @@ func (m *Manager) EnsureBootstrapConfig() error {
 		m.logger.Info("Updated cached config with current extensions", zap.String("path", m.cfg.OutputPath))
 	}
 	return nil
+}
+
+func (m *Manager) buildEffectiveConfig(remoteConfig []byte) ([]byte, error) {
+	mergedConfig, err := m.mergeLocalOverrides(remoteConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	mergedConfig, err = m.injectExtensions(mergedConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return mergedConfig, nil
+}
+
+func (m *Manager) mergeLocalOverrides(config []byte) ([]byte, error) {
+	mergedConfig := config
+
+	for _, overridePath := range m.cfg.LocalOverrides {
+		overrideContent, err := os.ReadFile(overridePath)
+		if err != nil {
+			m.logger.Warn("Failed to read local override file, skipping",
+				zap.String("path", overridePath),
+				zap.Error(err))
+			continue
+		}
+
+		mergedConfig, err = configmerge.MergeConfigs(mergedConfig, overrideContent)
+		if err != nil {
+			return nil, fmt.Errorf("failed to merge with override %s: %w", overridePath, err)
+		}
+		m.logger.Debug("Merged local override", zap.String("path", overridePath))
+	}
+
+	return mergedConfig, nil
+}
+
+func (m *Manager) injectExtensions(config []byte) ([]byte, error) {
+	mergedConfig := config
+
+	if m.cfg.LocalEndpoint != "" && m.cfg.InstanceUID != "" {
+		var err error
+		mergedConfig, err = configmerge.InjectOpAMPExtension(mergedConfig, m.cfg.LocalEndpoint, m.cfg.InstanceUID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to inject OpAMP extension: %w", err)
+		}
+		m.logger.Debug("Injected OpAMP extension",
+			zap.String("endpoint", m.cfg.LocalEndpoint),
+			zap.String("instanceUID", m.cfg.InstanceUID))
+	}
+
+	// Inject health_check extension to guarantee it stays reachable.
+	// This runs after merge so remote config cannot override the endpoint.
+	if m.cfg.HealthCheck.Endpoint != "" {
+		var err error
+		mergedConfig, err = configmerge.InjectHealthCheckExtension(mergedConfig, m.cfg.HealthCheck)
+		if err != nil {
+			return nil, fmt.Errorf("failed to inject health_check extension: %w", err)
+		}
+		m.logger.Debug("Injected health_check extension",
+			zap.String("endpoint", m.cfg.HealthCheck.Endpoint))
+	}
+
+	return mergedConfig, nil
+}
+
+func (m *Manager) loadCachedRemoteConfig() ([]byte, bool) {
+	if m.cfg.ConfigDir == "" || !m.remoteConfigWasApplied() {
+		return nil, false
+	}
+
+	remotePath := filepath.Join(m.cfg.ConfigDir, "remote", filepath.Base(m.cfg.OutputPath))
+	cached, err := os.ReadFile(remotePath)
+	if err != nil || len(cached) == 0 {
+		return nil, false
+	}
+
+	return cached, true
 }
 
 // remoteConfigWasApplied checks if the last remote config was successfully applied

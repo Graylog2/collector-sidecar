@@ -192,19 +192,21 @@ func buildHTTPExporter(ctx context.Context, s Settings) (sdklog.Exporter, error)
 	if len(s.Headers) > 0 {
 		opts = append(opts, otlploghttp.WithHeaders(s.Headers))
 	}
-	// Only the proxy URL is applied here. ProxyHeaders (CONNECT headers) cannot be
-	// wired without a custom http.Transport; gRPC also has no proxy support.
-	if s.ProxyURL != "" {
-		proxyURL, err := url.Parse(s.ProxyURL)
-		if err != nil {
-			return nil, fmt.Errorf("parse proxy URL: %w", err)
-		}
-		opts = append(opts, otlploghttp.WithProxy(http.ProxyURL(proxyURL)))
+	httpClient, err := newHTTPClient(s)
+	if err != nil {
+		return nil, err
+	}
+	if httpClient != nil {
+		opts = append(opts, otlploghttp.WithHTTPClient(httpClient))
 	}
 	return otlploghttp.New(ctx, opts...)
 }
 
 func buildGRPCExporter(ctx context.Context, s Settings) (sdklog.Exporter, error) {
+	if s.ProxyURL != "" || len(s.ProxyHeaders) > 0 {
+		return nil, fmt.Errorf("proxy settings are not supported for gRPC own_logs endpoints")
+	}
+
 	opts := []otlploggrpc.Option{
 		otlploggrpc.WithEndpointURL(s.Endpoint),
 	}
@@ -218,6 +220,37 @@ func buildGRPCExporter(ctx context.Context, s Settings) (sdklog.Exporter, error)
 		opts = append(opts, otlploggrpc.WithHeaders(s.Headers))
 	}
 	return otlploggrpc.New(ctx, opts...)
+}
+
+func newHTTPClient(s Settings) (*http.Client, error) {
+	if s.ProxyURL == "" && len(s.ProxyHeaders) == 0 {
+		return nil, nil
+	}
+	if s.ProxyURL == "" {
+		return nil, fmt.Errorf("proxy headers require a proxy URL")
+	}
+
+	proxyURL, err := url.Parse(s.ProxyURL)
+	if err != nil {
+		return nil, fmt.Errorf("parse proxy URL: %w", err)
+	}
+
+	transport, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		return nil, fmt.Errorf("unexpected default HTTP transport type %T", http.DefaultTransport)
+	}
+
+	cloned := transport.Clone()
+	cloned.Proxy = http.ProxyURL(proxyURL)
+	cloned.TLSClientConfig = s.TLSConfig
+	if len(s.ProxyHeaders) > 0 {
+		cloned.ProxyConnectHeader = make(http.Header, len(s.ProxyHeaders))
+		for key, value := range s.ProxyHeaders {
+			cloned.ProxyConnectHeader.Set(key, value)
+		}
+	}
+
+	return &http.Client{Transport: cloned}, nil
 }
 
 func (m *Manager) batchProcessorOpts() []sdklog.BatchProcessorOption {
