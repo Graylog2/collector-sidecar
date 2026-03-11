@@ -256,6 +256,10 @@ func (c *Commander) Stop(ctx context.Context) error {
 		return nil
 	}
 
+	if cmd == nil || cmd.Process == nil {
+		return nil
+	}
+
 	pid := cmd.Process.Pid
 	c.logger.Debug("Stopping agent process", zap.Int("pid", pid))
 

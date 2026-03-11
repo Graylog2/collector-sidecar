@@ -300,7 +300,7 @@ func isGRPC(endpoint string) bool {
 	if strings.Contains(endpoint, "/v1/logs") {
 		return false
 	}
-	if strings.HasSuffix(endpoint, ":4317") || strings.Contains(endpoint, ":4317/") {
+	if u, err := url.Parse(endpoint); err == nil && u.Port() == "4317" {
 		return true
 	}
 	// Default to HTTP per the OpAMP spec.
