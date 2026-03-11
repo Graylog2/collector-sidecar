@@ -422,6 +422,19 @@ func TestSupervisor_BuildCollectorEnv(t *testing.T) {
 		require.Equal(t, authMgr.GetSigningCertPath(), env["GLC_INTERNAL_TLS_CLIENT_CERT_PATH"])
 	})
 
+	t.Run("sets persistence dir", func(t *testing.T) {
+		s := &Supervisor{
+			authManager:    authMgr,
+			agentCfg:       config.AgentConfig{},
+			instanceUID:    instanceUid.String(),
+			persistenceDir: "/var/lib/graylog-sidecar",
+		}
+
+		env := s.buildCollectorEnv()
+
+		require.Equal(t, "/var/lib/graylog-sidecar", env["GLC_INTERNAL_PERSISTENCE_DIR"])
+	})
+
 	t.Run("merges user-configured env vars", func(t *testing.T) {
 		s := &Supervisor{
 			authManager: authMgr,

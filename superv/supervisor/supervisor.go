@@ -260,6 +260,7 @@ func (s *Supervisor) buildCollectorEnv() map[string]string {
 		"GLC_INTERNAL_INSTANCE_UID":         s.instanceUID,
 		"GLC_INTERNAL_TLS_CLIENT_KEY_PATH":  s.authManager.GetSigningKeyPath(),
 		"GLC_INTERNAL_TLS_CLIENT_CERT_PATH": s.authManager.GetSigningCertPath(),
+		"GLC_INTERNAL_PERSISTENCE_DIR":      s.persistenceDir,
 	}
 	maps.Copy(env, s.agentCfg.Env)
 	return env
