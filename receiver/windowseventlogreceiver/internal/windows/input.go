@@ -71,11 +71,20 @@ func errIsChannelError(err error) bool {
 }
 
 // Start will start reading events from a subscription.
-func (i *Input) Start(persister operator.Persister) error {
+func (i *Input) Start(persister operator.Persister) (err error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	i.cancel = cancel
 
 	i.persister = persister
+	// Start can fail after opening Windows handles. Roll back owned resources here
+	// because operator startup does not guarantee Stop will run on failure.
+	defer func() {
+		if err == nil {
+			return
+		}
+
+		err = multierr.Append(err, i.cleanup())
+	}()
 
 	i.bookmark = NewBookmark()
 	offsetXML, err := i.getBookmarkOffset(ctx)
@@ -115,9 +124,9 @@ func (i *Input) Start(persister operator.Persister) error {
 		i.channelList = filtered
 	}
 
-	subscription := NewSubscription()
+	i.subscription = NewSubscription()
 	query := i.effectiveQuery()
-	if err := subscription.Open(i.startAt, "", query, i.bookmark); err != nil {
+	if err := i.subscription.Open(i.startAt, "", query, i.bookmark); err != nil {
 		if isNonTransientError(err) {
 			if !i.ignoreChannelErrors || !errIsChannelError(err) {
 				return fmt.Errorf("failed to open local subscription: %w", err)
@@ -131,7 +140,6 @@ func (i *Input) Start(persister operator.Persister) error {
 		i.subscriptionOpen = true
 	}
 
-	i.subscription = subscription
 	i.wg.Add(1)
 	go i.pollAndRead(ctx)
 
@@ -140,6 +148,10 @@ func (i *Input) Start(persister operator.Persister) error {
 
 // Stop will stop reading events from a subscription.
 func (i *Input) Stop() error {
+	return i.cleanup()
+}
+
+func (i *Input) cleanup() error {
 	if i.cancel != nil {
 		i.cancel()
 	}
@@ -151,8 +163,10 @@ func (i *Input) Stop() error {
 		errs = multierr.Append(errs, fmt.Errorf("failed to close subscription: %w", err))
 	}
 
-	if err := i.bookmark.Close(); err != nil {
-		errs = multierr.Append(errs, fmt.Errorf("failed to close bookmark: %w", err))
+	if i.bookmark != nil {
+		if err := i.bookmark.Close(); err != nil {
+			errs = multierr.Append(errs, fmt.Errorf("failed to close bookmark: %w", err))
+		}
 	}
 
 	if err := i.publisherCache.evictAll(); err != nil {
