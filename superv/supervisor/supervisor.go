@@ -1292,6 +1292,10 @@ func (s *Supervisor) handleOwnLogs(ctx context.Context, settings *protobufs.Tele
 		zap.String("endpoint", converted.Endpoint),
 	)
 	// Restart collector so it picks up the new own-logs.yaml at startup.
+	// Unlike remote config updates, this does not change collector.yaml, and
+	// the collector treats own-logs startup errors as non-fatal. There is
+	// therefore no config rollback path here; a restart failure is just the
+	// ordinary stop/start failure mode and is logged below.
 	s.restartCollector(ctx)
 }
 
