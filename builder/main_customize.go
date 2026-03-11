@@ -19,17 +19,61 @@
 package main
 
 import (
+	"context"
+	"fmt"
+	"os"
+
 	"github.com/Graylog2/collector-sidecar/superv"
+	"github.com/Graylog2/collector-sidecar/superv/ownlogs"
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/collector/otelcol"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
+
+var ownLogsShutdown func(context.Context)
 
 func customizeSettings(params *otelcol.CollectorSettings) {
 	// Disable caller information in logs to reduce log chatter and avoid exposing source code file names.
 	params.LoggingOptions = append(params.LoggingOptions, zap.WithCaller(false))
+
+	persistDir := os.Getenv("GLC_INTERNAL_PERSISTENCE_DIR")
+	if persistDir == "" {
+		return
+	}
+
+	res := ownlogs.BuildResource("collector", params.BuildInfo.Version,
+		os.Getenv("GLC_INTERNAL_INSTANCE_UID"))
+
+	core, shutdown, err := ownlogs.NewCoreFromFile(
+		persistDir,
+		os.Getenv("GLC_INTERNAL_TLS_CLIENT_CERT_PATH"),
+		os.Getenv("GLC_INTERNAL_TLS_CLIENT_KEY_PATH"),
+		res,
+	)
+	if err != nil {
+		// Collector availability first: log warning, continue without own-logs.
+		// A broken own-logs config must never prevent the collector from starting.
+		fmt.Fprintf(os.Stderr, "WARNING: own-logs setup failed, continuing without OTLP log export: %v\n", err)
+		return
+	}
+	if core == nil {
+		return // no own-logs.yaml, skip
+	}
+
+	ownLogsShutdown = shutdown
+	params.LoggingOptions = append(params.LoggingOptions,
+		zap.WrapCore(func(original zapcore.Core) zapcore.Core {
+			return zapcore.NewTee(original, core)
+		}),
+	)
 }
 
 func customizeCommand(params *otelcol.CollectorSettings, cmd *cobra.Command) {
 	cmd.AddCommand(superv.GetCommand())
+	if ownLogsShutdown != nil {
+		cmd.PersistentPostRun = func(cmd *cobra.Command, args []string) {
+			ownLogsShutdown(cmd.Context())
+		}
+	}
 }
