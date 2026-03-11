@@ -1211,6 +1211,13 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 						s.logger.Error("Failed to delete persisted own_logs settings", zap.Error(err))
 					}
 				}
+				// TODO: If own_logs and a config change arrive close together, the collector
+				// may be restarted twice. This is harmless but wasteful. Consider coalescing
+				// restarts in the future.
+				s.logger.Info("Restarting collector to apply own_logs changes")
+				if err := s.commander.Restart(ctx); err != nil {
+					s.logger.Error("Failed to restart collector after own_logs change", zap.Error(err))
+				}
 				return
 			}
 
@@ -1244,6 +1251,11 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 			s.logger.Info("Own logs OTLP export enabled",
 				zap.String("endpoint", converted.Endpoint),
 			)
+			// Restart collector so it picks up the new own-logs.yaml at startup.
+			s.logger.Info("Restarting collector to apply own_logs changes")
+			if err := s.commander.Restart(ctx); err != nil {
+				s.logger.Error("Failed to restart collector after own_logs change", zap.Error(err))
+			}
 		},
 		SaveRemoteConfigStatus: func(ctx context.Context, status *protobufs.RemoteConfigStatus) {
 			s.logger.Debug("SaveRemoteConfigStatus callback invoked",
