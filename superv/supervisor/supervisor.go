@@ -1248,7 +1248,8 @@ func (s *Supervisor) handleOwnLogs(ctx context.Context, settings *protobufs.Tele
 		}
 		if s.ownLogsPersistence != nil {
 			if err := s.ownLogsPersistence.Delete(); err != nil {
-				s.logger.Error("Failed to delete persisted own_logs settings", zap.Error(err))
+				s.logger.Error("Failed to delete persisted own_logs settings, skipping collector restart", zap.Error(err))
+				return
 			}
 		}
 		// TODO: If own_logs and a config change arrive close together, the collector
@@ -1278,10 +1279,12 @@ func (s *Supervisor) handleOwnLogs(ctx context.Context, settings *protobufs.Tele
 		return
 	}
 
-	// Persist for restart
+	// Persist for restart. Only restart the collector if persistence succeeds,
+	// otherwise the collector would read stale or missing settings.
 	if s.ownLogsPersistence != nil {
 		if err := s.ownLogsPersistence.Save(converted); err != nil {
-			s.logger.Error("Failed to persist own_logs settings", zap.Error(err))
+			s.logger.Error("Failed to persist own_logs settings, skipping collector restart", zap.Error(err))
+			return
 		}
 	}
 
