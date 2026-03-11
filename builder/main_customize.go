@@ -77,7 +77,11 @@ func customizeCommand(params *otelcol.CollectorSettings, cmd *cobra.Command) {
 		// error exits the batch processor's periodic export (~1s) is the only
 		// flush mechanism. This is accepted — see the "Shutdown — Best-Effort
 		// Flush" section in the design spec.
+		existing := cmd.PersistentPostRun
 		cmd.PersistentPostRun = func(cmd *cobra.Command, args []string) {
+			if existing != nil {
+				existing(cmd, args)
+			}
 			ownLogsShutdown(cmd.Context())
 		}
 	}
