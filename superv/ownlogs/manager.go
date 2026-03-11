@@ -69,11 +69,11 @@ type Settings struct {
 // Manager manages the lifecycle of the OTel log exporter and provider.
 // It exposes a zapcore.Core that can be tee'd with the stderr core.
 type Manager struct {
-	sc       *swappableCore
-	cfg      config.TelemetryLogsConfig
+	sc           *swappableCore
+	cfg          config.TelemetryLogsConfig
 	defaultLevel zapcore.Level
-	mu       sync.Mutex // protects provider
-	provider *sdklog.LoggerProvider
+	mu           sync.Mutex // protects provider
+	provider     *sdklog.LoggerProvider
 }
 
 // NewManager creates a Manager with an initially disabled (nop) core.
@@ -83,8 +83,8 @@ func NewManager(cfg config.TelemetryLogsConfig) *Manager {
 		lvl = zapcore.InfoLevel
 	}
 	return &Manager{
-		sc:       newSwappableCore(),
-		cfg:      cfg,
+		sc:           newSwappableCore(),
+		cfg:          cfg,
 		defaultLevel: lvl,
 	}
 }

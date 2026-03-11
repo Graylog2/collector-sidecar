@@ -312,6 +312,22 @@ func (m *Manager) EnsureBootstrapConfig() error {
 		return fmt.Errorf("failed to read existing config %s: %w", m.cfg.OutputPath, err)
 	}
 
+	// If the effective config is missing or empty, try to recover from the
+	// cached remote config. This handles the case where collector.yaml was
+	// deleted but the last-known-good remote config is still available.
+	// Only recover if the last remote config was successfully applied —
+	// a FAILED status means the cached remote config is known-bad.
+	if len(config) == 0 && m.cfg.ConfigDir != "" {
+		if m.remoteConfigWasApplied() {
+			remotePath := filepath.Join(m.cfg.ConfigDir, "remote", filepath.Base(m.cfg.OutputPath))
+			if cached, cerr := os.ReadFile(remotePath); cerr == nil && len(cached) > 0 {
+				m.logger.Info("Recovered config from cached remote config",
+					zap.String("remote_path", remotePath))
+				config = cached
+			}
+		}
+	}
+
 	bootstrap := len(config) == 0
 	if bootstrap {
 		if errors.Is(err, os.ErrNotExist) {
@@ -369,6 +385,20 @@ func (m *Manager) EnsureBootstrapConfig() error {
 		m.logger.Info("Updated cached config with current extensions", zap.String("path", m.cfg.OutputPath))
 	}
 	return nil
+}
+
+// remoteConfigWasApplied checks if the last remote config was successfully applied
+// by reading the persisted status file.
+func (m *Manager) remoteConfigWasApplied() bool {
+	status, err := m.LoadRemoteConfigStatus()
+	if err != nil {
+		m.logger.Warn("Failed to load remote config status, skipping recovery", zap.Error(err))
+		return false
+	}
+	if status == nil {
+		return false // No status file means fresh install, nothing to recover
+	}
+	return status.GetStatus() == protobufs.RemoteConfigStatuses_RemoteConfigStatuses_APPLIED
 }
 
 // remoteConfigStatusYAML is the on-disk YAML representation of RemoteConfigStatus.

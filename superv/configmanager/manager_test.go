@@ -822,6 +822,90 @@ func TestEnsureBootstrapConfig_ReinjectsExtensionsWhenExists(t *testing.T) {
 	assert.NotContains(t, s, "logs/bootstrap")
 }
 
+func TestEnsureBootstrapConfig_RecoversFromCachedRemoteConfig(t *testing.T) {
+	dir := t.TempDir()
+	configDir := filepath.Join(dir, "config")
+	outputPath := filepath.Join(configDir, "collector.yaml")
+
+	// Create the remote/ directory with a cached remote config
+	remoteDir := filepath.Join(configDir, "remote")
+	require.NoError(t, os.MkdirAll(remoteDir, 0o755))
+	cachedRemote := []byte("receivers:\n  otlp:\n    protocols:\n      grpc: {}\nexporters:\n  debug: {}\nservice:\n  pipelines:\n    logs:\n      receivers:\n        - otlp\n      exporters:\n        - debug\n")
+	require.NoError(t, os.WriteFile(filepath.Join(remoteDir, "collector.yaml"), cachedRemote, 0o600))
+
+	// Mark the last remote config as successfully applied
+	mgr := New(zaptest.NewLogger(t), Config{
+		ConfigDir:     configDir,
+		OutputPath:    outputPath,
+		LocalEndpoint: "ws://127.0.0.1:54321/v1/opamp",
+		InstanceUID:   "test-uid-recovery",
+		HealthCheck: configmerge.HealthCheckConfig{
+			Endpoint: "localhost:13133",
+			Path:     "/health",
+		},
+	})
+	require.NoError(t, mgr.SaveRemoteConfigStatus(
+		protobufs.RemoteConfigStatuses_RemoteConfigStatuses_APPLIED, "", []byte("hash")))
+
+	// Do NOT create collector.yaml at outputPath — simulates deletion
+
+	err := mgr.EnsureBootstrapConfig()
+	require.NoError(t, err)
+
+	content, err := os.ReadFile(outputPath)
+	require.NoError(t, err)
+
+	s := string(content)
+	// Should have the real pipeline from the cached remote config, NOT the nop bootstrap
+	assert.Contains(t, s, "otlp")
+	assert.Contains(t, s, "debug")
+	assert.NotContains(t, s, "logs/bootstrap", "should not have nop bootstrap pipeline when remote cache exists")
+	assert.NotContains(t, s, "receivers::nop", "should not have nop receiver when remote cache exists")
+	// Should still have extensions injected
+	assert.Contains(t, s, "opamp")
+	assert.Contains(t, s, "ws://127.0.0.1:54321/v1/opamp")
+	assert.Contains(t, s, "health_check")
+}
+
+func TestEnsureBootstrapConfig_DoesNotRecoverFailedRemoteConfig(t *testing.T) {
+	dir := t.TempDir()
+	configDir := filepath.Join(dir, "config")
+	outputPath := filepath.Join(configDir, "collector.yaml")
+
+	// Create the remote/ directory with a cached remote config
+	remoteDir := filepath.Join(configDir, "remote")
+	require.NoError(t, os.MkdirAll(remoteDir, 0o755))
+	cachedRemote := []byte("receivers:\n  otlp:\n    protocols:\n      grpc: {}\nexporters:\n  debug: {}\nservice:\n  pipelines:\n    logs:\n      receivers:\n        - otlp\n      exporters:\n        - debug\n")
+	require.NoError(t, os.WriteFile(filepath.Join(remoteDir, "collector.yaml"), cachedRemote, 0o600))
+
+	// Mark the last remote config as FAILED
+	mgr := New(zaptest.NewLogger(t), Config{
+		ConfigDir:     configDir,
+		OutputPath:    outputPath,
+		LocalEndpoint: "ws://127.0.0.1:54321/v1/opamp",
+		InstanceUID:   "test-uid-no-recovery",
+		HealthCheck: configmerge.HealthCheckConfig{
+			Endpoint: "localhost:13133",
+			Path:     "/health",
+		},
+	})
+	require.NoError(t, mgr.SaveRemoteConfigStatus(
+		protobufs.RemoteConfigStatuses_RemoteConfigStatuses_FAILED, "bad config", []byte("hash")))
+
+	// Do NOT create collector.yaml at outputPath — simulates deletion
+
+	err := mgr.EnsureBootstrapConfig()
+	require.NoError(t, err)
+
+	content, err := os.ReadFile(outputPath)
+	require.NoError(t, err)
+
+	s := string(content)
+	// Should fall back to nop bootstrap, NOT recover the failed remote config
+	assert.Contains(t, s, "nop")
+	assert.Contains(t, s, "logs/bootstrap")
+}
+
 func TestEnsureBootstrapConfig_CreatesDirectory(t *testing.T) {
 	dir := t.TempDir()
 	// Nested dir that doesn't exist yet
