@@ -97,7 +97,7 @@ func (m *Manager) Core() zapcore.Core {
 // Apply builds a new OTLP exporter and LoggerProvider from the given settings,
 // swaps the otelzap core, and shuts down the previous provider.
 func (m *Manager) Apply(ctx context.Context, settings Settings, res *resource.Resource) error {
-	exporter, err := m.buildExporter(ctx, settings)
+	exporter, err := buildExporter(ctx, settings)
 	if err != nil {
 		return fmt.Errorf("build OTLP log exporter: %w", err)
 	}
@@ -166,14 +166,14 @@ func (m *Manager) Shutdown(ctx context.Context) error {
 	return m.Disable(ctx)
 }
 
-func (m *Manager) buildExporter(ctx context.Context, s Settings) (sdklog.Exporter, error) {
+func buildExporter(ctx context.Context, s Settings) (sdklog.Exporter, error) {
 	if isGRPC(s.Endpoint) {
-		return m.buildGRPCExporter(ctx, s)
+		return buildGRPCExporter(ctx, s)
 	}
-	return m.buildHTTPExporter(ctx, s)
+	return buildHTTPExporter(ctx, s)
 }
 
-func (m *Manager) buildHTTPExporter(ctx context.Context, s Settings) (sdklog.Exporter, error) {
+func buildHTTPExporter(ctx context.Context, s Settings) (sdklog.Exporter, error) {
 	endpoint := s.Endpoint
 	// WithEndpointURL uses the path from the URL as-is and does not append
 	// "/v1/logs". Ensure the OTLP log path is present.
@@ -204,7 +204,7 @@ func (m *Manager) buildHTTPExporter(ctx context.Context, s Settings) (sdklog.Exp
 	return otlploghttp.New(ctx, opts...)
 }
 
-func (m *Manager) buildGRPCExporter(ctx context.Context, s Settings) (sdklog.Exporter, error) {
+func buildGRPCExporter(ctx context.Context, s Settings) (sdklog.Exporter, error) {
 	opts := []otlploggrpc.Option{
 		otlploggrpc.WithEndpointURL(s.Endpoint),
 	}
