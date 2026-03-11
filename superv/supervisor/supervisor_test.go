@@ -91,6 +91,16 @@ func TestSupervisor_IsRunning(t *testing.T) {
 	require.False(t, sup.IsRunning())
 }
 
+func TestSupervisor_ShouldAcceptLocalCollectorConnection(t *testing.T) {
+	s := &Supervisor{}
+
+	require.True(t, s.shouldAcceptLocalCollectorConnection())
+
+	s.localServerDraining.Store(true)
+
+	require.False(t, s.shouldAcceptLocalCollectorConnection())
+}
+
 func TestSupervisor_ConfigManagerIntegration(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	dir := t.TempDir()

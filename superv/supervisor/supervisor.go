@@ -30,6 +30,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"text/template"
 	"time"
 
@@ -80,6 +81,7 @@ type Supervisor struct {
 	opampServer               *opamp.Server
 	mu                        sync.RWMutex
 	running                   bool
+	localServerDraining       atomic.Bool
 
 	// Serialized worker for state-mutating operations.
 	workQueue  chan workFunc
@@ -266,6 +268,10 @@ func (s *Supervisor) buildCollectorEnv() map[string]string {
 	return env
 }
 
+func (s *Supervisor) shouldAcceptLocalCollectorConnection() bool {
+	return !s.localServerDraining.Load()
+}
+
 // Start starts the supervisor and begins managing the collector.
 func (s *Supervisor) Start(ctx context.Context) error {
 	s.mu.Lock()
@@ -285,6 +291,7 @@ func (s *Supervisor) Start(ctx context.Context) error {
 		zap.String("instance_uid", s.instanceUID),
 		zap.String("endpoint", s.connectionSettingsManager.GetCurrent().Endpoint),
 	)
+	s.localServerDraining.Store(false)
 
 	// Initialize authentication
 	if err := s.initAuth(ctx); err != nil {
@@ -327,6 +334,12 @@ func (s *Supervisor) Start(ctx context.Context) error {
 		},
 		OnDisconnect: func(conn types.Connection) {
 			s.logger.Info("Collector disconnected from local OpAMP server")
+		},
+		OnConnectingFunc: func(_ *http.Request) (bool, int) {
+			if !s.shouldAcceptLocalCollectorConnection() {
+				return false, http.StatusServiceUnavailable
+			}
+			return true, 0
 		},
 	}
 
@@ -449,6 +462,7 @@ func (s *Supervisor) Stop(ctx context.Context) error {
 		return nil
 	}
 	s.running = false
+	s.localServerDraining.Store(true)
 
 	// Snapshot and nil-out to prevent concurrent use after unlock.
 	client := s.opampClient
@@ -471,13 +485,13 @@ func (s *Supervisor) Stop(ctx context.Context) error {
 	}
 	s.healthWg.Wait()
 
-	server.DisconnectAll()
-
 	if s.commander != nil {
 		if err := s.commander.Stop(ctx); err != nil {
 			s.logger.Error("Error stopping agent", zap.Error(err))
 		}
 	}
+
+	server.DisconnectAll()
 
 	if client != nil {
 		if err := client.Stop(ctx); err != nil {
