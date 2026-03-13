@@ -591,7 +591,7 @@ func TestSupervisor_HandleOwnLogs(t *testing.T) {
 		require.False(t, exists)
 
 		// Verify restart was attempted (log message present)
-		msgs := observed.FilterMessage("Restarting collector to apply own_logs changes")
+		msgs := observed.FilterMessage("Restarting collector to apply own telemetry changes")
 		require.Equal(t, 1, msgs.Len(), "expected restart log message")
 	})
 
@@ -618,7 +618,7 @@ func TestSupervisor_HandleOwnLogs(t *testing.T) {
 		require.Equal(t, ts.URL+"/v1/logs", loaded.Endpoint)
 
 		// Verify restart was attempted (log message present)
-		msgs := observed.FilterMessage("Restarting collector to apply own_logs changes")
+		msgs := observed.FilterMessage("Restarting collector to apply own telemetry changes")
 		require.Equal(t, 1, msgs.Len(), "expected restart log message")
 	})
 
@@ -639,7 +639,7 @@ func TestSupervisor_HandleOwnLogs(t *testing.T) {
 		s.handleOwnLogs(context.Background(), settings)
 		s.handleOwnLogs(context.Background(), settings)
 
-		restarts := observed.FilterMessage("Restarting collector to apply own_logs changes")
+		restarts := observed.FilterMessage("Restarting collector to apply own telemetry changes")
 		require.Equal(t, 1, restarts.Len(), "expected only one restart for unchanged own_logs settings")
 
 		skips := observed.FilterMessage("Own logs settings unchanged, skipping apply")
