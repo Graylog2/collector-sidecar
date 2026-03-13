@@ -103,6 +103,9 @@ type Supervisor struct {
 	ownLogsManager     *owntelemetry.Manager
 	ownLogsPersistence *owntelemetry.Persistence
 	currentOwnLogs     *owntelemetry.Settings
+
+	ownMetricsPersistence *owntelemetry.Persistence
+	currentOwnMetrics     *owntelemetry.Settings
 }
 
 // New creates a new Supervisor instance. The instanceUID must be obtained from
@@ -544,6 +547,16 @@ func (s *Supervisor) SetOwnLogs(manager *owntelemetry.Manager, persistence *ownt
 	}
 }
 
+// SetOwnMetrics configures the own-metrics persistence for OTLP metric export.
+// Must be called before Start.
+func (s *Supervisor) SetOwnMetrics(persistence *owntelemetry.Persistence, current *owntelemetry.Settings) {
+	s.ownMetricsPersistence = persistence
+	if current != nil {
+		settingsCopy := *current
+		s.currentOwnMetrics = &settingsCopy
+	}
+}
+
 // IsRunning returns true if the supervisor is running.
 func (s *Supervisor) IsRunning() bool {
 	s.mu.RLock()
@@ -660,6 +673,7 @@ func (s *Supervisor) createAndStartClient(ctx context.Context, settings connecti
 			ReportsConnectionSettingsStatus: false,
 			AcceptsRestartCommand:           true,
 			ReportsOwnLogs:                  s.ownLogsManager != nil,
+			ReportsOwnMetrics:               s.ownMetricsPersistence != nil,
 			ReportsHeartbeat:                true,
 			ReportsAvailableComponents:      true,
 		},
@@ -1233,6 +1247,13 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 				s.logger.Warn("Failed to enqueue own_logs apply")
 			}
 		},
+		OnOwnMetrics: func(ctx context.Context, settings *protobufs.TelemetryConnectionSettings) {
+			if !s.enqueueWork(ctx, func(wCtx context.Context) {
+				s.handleOwnMetrics(wCtx, settings)
+			}) {
+				s.logger.Warn("Failed to enqueue own_metrics apply")
+			}
+		},
 		SaveRemoteConfigStatus: func(ctx context.Context, status *protobufs.RemoteConfigStatus) {
 			s.logger.Debug("SaveRemoteConfigStatus callback invoked",
 				zap.String("status", status.GetStatus().String()),
@@ -1358,13 +1379,75 @@ func (s *Supervisor) handleOwnLogs(ctx context.Context, settings *protobufs.Tele
 	s.restartCollector(ctx)
 }
 
+// handleOwnMetrics processes own_metrics connection settings from the OpAMP server.
+func (s *Supervisor) handleOwnMetrics(ctx context.Context, settings *protobufs.TelemetryConnectionSettings) {
+	if s.ownMetricsPersistence == nil {
+		s.logger.Warn("Received own_metrics settings but own metrics persistence is not configured")
+		return
+	}
+
+	if settings.GetDestinationEndpoint() == "" {
+		shouldDisable := s.currentOwnMetrics != nil
+		if !shouldDisable {
+			_, exists, err := s.ownMetricsPersistence.Load()
+			if err != nil {
+				s.logger.Error("Failed to load persisted own_metrics settings during disable", zap.Error(err))
+				return
+			}
+			shouldDisable = exists
+		}
+		if !shouldDisable {
+			s.logger.Debug("Own metrics already disabled, skipping apply")
+			return
+		}
+		s.logger.Info("Received own_metrics with empty endpoint, disabling OTLP metric export")
+		if err := s.ownMetricsPersistence.Delete(); err != nil {
+			s.logger.Error("Failed to delete persisted own_metrics settings, skipping collector restart", zap.Error(err))
+			return
+		}
+		s.currentOwnMetrics = nil
+		s.restartCollector(ctx)
+		return
+	}
+
+	s.logger.Info("Received own_metrics connection settings",
+		zap.String("endpoint", settings.GetDestinationEndpoint()),
+	)
+
+	converted, err := owntelemetry.ConvertSettings(settings,
+		s.authManager.GetSigningCertPath(),
+		s.authManager.GetSigningKeyPath(),
+	)
+	if err != nil {
+		s.logger.Error("Failed to convert own_metrics settings", zap.Error(err))
+		return
+	}
+
+	if s.currentOwnMetrics != nil && s.currentOwnMetrics.Equal(converted) {
+		s.logger.Debug("Own metrics settings unchanged, skipping apply")
+		return
+	}
+
+	if err := s.ownMetricsPersistence.Save(converted); err != nil {
+		s.logger.Error("Failed to persist own_metrics settings, skipping collector restart", zap.Error(err))
+		return
+	}
+	settingsCopy := converted
+	s.currentOwnMetrics = &settingsCopy
+
+	s.logger.Info("Own metrics OTLP export enabled",
+		zap.String("endpoint", converted.Endpoint),
+	)
+	s.restartCollector(ctx)
+}
+
 // restartCollector restarts the collector process as a best-effort follow-up
-// to own_logs changes. Failures are logged but not returned because own_logs
-// updates are handled asynchronously and have no status/error response path
-// back to the OpAMP server.
+// to own telemetry changes (own_logs or own_metrics). Failures are logged but
+// not returned because telemetry updates are handled asynchronously and have
+// no status/error response path back to the OpAMP server.
 func (s *Supervisor) restartCollector(ctx context.Context) {
-	s.logger.Info("Restarting collector to apply own_logs changes")
+	s.logger.Info("Restarting collector to apply own telemetry changes")
 	if err := s.commander.Restart(ctx); err != nil {
-		s.logger.Error("Failed to restart collector after own_logs change", zap.Error(err))
+		s.logger.Error("Failed to restart collector after own telemetry change", zap.Error(err))
 	}
 }
