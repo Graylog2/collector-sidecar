@@ -15,7 +15,7 @@
 //
 // SPDX-License-Identifier: SSPL-1.0
 
-package ownlogs
+package owntelemetry
 
 import (
 	"crypto/tls"
@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/Graylog2/collector-sidecar/superv/persistence"
 	"github.com/Graylog2/collector-sidecar/superv/supervisor/connection"
@@ -101,8 +102,6 @@ func rebuildTLSConfigFromPEM(s Settings) (*tls.Config, error) {
 	return cfg, nil
 }
 
-const ownLogsFileName = "own-logs.yaml"
-
 // persistedSettings is the on-disk representation including TLS material
 // so OTLP export survives restarts in mTLS/custom-CA deployments.
 type persistedSettings struct {
@@ -121,6 +120,7 @@ type persistedSettings struct {
 	ProxyURL                 string            `koanf:"proxy_url,omitempty"`
 	ProxyHeaders             map[string]string `koanf:"proxy_headers,omitempty"`
 	LogLevel                 string            `koanf:"log_level,omitempty"`
+	ExportInterval           time.Duration     `koanf:"export_interval,omitempty"`
 }
 
 // Persistence handles saving and loading own_logs settings to disk.
@@ -130,12 +130,12 @@ type Persistence struct {
 	clientKeyPath  string
 }
 
-// NewPersistence creates a Persistence that stores settings in dataDir.
-// clientCertPath and clientKeyPath are the paths to the mTLS client certificate
-// and key files that will be loaded when restoring settings from disk.
-func NewPersistence(dataDir, clientCertPath, clientKeyPath string) *Persistence {
+// NewPersistence creates a Persistence that stores settings in the given file
+// under dataDir. clientCertPath and clientKeyPath are the paths to the mTLS
+// client certificate and key files that will be loaded when restoring settings.
+func NewPersistence(dataDir, fileName, clientCertPath, clientKeyPath string) *Persistence {
 	return &Persistence{
-		filePath:       filepath.Join(dataDir, ownLogsFileName),
+		filePath:       filepath.Join(dataDir, fileName),
 		clientCertPath: clientCertPath,
 		clientKeyPath:  clientKeyPath,
 	}
@@ -168,6 +168,7 @@ func (p *Persistence) Save(s Settings) error {
 		ProxyURL:                 s.ProxyURL,
 		ProxyHeaders:             s.ProxyHeaders,
 		LogLevel:                 s.LogLevel,
+		ExportInterval:           s.ExportInterval,
 	}
 	return persistence.WriteYAMLFile(".", p.filePath, &ps)
 }
@@ -199,6 +200,7 @@ func (p *Persistence) Load() (Settings, bool, error) {
 		ProxyURL:                 ps.ProxyURL,
 		ProxyHeaders:             ps.ProxyHeaders,
 		LogLevel:                 ps.LogLevel,
+		ExportInterval:           ps.ExportInterval,
 	}
 
 	// Rebuild TLSConfig from persisted PEM material

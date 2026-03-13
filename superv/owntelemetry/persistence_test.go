@@ -15,7 +15,7 @@
 //
 // SPDX-License-Identifier: SSPL-1.0
 
-package ownlogs
+package owntelemetry
 
 import (
 	"path/filepath"
@@ -28,7 +28,7 @@ import (
 func TestPersistence_SaveAndLoad(t *testing.T) {
 	dir := t.TempDir()
 	certPath, keyPath := writeTestClientCert(t)
-	p := NewPersistence(dir, certPath, keyPath)
+	p := NewPersistence(dir, "own-logs.yaml", certPath, keyPath)
 
 	settings := Settings{
 		Endpoint: "https://example.com:4318/v1/logs",
@@ -52,7 +52,7 @@ func TestPersistence_SaveAndLoad(t *testing.T) {
 func TestPersistence_SaveAndLoad_WithTLS(t *testing.T) {
 	dir := t.TempDir()
 	certPath, keyPath := writeTestClientCert(t)
-	p := NewPersistence(dir, certPath, keyPath)
+	p := NewPersistence(dir, "own-logs.yaml", certPath, keyPath)
 
 	caCertPEM, caKeyPEM := generateTestCA(t)
 	clientCertPEM, clientKeyPEM := generateTestCert(t, caCertPEM, caKeyPEM)
@@ -85,7 +85,7 @@ func TestPersistence_SaveAndLoad_WithTLS(t *testing.T) {
 func TestPersistence_SaveAndLoad_WithSystemCACertsPool(t *testing.T) {
 	dir := t.TempDir()
 	certPath, keyPath := writeTestClientCert(t)
-	p := NewPersistence(dir, certPath, keyPath)
+	p := NewPersistence(dir, "own-logs.yaml", certPath, keyPath)
 
 	caCertPEM, _ := generateTestCA(t)
 
@@ -109,7 +109,7 @@ func TestPersistence_SaveAndLoad_WithSystemCACertsPool(t *testing.T) {
 func TestPersistence_SaveAndLoad_WithDualCASources(t *testing.T) {
 	dir := t.TempDir()
 	certPath, keyPath := writeTestClientCert(t)
-	p := NewPersistence(dir, certPath, keyPath)
+	p := NewPersistence(dir, "own-logs.yaml", certPath, keyPath)
 
 	caCertPEM, _ := generateTestCA(t)
 	tlsCAPEM, _ := generateTestCA(t) // second, distinct CA
@@ -135,7 +135,7 @@ func TestPersistence_SaveAndLoad_WithDualCASources(t *testing.T) {
 func TestPersistence_SaveAndLoad_WithTLSServerName(t *testing.T) {
 	dir := t.TempDir()
 	certPath, keyPath := writeTestClientCert(t)
-	p := NewPersistence(dir, certPath, keyPath)
+	p := NewPersistence(dir, "own-logs.yaml", certPath, keyPath)
 
 	settings := Settings{
 		Endpoint:      "https://example.com:4318/v1/logs",
@@ -156,16 +156,16 @@ func TestPersistence_SaveAndLoad_WithTLSServerName(t *testing.T) {
 func TestPersistence_Delete(t *testing.T) {
 	dir := t.TempDir()
 	certPath, keyPath := writeTestClientCert(t)
-	p := NewPersistence(dir, certPath, keyPath)
+	p := NewPersistence(dir, "own-logs.yaml", certPath, keyPath)
 
 	// Save then delete
 	err := p.Save(Settings{Endpoint: "https://example.com:4318/v1/logs"})
 	require.NoError(t, err)
-	assert.FileExists(t, filepath.Join(dir, ownLogsFileName))
+	assert.FileExists(t, filepath.Join(dir, "own-logs.yaml"))
 
 	err = p.Delete()
 	require.NoError(t, err)
-	assert.NoFileExists(t, filepath.Join(dir, ownLogsFileName))
+	assert.NoFileExists(t, filepath.Join(dir, "own-logs.yaml"))
 
 	// Load should report no file
 	_, exists, err := p.Load()
@@ -176,7 +176,7 @@ func TestPersistence_Delete(t *testing.T) {
 func TestPersistence_Delete_NoFile(t *testing.T) {
 	dir := t.TempDir()
 	certPath, keyPath := writeTestClientCert(t)
-	p := NewPersistence(dir, certPath, keyPath)
+	p := NewPersistence(dir, "own-logs.yaml", certPath, keyPath)
 
 	// Deleting when no file exists should not error
 	err := p.Delete()
@@ -186,7 +186,7 @@ func TestPersistence_Delete_NoFile(t *testing.T) {
 func TestPersistence_Load_NoFile(t *testing.T) {
 	dir := t.TempDir()
 	certPath, keyPath := writeTestClientCert(t)
-	p := NewPersistence(dir, certPath, keyPath)
+	p := NewPersistence(dir, "own-logs.yaml", certPath, keyPath)
 
 	_, exists, err := p.Load()
 	require.NoError(t, err)
@@ -196,7 +196,7 @@ func TestPersistence_Load_NoFile(t *testing.T) {
 func TestPersistence_SaveAndLoad_WithProxy(t *testing.T) {
 	dir := t.TempDir()
 	certPath, keyPath := writeTestClientCert(t)
-	p := NewPersistence(dir, certPath, keyPath)
+	p := NewPersistence(dir, "own-logs.yaml", certPath, keyPath)
 
 	settings := Settings{
 		Endpoint:     "https://example.com:4318/v1/logs",
@@ -217,11 +217,11 @@ func TestPersistence_SaveAndLoad_WithProxy(t *testing.T) {
 func TestPersistence_FileLocation(t *testing.T) {
 	dir := t.TempDir()
 	certPath, keyPath := writeTestClientCert(t)
-	p := NewPersistence(dir, certPath, keyPath)
+	p := NewPersistence(dir, "own-logs.yaml", certPath, keyPath)
 
 	err := p.Save(Settings{Endpoint: "https://example.com:4318/v1/logs"})
 	require.NoError(t, err)
 
 	// File should exist at expected path
-	assert.FileExists(t, filepath.Join(dir, ownLogsFileName))
+	assert.FileExists(t, filepath.Join(dir, "own-logs.yaml"))
 }

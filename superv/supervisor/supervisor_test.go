@@ -564,7 +564,7 @@ func TestSupervisor_HandleOwnLogs(t *testing.T) {
 			persistenceDir:     persistDir,
 			instanceUID:        "test-instance",
 			ownLogsManager:     owntelemetry.NewManager(config.TelemetryLogsConfig{}),
-			ownLogsPersistence: owntelemetry.NewPersistence(persistDir, authMgr.GetSigningCertPath(), authMgr.GetSigningKeyPath()),
+			ownLogsPersistence: owntelemetry.NewPersistence(persistDir, "own-logs.yaml", authMgr.GetSigningCertPath(), authMgr.GetSigningKeyPath()),
 			commander:          cmd,
 		}
 	}

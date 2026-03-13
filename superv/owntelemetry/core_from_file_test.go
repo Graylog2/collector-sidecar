@@ -15,7 +15,7 @@
 //
 // SPDX-License-Identifier: SSPL-1.0
 
-package ownlogs
+package owntelemetry
 
 import (
 	"context"
@@ -44,7 +44,7 @@ func TestNewCoreFromFile_ValidFile(t *testing.T) {
 	certPath, keyPath := writeTestClientCert(t)
 
 	// Write a valid own-logs.yaml via Persistence
-	p := NewPersistence(dir, certPath, keyPath)
+	p := NewPersistence(dir, "own-logs.yaml", certPath, keyPath)
 	err := p.Save(Settings{
 		Endpoint: "https://example.com:4318/v1/logs",
 		Headers:  map[string]string{"Authorization": "Bearer tok"},
@@ -69,7 +69,7 @@ func TestNewCoreFromFile_ValidFile(t *testing.T) {
 func TestNewCoreFromFile_InvalidYAML(t *testing.T) {
 	dir := t.TempDir()
 	// Write invalid YAML to own-logs.yaml
-	err := os.WriteFile(filepath.Join(dir, ownLogsFileName), []byte(":::invalid yaml"), 0o644)
+	err := os.WriteFile(filepath.Join(dir, "own-logs.yaml"), []byte(":::invalid yaml"), 0o644)
 	require.NoError(t, err)
 
 	res := BuildResource("collector", "1.0.0", "test-instance")
@@ -85,7 +85,7 @@ func TestNewCoreFromFile_ShutdownIdempotent(t *testing.T) {
 	dir := t.TempDir()
 	certPath, keyPath := writeTestClientCert(t)
 
-	p := NewPersistence(dir, certPath, keyPath)
+	p := NewPersistence(dir, "own-logs.yaml", certPath, keyPath)
 	err := p.Save(Settings{
 		Endpoint: "https://example.com:4318/v1/logs",
 	})

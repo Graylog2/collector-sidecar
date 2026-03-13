@@ -271,7 +271,7 @@ func runSupervisor(cmd *cobra.Command, args []string) error {
 	// Restore persisted own_logs settings
 	certPath := filepath.Join(cfg.Keys.Dir, persistence.SigningCertFile)
 	keyPath := filepath.Join(cfg.Keys.Dir, persistence.SigningKeyFile)
-	ownLogsPersist := owntelemetry.NewPersistence(cfg.Persistence.Dir, certPath, keyPath)
+	ownLogsPersist := owntelemetry.NewPersistence(cfg.Persistence.Dir, "own-logs.yaml", certPath, keyPath)
 	var restoredOwnLogs *owntelemetry.Settings
 	if settings, exists, loadErr := ownLogsPersist.Load(); loadErr != nil {
 		logger.Warn("Failed to load persisted own_logs settings", zap.Error(loadErr))

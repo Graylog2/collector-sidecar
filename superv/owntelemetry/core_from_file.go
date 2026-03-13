@@ -15,7 +15,7 @@
 //
 // SPDX-License-Identifier: SSPL-1.0
 
-package ownlogs
+package owntelemetry
 
 import (
 	"context"
@@ -34,7 +34,7 @@ import (
 // Callers must treat errors as non-fatal: a failure here must never prevent
 // the collector from starting. Log the error and proceed without the OTLP tee.
 func NewCoreFromFile(persistenceDir, clientCertPath, clientKeyPath string, res *resource.Resource) (zapcore.Core, func(context.Context), error) {
-	p := NewPersistence(persistenceDir, clientCertPath, clientKeyPath)
+	p := NewPersistence(persistenceDir, "own-logs.yaml", clientCertPath, clientKeyPath)
 	s, exists, err := p.Load()
 	if err != nil {
 		return nil, nil, err
