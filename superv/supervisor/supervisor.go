@@ -1094,7 +1094,7 @@ func (s *Supervisor) reportEffectiveConfig(ctx context.Context, effectiveConfig 
 func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 	return &opamp.Callbacks{
 		OnConnect: func(ctx context.Context) {
-			s.logger.Info("Connected to OpAMP server", zap.String("endpoint", s.connectionSettingsManager.GetCurrent().Endpoint))
+			s.logger.Debug("Connected to OpAMP server", zap.String("endpoint", s.connectionSettingsManager.GetCurrent().Endpoint))
 		},
 		OnConnectFailed: func(ctx context.Context, err error) {
 			s.logger.Error("Failed to connect to OpAMP server", zap.Error(err))
