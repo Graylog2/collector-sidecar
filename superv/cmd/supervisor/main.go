@@ -153,6 +153,20 @@ func main() {
 	}
 	sup.SetOwnLogs(ownLogsManager, ownLogsPersist, restoredOwnLogs)
 
+	// Restore persisted own_metrics settings
+	ownMetricsPersist := owntelemetry.NewPersistence(cfg.Persistence.Dir, "own-metrics.yaml", certPath, keyPath)
+	var restoredOwnMetrics *owntelemetry.Settings
+	if settings, exists, loadErr := ownMetricsPersist.Load(); loadErr != nil {
+		logger.Warn("Failed to load persisted own_metrics settings", zap.Error(loadErr))
+	} else if exists {
+		logger.Info("Found persisted own_metrics settings",
+			zap.String("endpoint", settings.Endpoint),
+		)
+		settingsCopy := settings
+		restoredOwnMetrics = &settingsCopy
+	}
+	sup.SetOwnMetrics(ownMetricsPersist, restoredOwnMetrics)
+
 	// Setup signal handling
 	ctx, cancel := context.WithCancel(context.Background())
 	sigCh := make(chan os.Signal, 1)
