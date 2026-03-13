@@ -15,7 +15,7 @@
 //
 // SPDX-License-Identifier: SSPL-1.0
 
-package ownlogs
+package owntelemetry
 
 import (
 	"crypto/ecdsa"
@@ -121,6 +121,18 @@ func writeTestClientCert(t *testing.T) (certPath, keyPath string) {
 	require.NoError(t, os.WriteFile(certPath, clientCertPEM, 0o600))
 	require.NoError(t, os.WriteFile(keyPath, clientKeyPEM, 0o600))
 	return certPath, keyPath
+}
+
+func TestConvertSettings_ExportInterval(t *testing.T) {
+	certPath, keyPath := writeTestClientCert(t)
+	proto := &protobufs.TelemetryConnectionSettings{
+		DestinationEndpoint: "https://example.com:4318/v1/metrics?export_interval=15s",
+	}
+	s, err := ConvertSettings(proto, certPath, keyPath)
+	require.NoError(t, err)
+	assert.Equal(t, 15*time.Second, s.ExportInterval)
+	// Query param should be stripped from the endpoint
+	assert.NotContains(t, s.Endpoint, "export_interval")
 }
 
 func TestConvertSettings_Endpoint(t *testing.T) {

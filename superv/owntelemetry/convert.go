@@ -24,6 +24,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/Graylog2/collector-sidecar/superv/supervisor/connection"
 	"github.com/open-telemetry/opamp-go/protobufs"
@@ -44,6 +45,7 @@ func ConvertSettings(proto *protobufs.TelemetryConnectionSettings, clientCertPat
 	endpoint := proto.DestinationEndpoint
 	var tlsServerName string
 	var logLevel string
+	var exportInterval time.Duration
 
 	// Extract custom query parameters from the endpoint URL.
 	// These allow the OpAMP server to pass settings that don't have
@@ -65,6 +67,14 @@ func ConvertSettings(proto *protobufs.TelemetryConnectionSettings, clientCertPat
 		if ll := q.Get("log_level"); ll != "" {
 			logLevel = ll
 			q.Del("log_level")
+			changed = true
+		}
+
+		if ei := q.Get("export_interval"); ei != "" {
+			if d, parseErr := time.ParseDuration(ei); parseErr == nil {
+				exportInterval = d
+			}
+			q.Del("export_interval")
 			changed = true
 		}
 
@@ -97,6 +107,7 @@ func ConvertSettings(proto *protobufs.TelemetryConnectionSettings, clientCertPat
 	}
 	s.TLSServerName = tlsServerName
 	s.LogLevel = logLevel
+	s.ExportInterval = exportInterval
 
 	// Preserve raw PEM material for persistence
 	if cert := proto.GetCertificate(); cert != nil {
