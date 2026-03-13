@@ -20,6 +20,7 @@ package supervisor
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
@@ -67,6 +68,7 @@ type Supervisor struct {
 	agentCfg                  config.AgentConfig
 	authCfg                   config.AuthConfig
 	localServerCfg            config.LocalServer
+	metricsConfig             config.TelemetryMetricsConfig
 	persistenceDir            string
 	instanceUID               string
 	collectorVersion          string
@@ -220,6 +222,7 @@ func New(logger *zap.Logger, cfg config.Config, instanceUID string) (*Supervisor
 		agentCfg:                  cfg.Agent,
 		authCfg:                   cfg.Server.Auth,
 		localServerCfg:            cfg.LocalServer,
+		metricsConfig:             cfg.Telemetry.Metrics,
 		persistenceDir:            cfg.Persistence.Dir,
 		instanceUID:               instanceUID,
 		authManager:               authMgr,
@@ -265,6 +268,18 @@ func (s *Supervisor) buildCollectorEnv() map[string]string {
 		"GLC_INTERNAL_TLS_CLIENT_CERT_PATH": s.authManager.GetSigningCertPath(),
 		"GLC_INTERNAL_PERSISTENCE_DIR":      s.persistenceDir,
 	}
+
+	// JSON-encode metrics config for the collector's own-metrics setup.
+	if mcfgJSON, err := json.Marshal(struct {
+		Batch           config.BatchConfig `json:"batch"`
+		ExportedMetrics []string           `json:"exported_metrics"`
+	}{
+		Batch:           s.metricsConfig.Batch,
+		ExportedMetrics: s.metricsConfig.ExportedMetrics,
+	}); err == nil {
+		env["GLC_INTERNAL_METRICS_CONFIG"] = string(mcfgJSON)
+	}
+
 	maps.Copy(env, s.agentCfg.Env)
 	return env
 }
