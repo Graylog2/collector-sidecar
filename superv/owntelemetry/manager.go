@@ -27,6 +27,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Graylog2/collector-sidecar/superv/config"
 	"go.opentelemetry.io/contrib/bridges/otelzap"
@@ -66,6 +67,10 @@ type Settings struct {
 	// LogLevel overrides the configured default level when set via
 	// ?log_level=<level> on the DestinationEndpoint URL.
 	LogLevel string
+
+	// ExportInterval overrides the configured default metrics export interval
+	// when set via ?export_interval=<duration> on the DestinationEndpoint URL.
+	ExportInterval time.Duration
 }
 
 // Equal reports whether two settings describe the same logical own-logs
@@ -86,7 +91,8 @@ func (s Settings) Equal(other Settings) bool {
 		s.TLSServerName == other.TLSServerName &&
 		s.ProxyURL == other.ProxyURL &&
 		maps.Equal(s.ProxyHeaders, other.ProxyHeaders) &&
-		s.LogLevel == other.LogLevel
+		s.LogLevel == other.LogLevel &&
+		s.ExportInterval == other.ExportInterval
 }
 
 // Manager manages the lifecycle of the OTel log exporter and provider.
