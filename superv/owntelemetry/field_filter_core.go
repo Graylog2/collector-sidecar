@@ -15,7 +15,7 @@
 //
 // SPDX-License-Identifier: SSPL-1.0
 
-package ownlogs
+package owntelemetry
 
 import "slices"
 
