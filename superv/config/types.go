@@ -189,7 +189,8 @@ type PersistenceConfig struct {
 
 // TelemetryConfig configures the supervisor's own telemetry export.
 type TelemetryConfig struct {
-	Logs TelemetryLogsConfig `koanf:"logs"`
+	Logs    TelemetryLogsConfig    `koanf:"logs"`
+	Metrics TelemetryMetricsConfig `koanf:"metrics"`
 }
 
 // TelemetryLogsConfig configures own-log export via OTLP.
@@ -199,6 +200,17 @@ type TelemetryLogsConfig struct {
 	// Valid values: debug, info, warn, error.
 	DefaultLevel string      `koanf:"default_level"`
 	Batch        BatchConfig `koanf:"batch"`
+}
+
+// TelemetryMetricsConfig configures own-metrics export via OTLP.
+type TelemetryMetricsConfig struct {
+	// Batch configures the periodic reader's export interval and timeout.
+	// Only ExportInterval and ExportTimeout apply; MaxQueueSize and
+	// ExportMaxBatchSize are ignored for metrics.
+	Batch BatchConfig `koanf:"batch"`
+	// ExportedMetrics is the allow-list of metric names to export.
+	// If empty, no metrics are exported even if own-metrics.yaml exists.
+	ExportedMetrics []string `koanf:"exported_metrics"`
 }
 
 // BatchConfig configures the OTel SDK BatchProcessor.
@@ -305,6 +317,13 @@ func DefaultConfig() Config {
 					ExportInterval:     1 * time.Second,
 					ExportTimeout:      30 * time.Second,
 				},
+			},
+			Metrics: TelemetryMetricsConfig{
+				Batch: BatchConfig{
+					ExportInterval: 10 * time.Second,
+					ExportTimeout:  30 * time.Second,
+				},
+				ExportedMetrics: []string{},
 			},
 		},
 		Logging: LoggingConfig{
