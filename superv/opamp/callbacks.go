@@ -35,6 +35,7 @@ type Callbacks struct {
 	OnCommand                 func(ctx context.Context, command *protobufs.ServerToAgentCommand) error
 	OnCustomMessage           func(ctx context.Context, customMessage *protobufs.CustomMessage)
 	OnOwnLogs                 func(ctx context.Context, settings *protobufs.TelemetryConnectionSettings)
+	OnOwnMetrics              func(ctx context.Context, settings *protobufs.TelemetryConnectionSettings)
 	SaveRemoteConfigStatus    func(ctx context.Context, status *protobufs.RemoteConfigStatus)
 	GetEffectiveConfig        func(ctx context.Context) (*protobufs.EffectiveConfig, error)
 }
@@ -109,5 +110,10 @@ func (c *Callbacks) onMessage(ctx context.Context, msg *types.MessageData) {
 	// Handle own logs connection settings
 	if msg.OwnLogsConnSettings != nil && c.OnOwnLogs != nil {
 		c.OnOwnLogs(ctx, msg.OwnLogsConnSettings)
+	}
+
+	// Handle own metrics connection settings
+	if msg.OwnMetricsConnSettings != nil && c.OnOwnMetrics != nil {
+		c.OnOwnMetrics(ctx, msg.OwnMetricsConnSettings)
 	}
 }
