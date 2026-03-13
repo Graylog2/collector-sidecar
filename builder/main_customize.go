@@ -62,9 +62,18 @@ func customizeSettings(params *otelcol.CollectorSettings) {
 	}
 
 	ownLogsShutdown = shutdown
+	// The OTel Collector's service layer attaches its own telemetry resource
+	// (service.name, service.instance.id, etc.) as a zap field named "resource"
+	// on component loggers. The otelzap bridge converts that field into an OTLP
+	// log record attribute, which is redundant with the top-level OTLP resource
+	// we set via BuildResource and confusing because the two carry different
+	// values. Strip it before it reaches the bridge.
 	params.LoggingOptions = append(params.LoggingOptions,
 		zap.WrapCore(func(original zapcore.Core) zapcore.Core {
-			return zapcore.NewTee(original, core)
+			return zapcore.NewTee(original, &ownlogs.FieldFilterCore{
+				Core:       core,
+				DropFields: []string{"resource"},
+			})
 		}),
 	)
 }
