@@ -15,7 +15,7 @@
 //
 // SPDX-License-Identifier: SSPL-1.0
 
-package ownlogs
+package owntelemetry
 
 import (
 	"context"
@@ -86,6 +86,26 @@ func TestIsGRPC(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.endpoint, func(t *testing.T) {
 			assert.Equal(t, tt.want, isGRPC(tt.endpoint), "isGRPC(%q)", tt.endpoint)
+		})
+	}
+}
+
+func TestIsGRPC_MetricsPath(t *testing.T) {
+	tests := []struct {
+		name     string
+		endpoint string
+		want     bool
+	}{
+		{"HTTP metrics path", "https://example.com:4318/v1/metrics", false},
+		{"HTTP logs path", "https://example.com:4318/v1/logs", false},
+		{"gRPC port", "https://example.com:4317", true},
+		{"HTTP default", "https://example.com:4318", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isGRPC(tt.endpoint); got != tt.want {
+				t.Errorf("isGRPC(%q) = %v, want %v", tt.endpoint, got, tt.want)
+			}
 		})
 	}
 }

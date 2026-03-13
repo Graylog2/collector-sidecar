@@ -15,7 +15,7 @@
 //
 // SPDX-License-Identifier: SSPL-1.0
 
-package ownlogs
+package owntelemetry
 
 import (
 	"bytes"
@@ -295,9 +295,10 @@ func (m *Manager) batchProcessorOpts() []sdklog.BatchProcessorOption {
 }
 
 // isGRPC detects whether the endpoint should use gRPC based on the URL.
-// URLs with /v1/logs path use HTTP; port 4317 without a path uses gRPC.
+// URLs with a /v1/ path (e.g. /v1/logs, /v1/metrics) use HTTP;
+// port 4317 without a path uses gRPC.
 func isGRPC(endpoint string) bool {
-	if strings.Contains(endpoint, "/v1/logs") {
+	if strings.Contains(endpoint, "/v1/") {
 		return false
 	}
 	if u, err := url.Parse(endpoint); err == nil && u.Port() == "4317" {
