@@ -43,7 +43,7 @@ func customizeSettings(params *otelcol.CollectorSettings) {
 	}
 
 	res := owntelemetry.BuildResource("collector", params.BuildInfo.Version,
-		os.Getenv("GLC_INTERNAL_INSTANCE_UID"))
+		os.Getenv("GLC_INTERNAL_INSTANCE_UID"), "collector_log")
 
 	core, shutdown, err := owntelemetry.NewCoreFromFile(
 		persistDir,

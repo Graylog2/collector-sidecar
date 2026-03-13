@@ -1314,7 +1314,7 @@ func (s *Supervisor) handleOwnLogs(ctx context.Context, settings *protobufs.Tele
 		return
 	}
 
-	res := owntelemetry.BuildResource(ServiceName, version.Version(), s.instanceUID)
+	res := owntelemetry.BuildResource(ServiceName, version.Version(), s.instanceUID, "collector_log")
 
 	if err := s.ownLogsManager.Apply(ctx, converted, res); err != nil {
 		s.logger.Error("Failed to apply own_logs settings", zap.Error(err))

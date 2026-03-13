@@ -15,7 +15,7 @@
 //
 // SPDX-License-Identifier: SSPL-1.0
 
-package ownlogs
+package owntelemetry
 
 import (
 	"context"
@@ -26,13 +26,13 @@ import (
 )
 
 // BuildResource creates an OTel resource with service identifying attributes
-// for the supervisor's own log telemetry.
-func BuildResource(serviceName, serviceVersion, instanceID string) *resource.Resource {
+// for the supervisor's own telemetry.
+func BuildResource(serviceName, serviceVersion, instanceID, receiverType string) *resource.Resource {
 	attrs := []resource.Option{
 		resource.WithAttributes(
 			semconv.ServiceName(serviceName),
-			// Required to let the server correctly process the log record.
-			attribute.String("collector.receiver.type", "collector_log"),
+			// Required to let the server correctly process the record.
+			attribute.String("collector.receiver.type", receiverType),
 		),
 	}
 	if serviceVersion != "" {

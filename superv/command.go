@@ -279,7 +279,7 @@ func runSupervisor(cmd *cobra.Command, args []string) error {
 		logger.Info("Restoring OTLP log export from persisted settings",
 			zap.String("endpoint", settings.Endpoint),
 		)
-		res := owntelemetry.BuildResource(supervisor.ServiceName, version.Version(), instanceUID)
+		res := owntelemetry.BuildResource(supervisor.ServiceName, version.Version(), instanceUID, "collector_log")
 		if applyErr := ownLogsManager.Apply(context.Background(), settings, res); applyErr != nil {
 			logger.Warn("Failed to restore OTLP log export", zap.Error(applyErr))
 		} else {

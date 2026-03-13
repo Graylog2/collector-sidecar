@@ -30,7 +30,7 @@ import (
 
 func TestNewCoreFromFile_NoFile(t *testing.T) {
 	dir := t.TempDir()
-	res := BuildResource("collector", "1.0.0", "test-instance")
+	res := BuildResource("collector", "1.0.0", "test-instance", "collector_log")
 
 	core, shutdown, err := NewCoreFromFile(dir, "", "", res)
 
@@ -51,7 +51,7 @@ func TestNewCoreFromFile_ValidFile(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	res := BuildResource("collector", "1.0.0", "test-instance")
+	res := BuildResource("collector", "1.0.0", "test-instance", "collector_log")
 
 	core, shutdown, err := NewCoreFromFile(dir, certPath, keyPath, res)
 
@@ -72,7 +72,7 @@ func TestNewCoreFromFile_InvalidYAML(t *testing.T) {
 	err := os.WriteFile(filepath.Join(dir, "own-logs.yaml"), []byte(":::invalid yaml"), 0o644)
 	require.NoError(t, err)
 
-	res := BuildResource("collector", "1.0.0", "test-instance")
+	res := BuildResource("collector", "1.0.0", "test-instance", "collector_log")
 
 	core, shutdown, err := NewCoreFromFile(dir, "", "", res)
 
@@ -91,7 +91,7 @@ func TestNewCoreFromFile_ShutdownIdempotent(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	res := BuildResource("collector", "1.0.0", "test-instance")
+	res := BuildResource("collector", "1.0.0", "test-instance", "collector_log")
 	_, shutdown, err := NewCoreFromFile(dir, certPath, keyPath, res)
 	require.NoError(t, err)
 	require.NotNil(t, shutdown)
