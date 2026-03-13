@@ -19,16 +19,69 @@ package owntelemetry
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
+	"slices"
 	"strings"
 
 	"github.com/Graylog2/collector-sidecar/superv/config"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
+	"go.opentelemetry.io/otel/metric/noop"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"google.golang.org/grpc/credentials"
 )
+
+// LogsConfig holds the supervisor-side logs configuration passed to the
+// collector process via the GLC_INTERNAL_LOGS_CONFIG env var (JSON-encoded).
+type LogsConfig struct {
+	Batch config.BatchConfig `json:"batch"`
+}
+
+// MetricsConfig holds the supervisor-side metrics configuration passed to the
+// collector process via the GLC_INTERNAL_METRICS_CONFIG env var (JSON-encoded).
+type MetricsConfig struct {
+	Batch           config.BatchConfig `json:"batch"`
+	ExportedMetrics []string           `json:"exported_metrics"`
+}
+
+// ParseLogsConfigEnv reads and JSON-decodes the GLC_INTERNAL_LOGS_CONFIG
+// environment variable. Returns a zero LogsConfig if the var is unset or
+// malformed.
+func ParseLogsConfigEnv() LogsConfig {
+	return parseConfigEnv[LogsConfig]("GLC_INTERNAL_LOGS_CONFIG")
+}
+
+// ParseMetricsConfigEnv reads and JSON-decodes the GLC_INTERNAL_METRICS_CONFIG
+// environment variable. Returns a zero MetricsConfig if the var is unset or
+// malformed.
+func ParseMetricsConfigEnv() MetricsConfig {
+	return parseConfigEnv[MetricsConfig]("GLC_INTERNAL_METRICS_CONFIG")
+}
+
+func parseConfigEnv[T any](envVar string) T {
+	var zero T
+	raw := os.Getenv(envVar)
+	if raw == "" {
+		return zero
+	}
+	var cfg T
+	if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
+		fmt.Fprintf(os.Stderr, "WARNING: failed to parse %s: %v\n", envVar, err)
+		return zero
+	}
+	return cfg
+}
+
+// NoopMeterProvider implements a no-op meter provider with a Shutdown method.
+// It satisfies the collector's telemetry.MeterProvider interface
+// (metric.MeterProvider + Shutdown).
+type NoopMeterProvider struct{ noop.MeterProvider }
+
+// Shutdown is a no-op.
+func (NoopMeterProvider) Shutdown(context.Context) error { return nil }
 
 // NewMeterProviderFromFile loads own-metrics settings from
 // persistenceDir/own-metrics.yaml, builds an OTLP metric exporter and
@@ -78,12 +131,17 @@ func NewMeterProviderFromFile(
 
 	reader := sdkmetric.NewPeriodicReader(exporter, readerOpts...)
 
-	views := buildAllowListViews(exportedMetrics)
-
 	opts := []sdkmetric.Option{
 		sdkmetric.WithReader(reader),
-		sdkmetric.WithView(views...),
 	}
+
+	// "*" means export all metrics (no views needed).
+	// Otherwise, build allow-list views to filter.
+	if !slices.Contains(exportedMetrics, "*") {
+		views := buildAllowListViews(exportedMetrics)
+		opts = append(opts, sdkmetric.WithView(views...))
+	}
+
 	if res != nil {
 		opts = append(opts, sdkmetric.WithResource(res))
 	}

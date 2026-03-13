@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Graylog2/collector-sidecar/superv/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zapcore"
@@ -32,7 +33,7 @@ func TestNewCoreFromFile_NoFile(t *testing.T) {
 	dir := t.TempDir()
 	res := BuildResource("collector", "1.0.0", "test-instance", "collector_log")
 
-	core, shutdown, err := NewCoreFromFile(dir, "", "", res)
+	core, shutdown, err := NewCoreFromFile(dir, "", "", res, config.BatchConfig{})
 
 	require.NoError(t, err)
 	assert.Nil(t, core)
@@ -53,7 +54,7 @@ func TestNewCoreFromFile_ValidFile(t *testing.T) {
 
 	res := BuildResource("collector", "1.0.0", "test-instance", "collector_log")
 
-	core, shutdown, err := NewCoreFromFile(dir, certPath, keyPath, res)
+	core, shutdown, err := NewCoreFromFile(dir, certPath, keyPath, res, config.BatchConfig{})
 
 	require.NoError(t, err)
 	require.NotNil(t, core)
@@ -74,7 +75,7 @@ func TestNewCoreFromFile_InvalidYAML(t *testing.T) {
 
 	res := BuildResource("collector", "1.0.0", "test-instance", "collector_log")
 
-	core, shutdown, err := NewCoreFromFile(dir, "", "", res)
+	core, shutdown, err := NewCoreFromFile(dir, "", "", res, config.BatchConfig{})
 
 	require.Error(t, err)
 	assert.Nil(t, core)
@@ -92,7 +93,7 @@ func TestNewCoreFromFile_ShutdownIdempotent(t *testing.T) {
 	require.NoError(t, err)
 
 	res := BuildResource("collector", "1.0.0", "test-instance", "collector_log")
-	_, shutdown, err := NewCoreFromFile(dir, certPath, keyPath, res)
+	_, shutdown, err := NewCoreFromFile(dir, certPath, keyPath, res, config.BatchConfig{})
 	require.NoError(t, err)
 	require.NotNil(t, shutdown)
 

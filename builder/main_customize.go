@@ -20,12 +20,10 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 
 	"github.com/Graylog2/collector-sidecar/superv"
-	"github.com/Graylog2/collector-sidecar/superv/config"
 	"github.com/Graylog2/collector-sidecar/superv/owntelemetry"
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/collector/component"
@@ -33,7 +31,6 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/service/telemetry"
 	"go.opentelemetry.io/otel/attribute"
-	noopmetric "go.opentelemetry.io/otel/metric/noop"
 	sdkresource "go.opentelemetry.io/otel/sdk/resource"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -56,8 +53,9 @@ func customizeSettings(params *otelcol.CollectorSettings) {
 	res := owntelemetry.BuildResource("collector", params.BuildInfo.Version,
 		os.Getenv("GLC_INTERNAL_INSTANCE_UID"), "collector_log")
 
+	logsCfg := owntelemetry.ParseLogsConfigEnv()
 	core, shutdown, err := owntelemetry.NewCoreFromFile(
-		persistDir, certPath, keyPath, res,
+		persistDir, certPath, keyPath, res, logsCfg.Batch,
 	)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "WARNING: own-logs setup failed, continuing without OTLP log export: %v\n", err)
@@ -65,6 +63,12 @@ func customizeSettings(params *otelcol.CollectorSettings) {
 	}
 	if core != nil {
 		ownLogsShutdown = shutdown
+		// The OTel Collector's service layer attaches its own telemetry resource
+		// (service.name, service.instance.id, etc.) as a zap field named "resource"
+		// on component loggers. The otelzap bridge converts that field into an OTLP
+		// log record attribute, which is redundant with the top-level OTLP resource
+		// we set via BuildResource and confusing because the two carry different
+		// values. Strip it before it reaches the bridge.
 		params.LoggingOptions = append(params.LoggingOptions,
 			zap.WrapCore(func(original zapcore.Core) zapcore.Core {
 				return zapcore.NewTee(original, &owntelemetry.FieldFilterCore{
@@ -76,6 +80,7 @@ func customizeSettings(params *otelcol.CollectorSettings) {
 	}
 
 	// Wrap Factories to inject custom meter provider for own-metrics.
+	mcfg := owntelemetry.ParseMetricsConfigEnv()
 	origFactories := params.Factories
 	params.Factories = func() (otelcol.Factories, error) {
 		f, err := origFactories()
@@ -89,7 +94,7 @@ func customizeSettings(params *otelcol.CollectorSettings) {
 			telemetry.WithCreateLogger(orig.CreateLogger),
 			telemetry.WithCreateTracerProvider(orig.CreateTracerProvider),
 			telemetry.WithCreateMeterProvider(
-				makeCreateMeterProvider(persistDir, certPath, keyPath),
+				makeCreateMeterProvider(persistDir, certPath, keyPath, mcfg),
 			),
 		)
 		return f, nil
@@ -97,76 +102,52 @@ func customizeSettings(params *otelcol.CollectorSettings) {
 }
 
 // makeCreateMeterProvider returns a CreateMeterProviderFunc that reads
-// own-metrics config and builds a MeterProvider with OTLP export.
-// If the config is missing or the allow-list is empty, returns noop.
+// own-metrics.yaml and builds a MeterProvider with OTLP export.
+// If own-metrics.yaml doesn't exist or the allow-list is empty, returns noop.
 // Errors are logged and result in noop (collector availability first).
-func makeCreateMeterProvider(persistDir, certPath, keyPath string) telemetry.CreateMeterProviderFunc {
-	// Read config from env vars set by the supervisor.
-	metricsCfgJSON := os.Getenv("GLC_INTERNAL_METRICS_CONFIG")
-	var batchCfg config.BatchConfig
-	var exportedMetrics []string
-	if metricsCfgJSON != "" {
-		var mcfg struct {
-			Batch           config.BatchConfig `json:"batch"`
-			ExportedMetrics []string           `json:"exported_metrics"`
-		}
-		if err := json.Unmarshal([]byte(metricsCfgJSON), &mcfg); err == nil {
-			batchCfg = mcfg.Batch
-			exportedMetrics = mcfg.ExportedMetrics
-		}
-	}
-
+func makeCreateMeterProvider(persistDir, certPath, keyPath string, mcfg owntelemetry.MetricsConfig) telemetry.CreateMeterProviderFunc {
 	return func(
 		ctx context.Context,
 		set telemetry.MeterSettings,
 		cfg component.Config,
 	) (telemetry.MeterProvider, error) {
-		if len(exportedMetrics) == 0 {
-			return noopMeterProvider{}, nil
+		if len(mcfg.ExportedMetrics) == 0 {
+			return owntelemetry.NoopMeterProvider{}, nil
 		}
 
 		// Build resource from set.Resource (includes user-configured attrs)
 		// and append the Graylog-specific collector.receiver.type attribute.
-		attrs := pcommonAttrsToOTelAttrs(set.Resource)
+		attrs := pcommonAttrsToSDKAttrs(set.Resource)
 		attrs = append(attrs, attribute.String("collector.receiver.type", "collector_metric"))
 		res := sdkresource.NewWithAttributes("", attrs...)
 
 		provider, err := owntelemetry.NewMeterProviderFromFile(
 			persistDir, certPath, keyPath,
-			res, batchCfg, exportedMetrics,
+			res, mcfg.Batch, mcfg.ExportedMetrics,
 		)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "WARNING: own-metrics setup failed, continuing without OTLP metric export: %v\n", err)
-			return noopMeterProvider{}, nil
+			return owntelemetry.NoopMeterProvider{}, nil
 		}
 		if provider == nil {
-			return noopMeterProvider{}, nil
+			return owntelemetry.NoopMeterProvider{}, nil
 		}
 		return provider, nil
 	}
 }
 
-// pcommonAttrsToOTelAttrs converts pcommon.Resource attributes to OTel SDK attributes.
-func pcommonAttrsToOTelAttrs(res *pcommon.Resource) []attribute.KeyValue {
+// pcommonAttrsToSDKAttrs converts pcommon.Resource attributes to OTel SDK
+// key-value pairs. This conversion lives here because pcommon is a collector
+// dependency that the superv module does not import.
+func pcommonAttrsToSDKAttrs(res *pcommon.Resource) []attribute.KeyValue {
 	var result []attribute.KeyValue
 	if res != nil {
-		attrs := res.Attributes()
-		attrs.Range(func(k string, v pcommon.Value) bool {
+		res.Attributes().Range(func(k string, v pcommon.Value) bool {
 			result = append(result, attribute.String(k, v.AsString()))
 			return true
 		})
 	}
 	return result
-}
-
-// noopMeterProvider implements telemetry.MeterProvider with no-ops.
-// telemetry.MeterProvider = metric.MeterProvider + Shutdown(context.Context) error.
-type noopMeterProvider struct {
-	noopmetric.MeterProvider
-}
-
-func (noopMeterProvider) Shutdown(context.Context) error {
-	return nil
 }
 
 func customizeCommand(params *otelcol.CollectorSettings, cmd *cobra.Command) {

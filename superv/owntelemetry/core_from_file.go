@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Graylog2/collector-sidecar/superv/config"
 	"go.opentelemetry.io/contrib/bridges/otelzap"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -33,7 +34,7 @@ import (
 //
 // Callers must treat errors as non-fatal: a failure here must never prevent
 // the collector from starting. Log the error and proceed without the OTLP tee.
-func NewCoreFromFile(persistenceDir, clientCertPath, clientKeyPath string, res *resource.Resource) (zapcore.Core, func(context.Context), error) {
+func NewCoreFromFile(persistenceDir, clientCertPath, clientKeyPath string, res *resource.Resource, batchCfg config.BatchConfig) (zapcore.Core, func(context.Context), error) {
 	p := NewPersistence(persistenceDir, "own-logs.yaml", clientCertPath, clientKeyPath)
 	s, exists, err := p.Load()
 	if err != nil {
@@ -49,8 +50,22 @@ func NewCoreFromFile(persistenceDir, clientCertPath, clientKeyPath string, res *
 		return nil, nil, fmt.Errorf("build OTLP log exporter: %w", err)
 	}
 
+	var batchOpts []sdklog.BatchProcessorOption
+	if batchCfg.MaxQueueSize > 0 {
+		batchOpts = append(batchOpts, sdklog.WithMaxQueueSize(batchCfg.MaxQueueSize))
+	}
+	if batchCfg.ExportMaxBatchSize > 0 {
+		batchOpts = append(batchOpts, sdklog.WithExportMaxBatchSize(batchCfg.ExportMaxBatchSize))
+	}
+	if batchCfg.ExportInterval > 0 {
+		batchOpts = append(batchOpts, sdklog.WithExportInterval(batchCfg.ExportInterval))
+	}
+	if batchCfg.ExportTimeout > 0 {
+		batchOpts = append(batchOpts, sdklog.WithExportTimeout(batchCfg.ExportTimeout))
+	}
+
 	opts := []sdklog.LoggerProviderOption{
-		sdklog.WithProcessor(sdklog.NewBatchProcessor(exporter)),
+		sdklog.WithProcessor(sdklog.NewBatchProcessor(exporter, batchOpts...)),
 	}
 	if res != nil {
 		opts = append(opts, sdklog.WithResource(res))

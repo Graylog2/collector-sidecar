@@ -323,7 +323,7 @@ func DefaultConfig() Config {
 					ExportInterval: 10 * time.Second,
 					ExportTimeout:  30 * time.Second,
 				},
-				ExportedMetrics: []string{},
+				ExportedMetrics: []string{"*"},
 			},
 		},
 		Logging: LoggingConfig{

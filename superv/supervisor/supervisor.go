@@ -68,6 +68,7 @@ type Supervisor struct {
 	agentCfg                  config.AgentConfig
 	authCfg                   config.AuthConfig
 	localServerCfg            config.LocalServer
+	logsConfig                config.TelemetryLogsConfig
 	metricsConfig             config.TelemetryMetricsConfig
 	persistenceDir            string
 	instanceUID               string
@@ -225,6 +226,7 @@ func New(logger *zap.Logger, cfg config.Config, instanceUID string) (*Supervisor
 		agentCfg:                  cfg.Agent,
 		authCfg:                   cfg.Server.Auth,
 		localServerCfg:            cfg.LocalServer,
+		logsConfig:                cfg.Telemetry.Logs,
 		metricsConfig:             cfg.Telemetry.Metrics,
 		persistenceDir:            cfg.Persistence.Dir,
 		instanceUID:               instanceUID,
@@ -272,7 +274,17 @@ func (s *Supervisor) buildCollectorEnv() map[string]string {
 		"GLC_INTERNAL_PERSISTENCE_DIR":      s.persistenceDir,
 	}
 
-	// JSON-encode metrics config for the collector's own-metrics setup.
+	// JSON-encode telemetry configs for the collector's own-logs and own-metrics
+	// setup. We use JSON env vars (rather than multiple simple env vars) because
+	// the configs are structured (batch settings + allow-list) and the same
+	// types are used on both sides for (de)serialization.
+	if lcfgJSON, err := json.Marshal(struct {
+		Batch config.BatchConfig `json:"batch"`
+	}{
+		Batch: s.logsConfig.Batch,
+	}); err == nil {
+		env["GLC_INTERNAL_LOGS_CONFIG"] = string(lcfgJSON)
+	}
 	if mcfgJSON, err := json.Marshal(struct {
 		Batch           config.BatchConfig `json:"batch"`
 		ExportedMetrics []string           `json:"exported_metrics"`
