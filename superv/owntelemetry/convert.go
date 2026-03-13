@@ -15,7 +15,7 @@
 //
 // SPDX-License-Identifier: SSPL-1.0
 
-package ownlogs
+package owntelemetry
 
 import (
 	"crypto/tls"
@@ -29,7 +29,7 @@ import (
 	"github.com/open-telemetry/opamp-go/protobufs"
 )
 
-// ConvertSettings converts OpAMP TelemetryConnectionSettings to ownlogs.Settings.
+// ConvertSettings converts OpAMP TelemetryConnectionSettings to owntelemetry.Settings.
 // clientCertPath and clientKeyPath are the paths to the mTLS client certificate
 // and key files (e.g. the sidecar's signing cert/key). The exporter will not
 // start if the files cannot be loaded.

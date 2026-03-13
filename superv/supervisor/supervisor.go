@@ -47,7 +47,7 @@ import (
 	"github.com/Graylog2/collector-sidecar/superv/healthmonitor"
 	"github.com/Graylog2/collector-sidecar/superv/keen"
 	"github.com/Graylog2/collector-sidecar/superv/opamp"
-	"github.com/Graylog2/collector-sidecar/superv/ownlogs"
+	"github.com/Graylog2/collector-sidecar/superv/owntelemetry"
 	"github.com/Graylog2/collector-sidecar/superv/persistence"
 	"github.com/Graylog2/collector-sidecar/superv/version"
 )
@@ -98,9 +98,9 @@ type Supervisor struct {
 	createClientFunc func(ctx context.Context, settings connection.Settings) (*opamp.Client, error)
 
 	// ownLogsManager manages OTLP export of the supervisor's own logs.
-	ownLogsManager     *ownlogs.Manager
-	ownLogsPersistence *ownlogs.Persistence
-	currentOwnLogs     *ownlogs.Settings
+	ownLogsManager     *owntelemetry.Manager
+	ownLogsPersistence *owntelemetry.Persistence
+	currentOwnLogs     *owntelemetry.Settings
 }
 
 // New creates a new Supervisor instance. The instanceUID must be obtained from
@@ -520,7 +520,7 @@ func (s *Supervisor) Stop(ctx context.Context) error {
 
 // SetOwnLogs configures the own-logs manager and persistence for OTLP log export.
 // Must be called before Start.
-func (s *Supervisor) SetOwnLogs(manager *ownlogs.Manager, persistence *ownlogs.Persistence, current *ownlogs.Settings) {
+func (s *Supervisor) SetOwnLogs(manager *owntelemetry.Manager, persistence *owntelemetry.Persistence, current *owntelemetry.Settings) {
 	s.ownLogsManager = manager
 	s.ownLogsPersistence = persistence
 	if current != nil {
@@ -1300,7 +1300,7 @@ func (s *Supervisor) handleOwnLogs(ctx context.Context, settings *protobufs.Tele
 		zap.String("endpoint", settings.GetDestinationEndpoint()),
 	)
 
-	converted, err := ownlogs.ConvertSettings(settings,
+	converted, err := owntelemetry.ConvertSettings(settings,
 		s.authManager.GetSigningCertPath(),
 		s.authManager.GetSigningKeyPath(),
 	)
@@ -1314,7 +1314,7 @@ func (s *Supervisor) handleOwnLogs(ctx context.Context, settings *protobufs.Tele
 		return
 	}
 
-	res := ownlogs.BuildResource(ServiceName, version.Version(), s.instanceUID)
+	res := owntelemetry.BuildResource(ServiceName, version.Version(), s.instanceUID)
 
 	if err := s.ownLogsManager.Apply(ctx, converted, res); err != nil {
 		s.logger.Error("Failed to apply own_logs settings", zap.Error(err))

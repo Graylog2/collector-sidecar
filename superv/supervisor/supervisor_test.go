@@ -45,7 +45,7 @@ import (
 	"github.com/Graylog2/collector-sidecar/superv/config"
 	"github.com/Graylog2/collector-sidecar/superv/healthmonitor"
 	"github.com/Graylog2/collector-sidecar/superv/keen"
-	"github.com/Graylog2/collector-sidecar/superv/ownlogs"
+	"github.com/Graylog2/collector-sidecar/superv/owntelemetry"
 	"github.com/Graylog2/collector-sidecar/superv/persistence"
 	"github.com/Graylog2/collector-sidecar/superv/supervisor/connection"
 )
@@ -563,8 +563,8 @@ func TestSupervisor_HandleOwnLogs(t *testing.T) {
 			authManager:        authMgr,
 			persistenceDir:     persistDir,
 			instanceUID:        "test-instance",
-			ownLogsManager:     ownlogs.NewManager(config.TelemetryLogsConfig{}),
-			ownLogsPersistence: ownlogs.NewPersistence(persistDir, authMgr.GetSigningCertPath(), authMgr.GetSigningKeyPath()),
+			ownLogsManager:     owntelemetry.NewManager(config.TelemetryLogsConfig{}),
+			ownLogsPersistence: owntelemetry.NewPersistence(persistDir, authMgr.GetSigningCertPath(), authMgr.GetSigningKeyPath()),
 			commander:          cmd,
 		}
 	}
@@ -575,7 +575,7 @@ func TestSupervisor_HandleOwnLogs(t *testing.T) {
 		s := newSupervisorWithCommander(t, logger)
 
 		// Pre-create an own-logs.yaml file
-		err := s.ownLogsPersistence.Save(ownlogs.Settings{
+		err := s.ownLogsPersistence.Save(owntelemetry.Settings{
 			Endpoint: "https://example.com:4318/v1/logs",
 		})
 		require.NoError(t, err)

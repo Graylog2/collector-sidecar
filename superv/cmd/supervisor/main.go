@@ -30,7 +30,7 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/Graylog2/collector-sidecar/superv/config"
-	"github.com/Graylog2/collector-sidecar/superv/ownlogs"
+	"github.com/Graylog2/collector-sidecar/superv/owntelemetry"
 	"github.com/Graylog2/collector-sidecar/superv/persistence"
 	"github.com/Graylog2/collector-sidecar/superv/supervisor"
 	"github.com/Graylog2/collector-sidecar/superv/version"
@@ -112,7 +112,7 @@ func main() {
 	}
 
 	// Create own logs manager for OTLP export
-	ownLogsManager := ownlogs.NewManager(cfg.Telemetry.Logs)
+	ownLogsManager := owntelemetry.NewManager(cfg.Telemetry.Logs)
 
 	// Tee stderr core with the swappable OTLP core, preserving
 	// all original logger options (development mode, caller, stacktrace threshold).
@@ -129,15 +129,15 @@ func main() {
 	// Restore persisted own_logs settings
 	certPath := filepath.Join(cfg.Keys.Dir, persistence.SigningCertFile)
 	keyPath := filepath.Join(cfg.Keys.Dir, persistence.SigningKeyFile)
-	ownLogsPersist := ownlogs.NewPersistence(cfg.Persistence.Dir, certPath, keyPath)
-	var restoredOwnLogs *ownlogs.Settings
+	ownLogsPersist := owntelemetry.NewPersistence(cfg.Persistence.Dir, certPath, keyPath)
+	var restoredOwnLogs *owntelemetry.Settings
 	if settings, exists, loadErr := ownLogsPersist.Load(); loadErr != nil {
 		logger.Warn("Failed to load persisted own_logs settings", zap.Error(loadErr))
 	} else if exists {
 		logger.Info("Restoring OTLP log export from persisted settings",
 			zap.String("endpoint", settings.Endpoint),
 		)
-		res := ownlogs.BuildResource(supervisor.ServiceName, version.Version(), instanceUID)
+		res := owntelemetry.BuildResource(supervisor.ServiceName, version.Version(), instanceUID)
 		if applyErr := ownLogsManager.Apply(context.Background(), settings, res); applyErr != nil {
 			logger.Warn("Failed to restore OTLP log export", zap.Error(applyErr))
 		} else {

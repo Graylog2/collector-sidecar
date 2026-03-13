@@ -24,7 +24,7 @@ import (
 	"os"
 
 	"github.com/Graylog2/collector-sidecar/superv"
-	"github.com/Graylog2/collector-sidecar/superv/ownlogs"
+	"github.com/Graylog2/collector-sidecar/superv/owntelemetry"
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/collector/otelcol"
 	"go.uber.org/zap"
@@ -42,10 +42,10 @@ func customizeSettings(params *otelcol.CollectorSettings) {
 		return
 	}
 
-	res := ownlogs.BuildResource("collector", params.BuildInfo.Version,
+	res := owntelemetry.BuildResource("collector", params.BuildInfo.Version,
 		os.Getenv("GLC_INTERNAL_INSTANCE_UID"))
 
-	core, shutdown, err := ownlogs.NewCoreFromFile(
+	core, shutdown, err := owntelemetry.NewCoreFromFile(
 		persistDir,
 		os.Getenv("GLC_INTERNAL_TLS_CLIENT_CERT_PATH"),
 		os.Getenv("GLC_INTERNAL_TLS_CLIENT_KEY_PATH"),
@@ -70,7 +70,7 @@ func customizeSettings(params *otelcol.CollectorSettings) {
 	// values. Strip it before it reaches the bridge.
 	params.LoggingOptions = append(params.LoggingOptions,
 		zap.WrapCore(func(original zapcore.Core) zapcore.Core {
-			return zapcore.NewTee(original, &ownlogs.FieldFilterCore{
+			return zapcore.NewTee(original, &owntelemetry.FieldFilterCore{
 				Core:       core,
 				DropFields: []string{"resource"},
 			})
