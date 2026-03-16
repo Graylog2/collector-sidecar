@@ -86,7 +86,8 @@ func (NoopMeterProvider) Shutdown(context.Context) error { return nil }
 // NewMeterProviderFromFile loads own-metrics settings from
 // persistenceDir/own-metrics.yaml, builds an OTLP metric exporter and
 // MeterProvider with allow-list filtering. Returns the provider and any error.
-// If the file doesn't exist or exportedMetrics is empty, returns (nil, nil).
+// If the file doesn't exist or exportedMetrics is empty, returns a
+// NoopMeterProvider (not nil).
 //
 // Callers must treat errors as non-fatal: a failure here must never prevent
 // the collector from starting.
@@ -106,7 +107,7 @@ func NewMeterProviderFromFile(
 		return nil, err
 	}
 	if !exists {
-		return nil, nil
+		return nil, nil // no settings file → caller should use noop
 	}
 
 	ctx := context.Background()

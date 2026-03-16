@@ -105,6 +105,12 @@ func customizeSettings(params *otelcol.CollectorSettings) {
 // own-metrics.yaml and builds a MeterProvider with OTLP export.
 // If own-metrics.yaml doesn't exist or the allow-list is empty, returns noop.
 // Errors are logged and result in noop (collector availability first).
+//
+// Shutdown: the returned MeterProvider is owned by the collector's
+// service.Telemetry layer, which calls MeterProvider.Shutdown() during
+// service.Shutdown(). On error exits where Cobra skips post-run hooks,
+// the periodic reader's last scheduled export (~ExportInterval) is the
+// only flush — this is accepted as best-effort (see design spec).
 func makeCreateMeterProvider(persistDir, certPath, keyPath string, mcfg owntelemetry.MetricsConfig) telemetry.CreateMeterProviderFunc {
 	return func(
 		ctx context.Context,
@@ -137,13 +143,25 @@ func makeCreateMeterProvider(persistDir, certPath, keyPath string, mcfg owntelem
 }
 
 // pcommonAttrsToSDKAttrs converts pcommon.Resource attributes to OTel SDK
-// key-value pairs. This conversion lives here because pcommon is a collector
-// dependency that the superv module does not import.
+// key-value pairs, preserving the original value types. This conversion lives
+// here because pcommon is a collector dependency that the superv module does
+// not import.
 func pcommonAttrsToSDKAttrs(res *pcommon.Resource) []attribute.KeyValue {
 	var result []attribute.KeyValue
 	if res != nil {
 		res.Attributes().Range(func(k string, v pcommon.Value) bool {
-			result = append(result, attribute.String(k, v.AsString()))
+			switch v.Type() {
+			case pcommon.ValueTypeStr:
+				result = append(result, attribute.String(k, v.Str()))
+			case pcommon.ValueTypeInt:
+				result = append(result, attribute.Int64(k, v.Int()))
+			case pcommon.ValueTypeBool:
+				result = append(result, attribute.Bool(k, v.Bool()))
+			case pcommon.ValueTypeDouble:
+				result = append(result, attribute.Float64(k, v.Double()))
+			default:
+				result = append(result, attribute.String(k, v.AsString()))
+			}
 			return true
 		})
 	}

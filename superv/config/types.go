@@ -215,6 +215,9 @@ type TelemetryMetricsConfig struct {
 
 // BatchConfig configures the OTel SDK BatchProcessor.
 // Zero values use SDK defaults.
+// Note: for metrics (TelemetryMetricsConfig.Batch), only ExportInterval and
+// ExportTimeout apply; MaxQueueSize and ExportMaxBatchSize are ignored because
+// the metrics SDK uses a PeriodicReader, not a BatchProcessor.
 type BatchConfig struct {
 	// MaxQueueSize is the ring buffer capacity. Default: 2048.
 	MaxQueueSize int `koanf:"max_queue_size"`
