@@ -74,6 +74,7 @@ type AuthConfig struct {
 	InsecureTLS        bool              `koanf:"insecure_tls"`
 	JWTLifetime        time.Duration     `koanf:"jwt_lifetime"`
 	RenewalFraction    float64           `koanf:"renewal_fraction"`
+	RenewalInterval    time.Duration     `koanf:"renewal_interval"`
 }
 
 // KeysConfig configures key storage.
@@ -238,6 +239,7 @@ func DefaultConfig() Config {
 			Auth: AuthConfig{
 				JWTLifetime:     5 * time.Minute,
 				RenewalFraction: 0.75,
+				RenewalInterval: 1 * time.Hour,
 			},
 		},
 		Keys: KeysConfig{

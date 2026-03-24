@@ -115,6 +115,9 @@ func (k AuthConfig) Validate() error {
 	if k.RenewalFraction != 0 && (k.RenewalFraction <= 0 || k.RenewalFraction >= 1) {
 		return fmt.Errorf("server.auth.renewal_fraction: must be between 0 (exclusive) and 1 (exclusive), got %g", k.RenewalFraction)
 	}
+	if k.RenewalInterval <= 0 {
+		return fmt.Errorf("server.auth.renewal_interval: must be positive, got %s", k.RenewalInterval)
+	}
 	return nil
 }
 

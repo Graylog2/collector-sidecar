@@ -266,6 +266,35 @@ func TestValidateRenewalFraction(t *testing.T) {
 			cfg := AuthConfig{
 				JWTLifetime:     5 * time.Minute,
 				RenewalFraction: tt.value,
+				RenewalInterval: 1 * time.Hour,
+			}
+			err := cfg.Validate()
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				require.ErrorContains(t, err, tt.wantErr)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateRenewalInterval(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   time.Duration
+		wantErr string
+	}{
+		{name: "valid 1h", value: 1 * time.Hour},
+		{name: "valid 10s", value: 10 * time.Second},
+		{name: "zero", value: 0, wantErr: "renewal_interval"},
+		{name: "negative", value: -1 * time.Second, wantErr: "renewal_interval"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := AuthConfig{
+				JWTLifetime:     5 * time.Minute,
+				RenewalInterval: tt.value,
 			}
 			err := cfg.Validate()
 			if tt.wantErr != "" {

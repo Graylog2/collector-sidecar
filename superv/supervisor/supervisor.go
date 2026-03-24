@@ -439,10 +439,10 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	s.healthCancel = healthCancel
 	healthUpdates := s.healthMonitor.StartPolling(healthCtx)
 	s.healthWg.Go(func() {
-		renewalInterval := s.agentCfg.Health.Interval
-		if renewalInterval <= 0 {
-			renewalInterval = healthmonitor.DefaultInterval
-		}
+		renewalInterval := s.authCfg.RenewalInterval // validated > 0 by config
+		// Check immediately at startup, then on the ticker interval.
+		s.checkCertificateRenewal()
+
 		renewalTicker := time.NewTicker(renewalInterval)
 		defer renewalTicker.Stop()
 
