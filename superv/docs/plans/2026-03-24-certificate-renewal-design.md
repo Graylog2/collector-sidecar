@@ -76,10 +76,12 @@ New method **`CompleteRenewal(certPEM []byte) error`** on `auth.Manager`:
 2. Verifies the new cert's public key matches the existing `m.signingKey` using
    `bytes.Equal(cert.PublicKey.(ed25519.PublicKey), m.signingKey.Public().(ed25519.PublicKey))`
    — reject if the server issued a cert for a different key
-3. Warns if `newCert.NotAfter <= oldCert.NotAfter` (server bug — would cause a
-   tight renewal loop bounded by retry backoff)
+3. Rejects if `newCert.NotAfter <= oldCert.NotAfter` — returns an error, keeping the
+   old cert in place. This prevents overwriting a known-better cert with one that is
+   equal or worse (e.g., server bug issuing an already-expired cert). The retry
+   backoff kicks in and the server may eventually issue a valid cert.
 4. Saves the certificate to disk via `persistence.SaveCertificate`
-5. Updates `m.certificate` in memory
+5. Updates `m.certificate` in memory (under write lock — see section 8)
 
 ### 4. Integration into the Health Check Loop
 
@@ -105,7 +107,11 @@ if s.authManager.IsEnrolled() && s.pendingCSR == nil {
 2. Sets `s.pendingCSR` to the CSR (under lock)
 3. Calls `s.opampClient.RequestConnectionSettings(csrPEM)`
 4. On error: sets `s.nextRenewalRetry` with exponential backoff, logs at Warn level
-5. On success: logs at Info level ("Certificate renewal requested, awaiting response")
+5. On success: sets `s.nextRenewalRetry = time.Now().Add(renewalResponseTimeout)` to
+   prevent re-sending on the next tick while awaiting the server's response. The
+   `renewalResponseTimeout` is a constant (2 minutes). If the server does not respond
+   within this window, the next tick past the deadline treats it as a failure and
+   retries with normal exponential backoff. Logs at Info level.
 
 ### 5. Post-Renewal Actions
 
@@ -122,6 +128,11 @@ When `handleCertificateResponse` successfully processes a renewal:
    disk and calls `Apply()` with updated `Settings.TLSConfig` to rebuild the exporter
 6. Reset `s.nextRenewalRetry` to zero
 7. Log at Info level: "Certificate renewed successfully"
+
+Steps 4 and 5 are best-effort. If either fails, log the error but do not retry —
+the new cert is already persisted to disk. The collector will pick it up on its next
+restart (config change, crash recovery, etc.), and the own-logs exporter will reload
+on the next `TelemetryConnectionSettings` update from the server.
 
 ### 6. Retry and Failure Behavior
 
@@ -179,12 +190,30 @@ server:
 
 Validation: must be > 0 and < 1. If unset or zero, default to 0.75.
 
+### 8. Concurrency in `auth.Manager`
+
+Renewal introduces concurrent mutation of `m.certificate`: `CompleteRenewal` writes
+it from the opamp-go callback goroutine, while `GenerateJWT` reads it from the
+`HeaderFunc` goroutine, and `CertificateNeedsRenewal`/`CertificateExpired` read it
+from the health goroutine. Today these fields are plain struct fields with no
+synchronization because they were write-once (set during startup or enrollment).
+
+Add a `sync.RWMutex` to `auth.Manager`:
+
+- **Write lock:** `CompleteRenewal`, `CompleteEnrollment`, `LoadCredentials`
+- **Read lock:** `GenerateJWT`, `Certificate()`, `CertFingerprint()`,
+  `CertificateNeedsRenewal()`, `CertificateExpired()`
+
+The signing key (`m.signingKey`) does not change during renewal, but protecting it
+under the same lock is simpler and avoids a partial-update window where the cert and
+key are temporarily inconsistent (relevant during enrollment when both change).
+
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `auth/manager.go` | Add `CertificateNeedsRenewal`, `CertificateExpired`, `PrepareRenewal`, `CompleteRenewal` |
-| `supervisor/supervisor.go` | Rename `handleEnrollmentCertificate` → `handleCertificateResponse`, add renewal check in health loop, add `nextRenewalRetry` field, add `requestCertificateRenewal` |
+| `auth/manager.go` | Add `sync.RWMutex`, `CertificateNeedsRenewal`, `CertificateExpired`, `PrepareRenewal`, `CompleteRenewal`; add read/write locks to existing accessors |
+| `supervisor/supervisor.go` | Rename `handleEnrollmentCertificate` → `handleCertificateResponse`, add renewal check in health loop, add `nextRenewalRetry` field, add `requestCertificateRenewal`, add `renewalResponseTimeout` constant |
 | `ownlogs/manager.go` | Add `ReloadClientCert` method |
 | `config/types.go` | Add `RenewalFraction float64` to `AuthConfig` |
 | `config/defaults.go` (or equivalent) | Default `RenewalFraction` to 0.75 |
@@ -199,21 +228,26 @@ Validation: must be > 0 and < 1. If unset or zero, default to 0.75.
                            │ health tick: CertificateNeedsRenewal() == true
                            ▼
                     ┌──────────────┐
-            ┌──────│   Renewing   │◄────────┐
-            │      │ (pendingCSR) │         │
-            │      └──────┬───────┘         │
-            │             │                 │
-            │    success  │    failure       │
-            │             ▼                 │
-            │      ┌─────────────┐    retry after backoff
-            │      │  Cert       │──────────┘
-            │      │  Response?  │
-            │      └──────┬──────┘
-            │             │ yes
-            │             ▼
-            │      ┌──────────────┐
-            │      │  Renewed     │
-            │      │  (restart    │
+                    │  CSR Sent    │
+                    │  (awaiting   │──────────────┐
+                    │   response)  │              │
+                    └──────┬───────┘              │
+                           │                     │
+              cert received │    response timeout │
+                           │    (2 min)          │
+                           ▼                     │
+                    ┌──────────────┐              │
+                    │  Validate    │              │
+                    │  Response    │              │
+                    └──┬───────┬──┘              │
+                  ok   │       │ rejected        │
+                       │       │ (bad key,       │
+                       │       │  bad NotAfter)  │
+                       ▼       ▼                 │
+                    ┌──────────────┐              │
+            ┌──────│   Renewed    │   Retry      │
+            │      │  (persist,   │   (backoff)  │
+            │      │   restart    │◄─────────────┘
             │      │   collector, │
             │      │   reload     │
             │      │   own-logs)  │
