@@ -52,7 +52,8 @@ New method **`PrepareRenewal(instanceUID string) ([]byte, error)`**:
 1. Loads the existing encryption private key from disk via
    `persistence.LoadEncryptionKey(m.keysDir)`
 2. Derives the X25519 public key: `curve25519.X25519(privKey, curve25519.Basepoint)`
-3. Reads the tenant ID from `m.certificate.Subject.Organization[0]` (if present)
+3. Reads the tenant ID from `m.certificate.Subject.Organization[0]` (if the
+   `Organization` slice is non-empty; otherwise no tenant ID)
 4. Calls `CreateCSR` / `CreateCSRWithTenant` with `m.signingKey`, `instanceUID`,
    and the encryption public key
 5. Returns the PEM-encoded CSR via `EncodeCSRToPEM`
@@ -63,7 +64,8 @@ validate enrollment tokens. It does not set pending state since keys aren't chan
 ### 3. Handling the Renewal Certificate Response
 
 Rename `handleEnrollmentCertificate` to **`handleCertificateResponse`** to reflect
-its dual role. The logic becomes:
+its dual role. The call site in `prepareConnectionSettings` must be updated
+accordingly. The logic becomes:
 
 1. If `authManager.HasPendingEnrollment()` → call `CompleteEnrollment` (existing flow)
 2. Else if `s.pendingCSR != nil` → this is a renewal response, call
@@ -85,28 +87,66 @@ New method **`CompleteRenewal(certPEM []byte) error`** on `auth.Manager`:
 
 ### 4. Integration into the Health Check Loop
 
-The renewal check piggybacks on the existing health monitor polling loop. In the
-supervisor's health status consumer goroutine (`s.healthWg.Go`), after reporting
-health to the OpAMP server:
+The existing health status consumer goroutine (`s.healthWg.Go`) iterates over a
+channel that only emits on health status *changes*. Since the collector typically
+stays healthy, this channel fires rarely — too infrequently for a renewal check.
 
+The solution is to add a dedicated renewal ticker within the same goroutine, using
+`select` over both the health status channel and the renewal ticker:
+
+```go
+renewalTicker := time.NewTicker(s.healthMonitor.Interval()) // same cadence as health
+defer renewalTicker.Stop()
+
+for {
+    select {
+    case status, ok := <-healthUpdates:
+        if !ok {
+            return
+        }
+        // existing health reporting logic...
+
+    case <-renewalTicker.C:
+        s.checkCertificateRenewal()
+    }
+}
 ```
-if s.authManager.IsEnrolled() && s.pendingCSR == nil {
+
+**`checkCertificateRenewal()`** (called on every renewal tick):
+```
+if !s.authManager.IsEnrolled() {
+    return
+}
+if s.authManager.CertificateExpired() {
+    s.logger.Error("Certificate expired, renewal pending")
+}
+if s.pendingCSR == nil {
     if s.authManager.CertificateNeedsRenewal(s.renewalFraction) {
         s.requestCertificateRenewal()
     }
-} else if s.pendingCSR != nil && !s.authManager.HasPendingEnrollment() {
-    // Renewal is pending — check retry backoff
+} else if !s.authManager.HasPendingEnrollment() {
+    // Renewal is pending — check retry/response timeout
     if time.Now().After(s.nextRenewalRetry) {
         s.requestCertificateRenewal()
     }
 }
 ```
 
+Note: `IsEnrolled()` checks file existence on disk (two `stat` calls). This is
+acceptable at the health check interval (default 10s) but could be cached after
+enrollment if profiling shows it matters.
+
 **`requestCertificateRenewal()`**:
 1. Calls `authManager.PrepareRenewal(instanceUID)` to get the CSR PEM
-2. Sets `s.pendingCSR` to the CSR (under lock)
-3. Calls `s.opampClient.RequestConnectionSettings(csrPEM)`
-4. On error: sets `s.nextRenewalRetry` with exponential backoff, logs at Warn level
+2. Sets `s.pendingCSR` to the CSR (under `s.mu`)
+3. Calls `s.opampClient.RequestConnectionSettings(csrPEM)` — note that "success"
+   here means the request was queued/sent, not that the server accepted it
+4. On error: advances `s.nextRenewalRetry` with exponential backoff, logs at Warn.
+   Backoff uses `server.connection.retry_backoff` parameters (`Initial`, `Max`,
+   `Multiplier`). The current backoff interval is tracked in a new
+   `s.renewalBackoff time.Duration` field (protected by `s.mu`), reset to zero
+   on successful renewal. Jitter is not applied (the health tick interval provides
+   sufficient natural jitter).
 5. On success: sets `s.nextRenewalRetry = time.Now().Add(renewalResponseTimeout)` to
    prevent re-sending on the next tick while awaiting the server's response. The
    `renewalResponseTimeout` is a constant (2 minutes). If the server does not respond
@@ -124,8 +164,11 @@ When `handleCertificateResponse` successfully processes a renewal:
    from disk (it receives paths via `GLC_INTERNAL_TLS_CLIENT_KEY_PATH` and
    `GLC_INTERNAL_TLS_CLIENT_CERT_PATH` environment variables)
 5. Reconnect the supervisor's own-logs OTLP exporter via
-   `s.ownLogsManager.ReloadClientCert()` — this re-reads the cert/key files from
-   disk and calls `Apply()` with updated `Settings.TLSConfig` to rebuild the exporter
+   `s.ownLogsManager.ReloadClientCert(ctx, certPath, keyPath)` — this calls
+   `ownlogs.LoadClientCert` to build a new `tls.Config` from the on-disk files,
+   updates the TLS config in the current `Settings`, and calls `Apply()` using the
+   last-applied settings and resource (stored on `Manager` or passed from
+   `s.currentOwnLogs`)
 6. Reset `s.nextRenewalRetry` to zero
 7. Log at Info level: "Certificate renewed successfully"
 
@@ -136,16 +179,19 @@ on the next `TelemetryConnectionSettings` update from the server.
 
 ### 6. Retry and Failure Behavior
 
-No separate backoff timer or goroutine. The health tick drives retries:
+No separate backoff timer or goroutine. The renewal ticker drives retries:
 
-- Track `nextRenewalRetry time.Time` on the supervisor, protected by `s.mu`
-  (read/written from both the health goroutine and the opamp-go callback goroutine)
-- On each health tick, if `pendingCSR != nil` (renewal) and
+- Track `nextRenewalRetry time.Time` and `renewalBackoff time.Duration` on the
+  supervisor, both protected by `s.mu` (read/written from both the health/renewal
+  goroutine and the opamp-go callback goroutine)
+- On each renewal tick, if `pendingCSR != nil` (renewal) and
   `time.Now().After(nextRenewalRetry)`, attempt again
 - Each retry generates a fresh CSR (same keys, new CSR bytes) — re-sending is
   idempotent from the server's perspective since the public key material is unchanged
-- Advance `nextRenewalRetry` with exponential backoff capped at
-  `server.connection.retry_backoff.max` (default 5 minutes)
+- Advance `renewalBackoff` using `server.connection.retry_backoff` parameters:
+  start at `Initial` (default 1s), multiply by `Multiplier` (default 2.0), cap at
+  `Max` (default 5 minutes). Set `nextRenewalRetry = time.Now().Add(renewalBackoff)`.
+  Reset `renewalBackoff` to zero on successful renewal.
 - No shutdown or degraded mode — the supervisor keeps running indefinitely
 
 **Restart recovery:** Renewal state (`pendingCSR`, `nextRenewalRetry`) is not
@@ -188,7 +234,8 @@ server:
     renewal_fraction: 0.75  # default
 ```
 
-Validation: must be > 0 and < 1. If unset or zero, default to 0.75.
+Validation at config load time: values <= 0 or >= 1 are rejected with an error.
+If unset or zero, default to 0.75.
 
 ### 8. Concurrency in `auth.Manager`
 
@@ -213,7 +260,7 @@ key are temporarily inconsistent (relevant during enrollment when both change).
 | File | Change |
 |------|--------|
 | `auth/manager.go` | Add `sync.RWMutex`, `CertificateNeedsRenewal`, `CertificateExpired`, `PrepareRenewal`, `CompleteRenewal`; add read/write locks to existing accessors |
-| `supervisor/supervisor.go` | Rename `handleEnrollmentCertificate` → `handleCertificateResponse`, add renewal check in health loop, add `nextRenewalRetry` field, add `requestCertificateRenewal`, add `renewalResponseTimeout` constant |
+| `supervisor/supervisor.go` | Rename `handleEnrollmentCertificate` → `handleCertificateResponse` (update call site in `prepareConnectionSettings`), add renewal ticker + `checkCertificateRenewal` in health goroutine, add `nextRenewalRetry`/`renewalBackoff` fields (under `s.mu`), add `requestCertificateRenewal`, add `renewalResponseTimeout` constant |
 | `ownlogs/manager.go` | Add `ReloadClientCert` method |
 | `config/types.go` | Add `RenewalFraction float64` to `AuthConfig` |
 | `config/defaults.go` (or equivalent) | Default `RenewalFraction` to 0.75 |
@@ -225,37 +272,37 @@ key are temporarily inconsistent (relevant during enrollment when both change).
                     │   Enrolled   │
                     │  (cert valid)│
                     └──────┬───────┘
-                           │ health tick: CertificateNeedsRenewal() == true
+                           │ renewal tick: CertificateNeedsRenewal() == true
                            ▼
-                    ┌──────────────┐
-                    │  CSR Sent    │
-                    │  (awaiting   │──────────────┐
-                    │   response)  │              │
-                    └──────┬───────┘              │
-                           │                     │
-              cert received │    response timeout │
-                           │    (2 min)          │
-                           ▼                     │
-                    ┌──────────────┐              │
-                    │  Validate    │              │
-                    │  Response    │              │
-                    └──┬───────┬──┘              │
-                  ok   │       │ rejected        │
-                       │       │ (bad key,       │
-                       │       │  bad NotAfter)  │
-                       ▼       ▼                 │
-                    ┌──────────────┐              │
-            ┌──────│   Renewed    │   Retry      │
-            │      │  (persist,   │   (backoff)  │
-            │      │   restart    │◄─────────────┘
-            │      │   collector, │
-            │      │   reload     │
-            │      │   own-logs)  │
-            │      └──────┬───────┘
-            │             │
-            │             ▼
-            │      ┌──────────────┐
-            └─────►│   Enrolled   │
-                   │  (new cert)  │
-                   └──────────────┘
+              ┌───►┌──────────────┐
+              │    │  CSR Sent    │
+              │    │  (awaiting   │
+              │    │   response)  │
+              │    └──────┬───┬───┘
+              │           │   │
+              │  received │   │ response timeout (2 min)
+              │           │   │
+              │           ▼   │
+              │    ┌──────────┴──┐
+              │    │  Validate   │
+              │    │  Response   │
+              │    └──┬───────┬──┘
+              │  ok   │       │ rejected (bad key, bad NotAfter)
+              │       │       │
+              │       │       └──────┐
+              │       ▼              ▼
+              │    ┌──────────┐  ┌──────────┐
+              │    │ Renewed  │  │  Retry   │
+              │    │ (persist,│  │ (backoff)│
+              │    │  restart │  └────┬─────┘
+              │    │  collctr,│       │
+              │    │  reload  │       │
+              │    │  own-log)│       │
+              │    └────┬─────┘       │
+              │         │             │
+              │         ▼             │
+              │    ┌──────────┐       │
+              └────│ Enrolled │◄──────┘
+                   │(new cert)│  (retry loops back to CSR Sent
+                   └──────────┘   on next renewal tick)
 ```
