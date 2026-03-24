@@ -72,6 +72,11 @@ accordingly. The logic becomes:
    `authManager.CompleteRenewal(certPEM)`
 3. Else → ignore (no pending request)
 
+**Branch ordering is significant:** during enrollment, both `HasPendingEnrollment()`
+and `s.pendingCSR != nil` are true. Branch 1 must be checked first so enrollment
+takes the correct path. During renewal, only `s.pendingCSR != nil` is true
+(`HasPendingEnrollment()` is false because no pending signing key exists).
+
 New method **`CompleteRenewal(certPEM []byte) error`** on `auth.Manager`:
 
 1. Parses the certificate PEM
@@ -95,7 +100,7 @@ The solution is to add a dedicated renewal ticker within the same goroutine, usi
 `select` over both the health status channel and the renewal ticker:
 
 ```go
-renewalTicker := time.NewTicker(s.healthMonitor.Interval()) // same cadence as health
+renewalTicker := time.NewTicker(s.agentCfg.Health.Interval) // same cadence as health
 defer renewalTicker.Stop()
 
 for {
@@ -121,7 +126,7 @@ if s.authManager.CertificateExpired() {
     s.logger.Error("Certificate expired, renewal pending")
 }
 if s.pendingCSR == nil {
-    if s.authManager.CertificateNeedsRenewal(s.renewalFraction) {
+    if s.authManager.CertificateNeedsRenewal(s.authCfg.RenewalFraction) {
         s.requestCertificateRenewal()
     }
 } else if !s.authManager.HasPendingEnrollment() {
@@ -159,7 +164,12 @@ When `handleCertificateResponse` successfully processes a renewal:
 
 1. Persist new certificate to disk (in `CompleteRenewal`)
 2. Update `m.certificate` in memory (in `CompleteRenewal`)
-3. Clear `s.pendingCSR` (under lock)
+3. Clear `s.pendingCSR` and reset `s.nextRenewalRetry`/`s.renewalBackoff` (under
+   `s.mu`). **Lock ordering:** `CompleteRenewal` acquires the `auth.Manager` mutex
+   first, then `s.mu` is acquired separately afterward to clear supervisor state.
+   `CompleteRenewal` must NOT be called while holding `s.mu`, to avoid deadlock.
+   This matches the existing enrollment pattern where `CompleteEnrollment` runs
+   first, then `s.mu.Lock()` clears `s.pendingCSR`.
 4. Restart/reload the collector via `s.commander` so it re-reads the cert/key files
    from disk (it receives paths via `GLC_INTERNAL_TLS_CLIENT_KEY_PATH` and
    `GLC_INTERNAL_TLS_CLIENT_CERT_PATH` environment variables)
@@ -169,8 +179,8 @@ When `handleCertificateResponse` successfully processes a renewal:
    updates the TLS config in the current `Settings`, and calls `Apply()` using the
    last-applied settings and resource (stored on `Manager` or passed from
    `s.currentOwnLogs`)
-6. Reset `s.nextRenewalRetry` to zero
-7. Log at Info level: "Certificate renewed successfully"
+6. Log at Info level: "Certificate renewed successfully", including the new cert's
+   `NotAfter` and the old cert's `NotAfter` for operational observability
 
 Steps 4 and 5 are best-effort. If either fails, log the error but do not retry —
 the new cert is already persisted to disk. The collector will pick it up on its next
@@ -234,8 +244,9 @@ server:
     renewal_fraction: 0.75  # default
 ```
 
-Validation at config load time: values <= 0 or >= 1 are rejected with an error.
-If unset or zero, default to 0.75.
+Validation at config load time: zero (Go's default for unset `float64`) defaults to
+0.75 in `DefaultConfig()`. Values that are explicitly negative or >= 1 are rejected
+with an error.
 
 ### 8. Concurrency in `auth.Manager`
 
@@ -263,7 +274,7 @@ key are temporarily inconsistent (relevant during enrollment when both change).
 | `supervisor/supervisor.go` | Rename `handleEnrollmentCertificate` → `handleCertificateResponse` (update call site in `prepareConnectionSettings`), add renewal ticker + `checkCertificateRenewal` in health goroutine, add `nextRenewalRetry`/`renewalBackoff` fields (under `s.mu`), add `requestCertificateRenewal`, add `renewalResponseTimeout` constant |
 | `ownlogs/manager.go` | Add `ReloadClientCert` method |
 | `config/types.go` | Add `RenewalFraction float64` to `AuthConfig` |
-| `config/defaults.go` (or equivalent) | Default `RenewalFraction` to 0.75 |
+| `config/types.go` | Default `RenewalFraction` to 0.75 in `DefaultConfig()` |
 
 ## State Machine
 
@@ -278,31 +289,27 @@ key are temporarily inconsistent (relevant during enrollment when both change).
               │    │  CSR Sent    │
               │    │  (awaiting   │
               │    │   response)  │
-              │    └──────┬───┬───┘
-              │           │   │
-              │  received │   │ response timeout (2 min)
-              │           │   │
-              │           ▼   │
-              │    ┌──────────┴──┐
-              │    │  Validate   │
-              │    │  Response   │
-              │    └──┬───────┬──┘
-              │  ok   │       │ rejected (bad key, bad NotAfter)
-              │       │       │
-              │       │       └──────┐
-              │       ▼              ▼
-              │    ┌──────────┐  ┌──────────┐
-              │    │ Renewed  │  │  Retry   │
-              │    │ (persist,│  │ (backoff)│
-              │    │  restart │  └────┬─────┘
-              │    │  collctr,│       │
-              │    │  reload  │       │
-              │    │  own-log)│       │
-              │    └────┬─────┘       │
-              │         │             │
-              │         ▼             │
-              │    ┌──────────┐       │
-              └────│ Enrolled │◄──────┘
-                   │(new cert)│  (retry loops back to CSR Sent
-                   └──────────┘   on next renewal tick)
+              │    └──┬────────┬──┘
+              │       │        │
+              │       │ recv   │ timeout (2 min)
+              │       ▼        │
+              │    ┌────────┐  │
+              │    │Validate│  │
+              │    │Response│  │
+              │    └─┬────┬─┘  │
+              │   ok │    │bad │
+              │      │    │    │
+              │      ▼    ▼    ▼
+              │    ┌────┐ ┌──────┐
+              │    │Done│ │Retry │
+              │    │    │ │(bkof)│
+              │    └──┬─┘ └──┬───┘
+              │       │      │
+              │       ▼      │
+              │    ┌──────┐  │
+              └────│Enrold│◄─┘
+                   │(new) │ (retry loops back to
+                   └──────┘  CSR Sent on next tick)
+
+Done = persist cert, restart collector, reload own-logs
 ```
