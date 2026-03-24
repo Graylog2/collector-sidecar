@@ -18,6 +18,7 @@
 package auth
 
 import (
+	"bytes"
 	"context"
 	"crypto/ed25519"
 	"crypto/tls"
@@ -27,10 +28,12 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/Graylog2/collector-sidecar/superv/config"
 	"go.uber.org/zap"
+	"golang.org/x/crypto/curve25519"
 
 	"github.com/Graylog2/collector-sidecar/superv/persistence"
 )
@@ -41,6 +44,8 @@ type Manager struct {
 	keysDir     string
 	httpClient  *http.Client
 	jwtLifetime time.Duration
+
+	mu sync.RWMutex
 
 	// Cached credentials
 	signingKey  ed25519.PrivateKey
@@ -117,8 +122,10 @@ func (m *Manager) LoadCredentials() error {
 		return fmt.Errorf("failed to load certificate: %w", err)
 	}
 
+	m.mu.Lock()
 	m.signingKey = signingKey
 	m.certificate = cert
+	m.mu.Unlock()
 	return nil
 }
 
@@ -216,13 +223,7 @@ func (m *Manager) CompleteEnrollment(certPEM []byte) error {
 		return errors.New("no pending enrollment - call PrepareEnrollment first")
 	}
 
-	// Parse certificate
-	block, _ := pem.Decode(certPEM)
-	if block == nil || block.Type != "CERTIFICATE" {
-		return errors.New("invalid certificate PEM")
-	}
-
-	cert, err := x509.ParseCertificate(block.Bytes)
+	cert, err := parseCertificatePEM(certPEM)
 	if err != nil {
 		return fmt.Errorf("failed to parse certificate: %w", err)
 	}
@@ -241,15 +242,17 @@ func (m *Manager) CompleteEnrollment(certPEM []byte) error {
 		return fmt.Errorf("failed to save certificate: %w", err)
 	}
 
-	// Update manager state
+	// Update manager state and clear pending state atomically.
+	// HasPendingEnrollment and EnrollmentJWT read these fields under RLock
+	// from other goroutines (renewal ticker, auth header func).
+	m.mu.Lock()
 	m.signingKey = m.pendingSigningKey
 	m.certificate = cert
-
-	// Clear pending state
 	m.pendingSigningKey = nil
 	m.pendingEncryptionKey = nil
 	m.pendingTenantID = ""
 	m.pendingEnrollmentJWT = ""
+	m.mu.Unlock()
 
 	m.logger.Info("Enrollment completed successfully",
 		zap.String("cert_fingerprint", CertificateHexFingerprint(cert)),
@@ -260,19 +263,26 @@ func (m *Manager) CompleteEnrollment(certPEM []byte) error {
 
 // HasPendingEnrollment returns true if PrepareEnrollment was called but CompleteEnrollment was not.
 func (m *Manager) HasPendingEnrollment() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return m.pendingSigningKey != nil
 }
 
 // GenerateJWT generates a new JWT for authenticating with the OpAMP server.
 func (m *Manager) GenerateJWT() (string, error) {
-	if m.signingKey == nil || m.certificate == nil {
+	m.mu.RLock()
+	signingKey := m.signingKey
+	cert := m.certificate
+	m.mu.RUnlock()
+
+	if signingKey == nil || cert == nil {
 		return "", errors.New("credentials not loaded")
 	}
 
 	// TODO: Should we really use the instance uid from the cert here or our stored instance UID?
 	//       They should be the same but maybe we want to be explicit about it and check that they match?
-	instanceUID := m.certificate.Subject.CommonName
-	return CreateSupervisorJWT(m.signingKey, m.certificate, instanceUID, m.jwtLifetime)
+	instanceUID := cert.Subject.CommonName
+	return CreateSupervisorJWT(signingKey, cert, instanceUID, m.jwtLifetime)
 }
 
 // GetAuthorizationHeader returns the Authorization header value for OpAMP connections.
@@ -286,18 +296,164 @@ func (m *Manager) GetAuthorizationHeader() (string, error) {
 
 // Certificate returns the loaded certificate.
 func (m *Manager) Certificate() *x509.Certificate {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return m.certificate
 }
 
 // CertFingerprint returns the fingerprint of the loaded certificate.
 func (m *Manager) CertFingerprint() string {
-	if m.certificate == nil {
+	m.mu.RLock()
+	cert := m.certificate
+	m.mu.RUnlock()
+
+	if cert == nil {
 		return ""
 	}
-	return CertificateHexFingerprint(m.certificate)
+	return CertificateHexFingerprint(cert)
 }
 
 // EnrollmentJWT returns the pending enrollment JWT, or empty string if not enrolling.
 func (m *Manager) EnrollmentJWT() string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return m.pendingEnrollmentJWT
+}
+
+// parseCertificatePEM decodes and parses a PEM-encoded X.509 certificate.
+func parseCertificatePEM(certPEM []byte) (*x509.Certificate, error) {
+	block, _ := pem.Decode(certPEM)
+	if block == nil || block.Type != "CERTIFICATE" {
+		return nil, errors.New("invalid certificate PEM")
+	}
+	return x509.ParseCertificate(block.Bytes)
+}
+
+// CertificateNeedsRenewal returns true if the certificate has passed the renewal
+// threshold. The threshold is computed as NotBefore + fraction * (NotAfter - NotBefore).
+func (m *Manager) CertificateNeedsRenewal(renewalFraction float64) bool {
+	m.mu.RLock()
+	cert := m.certificate
+	m.mu.RUnlock()
+
+	if cert == nil {
+		return false
+	}
+
+	lifetime := cert.NotAfter.Sub(cert.NotBefore)
+	threshold := cert.NotBefore.Add(time.Duration(float64(lifetime) * renewalFraction))
+	return time.Now().After(threshold)
+}
+
+// CertificateExpired returns true if the certificate's NotAfter is in the past.
+func (m *Manager) CertificateExpired() bool {
+	m.mu.RLock()
+	cert := m.certificate
+	m.mu.RUnlock()
+
+	if cert == nil {
+		return false
+	}
+
+	return time.Now().After(cert.NotAfter)
+}
+
+// CompleteRenewal validates and persists a renewed certificate received from the server.
+// The new cert must have the same public key as the current signing key and a later NotAfter.
+func (m *Manager) CompleteRenewal(certPEM []byte) error {
+	m.mu.RLock()
+	signingKey := m.signingKey
+	oldCert := m.certificate
+	m.mu.RUnlock()
+
+	if signingKey == nil || oldCert == nil {
+		return errors.New("credentials not loaded")
+	}
+
+	newCert, err := parseCertificatePEM(certPEM)
+	if err != nil {
+		return fmt.Errorf("failed to parse certificate: %w", err)
+	}
+
+	// Reject if the server issued a cert for a different key
+	newPub, ok := newCert.PublicKey.(ed25519.PublicKey)
+	if !ok {
+		return errors.New("renewed certificate does not contain an Ed25519 public key")
+	}
+	if !bytes.Equal(newPub, signingKey.Public().(ed25519.PublicKey)) {
+		return errors.New("public key mismatch: renewed certificate has a different public key")
+	}
+
+	// Reject if subject identity changed
+	if newCert.Subject.CommonName != oldCert.Subject.CommonName {
+		return fmt.Errorf("renewed certificate CommonName changed from %q to %q",
+			oldCert.Subject.CommonName, newCert.Subject.CommonName)
+	}
+
+	// Reject if NotAfter is not extended
+	if !newCert.NotAfter.After(oldCert.NotAfter) {
+		return fmt.Errorf("renewed certificate NotAfter (%s) is not later than current (%s)",
+			newCert.NotAfter.Format(time.RFC3339), oldCert.NotAfter.Format(time.RFC3339))
+	}
+
+	if err := persistence.SaveCertificate(m.keysDir, newCert); err != nil {
+		return fmt.Errorf("failed to save renewed certificate: %w", err)
+	}
+
+	// Update cached cert so GenerateJWT uses the new thumbprint immediately.
+	m.mu.Lock()
+	m.certificate = newCert
+	m.mu.Unlock()
+
+	m.logger.Info("Certificate renewed",
+		zap.String("cert_fingerprint", CertificateHexFingerprint(newCert)),
+		zap.Time("old_expiration", oldCert.NotAfter),
+		zap.Time("new_expiration", newCert.NotAfter),
+	)
+
+	return nil
+}
+
+// PrepareRenewal creates a CSR for certificate renewal using the existing keys.
+// Unlike PrepareEnrollment, this does not generate new keypairs or validate tokens.
+func (m *Manager) PrepareRenewal(instanceUID string) ([]byte, error) {
+	m.mu.RLock()
+	signingKey := m.signingKey
+	cert := m.certificate
+	m.mu.RUnlock()
+
+	if signingKey == nil || cert == nil {
+		return nil, errors.New("credentials not loaded")
+	}
+
+	// Load encryption private key from disk and derive public key
+	encPriv, err := persistence.LoadEncryptionKey(m.keysDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load encryption key: %w", err)
+	}
+
+	encPub, err := curve25519.X25519(encPriv, curve25519.Basepoint)
+	if err != nil {
+		return nil, fmt.Errorf("failed to derive encryption public key: %w", err)
+	}
+
+	// Read tenant ID from certificate Organization field
+	var tenantID string
+	if len(cert.Subject.Organization) > 0 {
+		tenantID = cert.Subject.Organization[0]
+	}
+
+	// Create CSR with existing signing key
+	var csrDER []byte
+	if tenantID != "" {
+		csrDER, err = CreateCSRWithTenant(signingKey, instanceUID, tenantID, encPub)
+	} else {
+		csrDER, err = CreateCSR(signingKey, instanceUID, encPub)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to create renewal CSR: %w", err)
+	}
+
+	m.logger.Info("Renewal CSR prepared", zap.String("instance_uid", instanceUID))
+	return EncodeCSRToPEM(csrDER), nil
 }

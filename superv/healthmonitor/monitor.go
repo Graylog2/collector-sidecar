@@ -112,10 +112,14 @@ type Monitor struct {
 	lastSent *HealthStatus // last status emitted to channel
 }
 
+// DefaultInterval is the default health check polling interval, used when
+// Config.Interval is zero or negative.
+const DefaultInterval = 10 * time.Second
+
 // New creates a new health monitor with an HTTP client using the configured timeout.
 func New(logger *zap.Logger, cfg Config) *Monitor {
 	if cfg.Interval <= 0 {
-		cfg.Interval = 10 * time.Second
+		cfg.Interval = DefaultInterval
 	}
 	return &Monitor{
 		logger: logger,

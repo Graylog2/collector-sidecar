@@ -54,6 +54,10 @@ import (
 
 const (
 	ServiceName = "supervisor"
+
+	// renewalResponseTimeout is how long to wait for a certificate renewal response
+	// before treating the request as failed and retrying.
+	renewalResponseTimeout = 2 * time.Minute
 )
 
 // templateVars holds variables available for template expansion in agent args.
@@ -91,6 +95,11 @@ type Supervisor struct {
 
 	// Pending enrollment CSR (set during enrollment, cleared after completion)
 	pendingCSR []byte
+
+	// Certificate renewal retry state (protected by mu)
+	nextRenewalRetry  time.Time
+	renewalBackoff    time.Duration
+	renewalBackoffCfg config.BackoffConfig
 
 	// createClientFunc creates and starts a new OpAMP client for the given
 	// settings. Defaults to createAndStartClient; overridden in tests for
@@ -226,6 +235,7 @@ func New(logger *zap.Logger, cfg config.Config, instanceUID string) (*Supervisor
 		configManager:             configMgr,
 		healthMonitor:             healthMon,
 		connectionSettingsManager: connSettingsMgr,
+		renewalBackoffCfg:         cfg.Server.Connection.RetryBackoff,
 	}
 	s.createClientFunc = s.createAndStartClient
 	return s, nil
@@ -429,21 +439,37 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	s.healthCancel = healthCancel
 	healthUpdates := s.healthMonitor.StartPolling(healthCtx)
 	s.healthWg.Go(func() {
-		for status := range healthUpdates {
-			// Only report health if we're enrolled - during enrollment we want to avoid sending multiple requests
-			// using the enrollment token.
-			if s.authManager.IsEnrolled() { // TODO: Check how expensive IsEnrolled is and if we can cache it after enrollment
-				s.mu.RLock()
-				client := s.opampClient
-				s.mu.RUnlock()
+		renewalInterval := s.agentCfg.Health.Interval
+		if renewalInterval <= 0 {
+			renewalInterval = healthmonitor.DefaultInterval
+		}
+		renewalTicker := time.NewTicker(renewalInterval)
+		defer renewalTicker.Stop()
 
-				if client != nil {
-					// TODO: Pass commander as AgentStateProvider once it implements the interface
-					// This will enable accurate agent start time reporting per OpAMP spec
-					if err := client.SetHealth(status.ToComponentHealth(nil)); err != nil {
-						s.logger.Warn("Failed to report health", zap.Error(err))
+		for {
+			select {
+			case status, ok := <-healthUpdates:
+				if !ok {
+					return
+				}
+				// Only report health if we're enrolled - during enrollment we want to avoid sending multiple requests
+				// using the enrollment token.
+				if s.authManager.IsEnrolled() { // TODO: Check how expensive IsEnrolled is and if we can cache it after enrollment
+					s.mu.RLock()
+					client := s.opampClient
+					s.mu.RUnlock()
+
+					if client != nil {
+						// TODO: Pass commander as AgentStateProvider once it implements the interface
+						// This will enable accurate agent start time reporting per OpAMP spec
+						if err := client.SetHealth(status.ToComponentHealth(nil)); err != nil {
+							s.logger.Warn("Failed to report health", zap.Error(err))
+						}
 					}
 				}
+
+			case <-renewalTicker.C:
+				s.checkCertificateRenewal()
 			}
 		}
 	})
@@ -858,7 +884,7 @@ func (s *Supervisor) prepareConnectionSettings(
 		return nil, nil
 	}
 
-	newlyEnrolled, err := s.handleEnrollmentCertificate(settings)
+	newlyEnrolled, err := s.handleCertificateResponse(settings)
 	if err != nil {
 		return nil, fmt.Errorf("enrollment certificate handling failed: %w", err)
 	}
@@ -918,8 +944,8 @@ func (s *Supervisor) applyConnectionSettings(ctx context.Context, pending *pendi
 	s.logger.Info("Connection settings applied successfully")
 }
 
-// handleEnrollmentCertificate handles certificate from enrollment response.
-func (s *Supervisor) handleEnrollmentCertificate(settings *protobufs.OpAMPConnectionSettings) (bool, error) {
+// handleCertificateResponse handles certificate from enrollment or renewal response.
+func (s *Supervisor) handleCertificateResponse(settings *protobufs.OpAMPConnectionSettings) (bool, error) {
 	cert := settings.GetCertificate()
 	if cert == nil {
 		return false, nil
@@ -932,27 +958,94 @@ func (s *Supervisor) handleEnrollmentCertificate(settings *protobufs.OpAMPConnec
 
 	s.logger.Info("Received certificate from server")
 
-	// Check if we have a pending enrollment
-	if !s.authManager.HasPendingEnrollment() {
-		s.logger.Debug("No pending enrollment, ignoring certificate")
+	// Branch 1: enrollment (HasPendingEnrollment takes precedence — during enrollment
+	// both HasPendingEnrollment() and pendingCSR != nil are true)
+	if s.authManager.HasPendingEnrollment() {
+		s.logger.Info("Completing enrollment with received certificate")
+		if err := s.authManager.CompleteEnrollment(certPEM); err != nil {
+			return false, fmt.Errorf("failed to complete enrollment: %w", err)
+		}
+
+		s.mu.Lock()
+		s.pendingCSR = nil
+		s.mu.Unlock()
+
+		s.logger.Info("Enrollment completed successfully",
+			zap.String("cert_fingerprint", s.authManager.CertFingerprint()),
+		)
+		return true, nil
+	}
+
+	// Branch 2: renewal
+	s.mu.RLock()
+	hasPendingCSR := s.pendingCSR != nil
+	s.mu.RUnlock()
+
+	if hasPendingCSR {
+		s.logger.Info("Completing certificate renewal")
+		// CompleteRenewal takes auth.Manager mutex internally.
+		// Must NOT hold s.mu here to avoid deadlock.
+		if err := s.authManager.CompleteRenewal(certPEM); err != nil {
+			return false, fmt.Errorf("failed to complete renewal: %w", err)
+		}
+
+		s.mu.Lock()
+		s.pendingCSR = nil
+		s.nextRenewalRetry = time.Time{}
+		s.renewalBackoff = 0
+		s.mu.Unlock()
+
+		s.logger.Info("Certificate renewal completed successfully",
+			zap.String("cert_fingerprint", s.authManager.CertFingerprint()),
+		)
+
+		// Best-effort post-renewal actions dispatched to the work queue so they
+		// don't block the synchronous OnOpampConnectionSettings callback.
+		// The collector restart can wait on process shutdown timeouts, and the
+		// own-logs reload must serialize with handleOwnLogs.
+		if !s.enqueueWork(context.Background(), func(wCtx context.Context) {
+			if s.commander != nil {
+				if err := s.commander.Restart(wCtx); err != nil {
+					s.logger.Error("Failed to restart collector after certificate renewal", zap.Error(err))
+				}
+			}
+			if s.ownLogsManager != nil {
+				if err := s.reloadOwnLogsCert(wCtx); err != nil {
+					s.logger.Warn("Failed to reload own-logs certificate", zap.Error(err))
+				}
+			}
+		}) {
+			s.logger.Warn("Failed to enqueue post-renewal actions")
+		}
+
+		// Return false: renewal does not require an OpAMP reconnect. The JWT
+		// HeaderFunc picks up the new cert thumbprint automatically on the
+		// next request. Only enrollment returns true (to switch from the
+		// enrollment token to JWT auth).
 		return false, nil
 	}
 
-	s.logger.Info("Completing enrollment with received certificate")
-	if err := s.authManager.CompleteEnrollment(certPEM); err != nil {
-		return false, fmt.Errorf("failed to complete enrollment: %w", err)
+	// Branch 3: no pending request
+	s.logger.Debug("No pending enrollment or renewal, ignoring certificate")
+	return false, nil
+}
+
+// reloadOwnLogsCert reloads the own-logs OTLP exporter's client certificate
+// after a certificate renewal.
+func (s *Supervisor) reloadOwnLogsCert(ctx context.Context) error {
+	if s.ownLogsManager == nil || s.currentOwnLogs == nil || s.currentOwnLogs.TLSConfig == nil {
+		return nil
 	}
 
-	// Clear the pending CSR
-	s.mu.Lock()
-	s.pendingCSR = nil
-	s.mu.Unlock()
+	certPath := s.authManager.GetSigningCertPath()
+	keyPath := s.authManager.GetSigningKeyPath()
 
-	s.logger.Info("Enrollment completed successfully",
-		zap.String("cert_fingerprint", s.authManager.CertFingerprint()),
-	)
+	if err := s.currentOwnLogs.LoadClientCert(certPath, keyPath); err != nil {
+		return fmt.Errorf("load client cert: %w", err)
+	}
 
-	return true, nil
+	res := ownlogs.BuildResource(ServiceName, version.Version(), s.instanceUID)
+	return s.ownLogsManager.Apply(ctx, *s.currentOwnLogs, res)
 }
 
 // awaitCollectorHealthy polls the health monitor until the collector reports
@@ -1352,4 +1445,97 @@ func (s *Supervisor) restartCollector(ctx context.Context) {
 	if err := s.commander.Restart(ctx); err != nil {
 		s.logger.Error("Failed to restart collector after own_logs change", zap.Error(err))
 	}
+}
+
+// checkCertificateRenewal checks if the certificate needs renewal and initiates
+// or retries the renewal process.
+func (s *Supervisor) checkCertificateRenewal() {
+	s.logger.Debug("Checking certificate renewal")
+
+	if !s.authManager.IsEnrolled() {
+		return
+	}
+
+	if s.authManager.CertificateExpired() {
+		s.logger.Error("Certificate expired, renewal pending")
+	}
+
+	if s.authManager.HasPendingEnrollment() {
+		return // enrollment in progress, not our concern
+	}
+
+	s.mu.RLock()
+	hasPendingCSR := s.pendingCSR != nil
+	nextRetry := s.nextRenewalRetry
+	s.mu.RUnlock()
+
+	if !hasPendingCSR {
+		fraction := s.authCfg.RenewalFraction
+		if fraction == 0 {
+			fraction = 0.75 // default if unset
+		}
+		if s.authManager.CertificateNeedsRenewal(fraction) {
+			s.requestCertificateRenewal()
+		}
+		return
+	}
+
+	// Renewal pending — check retry/response timeout
+	if time.Now().After(nextRetry) {
+		s.requestCertificateRenewal()
+	}
+}
+
+// requestCertificateRenewal generates a renewal CSR and sends it via OpAMP.
+func (s *Supervisor) requestCertificateRenewal() {
+	s.logger.Debug("Requesting certificate renewal")
+
+	csrPEM, err := s.authManager.PrepareRenewal(s.instanceUID)
+	if err != nil {
+		s.logger.Error("Failed to prepare renewal CSR", zap.Error(err))
+		s.advanceRenewalBackoff()
+		return
+	}
+
+	s.mu.RLock()
+	client := s.opampClient
+	s.mu.RUnlock()
+
+	if client == nil {
+		s.logger.Warn("OpAMP client not available for certificate renewal")
+		s.advanceRenewalBackoff()
+		return
+	}
+
+	s.mu.Lock()
+	s.pendingCSR = csrPEM
+	s.mu.Unlock()
+
+	if err := client.RequestConnectionSettings(csrPEM); err != nil {
+		s.logger.Warn("Failed to send certificate renewal request", zap.Error(err))
+		s.advanceRenewalBackoff()
+		return
+	}
+
+	// Request sent successfully — set response timeout
+	s.mu.Lock()
+	s.nextRenewalRetry = time.Now().Add(renewalResponseTimeout)
+	s.mu.Unlock()
+
+	s.logger.Info("Certificate renewal requested, awaiting response")
+}
+
+// advanceRenewalBackoff advances the exponential backoff for renewal retries.
+func (s *Supervisor) advanceRenewalBackoff() {
+	s.mu.Lock()
+	if s.renewalBackoff == 0 {
+		s.renewalBackoff = s.renewalBackoffCfg.Initial
+	} else {
+		s.renewalBackoff = time.Duration(float64(s.renewalBackoff) * s.renewalBackoffCfg.Multiplier)
+	}
+	if s.renewalBackoff > s.renewalBackoffCfg.Max {
+		s.renewalBackoff = s.renewalBackoffCfg.Max
+	}
+	s.nextRenewalRetry = time.Now().Add(s.renewalBackoff)
+	s.mu.Unlock()
 }

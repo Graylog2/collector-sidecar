@@ -318,6 +318,87 @@ func TestIntegration_ConnectionSettingsPersistence(t *testing.T) {
 	t.Skip("TODO: Implement with supervisor lifecycle testing")
 }
 
+func TestIntegration_CertificateRenewal(t *testing.T) {
+	// Create test server
+	server, err := testserver.New()
+	require.NoError(t, err)
+	server.RequireAuth = false
+
+	serverURL := server.Start()
+	defer server.Stop()
+
+	enrollmentToken, err := server.CreateEnrollmentJWT("test-tenant", time.Hour)
+	require.NoError(t, err)
+
+	// Setup dirs
+	dir := t.TempDir()
+	keysDir := filepath.Join(dir, "keys")
+	logger := zaptest.NewLogger(t)
+
+	// Create auth manager with test server's HTTP client
+	authMgr := auth.NewManager(logger.Named("auth"), auth.ManagerConfig{
+		KeysDir:     keysDir,
+		JWTLifetime: 5 * time.Minute,
+		HTTPClient:  server.Client(),
+	})
+
+	// Load instance UID
+	instanceUID, err := persistence.LoadOrCreateInstanceUID(dir)
+	require.NoError(t, err)
+
+	// Phase 1: Complete enrollment
+	result, err := authMgr.PrepareEnrollment(context.Background(), server.URL(), enrollmentToken, instanceUID)
+	require.NoError(t, err)
+
+	certPEM := sendCSRViaOpAMP(t, serverURL, instanceUID, result.CSRPEM)
+
+	err = authMgr.CompleteEnrollment(certPEM)
+	require.NoError(t, err)
+	require.True(t, authMgr.IsEnrolled())
+
+	// Save old cert info for comparison
+	oldFingerprint := authMgr.CertFingerprint()
+	oldNotAfter := authMgr.Certificate().NotAfter
+	require.NotEmpty(t, oldFingerprint)
+
+	// Wait briefly so the test server issues a certificate with a later NotAfter.
+	// The test server computes NotAfter as time.Now().Add(365*24h) truncated to
+	// second precision, so we need at least a 1-second gap.
+	time.Sleep(1100 * time.Millisecond)
+
+	// Phase 2: Prepare renewal CSR
+	renewalCSR, err := authMgr.PrepareRenewal(instanceUID)
+	require.NoError(t, err)
+	require.NotEmpty(t, renewalCSR)
+
+	// Phase 3: Send renewal CSR via OpAMP and receive new certificate
+	newCertPEM := sendCSRViaOpAMP(t, serverURL, instanceUID, renewalCSR)
+
+	// Phase 4: Complete renewal
+	err = authMgr.CompleteRenewal(newCertPEM)
+	require.NoError(t, err)
+
+	// Verify: new fingerprint differs from old
+	newFingerprint := authMgr.CertFingerprint()
+	require.NotEqual(t, oldFingerprint, newFingerprint, "renewed cert should have a different fingerprint")
+
+	// Verify: new NotAfter is later than old NotAfter
+	newNotAfter := authMgr.Certificate().NotAfter
+	require.True(t, newNotAfter.After(oldNotAfter),
+		"renewed cert NotAfter (%s) should be later than old (%s)", newNotAfter, oldNotAfter)
+
+	// Verify: signing key still works (can generate JWT)
+	jwt, err := authMgr.GenerateJWT()
+	require.NoError(t, err)
+	require.NotEmpty(t, jwt)
+
+	// Verify the JWT is valid and references the new cert
+	certFP, claims, err := auth.ParseSupervisorJWT(jwt)
+	require.NoError(t, err)
+	require.Equal(t, instanceUID, claims.Subject)
+	require.Equal(t, newFingerprint, certFP)
+}
+
 // sendCSRViaOpAMP sends a CSR to the test server via OpAMP WebSocket and returns the certificate.
 func sendCSRViaOpAMP(t *testing.T, serverURL, instanceUID string, csrPEM []byte) []byte {
 	t.Helper()

@@ -63,6 +63,10 @@ func RenderErrors(err error) string {
 
 // Validate checks ServerConfig for errors.
 func (s ServerConfig) Validate() error {
+	if err := s.Connection.RetryBackoff.Validate("server.connection.retry_backoff"); err != nil {
+		return err
+	}
+
 	if s.Endpoint == "" {
 		// An empty endpoint is okay for config validation, it can be set later via stored connection settings.
 		return nil
@@ -84,10 +88,32 @@ func (s ServerConfig) Validate() error {
 	return nil
 }
 
+// Validate checks BackoffConfig for errors. The prefix is used in error messages
+// to identify which backoff config is invalid (e.g. "server.connection.retry_backoff").
+func (b BackoffConfig) Validate(prefix string) error {
+	if b.Initial <= 0 {
+		return fmt.Errorf("%s.initial: must be positive, got %s", prefix, b.Initial)
+	}
+	if b.Max <= 0 {
+		return fmt.Errorf("%s.max: must be positive, got %s", prefix, b.Max)
+	}
+	if b.Max < b.Initial {
+		return fmt.Errorf("%s.max: must be >= initial (%s), got %s", prefix, b.Initial, b.Max)
+	}
+	if b.Multiplier < 1 {
+		return fmt.Errorf("%s.multiplier: must be >= 1, got %g", prefix, b.Multiplier)
+	}
+	return nil
+}
+
 // Validate checks AuthConfig for errors.
 func (k AuthConfig) Validate() error {
 	if k.JWTLifetime < minJWTLifetime {
 		return fmt.Errorf("server.auth.jwt_lifetime: JWT lifetime must be at least %s", minJWTLifetime)
+	}
+	// Zero means unset (DefaultConfig provides 0.75). Reject negative and >= 1.
+	if k.RenewalFraction != 0 && (k.RenewalFraction <= 0 || k.RenewalFraction >= 1) {
+		return fmt.Errorf("server.auth.renewal_fraction: must be between 0 (exclusive) and 1 (exclusive), got %g", k.RenewalFraction)
 	}
 	return nil
 }

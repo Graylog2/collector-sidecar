@@ -19,6 +19,7 @@ package config
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -238,6 +239,96 @@ func TestValidateTransport(t *testing.T) {
 			if tt.expectErr {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "server.transport")
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateRenewalFraction(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   float64
+		wantErr string
+	}{
+		{name: "valid 0.75", value: 0.75},
+		{name: "valid 0.5", value: 0.5},
+		{name: "valid 0.01", value: 0.01},
+		{name: "valid 0.99", value: 0.99},
+		{name: "zero defaults to 0.75", value: 0},
+		{name: "negative", value: -0.5, wantErr: "renewal_fraction"},
+		{name: "one", value: 1.0, wantErr: "renewal_fraction"},
+		{name: "greater than one", value: 1.5, wantErr: "renewal_fraction"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := AuthConfig{
+				JWTLifetime:     5 * time.Minute,
+				RenewalFraction: tt.value,
+			}
+			err := cfg.Validate()
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				require.ErrorContains(t, err, tt.wantErr)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateBackoffConfig(t *testing.T) {
+	tests := []struct {
+		name    string
+		cfg     BackoffConfig
+		wantErr string
+	}{
+		{
+			name: "valid defaults",
+			cfg:  BackoffConfig{Initial: 1 * time.Second, Max: 5 * time.Minute, Multiplier: 2.0},
+		},
+		{
+			name: "multiplier exactly 1",
+			cfg:  BackoffConfig{Initial: 1 * time.Second, Max: 1 * time.Second, Multiplier: 1.0},
+		},
+		{
+			name:    "zero initial",
+			cfg:     BackoffConfig{Initial: 0, Max: 5 * time.Minute, Multiplier: 2.0},
+			wantErr: "initial",
+		},
+		{
+			name:    "negative initial",
+			cfg:     BackoffConfig{Initial: -1 * time.Second, Max: 5 * time.Minute, Multiplier: 2.0},
+			wantErr: "initial",
+		},
+		{
+			name:    "zero max",
+			cfg:     BackoffConfig{Initial: 1 * time.Second, Max: 0, Multiplier: 2.0},
+			wantErr: "max",
+		},
+		{
+			name:    "max less than initial",
+			cfg:     BackoffConfig{Initial: 5 * time.Minute, Max: 1 * time.Second, Multiplier: 2.0},
+			wantErr: "max",
+		},
+		{
+			name:    "zero multiplier",
+			cfg:     BackoffConfig{Initial: 1 * time.Second, Max: 5 * time.Minute, Multiplier: 0},
+			wantErr: "multiplier",
+		},
+		{
+			name:    "multiplier less than 1",
+			cfg:     BackoffConfig{Initial: 1 * time.Second, Max: 5 * time.Minute, Multiplier: 0.5},
+			wantErr: "multiplier",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.cfg.Validate("test.backoff")
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				require.ErrorContains(t, err, tt.wantErr)
 			} else {
 				require.NoError(t, err)
 			}
