@@ -35,7 +35,7 @@ func TestServer_JWKS(t *testing.T) {
 
 	// Fetch JWKS
 	client := server.Client()
-	keys, err := auth.FetchJWKS(client, url)
+	keys, err := auth.FetchJWKS(t.Context(), client, url)
 	require.NoError(t, err)
 	require.Len(t, keys, 1)
 	require.Equal(t, server.KeyID, keys[0].KeyID)
@@ -55,7 +55,7 @@ func TestServer_EnrollmentJWT(t *testing.T) {
 
 	// Validate it using our auth package
 	client := server.Client()
-	keys, err := auth.FetchJWKS(client, url)
+	keys, err := auth.FetchJWKS(t.Context(), client, url)
 	require.NoError(t, err)
 
 	claims, err := auth.ValidateEnrollmentJWT(jwt, keys)

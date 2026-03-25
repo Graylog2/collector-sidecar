@@ -39,10 +39,11 @@ func DeriveEnrollmentEndpoint(enrollmentURL string) (string, error) {
 	if scheme == "" && host == "" {
 		return "", errors.New("invalid enrollment URL: missing scheme and host")
 	}
-	if path == "" || path == "/" {
+	path = strings.TrimSuffix(path, "/")
+	if path == "" {
 		path = DefaultOpAMPPath
 	} else if !strings.HasSuffix(path, DefaultOpAMPPath) {
-		path = strings.TrimSuffix(path, "/") + DefaultOpAMPPath
+		path = path + DefaultOpAMPPath
 	}
 
 	endpoint := &url.URL{

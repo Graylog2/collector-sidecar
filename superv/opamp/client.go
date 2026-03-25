@@ -256,7 +256,7 @@ func (c *Client) Start(ctx context.Context) error {
 	}
 
 	if err := c.opampClient.Start(ctx, settings); err != nil {
-		return err
+		return fmt.Errorf("opamp client start: %w", err)
 	}
 
 	c.started.Store(true)

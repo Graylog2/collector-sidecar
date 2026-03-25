@@ -106,6 +106,11 @@ func (r *TestRecorder) Clear() {
 func (r *TestRecorder) WaitFor(predicate func(Event) bool, timeout time.Duration) (Event, error) {
 	deadline := time.Now().Add(timeout)
 
+	timer := time.AfterFunc(timeout, func() {
+		r.cond.Broadcast()
+	})
+	defer timer.Stop()
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -118,27 +123,11 @@ func (r *TestRecorder) WaitFor(predicate func(Event) bool, timeout time.Duration
 		}
 
 		// Check timeout
-		remaining := time.Until(deadline)
-		if remaining <= 0 {
+		if time.Now().After(deadline) {
 			return Event{}, ErrTimeout
 		}
 
-		// Wait for new events with timeout
-		done := make(chan struct{})
-		go func() {
-			time.Sleep(remaining)
-			r.cond.Broadcast()
-			close(done)
-		}()
-
 		r.cond.Wait()
-
-		select {
-		case <-done:
-			// Timeout occurred
-		default:
-			// New event arrived
-		}
 	}
 }
 

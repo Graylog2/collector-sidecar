@@ -671,6 +671,9 @@ func (a *AgentConnection) Send(msg *protobufs.ServerToAgent) error {
 
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	if a.Conn == nil {
+		return fmt.Errorf("agent %s is connected via HTTP polling, not WebSocket", a.InstanceUID)
+	}
 	return a.Conn.WriteMessage(websocket.BinaryMessage, data)
 }
 

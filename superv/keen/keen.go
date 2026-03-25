@@ -77,10 +77,20 @@ func New(logger *zap.Logger, logsDir string, cfg Config, backoff *Backoff) (*Com
 }
 
 // Start starts the agent process.
+// When crash recovery is enabled (MaxRetries >= 1), the first start is
+// synchronous so that callers observe any immediate launch failure. If the
+// first start succeeds, subsequent crash-recovery restarts run in a background
+// goroutine; use [Commander.Done] to detect when recovery gives up.
 func (c *Commander) Start(ctx context.Context) error {
 	if c.backoff.MaxRetries() < 1 {
 		// No crash recovery requested
 		return c.start(ctx)
+	}
+
+	// Start the process synchronously first so the caller can observe
+	// immediate failures (e.g., missing executable).
+	if err := c.start(ctx); err != nil {
+		return err
 	}
 
 	c.mu.Lock()
@@ -138,7 +148,7 @@ func (c *Commander) buildEnv() []string {
 
 func (c *Commander) startNormal() error {
 	logFilePath := filepath.Join(c.logsDir, "agent.log")
-	logFile, err := os.Create(logFilePath)
+	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		c.running.Store(false)
 		return fmt.Errorf("cannot create log file %s: %w", logFilePath, err)
@@ -264,7 +274,11 @@ func (c *Commander) Stop(ctx context.Context) error {
 	c.logger.Debug("Stopping agent process", zap.Int("pid", pid))
 
 	if err := sendShutdownSignal(cmd.Process); err != nil {
-		return err
+		if !c.running.Load() {
+			// Process already exited, nothing to do.
+			return nil
+		}
+		return fmt.Errorf("failed to send shutdown signal: %w", err)
 	}
 
 	// Wait with timeout for graceful shutdown
@@ -311,6 +325,8 @@ func (c *Commander) ReloadConfig() error {
 }
 
 // Exited returns a channel that signals when the agent process exits.
+// When crash recovery is enabled (MaxRetries >= 1), the recovery loop consumes
+// exit events. Use [Commander.Done] instead to detect when the recovery loop completes.
 func (c *Commander) Exited() <-chan struct{} {
 	return c.exitCh
 }
@@ -345,18 +361,27 @@ func (c *Commander) IsRunning() bool {
 }
 
 // recoveryLoop runs the crash recovery loop.
+// The first start is done synchronously in [Commander.Start], so this loop
+// begins by waiting for the already-running process to exit.
 func (c *Commander) recoveryLoop(ctx context.Context) {
 	defer close(c.recoveryDone)
 
+	// The first iteration waits for the process started by Start().
+	// Subsequent iterations start the process themselves.
+	firstIteration := true
+
 	for {
-		// Start the process
-		if err := c.start(ctx); err != nil {
-			c.logger.Error("Failed to start agent", zap.Error(err))
-			if !c.handleCrash(ctx) {
-				return
+		if !firstIteration {
+			// Start the process
+			if err := c.start(ctx); err != nil {
+				c.logger.Error("Failed to start agent", zap.Error(err))
+				if !c.handleCrash(ctx) {
+					return
+				}
+				continue
 			}
-			continue
 		}
+		firstIteration = false
 
 		// Mark as running for stability tracking
 		c.backoff.MarkRunning()

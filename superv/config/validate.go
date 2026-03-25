@@ -67,6 +67,10 @@ func (s ServerConfig) Validate() error {
 		return err
 	}
 
+	if !slices.Contains(validTransports, s.Transport) {
+		return fmt.Errorf("server.transport: must be one of %v, got %q", validTransports, s.Transport)
+	}
+
 	if s.Endpoint == "" {
 		// An empty endpoint is okay for config validation, it can be set later via stored connection settings.
 		return nil
@@ -79,10 +83,6 @@ func (s ServerConfig) Validate() error {
 
 	if !slices.Contains(validSchemes, u.Scheme) {
 		return fmt.Errorf("server.endpoint: scheme must be one of %v, got %q", validSchemes, u.Scheme)
-	}
-
-	if !slices.Contains(validTransports, s.Transport) {
-		return fmt.Errorf("server.transport: must be one of %v, got %q", validTransports, s.Transport)
 	}
 
 	return nil

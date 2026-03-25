@@ -156,7 +156,7 @@ func (m *Manager) PrepareEnrollment(ctx context.Context, enrollmentEndpoint, enr
 
 	// Fetch JWKS
 	m.logger.Debug("Fetching JWKS", zap.String("base-url", baseURL))
-	jwks, err := FetchJWKS(m.httpClient, baseURL)
+	jwks, err := FetchJWKS(ctx, m.httpClient, baseURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch JWKS: %w", err)
 	}
@@ -199,11 +199,15 @@ func (m *Manager) PrepareEnrollment(ctx context.Context, enrollmentEndpoint, enr
 		return nil, fmt.Errorf("failed to create CSR: %w", err)
 	}
 
-	// Store pending credentials (will be saved when certificate is received)
+	// Store pending credentials (will be saved when certificate is received).
+	// HasPendingEnrollment and EnrollmentJWT read these fields under RLock
+	// from other goroutines, so writes must be protected.
+	m.mu.Lock()
 	m.pendingSigningKey = signingPriv
 	m.pendingEncryptionKey = encPriv
 	m.pendingTenantID = claims.TenantID
 	m.pendingEnrollmentJWT = enrollmentToken
+	m.mu.Unlock()
 
 	// Return the CSR in PEM format for submission via OpAMP
 	csrPEM := EncodeCSRToPEM(csrDER)
@@ -219,7 +223,12 @@ func (m *Manager) PrepareEnrollment(ctx context.Context, enrollmentEndpoint, enr
 // CompleteEnrollment stores the certificate received from the server and saves all credentials.
 // The certPEM should be the certificate received in the OpAMP connection_settings response.
 func (m *Manager) CompleteEnrollment(certPEM []byte) error {
-	if m.pendingSigningKey == nil {
+	m.mu.RLock()
+	pendingSigningKey := m.pendingSigningKey
+	pendingEncryptionKey := m.pendingEncryptionKey
+	m.mu.RUnlock()
+
+	if pendingSigningKey == nil {
 		return errors.New("no pending enrollment - call PrepareEnrollment first")
 	}
 
@@ -230,11 +239,11 @@ func (m *Manager) CompleteEnrollment(certPEM []byte) error {
 
 	// Save credentials
 	m.logger.Debug("Saving credentials")
-	if err := persistence.SaveSigningKey(m.keysDir, m.pendingSigningKey); err != nil {
+	if err := persistence.SaveSigningKey(m.keysDir, pendingSigningKey); err != nil {
 		return fmt.Errorf("failed to save signing key: %w", err)
 	}
 
-	if err := persistence.SaveEncryptionKey(m.keysDir, m.pendingEncryptionKey); err != nil {
+	if err := persistence.SaveEncryptionKey(m.keysDir, pendingEncryptionKey); err != nil {
 		return fmt.Errorf("failed to save encryption key: %w", err)
 	}
 
@@ -243,10 +252,8 @@ func (m *Manager) CompleteEnrollment(certPEM []byte) error {
 	}
 
 	// Update manager state and clear pending state atomically.
-	// HasPendingEnrollment and EnrollmentJWT read these fields under RLock
-	// from other goroutines (renewal ticker, auth header func).
 	m.mu.Lock()
-	m.signingKey = m.pendingSigningKey
+	m.signingKey = pendingSigningKey
 	m.certificate = cert
 	m.pendingSigningKey = nil
 	m.pendingEncryptionKey = nil

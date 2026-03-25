@@ -33,7 +33,6 @@ const (
 	SigningKeyFile    = "signing.key"
 	SigningCertFile   = "signing.crt"
 	encryptionKeyFile = "encryption.key"
-	bearerTokenFile   = "bearer_token"
 )
 
 // SaveSigningKey saves an Ed25519 private key to disk in PEM format.
@@ -83,6 +82,10 @@ func LoadSigningKey(keysDir string) (ed25519.PrivateKey, error) {
 
 // SaveEncryptionKey saves an X25519 private key to disk in PEM format.
 func SaveEncryptionKey(keysDir string, key []byte) error {
+	if len(key) != 32 {
+		return fmt.Errorf("invalid X25519 key length: got %d, want 32", len(key))
+	}
+
 	block := &pem.Block{
 		Type:  "X25519 PRIVATE KEY",
 		Bytes: key,
@@ -104,6 +107,9 @@ func LoadEncryptionKey(keysDir string) ([]byte, error) {
 	block, _ := pem.Decode(content)
 	if block == nil {
 		return nil, errors.New("failed to decode PEM block")
+	}
+	if block.Type != "X25519 PRIVATE KEY" {
+		return nil, fmt.Errorf("unexpected PEM block type: %q", block.Type)
 	}
 
 	return block.Bytes, nil

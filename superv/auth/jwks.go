@@ -18,6 +18,7 @@
 package auth
 
 import (
+	"context"
 	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/json"
@@ -46,8 +47,12 @@ type jwkEntry struct {
 }
 
 // FetchJWKS fetches the JWKS from the server's well-known endpoint.
-func FetchJWKS(client *http.Client, baseURL string) ([]JWK, error) {
-	resp, err := client.Get(baseURL + "/.well-known/jwks.json")
+func FetchJWKS(ctx context.Context, client *http.Client, baseURL string) ([]JWK, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/.well-known/jwks.json", nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create JWKS request: %w", err)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch JWKS: %w", err)
 	}

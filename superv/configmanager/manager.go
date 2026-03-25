@@ -309,7 +309,7 @@ func (m *Manager) EnsureBootstrapConfig() error {
 	// Inject OpAMP extension (updates endpoint on every start).
 	config, err = m.injectExtensions(config)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to inject extensions: %w", err)
 	}
 
 	// The collector requires at least one pipeline. If the config has none

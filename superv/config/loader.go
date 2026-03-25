@@ -57,7 +57,7 @@ func Load(path string) (Config, error) {
 	}
 
 	// Load environment variables (highest precedence)
-	// GLC_SERVER_ENDPOINT -> server::endpoint
+	// GLC_SERVER__ENDPOINT -> server::endpoint
 	if err := k.Load(env.Provider("::", env.Opt{
 		Prefix: envPrefix,
 		TransformFunc: func(k, v string) (string, any) {
