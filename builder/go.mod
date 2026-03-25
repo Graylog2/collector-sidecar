@@ -38,6 +38,7 @@ require (
 )
 
 require (
+	github.com/DeRuina/timberjack v1.4.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bmatcuk/doublestar/v4 v4.10.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect

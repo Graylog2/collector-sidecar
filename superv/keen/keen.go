@@ -19,6 +19,7 @@ package keen
 
 import (
 	"bufio"
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -31,8 +32,16 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/DeRuina/timberjack"
 	"go.uber.org/zap"
 )
+
+// LogRotationConfig holds configuration for agent log file rotation.
+type LogRotationConfig struct {
+	MaxSize    int // Maximum size in megabytes before rotation (default: 100)
+	MaxBackups int // Maximum number of rotated log files to keep (default: 5)
+	MaxAge     int // Maximum age in days to retain old log files (default: 30)
+}
 
 // Config holds the configuration for the commander.
 type Config struct {
@@ -40,6 +49,7 @@ type Config struct {
 	Args            []string
 	Env             map[string]string
 	PassthroughLogs bool
+	LogRotation     LogRotationConfig
 }
 
 // Commander manages the lifecycle of an agent process.
@@ -52,6 +62,9 @@ type Commander struct {
 	running atomic.Bool
 	doneCh  chan struct{}
 	exitCh  chan struct{}
+
+	// Log rotation writer (persists across restarts)
+	logWriter *timberjack.Logger
 
 	// Crash recovery fields
 	backoff      *Backoff
@@ -147,28 +160,30 @@ func (c *Commander) buildEnv() []string {
 }
 
 func (c *Commander) startNormal() error {
-	logFilePath := filepath.Join(c.logsDir, "agent.log")
-	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
-	if err != nil {
-		c.running.Store(false)
-		return fmt.Errorf("cannot create log file %s: %w", logFilePath, err)
+	c.mu.Lock()
+	if c.logWriter == nil {
+		rot := c.cfg.LogRotation
+		c.logWriter = &timberjack.Logger{
+			Filename:   filepath.Join(c.logsDir, "agent.log"),
+			MaxSize:    cmp.Or(rot.MaxSize, 100),
+			MaxBackups: cmp.Or(rot.MaxBackups, 5),
+			MaxAge:     cmp.Or(rot.MaxAge, 30),
+			LocalTime:  true,
+		}
 	}
+	c.mu.Unlock()
 
-	c.cmd.Stdout = logFile
-	c.cmd.Stderr = logFile
+	c.cmd.Stdout = c.logWriter
+	c.cmd.Stderr = c.logWriter
 
 	if err := c.cmd.Start(); err != nil {
-		logFile.Close()
 		c.running.Store(false)
 		return fmt.Errorf("failed to start agent: %w", err)
 	}
 
 	c.logger.Debug("Agent process started", zap.Int("pid", c.cmd.Process.Pid))
 
-	go func() {
-		defer logFile.Close()
-		c.watch()
-	}()
+	go c.watch()
 
 	return nil
 }
@@ -252,6 +267,8 @@ func (c *Commander) watch() {
 
 // Stop stops the agent process gracefully.
 func (c *Commander) Stop(ctx context.Context) error {
+	defer c.closeLogWriter()
+
 	// Cancel recovery loop if running
 	c.mu.Lock()
 	stopRecovery := c.stopRecovery
@@ -301,6 +318,18 @@ func (c *Commander) Stop(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (c *Commander) closeLogWriter() {
+	c.mu.Lock()
+	lw := c.logWriter
+	c.logWriter = nil
+	c.mu.Unlock()
+	if lw != nil {
+		if err := lw.Close(); err != nil {
+			c.logger.Warn("Failed to close log writer", zap.Error(err))
+		}
+	}
 }
 
 // Restart restarts the agent process.
