@@ -57,5 +57,5 @@ jobs:
 
           for file in $(find . -maxdepth 1 -name 'graylog-collector*' -type f | sort -V); do
             aws s3 cp --no-progress "$file" "s3://${AWS_S3_BUCKET}/sidecar/v2/${TIMESTAMP}/"
-            printf -- "- https://downloads.graylog.org/snapshots/sidecar/v2/%s/%s\n" "$TIMESTAMP" "$file" >> "$GITHUB_STEP_SUMMARY"
+            printf -- "- https://downloads.graylog.org/snapshots/sidecar/v2/%s/%s\n" "$TIMESTAMP" "$(basename "$file")" >> "$GITHUB_STEP_SUMMARY"
           done
