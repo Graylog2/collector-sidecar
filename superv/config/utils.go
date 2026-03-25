@@ -18,6 +18,7 @@
 package config
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"net"
@@ -39,10 +40,8 @@ func DeriveEnrollmentEndpoint(enrollmentURL string) (string, error) {
 	if scheme == "" && host == "" {
 		return "", errors.New("invalid enrollment URL: missing scheme and host")
 	}
-	path = strings.TrimSuffix(path, "/")
-	if path == "" {
-		path = DefaultOpAMPPath
-	} else if !strings.HasSuffix(path, DefaultOpAMPPath) {
+	path = cmp.Or(strings.TrimSuffix(path, "/"), DefaultOpAMPPath)
+	if !strings.HasSuffix(path, DefaultOpAMPPath) {
 		path = path + DefaultOpAMPPath
 	}
 

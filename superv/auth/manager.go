@@ -19,6 +19,7 @@ package auth
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"crypto/ed25519"
 	"crypto/tls"
@@ -81,10 +82,7 @@ func NewManager(logger *zap.Logger, cfg ManagerConfig) *Manager {
 		}}
 	}
 
-	jwtLifetime := cfg.JWTLifetime
-	if jwtLifetime == 0 {
-		jwtLifetime = 5 * time.Minute
-	}
+	jwtLifetime := cmp.Or(cfg.JWTLifetime, 5*time.Minute)
 
 	return &Manager{
 		logger:      logger,

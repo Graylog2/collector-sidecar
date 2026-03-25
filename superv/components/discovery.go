@@ -18,6 +18,7 @@
 package components
 
 import (
+	"cmp"
 	"context"
 	"crypto/sha256"
 	"fmt"
@@ -79,9 +80,7 @@ type DiscoverConfig struct {
 
 // Discover runs the collector's components command and parses the output.
 func Discover(ctx context.Context, cfg DiscoverConfig) (*Components, error) {
-	if cfg.Timeout == 0 {
-		cfg.Timeout = 10 * time.Second
-	}
+	cfg.Timeout = cmp.Or(cfg.Timeout, 10*time.Second)
 
 	ctx, cancel := context.WithTimeout(ctx, cfg.Timeout)
 	defer cancel()

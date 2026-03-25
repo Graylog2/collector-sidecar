@@ -18,6 +18,7 @@
 package keen
 
 import (
+	"cmp"
 	"sync"
 	"time"
 
@@ -71,20 +72,12 @@ type Backoff struct {
 func NewBackoff(cfg BackoffConfig) *Backoff {
 	defaults := DefaultBackoffConfig()
 
-	// Apply defaults for zero values
-	// RandomizationFactor of 0 is valid (no jitter), so don't default it
-	if cfg.InitialInterval == 0 {
-		cfg.InitialInterval = defaults.InitialInterval
-	}
-	if cfg.MaxInterval == 0 {
-		cfg.MaxInterval = defaults.MaxInterval
-	}
-	if cfg.Multiplier == 0 {
-		cfg.Multiplier = defaults.Multiplier
-	}
-	if cfg.StableAfter == 0 {
-		cfg.StableAfter = defaults.StableAfter
-	}
+	// Apply defaults for zero values.
+	// RandomizationFactor of 0 is valid (no jitter), so don't default it.
+	cfg.InitialInterval = cmp.Or(cfg.InitialInterval, defaults.InitialInterval)
+	cfg.MaxInterval = cmp.Or(cfg.MaxInterval, defaults.MaxInterval)
+	cfg.Multiplier = cmp.Or(cfg.Multiplier, defaults.Multiplier)
+	cfg.StableAfter = cmp.Or(cfg.StableAfter, defaults.StableAfter)
 
 	exp := backoff.NewExponentialBackOff()
 	exp.InitialInterval = cfg.InitialInterval
