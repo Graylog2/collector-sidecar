@@ -441,12 +441,11 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	s.healthCancel = healthCancel
 	healthUpdates := s.healthMonitor.StartPolling(healthCtx)
 	s.healthWg.Go(func() {
-		renewalInterval := s.authCfg.RenewalInterval // validated > 0 by config
-		// Check immediately at startup, then on the ticker interval.
-		s.checkCertificateRenewal()
-
-		renewalTicker := time.NewTicker(renewalInterval)
-		defer renewalTicker.Stop()
+		// Check immediately at startup; the returned delay schedules the next check
+		// based on the certificate's actual renewal time rather than a fixed interval.
+		nextCheck := s.checkCertificateRenewal()
+		renewalTimer := time.NewTimer(nextCheck)
+		defer renewalTimer.Stop()
 
 		for {
 			select {
@@ -470,8 +469,9 @@ func (s *Supervisor) Start(ctx context.Context) error {
 					}
 				}
 
-			case <-renewalTicker.C:
-				s.checkCertificateRenewal()
+			case <-renewalTimer.C:
+				nextCheck = s.checkCertificateRenewal()
+				renewalTimer.Reset(nextCheck)
 			}
 		}
 	})
@@ -1514,12 +1514,16 @@ func (s *Supervisor) restartCollector(ctx context.Context) {
 }
 
 // checkCertificateRenewal checks if the certificate needs renewal and initiates
-// or retries the renewal process.
-func (s *Supervisor) checkCertificateRenewal() {
+// or retries the renewal process. It returns the duration until the next check
+// should occur, allowing the caller to use a resettable timer instead of a
+// fixed-interval ticker.
+func (s *Supervisor) checkCertificateRenewal() time.Duration {
 	s.logger.Debug("Checking certificate renewal")
 
+	fallback := s.authCfg.RenewalInterval
+
 	if !s.authManager.IsEnrolled() {
-		return
+		return fallback
 	}
 
 	if s.authManager.CertificateExpired() {
@@ -1527,7 +1531,7 @@ func (s *Supervisor) checkCertificateRenewal() {
 	}
 
 	if s.authManager.HasPendingEnrollment() {
-		return // enrollment in progress, not our concern
+		return fallback // enrollment in progress, not our concern
 	}
 
 	s.mu.RLock()
@@ -1542,14 +1546,30 @@ func (s *Supervisor) checkCertificateRenewal() {
 		}
 		if s.authManager.CertificateNeedsRenewal(fraction) {
 			s.requestCertificateRenewal()
+			return fallback
 		}
-		return
+		// Schedule next check for when the cert actually needs renewal,
+		// but no later than the fallback interval so we still periodically
+		// verify cert state for long-lived certificates.
+		renewalTime := s.authManager.CertificateRenewalTime(fraction)
+		if renewalTime.IsZero() {
+			return fallback
+		}
+		delay := time.Until(renewalTime)
+		if delay <= 0 {
+			return fallback
+		}
+		return min(delay, fallback)
 	}
 
 	// Renewal pending — check retry/response timeout
 	if time.Now().After(nextRetry) {
 		s.requestCertificateRenewal()
+		return fallback
 	}
+
+	// Wait until the next retry is due.
+	return time.Until(nextRetry)
 }
 
 // requestCertificateRenewal generates a renewal CSR and sends it via OpAMP.

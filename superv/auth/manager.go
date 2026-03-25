@@ -337,17 +337,23 @@ func parseCertificatePEM(certPEM []byte) (*x509.Certificate, error) {
 // CertificateNeedsRenewal returns true if the certificate has passed the renewal
 // threshold. The threshold is computed as NotBefore + fraction * (NotAfter - NotBefore).
 func (m *Manager) CertificateNeedsRenewal(renewalFraction float64) bool {
+	return !m.CertificateRenewalTime(renewalFraction).IsZero() &&
+		!time.Now().Before(m.CertificateRenewalTime(renewalFraction))
+}
+
+// CertificateRenewalTime returns the time at which the certificate should be
+// renewed. Returns zero if no certificate is loaded.
+func (m *Manager) CertificateRenewalTime(renewalFraction float64) time.Time {
 	m.mu.RLock()
 	cert := m.certificate
 	m.mu.RUnlock()
 
 	if cert == nil {
-		return false
+		return time.Time{}
 	}
 
 	lifetime := cert.NotAfter.Sub(cert.NotBefore)
-	threshold := cert.NotBefore.Add(time.Duration(float64(lifetime) * renewalFraction))
-	return time.Now().After(threshold)
+	return cert.NotBefore.Add(time.Duration(float64(lifetime) * renewalFraction))
 }
 
 // CertificateExpired returns true if the certificate's NotAfter is in the past.
