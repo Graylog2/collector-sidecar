@@ -79,6 +79,10 @@ func New(logger *zap.Logger, logsDir string, cfg Config, backoff *Backoff) (*Com
 	if backoff == nil {
 		return nil, errors.New("backoff is required")
 	}
+	logsDir = filepath.Join(logsDir, "logs")
+	if err := os.MkdirAll(logsDir, 0o750); err != nil {
+		return nil, fmt.Errorf("failed to create logs directory: %w", err)
+	}
 	return &Commander{
 		logger:  logger,
 		logsDir: logsDir,
