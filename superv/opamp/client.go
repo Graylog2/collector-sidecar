@@ -37,13 +37,14 @@ import (
 
 // ClientConfig holds configuration for the OpAMP client.
 type ClientConfig struct {
-	Endpoint          string
-	InstanceUID       string
-	Headers           http.Header
-	HeaderFunc        func(http.Header) http.Header
-	TLSConfig         *tls.Config
-	Capabilities      Capabilities
-	HeartbeatInterval time.Duration // 0 uses opamp-go default (30s)
+	Endpoint             string
+	InstanceUID          string
+	Headers              http.Header
+	HeaderFunc           func(http.Header) http.Header
+	TLSConfig            *tls.Config
+	Capabilities         Capabilities
+	HeartbeatInterval    time.Duration // 0 uses opamp-go default (30s)
+	MaxHeartbeatInterval time.Duration // 0 means no cap
 }
 
 // Validate validates the client configuration.
@@ -239,8 +240,16 @@ func (c *Client) Start(ctx context.Context) error {
 	// Pass heartbeat interval to opamp-go if configured. When zero (default),
 	// opamp-go uses its own default (30s). The interval is sourced from
 	// persisted connection.Settings, so it survives reconnects correctly.
+	//
+	// Cap with MaxHeartbeatInterval: opamp-go's HTTP client uses this as
+	// the polling interval, so an excessively large value (e.g. server
+	// sending days/years) would effectively stop the client from polling
+	// and prevent recovery from transient errors.
 	if c.cfg.HeartbeatInterval > 0 {
 		interval := c.cfg.HeartbeatInterval
+		if c.cfg.MaxHeartbeatInterval > 0 {
+			interval = min(interval, c.cfg.MaxHeartbeatInterval)
+		}
 		settings.HeartbeatInterval = &interval
 	}
 

@@ -36,12 +36,13 @@ type Config struct {
 
 // ServerConfig configures the upstream OpAMP server connection.
 type ServerConfig struct {
-	Endpoint   string            `koanf:"endpoint"`
-	Transport  string            `koanf:"transport"` // websocket | http | auto
-	Headers    map[string]string `koanf:"headers"`
-	TLS        TLSConfig         `koanf:"tls"`
-	Connection ConnectionConfig  `koanf:"connection"`
-	Auth       AuthConfig        `koanf:"auth"`
+	Endpoint             string            `koanf:"endpoint"`
+	Transport            string            `koanf:"transport"` // websocket | http | auto
+	Headers              map[string]string `koanf:"headers"`
+	TLS                  TLSConfig         `koanf:"tls"`
+	Connection           ConnectionConfig  `koanf:"connection"`
+	Auth                 AuthConfig        `koanf:"auth"`
+	MaxHeartbeatInterval time.Duration     `koanf:"max_heartbeat_interval"`
 }
 
 // TLSConfig configures TLS for server connection.
@@ -227,8 +228,9 @@ type LoggingConfig struct {
 func DefaultConfig() Config {
 	return Config{
 		Server: ServerConfig{
-			Endpoint:  "", //ws://localhost:4320/v1/opamp",
-			Transport: "auto",
+			Endpoint:             "", //ws://localhost:4320/v1/opamp",
+			Transport:            "auto",
+			MaxHeartbeatInterval: 15 * time.Minute,
 			Connection: ConnectionConfig{
 				RetryBackoff: BackoffConfig{
 					Initial:    1 * time.Second,

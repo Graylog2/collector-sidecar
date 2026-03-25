@@ -71,6 +71,7 @@ type Supervisor struct {
 	agentCfg                  config.AgentConfig
 	authCfg                   config.AuthConfig
 	localServerCfg            config.LocalServer
+	maxHeartbeatInterval      time.Duration
 	persistenceDir            string
 	instanceUID               string
 	collectorVersion          string
@@ -229,6 +230,7 @@ func New(logger *zap.Logger, cfg config.Config, instanceUID string) (*Supervisor
 		agentCfg:                  cfg.Agent,
 		authCfg:                   cfg.Server.Auth,
 		localServerCfg:            cfg.LocalServer,
+		maxHeartbeatInterval:      cfg.Server.MaxHeartbeatInterval,
 		persistenceDir:            cfg.Persistence.Dir,
 		instanceUID:               instanceUID,
 		authManager:               authMgr,
@@ -648,11 +650,12 @@ func (s *Supervisor) createAndStartClient(ctx context.Context, settings connecti
 	}
 
 	client, err := opamp.NewClient(s.logger, opamp.ClientConfig{
-		Endpoint:          settings.Endpoint,
-		InstanceUID:       s.instanceUID,
-		Headers:           headers,
-		HeaderFunc:        headerFunc,
-		HeartbeatInterval: settings.HeartbeatInterval,
+		Endpoint:             settings.Endpoint,
+		InstanceUID:          s.instanceUID,
+		Headers:              headers,
+		HeaderFunc:           headerFunc,
+		HeartbeatInterval:    settings.HeartbeatInterval,
+		MaxHeartbeatInterval: s.maxHeartbeatInterval,
 		TLSConfig: &tls.Config{
 			InsecureSkipVerify: settings.TLS.Insecure,
 			MinVersion:         minVersion,

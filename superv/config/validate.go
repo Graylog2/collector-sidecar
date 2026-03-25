@@ -71,6 +71,10 @@ func (s ServerConfig) Validate() error {
 		return fmt.Errorf("server.transport: must be one of %v, got %q", validTransports, s.Transport)
 	}
 
+	if s.MaxHeartbeatInterval < 0 {
+		return fmt.Errorf("server.max_heartbeat_interval: must not be negative, got %s", s.MaxHeartbeatInterval)
+	}
+
 	if s.Endpoint == "" {
 		// An empty endpoint is okay for config validation, it can be set later via stored connection settings.
 		return nil
