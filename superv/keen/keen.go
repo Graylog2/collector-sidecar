@@ -295,7 +295,7 @@ func (c *Commander) Stop(ctx context.Context) error {
 	c.logger.Debug("Stopping agent process", zap.Int("pid", pid))
 
 	if err := sendShutdownSignal(cmd.Process); err != nil {
-		if !c.running.Load() {
+		if errors.Is(err, os.ErrProcessDone) || !c.running.Load() {
 			// Process already exited, nothing to do.
 			return nil
 		}
