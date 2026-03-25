@@ -1048,6 +1048,18 @@ func (s *Supervisor) reloadOwnLogsCert(ctx context.Context) error {
 	return s.ownLogsManager.Apply(ctx, *s.currentOwnLogs, res)
 }
 
+func (s *Supervisor) isWorkerStopping() bool {
+	s.mu.RLock()
+	workCtx := s.workCtx
+	s.mu.RUnlock()
+
+	return workCtx != nil && workCtx.Err() != nil
+}
+
+func (s *Supervisor) isShutdownCancellation(err error) bool {
+	return errors.Is(err, context.Canceled) && s.isWorkerStopping()
+}
+
 // awaitCollectorHealthy polls the health monitor until the collector reports
 // healthy or the timeout expires. This is needed because Commander.Start()
 // returns immediately when crash recovery is enabled (MaxRetries >= 1).
@@ -1219,6 +1231,10 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 			// with the previous config to avoid leaving it stopped.
 			s.logger.Info("Config changed, restarting collector")
 			if err := s.commander.Restart(ctx); err != nil {
+				if s.isShutdownCancellation(err) {
+					s.logger.Debug("Supervisor shutdown interrupted config apply during collector restart")
+					return false
+				}
 				s.logger.Error("Failed to restart collector with new config", zap.Error(err))
 				s.rollbackAndRecover(ctx, cfg.GetConfigHash(), err)
 				return false
@@ -1229,6 +1245,10 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 			// enabled (MaxRetries >= 1), so we must poll health to confirm
 			// the process actually started successfully.
 			if err := s.awaitCollectorHealthy(ctx, s.agentCfg.ConfigApplyTimeout); err != nil {
+				if s.isShutdownCancellation(err) {
+					s.logger.Debug("Supervisor shutdown interrupted config apply while awaiting collector health")
+					return false
+				}
 				s.logger.Error("Collector unhealthy after restart", zap.Error(err))
 				s.rollbackAndRecover(ctx, cfg.GetConfigHash(), err)
 				return false
@@ -1308,6 +1328,10 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 			if !s.enqueueWork(ctx, func(wCtx context.Context) {
 				s.handleOwnLogs(wCtx, settings)
 			}) {
+				if s.isWorkerStopping() {
+					s.logger.Debug("Skipping own_logs apply during shutdown")
+					return
+				}
 				s.logger.Warn("Failed to enqueue own_logs apply")
 			}
 		},
