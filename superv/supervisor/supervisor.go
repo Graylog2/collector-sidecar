@@ -18,7 +18,6 @@
 package supervisor
 
 import (
-	"cmp"
 	"context"
 	"crypto/tls"
 	"errors"
@@ -93,13 +92,6 @@ type Supervisor struct {
 	workCtx    context.Context
 	workCancel context.CancelFunc
 	workWg     sync.WaitGroup
-
-	// lastConnected stores the UnixNano timestamp of the most recent
-	// successful OpAMP connection (200 OK from server). Used by the
-	// connection watchdog to detect when the opamp-go HTTP client has
-	// silently stopped sending requests (e.g. after a non-retryable
-	// error like 405 or 500).
-	lastConnected atomic.Int64
 
 	// Pending enrollment CSR (set during enrollment, cleared after completion)
 	pendingCSR []byte
@@ -454,12 +446,6 @@ func (s *Supervisor) Start(ctx context.Context) error {
 		renewalTicker := time.NewTicker(renewalInterval)
 		defer renewalTicker.Stop()
 
-		// The connection watchdog detects when the opamp-go HTTP client has
-		// silently died and triggers a reconnect.
-		watchdogInterval := cmp.Or(s.connectionSettingsManager.GetCurrent().HeartbeatInterval, 30*time.Second)
-		watchdogTicker := time.NewTicker(watchdogInterval)
-		defer watchdogTicker.Stop()
-
 		for {
 			select {
 			case status, ok := <-healthUpdates:
@@ -481,9 +467,6 @@ func (s *Supervisor) Start(ctx context.Context) error {
 						}
 					}
 				}
-
-			case <-watchdogTicker.C:
-				s.checkConnectionWatchdog()
 
 			case <-renewalTicker.C:
 				s.checkCertificateRenewal()
@@ -842,63 +825,6 @@ func (s *Supervisor) buildAuthHeaders(settings connection.Settings) (http.Header
 	}
 
 	return headers, headerFunc
-}
-
-// checkConnectionWatchdog checks whether the upstream OpAMP connection is
-// stale and triggers a reconnect if needed. This works around a bug in
-// opamp-go's HTTP client where a non-retryable server response (e.g. 405,
-// 500) permanently kills the polling loop, preventing any future requests.
-//
-// Only applies to HTTP transport. The WebSocket client has its own robust
-// reconnection loop (ensureConnected) and does not suffer from this bug.
-// A long-lived WebSocket connection does not call OnConnect repeatedly, so
-// lastConnected would go stale even on a healthy connection.
-//
-// Called periodically from the health monitoring goroutine.
-func (s *Supervisor) checkConnectionWatchdog() {
-	settings := s.connectionSettingsManager.GetCurrent()
-
-	// WebSocket transport has its own reconnection loop; skip.
-	if strings.HasPrefix(settings.Endpoint, "ws") {
-		return
-	}
-
-	lastNano := s.lastConnected.Load()
-	if lastNano == 0 {
-		// No successful connection yet (still in initial connect phase).
-		// Don't interfere — the client's own retry/backoff handles this.
-		return
-	}
-
-	hb := cmp.Or(settings.HeartbeatInterval, 30*time.Second)
-	// Allow generous headroom: 3 heartbeat intervals before declaring stale.
-	threshold := 3 * hb
-
-	since := time.Since(time.Unix(0, lastNano))
-	if since <= threshold {
-		return
-	}
-
-	s.logger.Warn("OpAMP connection appears stale, triggering reconnect",
-		zap.Duration("since_last_connect", since),
-		zap.Duration("threshold", threshold),
-	)
-
-	// Reset the timestamp before enqueueing so subsequent watchdog checks
-	// see a fresh value while the reconnect is in progress. If the reconnect
-	// succeeds, OnConnect updates it again; if it fails, the timestamp ages
-	// naturally and the watchdog fires again after the threshold.
-	s.lastConnected.Store(time.Now().UnixNano())
-
-	s.enqueueWork(context.Background(), func(ctx context.Context) {
-		if err := s.reconnectClient(ctx, settings); err != nil {
-			if s.isShutdownCancellation(err) {
-				s.logger.Debug("Watchdog reconnect aborted during shutdown")
-			} else {
-				s.logger.Error("Watchdog reconnect failed", zap.Error(err))
-			}
-		}
-	})
 }
 
 func (s *Supervisor) reconnectClient(ctx context.Context, settings connection.Settings) error {
@@ -1308,7 +1234,6 @@ func (s *Supervisor) reportEffectiveConfig(ctx context.Context, effectiveConfig 
 func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 	return &opamp.Callbacks{
 		OnConnect: func(ctx context.Context) {
-			s.lastConnected.Store(time.Now().UnixNano())
 			s.logger.Debug("Connected to OpAMP server", zap.String("endpoint", s.connectionSettingsManager.GetCurrent().Endpoint))
 		},
 		OnConnectFailed: func(ctx context.Context, err error) {
