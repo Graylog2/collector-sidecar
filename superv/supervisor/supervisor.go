@@ -911,11 +911,22 @@ func (s *Supervisor) prepareConnectionSettings(
 // Runs on the serialized worker goroutine. On failure, rolls back to old settings.
 func (s *Supervisor) applyConnectionSettings(ctx context.Context, pending *pendingReconnect) {
 	if err := s.reconnectClient(ctx, pending.newSettings); err != nil {
+		if s.isShutdownCancellation(err) {
+			s.logger.Debug("Supervisor shutdown interrupted connection settings apply")
+			if cleanupErr := pending.stagedFile.Cleanup(); cleanupErr != nil {
+				s.logger.Error("Failed to clean up staged settings file", zap.Error(cleanupErr))
+			}
+			return
+		}
 		s.logger.Error("Failed to connect with new settings, rolling back", zap.Error(err))
 		if cleanupErr := pending.stagedFile.Cleanup(); cleanupErr != nil {
 			s.logger.Error("Failed to clean up staged settings file", zap.Error(cleanupErr))
 		}
 		if rollbackErr := s.reconnectClient(ctx, pending.oldSettings); rollbackErr != nil {
+			if s.isShutdownCancellation(rollbackErr) {
+				s.logger.Debug("Supervisor shutdown interrupted connection settings rollback")
+				return
+			}
 			s.logger.Error("Rollback also failed", zap.Error(rollbackErr))
 		}
 		return
@@ -926,10 +937,18 @@ func (s *Supervisor) applyConnectionSettings(ctx context.Context, pending *pendi
 
 		// Reconnect to old settings since persisting the new settings failed.
 		if reconnectErr := s.reconnectClient(ctx, pending.oldSettings); reconnectErr != nil {
+			if s.isShutdownCancellation(reconnectErr) {
+				s.logger.Debug("Supervisor shutdown interrupted connection settings rollback after persistence error")
+				return
+			}
 			s.logger.Error("Rollback after persistence error failed", zap.Error(reconnectErr))
 
 			// If rollback fails, try new settings again for runtime consistency.
 			if recoverErr := s.reconnectClient(ctx, pending.newSettings); recoverErr != nil {
+				if s.isShutdownCancellation(recoverErr) {
+					s.logger.Debug("Supervisor shutdown interrupted connection settings recovery")
+					return
+				}
 				s.logger.Error("Recovery with new settings also failed", zap.Error(recoverErr))
 			} else {
 				s.connectionSettingsManager.SetCurrent(pending.newSettings)
@@ -1006,16 +1025,28 @@ func (s *Supervisor) handleCertificateResponse(settings *protobufs.OpAMPConnecti
 		if !s.enqueueWork(context.Background(), func(wCtx context.Context) {
 			if s.commander != nil {
 				if err := s.commander.Restart(wCtx); err != nil {
-					s.logger.Error("Failed to restart collector after certificate renewal", zap.Error(err))
+					if s.isShutdownCancellation(err) {
+						s.logger.Debug("Supervisor shutdown interrupted collector restart after certificate renewal")
+					} else {
+						s.logger.Error("Failed to restart collector after certificate renewal", zap.Error(err))
+					}
 				}
 			}
 			if s.ownLogsManager != nil {
 				if err := s.reloadOwnLogsCert(wCtx); err != nil {
-					s.logger.Warn("Failed to reload own-logs certificate", zap.Error(err))
+					if s.isShutdownCancellation(err) {
+						s.logger.Debug("Supervisor shutdown interrupted own-logs certificate reload")
+					} else {
+						s.logger.Warn("Failed to reload own-logs certificate", zap.Error(err))
+					}
 				}
 			}
 		}) {
-			s.logger.Warn("Failed to enqueue post-renewal actions")
+			if s.isWorkerStopping() {
+				s.logger.Debug("Skipping post-renewal actions during shutdown")
+			} else {
+				s.logger.Warn("Failed to enqueue post-renewal actions")
+			}
 		}
 
 		// Return false: renewal does not require an OpAMP reconnect. The JWT
@@ -1147,7 +1178,11 @@ func (s *Supervisor) rollbackAndRecover(ctx context.Context, configHash []byte, 
 		// (Restart = Stop + Start, failed Start leaves process down) or
 		// running with a bad config (health check failed).
 		if restartErr := s.commander.Restart(ctx); restartErr != nil {
-			s.logger.Error("Failed to restart collector after rollback", zap.Error(restartErr))
+			if s.isShutdownCancellation(restartErr) {
+				s.logger.Debug("Supervisor shutdown interrupted rollback restart")
+			} else {
+				s.logger.Error("Failed to restart collector after rollback", zap.Error(restartErr))
+			}
 		}
 	}
 
@@ -1467,6 +1502,10 @@ func (s *Supervisor) handleOwnLogs(ctx context.Context, settings *protobufs.Tele
 func (s *Supervisor) restartCollector(ctx context.Context) {
 	s.logger.Info("Restarting collector to apply own_logs changes")
 	if err := s.commander.Restart(ctx); err != nil {
+		if s.isShutdownCancellation(err) {
+			s.logger.Debug("Supervisor shutdown interrupted collector restart for own_logs change")
+			return
+		}
 		s.logger.Error("Failed to restart collector after own_logs change", zap.Error(err))
 	}
 }
