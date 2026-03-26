@@ -1,11 +1,11 @@
 module github.com/Graylog2/collector-sidecar/extension/sidecar
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/docker/go-units v0.5.0
 	github.com/elastic/go-ucfg v0.8.6
-	github.com/elastic/gosigar v0.14.2
+	github.com/elastic/gosigar v0.14.4
 	github.com/flynn-archive/go-shlex v0.0.0-20150515145356-3f9db97f8568
 	github.com/hashicorp/go-version v1.8.0
 	github.com/kardianos/service v1.2.2
@@ -16,7 +16,7 @@ require (
 	go.opentelemetry.io/collector/component v1.50.0
 	go.opentelemetry.io/collector/extension v1.50.0
 	go.uber.org/zap v1.27.1
-	golang.org/x/sys v0.38.0
+	golang.org/x/sys v0.42.0
 )
 
 require (
