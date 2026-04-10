@@ -573,6 +573,19 @@ func TestSupervisor_BuildCollectorEnv(t *testing.T) {
 	instanceUid, err := uuid.NewV7()
 	require.NoError(t, err)
 
+	t.Run("sets instance uid", func(t *testing.T) {
+		s := &Supervisor{
+			authManager:    authMgr,
+			agentCfg:       config.AgentConfig{},
+			instanceUID:    instanceUid.String(),
+			persistenceDir: "/var/lib/graylog-sidecar",
+		}
+
+		env := s.buildCollectorEnv()
+
+		require.Equal(t, instanceUid.String(), env["GLC_INTERNAL_INSTANCE_UID"])
+	})
+
 	t.Run("sets TLS paths from auth manager", func(t *testing.T) {
 		s := &Supervisor{
 			authManager: authMgr,
@@ -582,7 +595,6 @@ func TestSupervisor_BuildCollectorEnv(t *testing.T) {
 
 		env := s.buildCollectorEnv()
 
-		require.Equal(t, instanceUid.String(), env["GLC_INTERNAL_INSTANCE_UID"])
 		require.Equal(t, authMgr.GetSigningKeyPath(), env["GLC_INTERNAL_TLS_CLIENT_KEY_PATH"])
 		require.Equal(t, authMgr.GetSigningCertPath(), env["GLC_INTERNAL_TLS_CLIENT_CERT_PATH"])
 	})
@@ -598,6 +610,21 @@ func TestSupervisor_BuildCollectorEnv(t *testing.T) {
 		env := s.buildCollectorEnv()
 
 		require.Equal(t, "/var/lib/graylog-sidecar", env["GLC_INTERNAL_PERSISTENCE_DIR"])
+	})
+
+	t.Run("sets storage path", func(t *testing.T) {
+		s := &Supervisor{
+			authManager: authMgr,
+			agentCfg: config.AgentConfig{
+				StorageDir: "/var/lib/graylog-sidecar/storage",
+			},
+			instanceUID:    instanceUid.String(),
+			persistenceDir: "/var/lib/graylog-sidecar",
+		}
+
+		env := s.buildCollectorEnv()
+
+		require.Equal(t, "/var/lib/graylog-sidecar/storage", env["GLC_INTERNAL_STORAGE_PATH"])
 	})
 
 	t.Run("merges user-configured env vars", func(t *testing.T) {

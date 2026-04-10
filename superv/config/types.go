@@ -105,6 +105,7 @@ type AgentConfig struct {
 	ConfigApplyTimeout time.Duration     `koanf:"config_apply_timeout"`
 	BootstrapTimeout   time.Duration     `koanf:"bootstrap_timeout"`
 	PassthroughLogs    bool              `koanf:"passthrough_logs"`
+	StorageDir         string            `koanf:"storage_dir"`
 	Config             AgentConfigMerge  `koanf:"config"`
 	Health             HealthConfig      `koanf:"health"`
 	Reload             ReloadConfig      `koanf:"reload"`
@@ -257,6 +258,8 @@ func DefaultConfig() Config {
 			ConfigApplyTimeout: 5 * time.Second,
 			BootstrapTimeout:   3 * time.Second,
 			PassthroughLogs:    false,
+			// TODO: Branding
+			StorageDir: "/var/lib/graylog-collector/storage",
 			Config: AgentConfigMerge{
 				MergeStrategy: "deep",
 			},
