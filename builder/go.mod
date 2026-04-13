@@ -10,6 +10,7 @@ require (
 	github.com/Graylog2/collector-sidecar/superv v0.0.0-00010101000000-000000000000
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.148.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampextension v0.148.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/filestorage v0.148.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.148.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver v0.148.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver v0.148.0
@@ -125,6 +126,7 @@ require (
 	github.com/tklauser/numcpus v0.11.0 // indirect
 	github.com/valyala/fastjson v1.6.10 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
+	go.etcd.io/bbolt v1.4.3 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/collector v0.148.0 // indirect
 	go.opentelemetry.io/collector/client v1.54.0 // indirect

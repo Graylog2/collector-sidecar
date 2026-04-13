@@ -146,6 +146,10 @@ func (a AgentConfig) Validate() error {
 		return fmt.Errorf("agent.reload.method: must be one of %v, got %q", validReloadMethods, a.Reload.Method)
 	}
 
+	if a.StorageDir == "" {
+		return errors.New("agent.storage_dir: is required")
+	}
+
 	if a.Health.Endpoint != "" {
 		u, err := url.Parse(a.Health.Endpoint)
 		if err != nil {

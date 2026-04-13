@@ -158,6 +158,8 @@ github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampextensi
 github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampextension v0.148.0/go.mod h1:LgR3ntrtLf3CP+OrcqyW5BK6oSzJIE2jSW8HsFFbKJw=
 github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage v0.148.0 h1:0eVAHvReR2MDYRN4jZBxEvLWRnUEH7pAy6ewKyzY0jg=
 github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage v0.148.0/go.mod h1:8c9Y+jpQ2ZaAbMKVNhnyVloCPu9QbPtZMix8E/55ozY=
+github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/filestorage v0.148.0 h1:px13u/AQ9mUQt30C494djBMCCmxP2j8MUZ/ZmtjDukg=
+github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/filestorage v0.148.0/go.mod h1:H9fwjE1De8nTQYLKvBlrc1TXK735Tog9GuICRqye9tE=
 github.com/open-telemetry/opentelemetry-collector-contrib/internal/common v0.148.0 h1:XfnWquAk1ZhCuUNFIg4MKKOXiTfJrSulU8yKPxArFSM=
 github.com/open-telemetry/opentelemetry-collector-contrib/internal/common v0.148.0/go.mod h1:uq/XRz2qvgDqO03Z90K/pqV8+h20uauP3E2XseKIIDE=
 github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal v0.148.0 h1:pbsTNnV4+4q27bIftrITw/EuJbI5z94RF5bwcRrMZJY=
@@ -234,6 +236,8 @@ github.com/valyala/fastjson v1.6.10 h1:/yjJg8jaVQdYR3arGxPE2X5z89xrlhS0eGXdv+ADT
 github.com/valyala/fastjson v1.6.10/go.mod h1:e6FubmQouUNP73jtMLmcbxS6ydWIpOfhz34TSfO3JaE=
 github.com/yusufpapurcu/wmi v1.2.4 h1:zFUKzehAFReQwLys1b/iSMl+JQGSCSjtVqQn9bBrPo0=
 github.com/yusufpapurcu/wmi v1.2.4/go.mod h1:SBZ9tNy3G9/m5Oi98Zks0QjeHVDvuK0qfxQmPyzfmi0=
+go.etcd.io/bbolt v1.4.3 h1:dEadXpI6G79deX5prL3QRNP6JB8UxVkqo4UPnHaNXJo=
+go.etcd.io/bbolt v1.4.3/go.mod h1:tKQlpPaYCVFctUIgFKFnAlvbmB3tpy1vkTnDWohtc0E=
 go.opentelemetry.io/auto/sdk v1.2.1 h1:jXsnJ4Lmnqd11kwkBV2LgLoFMZKizbCi5fNZ/ipaZ64=
 go.opentelemetry.io/auto/sdk v1.2.1/go.mod h1:KRTj+aOaElaLi+wW1kO/DZRXwkF4C5xPbEe3ZiIhN7Y=
 go.opentelemetry.io/collector v0.148.0 h1:v/MudgCZ7n0LfOxtMIJjYdA8R073vjUllhhsaBtiTro=
@@ -460,6 +464,8 @@ golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa h1:Zt3DZoOFFYkKhDT3v7Lm9FDME
 golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa/go.mod h1:K79w1Vqn7PoiZn+TkNpx3BUWUQksGO3JcVX6qIjytmA=
 golang.org/x/net v0.52.0 h1:He/TN1l0e4mmR3QqHMT2Xab3Aj3L9qjbhRm78/6jrW0=
 golang.org/x/net v0.52.0/go.mod h1:R1MAz7uMZxVMualyPXb+VaqGSa3LIaUqk0eEt3w36Sw=
+golang.org/x/sync v0.20.0 h1:e0PTpb7pjO8GAtTs2dQ6jYa5BWYlMuX047Dco/pItO4=
+golang.org/x/sync v0.20.0/go.mod h1:9xrNwdLfx4jkKbNva9FpL6vEN7evnE43NNNJQ2LF3+0=
 golang.org/x/sys v0.0.0-20190916202348-b4ddaad3f8a3/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20201015000850-e3ed0017c211/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20201204225414-ed752295db88/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=

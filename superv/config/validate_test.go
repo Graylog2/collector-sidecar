@@ -64,6 +64,15 @@ func TestValidateAgentExecutable(t *testing.T) {
 	require.Contains(t, err.Error(), "agent.executable")
 }
 
+func TestValidateAgentStorageDir(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.Agent.Executable = "test"
+	cfg.Agent.StorageDir = ""
+	err := cfg.Validate()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "agent.storage_dir")
+}
+
 func TestValidateHealthEndpoint(t *testing.T) {
 	tests := []struct {
 		name      string
