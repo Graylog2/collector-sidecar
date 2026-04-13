@@ -9,6 +9,7 @@ extensions:
   - gomod: github.com/Graylog2/collector-sidecar/extension/sidecar v1.5.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.148.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampextension v0.148.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/filestorage v0.148.0
 
 exporters:
   - gomod: go.opentelemetry.io/collector/exporter/debugexporter v0.148.0

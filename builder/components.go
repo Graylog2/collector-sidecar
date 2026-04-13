@@ -7,6 +7,7 @@ import (
 	windowseventlogreceiver "github.com/Graylog2/collector-sidecar/receiver/windowseventlogreceiver"
 	healthcheckextension "github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension"
 	opampextension "github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampextension"
+	filestorage "github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/filestorage"
 	resourceprocessor "github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
 	filelogreceiver "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver"
 	journaldreceiver "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver"
@@ -51,6 +52,7 @@ func components() (otelcol.Factories, error) {
 		sidecar.NewFactory(),
 		healthcheckextension.NewFactory(),
 		opampextension.NewFactory(),
+		filestorage.NewFactory(),
 	)
 	if err != nil {
 		return otelcol.Factories{}, err
@@ -59,6 +61,7 @@ func components() (otelcol.Factories, error) {
 		sidecar.NewFactory().Type():              "github.com/Graylog2/collector-sidecar/extension/sidecar v1.5.0",
 		healthcheckextension.NewFactory().Type(): "github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.148.0",
 		opampextension.NewFactory().Type():       "github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampextension v0.148.0",
+		filestorage.NewFactory().Type():          "github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/filestorage v0.148.0",
 	})
 
 	factories.Receivers, err = otelcol.MakeFactoryMap[receiver.Factory](
