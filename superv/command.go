@@ -176,6 +176,7 @@ func buildConfig(cmd *cobra.Command) (config.Config, []func(logger *zap.Logger),
 			return config.Config{}, nil, err
 		}
 		cfg.Persistence.Dir = filepath.Join(absPath, "supervisor")
+		cfg.Agent.StorageDir = filepath.Join(absPath, "storage")
 		cfg.Keys.Dir = filepath.Join(absPath, "keys")
 		cfg.Packages.StorageDir = filepath.Join(absPath, "packages")
 		cfg.Logging.Format = "text"
