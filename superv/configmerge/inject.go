@@ -102,3 +102,16 @@ func InjectServiceExtension(config []byte, extensionName string) ([]byte, error)
 
 	return k.Marshal(yaml.Parser())
 }
+
+// InjectDisableTelemetryMetrics injects configuration to disable the telemetry metrics.
+// This disables the default Prometheus HTTP endpoint on localhost:8888.
+func InjectDisableTelemetryMetrics(config []byte) ([]byte, error) {
+	// See: https://opentelemetry.io/docs/collector/internal-telemetry/#configure-internal-metrics
+	result, err := InjectSettings(config, map[string]any{
+		"service::telemetry::metrics::level": "none",
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}

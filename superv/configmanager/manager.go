@@ -403,6 +403,11 @@ func (m *Manager) injectExtensions(config []byte) ([]byte, error) {
 			zap.String("endpoint", m.cfg.HealthCheck.Endpoint))
 	}
 
+	mergedConfig, err := configmerge.InjectDisableTelemetryMetrics(mergedConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to inject disabled telemetry metrics: %w", err)
+	}
+
 	return mergedConfig, nil
 }
 

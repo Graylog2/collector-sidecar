@@ -96,6 +96,9 @@ service:
 	assert.Contains(t, string(content), "ws://localhost:4320/v1/opamp")
 	assert.Contains(t, string(content), "test-instance-123")
 
+	// Verify telemetry metrics are disabled
+	assert.Contains(t, string(content), "level: none")
+
 	// Apply the same config again - should return Changed=false
 	result2, err := mgr.ApplyRemoteConfig(context.Background(), remote)
 	require.NoError(t, err)
@@ -378,6 +381,9 @@ service:
 	content, err := os.ReadFile(outputPath)
 	require.NoError(t, err)
 	assert.NotContains(t, string(content), "opamp")
+
+	// Telemetry metrics should still be disabled even without OpAMP
+	assert.Contains(t, string(content), "level: none")
 }
 
 func TestConfigManager_GetEffectiveConfig(t *testing.T) {
@@ -698,6 +704,9 @@ func TestApplyRemoteConfig_InjectsHealthCheckExtension(t *testing.T) {
 	require.Contains(t, string(result.EffectiveConfig), "health_check")
 	require.Contains(t, string(result.EffectiveConfig), "localhost:13133")
 	require.Contains(t, string(result.EffectiveConfig), "/health")
+
+	// Telemetry metrics should be disabled
+	require.Contains(t, string(result.EffectiveConfig), "level: none")
 }
 
 func TestSetLastConfigHash_SkipsUnchangedConfig(t *testing.T) {
@@ -783,6 +792,9 @@ func TestEnsureBootstrapConfig_WritesWhenMissing(t *testing.T) {
 	// Bootstrap includes a nop pipeline so the collector accepts the config
 	assert.Contains(t, s, "nop")
 	assert.Contains(t, s, "logs/bootstrap")
+
+	// Telemetry metrics should be disabled
+	assert.Contains(t, s, "level: none")
 }
 
 func TestEnsureBootstrapConfig_ReinjectsExtensionsWhenExists(t *testing.T) {
@@ -820,6 +832,9 @@ func TestEnsureBootstrapConfig_ReinjectsExtensionsWhenExists(t *testing.T) {
 	assert.Contains(t, s, "localhost:13133")
 	// Cached config should NOT get a nop bootstrap pipeline
 	assert.NotContains(t, s, "logs/bootstrap")
+
+	// Telemetry metrics should be disabled
+	assert.Contains(t, s, "level: none")
 }
 
 func TestEnsureBootstrapConfig_RecoversFromCachedRemoteConfig(t *testing.T) {

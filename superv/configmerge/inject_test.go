@@ -372,6 +372,102 @@ service:
 	require.Equal(t, "/health/status", healthCheck["path"])
 }
 
+func TestInjectDisableTelemetryMetrics(t *testing.T) {
+	config := []byte(`
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+exporters:
+  debug: {}
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [debug]
+`)
+
+	result, err := InjectDisableTelemetryMetrics(config)
+	require.NoError(t, err)
+
+	var parsed map[string]any
+	err = yaml.Unmarshal(result, &parsed)
+	require.NoError(t, err)
+
+	// Verify service.telemetry.metrics.level is set to "none"
+	service, ok := parsed["service"].(map[string]any)
+	require.True(t, ok, "service should exist")
+
+	telemetry, ok := service["telemetry"].(map[string]any)
+	require.True(t, ok, "service.telemetry should exist")
+
+	metrics, ok := telemetry["metrics"].(map[string]any)
+	require.True(t, ok, "service.telemetry.metrics should exist")
+
+	require.Equal(t, "none", metrics["level"])
+
+	// Verify original config is preserved
+	require.Contains(t, parsed, "receivers")
+	require.Contains(t, parsed, "exporters")
+}
+
+func TestInjectDisableTelemetryMetrics_ExistingTelemetry(t *testing.T) {
+	config := []byte(`
+service:
+  telemetry:
+    logs:
+      level: info
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [debug]
+`)
+
+	result, err := InjectDisableTelemetryMetrics(config)
+	require.NoError(t, err)
+
+	var parsed map[string]any
+	err = yaml.Unmarshal(result, &parsed)
+	require.NoError(t, err)
+
+	service := parsed["service"].(map[string]any)
+	telemetry := service["telemetry"].(map[string]any)
+	metrics := telemetry["metrics"].(map[string]any)
+	logs := telemetry["logs"].(map[string]any)
+
+	require.Equal(t, "none", metrics["level"])
+	require.Equal(t, "info", logs["level"])
+}
+
+func TestInjectDisableTelemetryMetrics_EmptyConfig(t *testing.T) {
+	result, err := InjectDisableTelemetryMetrics([]byte{})
+	require.NoError(t, err)
+
+	var parsed map[string]any
+	err = yaml.Unmarshal(result, &parsed)
+	require.NoError(t, err)
+
+	service := parsed["service"].(map[string]any)
+	telemetry := service["telemetry"].(map[string]any)
+	metrics := telemetry["metrics"].(map[string]any)
+
+	require.Equal(t, "none", metrics["level"])
+
+	// Test with nil config
+	result, err = InjectDisableTelemetryMetrics(nil)
+	require.NoError(t, err)
+
+	err = yaml.Unmarshal(result, &parsed)
+	require.NoError(t, err)
+
+	service = parsed["service"].(map[string]any)
+	telemetry = service["telemetry"].(map[string]any)
+	metrics = telemetry["metrics"].(map[string]any)
+
+	require.Equal(t, "none", metrics["level"])
+}
+
 func TestInjectHealthCheckExtension_ExistingExtensions(t *testing.T) {
 	config := []byte(`
 extensions:
