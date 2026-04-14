@@ -28,9 +28,6 @@ import (
 // EnrollmentClaims represents claims from an enrollment JWT.
 type EnrollmentClaims struct {
 	jwt.RegisteredClaims
-	TenantID     string            `json:"tenant_id"`
-	KeyAlgorithm string            `json:"key_algorithm"`
-	AgentLabels  map[string]string `json:"agent_labels"`
 }
 
 // IsExpired returns true if the enrollment claims have expired.

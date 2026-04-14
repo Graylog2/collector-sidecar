@@ -43,7 +43,7 @@ import (
 func main() {
 	var (
 		addr        string
-		tenantID    string
+		issuer      string
 		jwtExpiry   time.Duration
 		printJWKS   bool
 		verbose     bool
@@ -52,7 +52,7 @@ func main() {
 	)
 
 	flag.StringVar(&addr, "addr", ":8443", "Address to listen on")
-	flag.StringVar(&tenantID, "tenant", "test-tenant", "Tenant ID for enrollment JWT")
+	flag.StringVar(&issuer, "issuer", "test", "Issuer for enrollment JWT")
 	flag.DurationVar(&jwtExpiry, "jwt-expiry", 24*time.Hour, "Enrollment JWT expiry duration")
 	flag.BoolVar(&printJWKS, "print-jwks", false, "Print JWKS and exit")
 	flag.BoolVar(&verbose, "v", false, "Detailed logging (description, effective config, packages)")
@@ -118,7 +118,7 @@ func main() {
 	}
 
 	// Create enrollment JWT
-	enrollmentJWT, err := server.CreateEnrollmentJWT(tenantID, jwtExpiry)
+	enrollmentJWT, err := server.CreateEnrollmentJWT(issuer, jwtExpiry)
 	if err != nil {
 		log.Fatalf("Failed to create enrollment JWT: %v", err)
 	}
@@ -127,7 +127,7 @@ func main() {
 	fmt.Println("Test OpAMP Server")
 	fmt.Println("========================================")
 	fmt.Printf("Listening on: https://localhost%s\n", addr)
-	fmt.Printf("Tenant ID: %s\n", tenantID)
+	fmt.Printf("Issuer: %s\n", issuer)
 	fmt.Printf("JWT Expiry: %s\n", jwtExpiry)
 	fmt.Printf("Verbosity: %d\n", verbosity)
 	fmt.Printf("JSON logs: %v\n", jsonLogs)

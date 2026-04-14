@@ -210,8 +210,6 @@ func TestManager_PrepareAndCompleteEnrollment(t *testing.T) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
-		TenantID:     "test-tenant",
-		KeyAlgorithm: "Ed25519",
 	})
 
 	logger := zaptest.NewLogger(t)
@@ -224,7 +222,6 @@ func TestManager_PrepareAndCompleteEnrollment(t *testing.T) {
 	result, err := m.PrepareEnrollment(context.Background(), server.URL, enrollmentJWT, "test-instance")
 	require.NoError(t, err)
 	require.NotEmpty(t, result.CSRPEM)
-	require.Equal(t, "test-tenant", result.TenantID)
 
 	// Verify pending state
 	require.True(t, m.HasPendingEnrollment())
@@ -456,27 +453,6 @@ func TestManager_CertificateExpired(t *testing.T) {
 	})
 }
 
-func createManagerTestCertWithOrg(t *testing.T, pub ed25519.PublicKey, org string) *x509.Certificate {
-	t.Helper()
-	seed := make([]byte, ed25519.SeedSize)
-	signingKey := ed25519.NewKeyFromSeed(seed)
-	template := &x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Subject: pkix.Name{
-			CommonName:   "test-instance-uid",
-			Organization: []string{org},
-		},
-		NotBefore: time.Now(),
-		NotAfter:  time.Now().Add(24 * time.Hour),
-		KeyUsage:  x509.KeyUsageDigitalSignature,
-	}
-	certDER, err := x509.CreateCertificate(rand.Reader, template, template, pub, signingKey)
-	require.NoError(t, err)
-	cert, err := x509.ParseCertificate(certDER)
-	require.NoError(t, err)
-	return cert
-}
-
 func TestManager_PrepareRenewal(t *testing.T) {
 	dir := t.TempDir()
 	keysDir := filepath.Join(dir, "keys")
@@ -494,7 +470,7 @@ func TestManager_PrepareRenewal(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create cert with Organization
-	cert := createManagerTestCertWithOrg(t, signingPriv.Public().(ed25519.PublicKey), "test-tenant")
+	cert := createManagerTestCert(t, signingPriv.Public().(ed25519.PublicKey))
 	err = persistence.SaveCertificate(keysDir, cert)
 	require.NoError(t, err)
 
@@ -517,7 +493,6 @@ func TestManager_PrepareRenewal(t *testing.T) {
 
 	// Verify CN and Organization
 	require.Equal(t, "test-instance-uid", csr.Subject.CommonName)
-	require.Equal(t, []string{"test-tenant"}, csr.Subject.Organization)
 
 	// Verify public key matches signing key
 	require.Equal(t, signingPriv.Public(), csr.PublicKey)
@@ -532,44 +507,6 @@ func TestManager_PrepareRenewal(t *testing.T) {
 	}
 	require.NotNil(t, foundEncPub, "encryption public key extension not found")
 	require.Equal(t, encPubExpected, foundEncPub)
-}
-
-func TestManager_PrepareRenewal_NoTenant(t *testing.T) {
-	dir := t.TempDir()
-	keysDir := filepath.Join(dir, "keys")
-
-	// Generate signing keypair and save
-	_, signingPriv, err := GenerateSigningKeypair()
-	require.NoError(t, err)
-	err = persistence.SaveSigningKey(keysDir, signingPriv)
-	require.NoError(t, err)
-
-	// Generate encryption keypair and save private key
-	_, encPriv, err := GenerateEncryptionKeypair()
-	require.NoError(t, err)
-	err = persistence.SaveEncryptionKey(keysDir, encPriv)
-	require.NoError(t, err)
-
-	// Create cert without Organization
-	cert := createManagerTestCert(t, signingPriv.Public().(ed25519.PublicKey))
-	err = persistence.SaveCertificate(keysDir, cert)
-	require.NoError(t, err)
-
-	logger := zaptest.NewLogger(t)
-	m := NewManager(logger, ManagerConfig{KeysDir: keysDir})
-	err = m.LoadCredentials()
-	require.NoError(t, err)
-
-	csrPEM, err := m.PrepareRenewal("test-instance-uid")
-	require.NoError(t, err)
-	require.NotEmpty(t, csrPEM)
-
-	// Parse and verify empty Organization
-	block, _ := pem.Decode(csrPEM)
-	require.NotNil(t, block)
-	csr, err := x509.ParseCertificateRequest(block.Bytes)
-	require.NoError(t, err)
-	require.Empty(t, csr.Subject.Organization)
 }
 
 func TestManager_PrepareRenewal_NotLoaded(t *testing.T) {

@@ -58,22 +58,6 @@ func TestCreateCSR_WithoutEncryptionKey(t *testing.T) {
 	require.Empty(t, csr.Extensions) // No extensions when no encryption key
 }
 
-func TestCreateCSRWithTenant(t *testing.T) {
-	_, priv, err := ed25519.GenerateKey(rand.Reader)
-	require.NoError(t, err)
-
-	encPub, _, err := GenerateEncryptionKeypair()
-	require.NoError(t, err)
-
-	csrDER, err := CreateCSRWithTenant(priv, "instance-123", "acme-corp", encPub)
-	require.NoError(t, err)
-
-	csr, err := ParseCSR(csrDER)
-	require.NoError(t, err)
-	require.Equal(t, "instance-123", csr.Subject.CommonName)
-	require.Contains(t, csr.Subject.Organization, "acme-corp")
-}
-
 func TestCreateCSR_IncludesEncryptionKey(t *testing.T) {
 	_, priv, err := ed25519.GenerateKey(rand.Reader)
 	require.NoError(t, err)

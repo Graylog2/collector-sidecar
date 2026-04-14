@@ -786,9 +786,7 @@ func (s *Supervisor) initAuth(ctx context.Context) error {
 	// Store CSR to send via OpAMP after connection is established
 	s.pendingCSR = result.CSRPEM
 
-	s.logger.Info("Enrollment prepared, CSR ready for submission via OpAMP",
-		zap.String("tenant_id", result.TenantID),
-	)
+	s.logger.Info("Enrollment prepared, CSR ready for submission via OpAMP")
 
 	return nil
 }

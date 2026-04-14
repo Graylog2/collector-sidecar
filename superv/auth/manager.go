@@ -55,7 +55,6 @@ type Manager struct {
 	// Enrollment state (before CSR is submitted)
 	pendingSigningKey    ed25519.PrivateKey
 	pendingEncryptionKey []byte
-	pendingTenantID      string
 	pendingEnrollmentJWT string
 }
 
@@ -131,8 +130,6 @@ func (m *Manager) LoadCredentials() error {
 type EnrollmentResult struct {
 	// CSRPEM is the PEM-encoded CSR to send via OpAMP
 	CSRPEM []byte
-	// TenantID from the enrollment JWT
-	TenantID string
 }
 
 // PrepareEnrollment validates the enrollment JWT, generates keypairs, and creates a CSR.
@@ -167,8 +164,8 @@ func (m *Manager) PrepareEnrollment(ctx context.Context, enrollmentEndpoint, enr
 	}
 
 	m.logger.Info("Enrollment JWT validated",
-		zap.String("tenant_id", claims.TenantID),
-		zap.String("key_algorithm", claims.KeyAlgorithm),
+		zap.String("issuer", claims.Issuer),
+		zap.String("id", claims.ID),
 	)
 
 	// Generate signing keypair
@@ -187,12 +184,7 @@ func (m *Manager) PrepareEnrollment(ctx context.Context, enrollmentEndpoint, enr
 
 	// Create CSR
 	m.logger.Debug("Creating CSR")
-	var csrDER []byte
-	if claims.TenantID != "" {
-		csrDER, err = CreateCSRWithTenant(signingPriv, instanceUID, claims.TenantID, encPub)
-	} else {
-		csrDER, err = CreateCSR(signingPriv, instanceUID, encPub)
-	}
+	csrDER, err := CreateCSR(signingPriv, instanceUID, encPub)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create CSR: %w", err)
 	}
@@ -203,7 +195,6 @@ func (m *Manager) PrepareEnrollment(ctx context.Context, enrollmentEndpoint, enr
 	m.mu.Lock()
 	m.pendingSigningKey = signingPriv
 	m.pendingEncryptionKey = encPriv
-	m.pendingTenantID = claims.TenantID
 	m.pendingEnrollmentJWT = enrollmentToken
 	m.mu.Unlock()
 
@@ -212,10 +203,7 @@ func (m *Manager) PrepareEnrollment(ctx context.Context, enrollmentEndpoint, enr
 
 	m.logger.Info("Enrollment prepared, CSR ready for submission via OpAMP")
 
-	return &EnrollmentResult{
-		CSRPEM:   csrPEM,
-		TenantID: claims.TenantID,
-	}, nil
+	return &EnrollmentResult{CSRPEM: csrPEM}, nil
 }
 
 // CompleteEnrollment stores the certificate received from the server and saves all credentials.
@@ -255,7 +243,6 @@ func (m *Manager) CompleteEnrollment(certPEM []byte) error {
 	m.certificate = cert
 	m.pendingSigningKey = nil
 	m.pendingEncryptionKey = nil
-	m.pendingTenantID = ""
 	m.pendingEnrollmentJWT = ""
 	m.mu.Unlock()
 
@@ -448,19 +435,8 @@ func (m *Manager) PrepareRenewal(instanceUID string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to derive encryption public key: %w", err)
 	}
 
-	// Read tenant ID from certificate Organization field
-	var tenantID string
-	if len(cert.Subject.Organization) > 0 {
-		tenantID = cert.Subject.Organization[0]
-	}
-
 	// Create CSR with existing signing key
-	var csrDER []byte
-	if tenantID != "" {
-		csrDER, err = CreateCSRWithTenant(signingKey, instanceUID, tenantID, encPub)
-	} else {
-		csrDER, err = CreateCSR(signingKey, instanceUID, encPub)
-	}
+	csrDER, err := CreateCSR(signingKey, instanceUID, encPub)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create renewal CSR: %w", err)
 	}

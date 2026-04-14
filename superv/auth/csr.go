@@ -34,21 +34,8 @@ var OIDEncryptionPublicKey = asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 99999, 1, 1
 // CreateCSR creates a Certificate Signing Request with the instance UID as CN
 // and the X25519 encryption public key as a custom extension.
 func CreateCSR(signingKey ed25519.PrivateKey, instanceUID string, encryptionPubKey []byte) ([]byte, error) {
-	return createCSR(signingKey, instanceUID, "", encryptionPubKey)
-}
-
-// CreateCSRWithTenant creates a CSR with tenant ID in the Organization field.
-func CreateCSRWithTenant(signingKey ed25519.PrivateKey, instanceUID, tenantID string, encryptionPubKey []byte) ([]byte, error) {
-	return createCSR(signingKey, instanceUID, tenantID, encryptionPubKey)
-}
-
-// createCSR is the common implementation for CSR creation.
-func createCSR(signingKey ed25519.PrivateKey, instanceUID, tenantID string, encryptionPubKey []byte) ([]byte, error) {
 	subject := pkix.Name{
 		CommonName: instanceUID,
-	}
-	if tenantID != "" {
-		subject.Organization = []string{tenantID}
 	}
 
 	template := &x509.CertificateRequest{

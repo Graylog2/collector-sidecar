@@ -34,19 +34,15 @@ func TestValidateEnrollmentJWT(t *testing.T) {
 	token := createSignedEnrollmentJWT(t, priv, "test-kid", &EnrollmentClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+			Issuer:    "test",
 		},
-		TenantID:     "test-tenant",
-		KeyAlgorithm: "Ed25519",
-		AgentLabels:  map[string]string{"env": "test"},
 	})
 
 	keys := []JWK{{KeyID: "test-kid", PublicKey: pub}}
 
 	validated, err := ValidateEnrollmentJWT(token, keys)
 	require.NoError(t, err)
-	require.Equal(t, "test-tenant", validated.TenantID)
-	require.Equal(t, "Ed25519", validated.KeyAlgorithm)
-	require.Equal(t, "test", validated.AgentLabels["env"])
+	require.Equal(t, "test", validated.Issuer)
 }
 
 func TestValidateEnrollmentJWT_Expired(t *testing.T) {
@@ -57,7 +53,6 @@ func TestValidateEnrollmentJWT_Expired(t *testing.T) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(-time.Hour)), // Expired
 		},
-		TenantID: "test",
 	})
 
 	keys := []JWK{{KeyID: "test-kid", PublicKey: pub}}
@@ -78,7 +73,6 @@ func TestValidateEnrollmentJWT_InvalidSignature(t *testing.T) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
-		TenantID: "test",
 	})
 
 	keys := []JWK{{KeyID: "test-kid", PublicKey: otherPub}} // Different key
@@ -96,7 +90,6 @@ func TestValidateEnrollmentJWT_KeyNotFound(t *testing.T) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
-		TenantID: "test",
 	})
 
 	keys := []JWK{} // No keys

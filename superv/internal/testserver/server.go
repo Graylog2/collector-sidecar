@@ -161,12 +161,11 @@ func (s *Server) URL() string {
 }
 
 // CreateEnrollmentJWT creates a signed enrollment JWT.
-func (s *Server) CreateEnrollmentJWT(tenantID string, expiry time.Duration) (string, error) {
+func (s *Server) CreateEnrollmentJWT(issuer string, expiry time.Duration) (string, error) {
 	claims := jwt.MapClaims{
-		"tenant_id":     tenantID,
-		"key_algorithm": "Ed25519",
-		"exp":           time.Now().Add(expiry).Unix(),
-		"iat":           time.Now().Unix(),
+		"exp": time.Now().Add(expiry).Unix(),
+		"iat": time.Now().Unix(),
+		"iss": issuer,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
@@ -233,8 +232,6 @@ type AuthResult struct {
 	Authenticated bool
 	// IsEnrollment is true if this is an enrollment JWT (vs supervisor JWT)
 	IsEnrollment bool
-	// TenantID from the enrollment JWT (if IsEnrollment)
-	TenantID string
 	// InstanceUID from the supervisor JWT (if !IsEnrollment)
 	InstanceUID string
 	// Error message if authentication failed
@@ -286,17 +283,9 @@ func (s *Server) validateEnrollmentJWT(tokenString string) AuthResult {
 		return AuthResult{Error: "invalid enrollment JWT"}
 	}
 
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return AuthResult{Error: "invalid enrollment JWT claims"}
-	}
-
-	tenantID, _ := claims["tenant_id"].(string)
-
 	return AuthResult{
 		Authenticated: true,
 		IsEnrollment:  true,
-		TenantID:      tenantID,
 	}
 }
 

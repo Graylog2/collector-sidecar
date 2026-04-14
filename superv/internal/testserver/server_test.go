@@ -49,7 +49,7 @@ func TestServer_EnrollmentJWT(t *testing.T) {
 	defer server.Stop()
 
 	// Create enrollment JWT
-	jwt, err := server.CreateEnrollmentJWT("test-tenant", time.Hour)
+	jwt, err := server.CreateEnrollmentJWT("test", time.Hour)
 	require.NoError(t, err)
 	require.NotEmpty(t, jwt)
 
@@ -60,6 +60,5 @@ func TestServer_EnrollmentJWT(t *testing.T) {
 
 	claims, err := auth.ValidateEnrollmentJWT(jwt, keys)
 	require.NoError(t, err)
-	require.Equal(t, "test-tenant", claims.TenantID)
-	require.Equal(t, "Ed25519", claims.KeyAlgorithm)
+	require.Equal(t, "test", claims.Issuer)
 }

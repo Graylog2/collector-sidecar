@@ -141,7 +141,7 @@ func TestServer_OpAMP_HTTP_CSR(t *testing.T) {
 	csrTemplate := &x509.CertificateRequest{
 		Subject: pkix.Name{
 			CommonName:   "test-instance-http",
-			Organization: []string{"test-tenant"},
+			Organization: []string{"test"},
 		},
 	}
 	csrDER, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, signingPriv)
@@ -207,7 +207,7 @@ func TestServer_OpAMP_HTTP_CSR(t *testing.T) {
 	cert, err := x509.ParseCertificate(block.Bytes)
 	require.NoError(t, err)
 	require.Equal(t, "test-instance-http", cert.Subject.CommonName)
-	require.Contains(t, cert.Subject.Organization, "test-tenant")
+	require.Contains(t, cert.Subject.Organization, "test")
 }
 
 func TestServer_OpAMP_CSR(t *testing.T) {
@@ -238,7 +238,7 @@ func TestServer_OpAMP_CSR(t *testing.T) {
 	csrTemplate := &x509.CertificateRequest{
 		Subject: pkix.Name{
 			CommonName:   "test-instance",
-			Organization: []string{"test-tenant"},
+			Organization: []string{"test"},
 		},
 	}
 	csrDER, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, signingPriv)
@@ -300,7 +300,7 @@ func TestServer_OpAMP_CSR(t *testing.T) {
 	cert, err := x509.ParseCertificate(block.Bytes)
 	require.NoError(t, err)
 	require.Equal(t, "test-instance", cert.Subject.CommonName)
-	require.Contains(t, cert.Subject.Organization, "test-tenant")
+	require.Contains(t, cert.Subject.Organization, "test")
 }
 
 func TestServer_RequireAuth_Unauthenticated(t *testing.T) {
@@ -342,7 +342,7 @@ func TestServer_RequireAuth_EnrollmentJWT(t *testing.T) {
 	httpURL := url + "/v1/opamp"
 
 	// Create enrollment JWT
-	enrollmentJWT, err := server.CreateEnrollmentJWT("test-tenant", time.Hour)
+	enrollmentJWT, err := server.CreateEnrollmentJWT("test", time.Hour)
 	require.NoError(t, err)
 
 	// Generate CSR
@@ -352,7 +352,7 @@ func TestServer_RequireAuth_EnrollmentJWT(t *testing.T) {
 	csrTemplate := &x509.CertificateRequest{
 		Subject: pkix.Name{
 			CommonName:   "test-instance-auth",
-			Organization: []string{"test-tenant"},
+			Organization: []string{"test"},
 		},
 	}
 	csrDER, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, signingPriv)
@@ -418,7 +418,7 @@ func TestServer_RequireAuth_SupervisorJWT(t *testing.T) {
 	instanceUID := "test-instance-supervisor"
 
 	// First, enroll with enrollment JWT
-	enrollmentJWT, err := server.CreateEnrollmentJWT("test-tenant", time.Hour)
+	enrollmentJWT, err := server.CreateEnrollmentJWT("test", time.Hour)
 	require.NoError(t, err)
 
 	// Generate keys
@@ -428,7 +428,7 @@ func TestServer_RequireAuth_SupervisorJWT(t *testing.T) {
 	csrTemplate := &x509.CertificateRequest{
 		Subject: pkix.Name{
 			CommonName:   instanceUID,
-			Organization: []string{"test-tenant"},
+			Organization: []string{"test"},
 		},
 	}
 	csrDER, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, signingPriv)

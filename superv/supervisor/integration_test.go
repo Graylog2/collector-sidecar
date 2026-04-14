@@ -46,7 +46,7 @@ func TestIntegration_Enrollment(t *testing.T) {
 	serverURL := server.Start()
 	defer server.Stop()
 
-	enrollmentToken, err := server.CreateEnrollmentJWT("test-tenant", time.Hour)
+	enrollmentToken, err := server.CreateEnrollmentJWT("test", time.Hour)
 	require.NoError(t, err)
 
 	// Setup dirs
@@ -72,7 +72,6 @@ func TestIntegration_Enrollment(t *testing.T) {
 	result, err := authMgr.PrepareEnrollment(context.Background(), server.URL(), enrollmentToken, instanceUID)
 	require.NoError(t, err)
 	require.NotEmpty(t, result.CSRPEM)
-	require.Equal(t, "test-tenant", result.TenantID)
 
 	// Verify pending state
 	require.True(t, authMgr.HasPendingEnrollment())
@@ -111,7 +110,7 @@ func TestIntegration_EnrollmentPersistence(t *testing.T) {
 	serverURL := server.Start()
 	defer server.Stop()
 
-	enrollmentToken, err := server.CreateEnrollmentJWT("test-tenant", time.Hour)
+	enrollmentToken, err := server.CreateEnrollmentJWT("test", time.Hour)
 	require.NoError(t, err)
 
 	dir := t.TempDir()
@@ -158,48 +157,6 @@ func TestIntegration_EnrollmentPersistence(t *testing.T) {
 	require.NotEmpty(t, jwt)
 }
 
-func TestIntegration_EnrollmentWithTenant(t *testing.T) {
-	// Create test server
-	server, err := testserver.New()
-	require.NoError(t, err)
-	server.RequireAuth = false
-
-	serverURL := server.Start()
-	defer server.Stop()
-
-	enrollmentToken, err := server.CreateEnrollmentJWT("acme-corp", time.Hour)
-	require.NoError(t, err)
-
-	dir := t.TempDir()
-	keysDir := filepath.Join(dir, "keys")
-	logger := zaptest.NewLogger(t)
-
-	authMgr := auth.NewManager(logger.Named("auth"), auth.ManagerConfig{
-		KeysDir:    keysDir,
-		HTTPClient: server.Client(),
-	})
-
-	instanceUID, _ := persistence.LoadOrCreateInstanceUID(dir)
-
-	// Prepare enrollment
-	result, err := authMgr.PrepareEnrollment(context.Background(), server.URL(), enrollmentToken, instanceUID)
-	require.NoError(t, err)
-	require.Equal(t, "acme-corp", result.TenantID)
-
-	// Get certificate via OpAMP
-	certPEM := sendCSRViaOpAMP(t, serverURL, instanceUID, result.CSRPEM)
-
-	// Complete enrollment
-	err = authMgr.CompleteEnrollment(certPEM)
-	require.NoError(t, err)
-
-	// Verify the certificate contains the tenant
-	cert := authMgr.Certificate()
-	require.NotNil(t, cert)
-	require.Equal(t, instanceUID, cert.Subject.CommonName)
-	require.Contains(t, cert.Subject.Organization, "acme-corp")
-}
-
 func TestIntegration_JWTExpiry(t *testing.T) {
 	// Create test server
 	server, err := testserver.New()
@@ -209,7 +166,7 @@ func TestIntegration_JWTExpiry(t *testing.T) {
 	serverURL := server.Start()
 	defer server.Stop()
 
-	enrollmentToken, err := server.CreateEnrollmentJWT("test-tenant", time.Hour)
+	enrollmentToken, err := server.CreateEnrollmentJWT("test", time.Hour)
 	require.NoError(t, err)
 
 	dir := t.TempDir()
@@ -327,7 +284,7 @@ func TestIntegration_CertificateRenewal(t *testing.T) {
 	serverURL := server.Start()
 	defer server.Stop()
 
-	enrollmentToken, err := server.CreateEnrollmentJWT("test-tenant", time.Hour)
+	enrollmentToken, err := server.CreateEnrollmentJWT("test", time.Hour)
 	require.NoError(t, err)
 
 	// Setup dirs
