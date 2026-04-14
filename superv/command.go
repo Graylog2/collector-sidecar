@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -43,7 +44,17 @@ func GetCommand() *cobra.Command {
 		Use:   "supervisor",
 		Short: "Start the supervisor",
 		Long:  "Start the Collector supervisor process",
-		RunE:  runSupervisor,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			// Explicitly check for supported platforms to avoid custom supervisor builds on unsupported platforms
+			// to connect to the OpAMP server.
+			switch runtime.GOOS {
+			case "darwin", "linux", "windows":
+				return nil
+			default:
+				return fmt.Errorf("unsupported platform: %s", runtime.GOOS)
+			}
+		},
+		RunE: runSupervisor,
 	}
 
 	cmd.Flags().StringP("config", "c", "", "Path to a supervisor configuration file")
