@@ -604,7 +604,7 @@ func TestSupervisor_BuildCollectorEnv(t *testing.T) {
 			authManager:    authMgr,
 			agentCfg:       config.AgentConfig{},
 			instanceUID:    instanceUid.String(),
-			persistenceDir: "/var/lib/graylog-sidecar",
+			persistenceDir: "/var/lib/graylog-sidecar/", // Check that trailing slash gets removed
 		}
 
 		env := s.buildCollectorEnv()
@@ -616,7 +616,7 @@ func TestSupervisor_BuildCollectorEnv(t *testing.T) {
 		s := &Supervisor{
 			authManager: authMgr,
 			agentCfg: config.AgentConfig{
-				StorageDir: "/var/lib/graylog-sidecar/storage",
+				StorageDir: "/var/lib/graylog-sidecar/storage/", // Check that trailing slash gets removed
 			},
 			instanceUID:    instanceUid.String(),
 			persistenceDir: "/var/lib/graylog-sidecar",
