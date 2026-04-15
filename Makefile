@@ -231,10 +231,10 @@ v2:
 
 .PHONY: v2all
 v2all:
-	$(GO) tool govulncheck
-	$(GO) tool govulncheck -C builder
-	$(GO) tool govulncheck -C superv
-	$(GO) tool govulncheck -C receiver/windowseventlogreceiver/
+	$(GO) tool govulncheck ./...
+	$(GO) tool govulncheck -C builder ./...
+	$(GO) tool govulncheck -C superv ./...
+	$(GO) tool govulncheck -C receiver/windowseventlogreceiver/ ./...
 	$(GO) generate .
 	$(GO) tool github.com/google/addlicense -check $(FMT_ARGS)
 	(cd builder && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 $(GO) build $(V2_BUILD_OPTS) -o ../graylog-collector-linux-amd64 .)
