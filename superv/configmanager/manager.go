@@ -407,6 +407,7 @@ func (m *Manager) injectExtensions(config []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to inject disabled telemetry metrics: %w", err)
 	}
+	m.logger.Debug("Injected telemetry metrics deactivation")
 
 	return mergedConfig, nil
 }
