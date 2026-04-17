@@ -35,7 +35,7 @@ design document. Summary of enhancements:
 - **XML query validation** — validates query XML syntax at config time
 - **XML input sanitization** — strips invalid XML 1.0 characters before parsing
 - **Strict bookmark recovery** — uses `EvtSubscribeStrict` and falls back to
-  oldest record when the bookmark is stale
+  the configured `start_at` when the bookmark is stale
 - **ProcessingErrorData diagnostics** — exposes rendering error codes in output
 - **Audit outcome enrichment** — derives `outcome` field from keyword audit bits
 - **Exponential backoff** — classifies Windows error codes and uses exponential
@@ -157,8 +157,10 @@ The receiver classifies Windows error codes and handles them differently:
 - **Non-recoverable errors** (`ERROR_EVT_CHANNEL_NOT_FOUND`,
   `ERROR_ACCESS_DENIED`) stop the receiver (unless `ignore_channel_errors: true`
   for channel errors).
-- **Stale bookmark** errors cause the receiver to fall back to reading from the
-  oldest record, ensuring no events are missed after log rotation or clearing.
+- **Stale bookmark** errors cause the receiver to fall back to the configured
+  `start_at` (`end` or `beginning`). Resumption from a stale bookmark is not
+  possible, so some gap between the last recorded bookmark and the new start
+  position may occur.
 
 ## Example Configurations
 

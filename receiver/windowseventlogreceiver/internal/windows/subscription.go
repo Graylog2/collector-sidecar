@@ -60,9 +60,12 @@ func (s *Subscription) Open(startAt string, channel string, query *string, bookm
 	flags := s.createFlags(startAt, bookmarkHandle)
 	subscriptionHandle, err := evtSubscribe(0, signalEvent, channelPtr, queryPtr, bookmarkHandle, 0, 0, flags)
 	if err != nil {
-		// If bookmark is stale, retry from oldest record
+		// If the bookmark is stale, retry honoring the configured start_at
+		// (future events for "end", oldest record for "beginning") instead
+		// of unconditionally replaying the entire channel history.
 		if bookmarkHandle != 0 && isStaleBookmarkError(err) {
-			subscriptionHandle, err = evtSubscribe(0, signalEvent, channelPtr, queryPtr, 0, 0, 0, EvtSubscribeStartAtOldestRecord)
+			fallbackFlags := s.createFlags(startAt, 0)
+			subscriptionHandle, err = evtSubscribe(0, signalEvent, channelPtr, queryPtr, 0, 0, 0, fallbackFlags)
 			if err != nil {
 				return fmt.Errorf("failed to subscribe after stale bookmark recovery: %w", err)
 			}
