@@ -59,10 +59,7 @@ func TestConfigDefaults(t *testing.T) {
 	assert.False(t, cfg.Agent.Sidecar.Enabled)
 	assert.True(t, cfg.Agent.Sidecar.Autodetect)
 
-	assert.Equal(t, "/var/lib/graylog-collector/supervisor", cfg.Persistence.Dir)
-	assert.Equal(t, "/var/lib/graylog-collector/storage", cfg.Agent.StorageDir)
-	assert.Equal(t, "/var/lib/graylog-collector/keys", cfg.Keys.Dir)
-	assert.Equal(t, "/var/lib/graylog-collector/packages", cfg.Packages.StorageDir)
+	// See platform-specific test files for directory default value tests
 }
 
 func TestConfigInsecure(t *testing.T) {

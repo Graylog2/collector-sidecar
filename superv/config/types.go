@@ -18,6 +18,9 @@
 package config
 
 import (
+	"fmt"
+	"path/filepath"
+	"runtime"
 	"time"
 )
 
@@ -225,6 +228,22 @@ type LoggingConfig struct {
 	Color  bool   `koanf:"color"`
 }
 
+var linuxDataPathPrefix = "/var/lib/graylog-collector"
+var windowsDataPathPrefix = filepath.Join("C:", "ProgramData", "Graylog", "Collector")
+
+type platformName string
+
+const windows platformName = "windows"
+const linux platformName = "linux"
+
+func platformDefaultValue[T any](values map[platformName]T) T {
+	if value, ok := values[platformName(runtime.GOOS)]; ok {
+		return value
+	}
+	// Must not happen
+	panic(fmt.Sprintf("platform %s not found", runtime.GOOS))
+}
+
 // DefaultConfig returns a Config with sensible defaults.
 func DefaultConfig() Config {
 	return Config{
@@ -247,7 +266,10 @@ func DefaultConfig() Config {
 		},
 		Keys: KeysConfig{
 			// TODO: Branding
-			Dir:       "/var/lib/graylog-collector/keys",
+			Dir: platformDefaultValue(map[platformName]string{
+				linux:   filepath.Join(linuxDataPathPrefix, "keys"),
+				windows: filepath.Join(windowsDataPathPrefix, "keys"),
+			}),
 			Encrypted: false,
 		},
 		LocalServer: LocalServer{
@@ -259,7 +281,10 @@ func DefaultConfig() Config {
 			BootstrapTimeout:   3 * time.Second,
 			PassthroughLogs:    false,
 			// TODO: Branding
-			StorageDir: "/var/lib/graylog-collector/storage",
+			StorageDir: platformDefaultValue(map[platformName]string{
+				linux:   filepath.Join(linuxDataPathPrefix, "storage"),
+				windows: filepath.Join(windowsDataPathPrefix, "storage"),
+			}),
 			Config: AgentConfigMerge{
 				MergeStrategy: "deep",
 			},
@@ -292,7 +317,10 @@ func DefaultConfig() Config {
 		},
 		Packages: PackagesConfig{
 			// TODO: Branding
-			StorageDir:   "/var/lib/graylog-collector/packages",
+			StorageDir: platformDefaultValue(map[platformName]string{
+				linux:   filepath.Join(linuxDataPathPrefix, "packages"),
+				windows: filepath.Join(windowsDataPathPrefix, "packages"),
+			}),
 			KeepVersions: 2,
 			Verification: VerificationConfig{
 				PublisherSignature: PublisherSignatureConfig{
@@ -303,7 +331,10 @@ func DefaultConfig() Config {
 		},
 		Persistence: PersistenceConfig{
 			// TODO: Branding
-			Dir: "/var/lib/graylog-collector/supervisor",
+			Dir: platformDefaultValue(map[platformName]string{
+				linux:   filepath.Join(linuxDataPathPrefix, "supervisor"),
+				windows: filepath.Join(windowsDataPathPrefix, "supervisor"),
+			}),
 		},
 		Telemetry: TelemetryConfig{
 			Logs: TelemetryLogsConfig{
