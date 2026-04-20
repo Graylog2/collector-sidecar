@@ -94,16 +94,9 @@ func New(logger *zap.Logger, logsDir string, cfg Config, backoff *Backoff) (*Com
 }
 
 // Start starts the agent process.
-// When crash recovery is enabled (MaxRetries >= 1), the first start is
-// synchronous so that callers observe any immediate launch failure. If the
-// first start succeeds, subsequent crash-recovery restarts run in a background
+// If the first start succeeds, subsequent crash-recovery restarts run in a background
 // goroutine; use [Commander.Done] to detect when recovery gives up.
 func (c *Commander) Start(ctx context.Context) error {
-	if c.backoff.MaxRetries() < 1 {
-		// No crash recovery requested
-		return c.start(ctx)
-	}
-
 	// Start the process synchronously first so the caller can observe
 	// immediate failures (e.g., missing executable).
 	if err := c.start(ctx); err != nil {
