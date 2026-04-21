@@ -44,6 +44,9 @@
     <Property Id="ARPNOMODIFY" Value="1" />
     <Property Id="ARPNOREPAIR" Value="1" />
 
+    <Property Id="SERVERURL" Secure="yes" />
+    <Property Id="TOKEN" Secure="yes" />
+
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="GraylogDir" Name="Graylog">
         <Directory Id="INSTALLFOLDER" Name="Collector">
@@ -78,6 +81,22 @@
                   Name="LICENSE"
                   KeyPath="yes" />
           </Component>
+
+          <Component Id="InstallStateMirror" Guid="*">
+            <RegistryKey Root="HKLM" Key="SOFTWARE\Graylog\Collector">
+              <RegistryValue Name="SERVERURL" Type="string" Value="[SERVERURL]" KeyPath="yes" />
+              <RegistryValue Name="TOKEN"     Type="string" Value="[TOKEN]" />
+            </RegistryKey>
+          </Component>
+
+          <Component Id="ServiceEnvironment" Guid="*">
+            <RegistryKey Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\graylog-collector">
+              <RegistryValue Name="Environment" Type="multiString" KeyPath="yes">
+                <MultiStringValue>GLC_SERVER__AUTH__ENROLLMENT_ENDPOINT=[SERVERURL]</MultiStringValue>
+                <MultiStringValue>GLC_SERVER__AUTH__ENROLLMENT_TOKEN=[TOKEN]</MultiStringValue>
+              </RegistryValue>
+            </RegistryKey>
+          </Component>
         </Directory>
       </Directory>
     </StandardDirectory>
@@ -91,6 +110,8 @@
     <Feature Id="Main" Title="Graylog Collector" Level="1">
       <ComponentRef Id="CollectorExe" />
       <ComponentRef Id="CollectorLicense" />
+      <ComponentRef Id="InstallStateMirror" />
+      <ComponentRef Id="ServiceEnvironment" />
     </Feature>
 
   </Package>
