@@ -22,5 +22,74 @@
   <Fragment>
     <ui:WixUI Id="WixUI_Minimal" />
     <WixVariable Id="WixUILicenseRtf" Value="LICENSE.rtf" />
+
+    <UI Id="GraylogUI">
+      <Dialog Id="ConfigurationDlg"
+              Width="370" Height="270"
+              Title="Graylog Collector Setup"
+              NoMinimize="yes">
+
+        <Control Id="ServerUrlLabel" Type="Text"
+                 X="20" Y="60" Width="330" Height="14"
+                 Text="Graylog server URL:" Transparent="yes" />
+
+        <Control Id="ServerUrlEdit" Type="Edit"
+                 X="20" Y="76" Width="330" Height="17"
+                 Property="SERVERURL" Text="[SERVERURL]" />
+
+        <Control Id="TokenLabel" Type="Text"
+                 X="20" Y="110" Width="330" Height="14"
+                 Text="Enrollment token:" Transparent="yes" />
+
+        <Control Id="TokenEdit" Type="Edit"
+                 X="20" Y="126" Width="330" Height="17"
+                 Property="TOKEN" Password="yes" Text="[TOKEN]" />
+
+        <Control Id="Back" Type="PushButton"
+                 X="180" Y="243" Width="56" Height="17"
+                 Text="Back">
+          <Publish Event="NewDialog" Value="WelcomeDlg" />
+        </Control>
+
+        <Control Id="Next" Type="PushButton"
+                 X="236" Y="243" Width="56" Height="17"
+                 Default="yes" Text="Next">
+          <Condition Action="disable"><![CDATA[SERVERURL="" OR TOKEN=""]]></Condition>
+          <Condition Action="enable"><![CDATA[SERVERURL<>"" AND TOKEN<>""]]></Condition>
+          <Publish Event="NewDialog" Value="VerifyReadyDlg" />
+        </Control>
+
+        <Control Id="Cancel" Type="PushButton"
+                 X="304" Y="243" Width="56" Height="17"
+                 Cancel="yes" Text="Cancel">
+          <Publish Event="SpawnDialog" Value="CancelDlg" />
+        </Control>
+
+        <Control Id="BannerBitmap" Type="Bitmap"
+                 X="0" Y="0" Width="370" Height="44"
+                 TabSkip="no" Text="WixUI_Bmp_Banner" />
+
+        <Control Id="Title" Type="Text"
+                 X="15" Y="6" Width="200" Height="15"
+                 Transparent="yes" NoPrefix="yes"
+                 Text="{\WixUI_Font_Title}Configure Graylog Collector" />
+
+        <Control Id="Description" Type="Text"
+                 X="25" Y="23" Width="280" Height="15"
+                 Transparent="yes" NoPrefix="yes"
+                 Text="Enter the enrollment details for this collector." />
+
+        <Control Id="BottomLine" Type="Line"
+                 X="0" Y="234" Width="370" Height="0" />
+      </Dialog>
+
+      <!-- Insert our dialog into the WixUI_Minimal flow -->
+      <Publish Dialog="WelcomeDlg" Control="Next"
+               Event="NewDialog" Value="ConfigurationDlg"
+               Order="2">1</Publish>
+      <Publish Dialog="VerifyReadyDlg" Control="Back"
+               Event="NewDialog" Value="ConfigurationDlg"
+               Order="2">1</Publish>
+    </UI>
   </Fragment>
 </Wix>
