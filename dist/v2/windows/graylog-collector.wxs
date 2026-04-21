@@ -60,6 +60,8 @@
                       Type="raw" />
     </Property>
 
+    <Property Id="REMOVE_DATA" Secure="yes" Value="0" />
+
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="GraylogDir" Name="Graylog">
         <Directory Id="INSTALLFOLDER" Name="Collector">
@@ -126,6 +128,28 @@
       <ComponentRef Id="InstallStateMirror" />
       <ComponentRef Id="ServiceEnvironment" />
     </Feature>
+
+    <!-- Immediate: capture the resolved path into CustomActionData for the deferred action -->
+    <CustomAction Id="PurgeProgramDataSetData"
+                  Property="PurgeProgramData"
+                  Value="[PROGRAMDATAFOLDER]" />
+
+    <!-- Deferred: runs elevated, reads [CustomActionData], removes the directory -->
+    <CustomAction Id="PurgeProgramData"
+                  Directory="TARGETDIR"
+                  ExeCommand='cmd.exe /c "rmdir /s /q ""[CustomActionData]"""'
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <InstallExecuteSequence>
+      <Custom Action="PurgeProgramDataSetData"
+              Before="PurgeProgramData"
+              Condition='REMOVE_DATA="1" AND REMOVE="ALL"' />
+      <Custom Action="PurgeProgramData"
+              After="RemoveFiles"
+              Condition='REMOVE_DATA="1" AND REMOVE="ALL"' />
+    </InstallExecuteSequence>
 
   </Package>
 </Wix>
