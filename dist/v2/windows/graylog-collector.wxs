@@ -41,9 +41,6 @@
     <Property Id="ARPPRODUCTICON" Value="graylog.ico" />
     <Property Id="ARPHELPLINK" Value="https://docs.graylog.org/" />
     <Property Id="ARPURLINFOABOUT" Value="https://www.graylog.org/" />
-    <Property Id="ARPNOMODIFY" Value="1" />
-    <Property Id="ARPNOREPAIR" Value="1" />
-
     <Property Id="SERVERURL" Secure="yes">
       <RegistrySearch Id="ExistingServerUrl"
                       Root="HKLM"
@@ -88,7 +85,7 @@
                 Start="install"
                 Stop="both"
                 Remove="uninstall"
-                Wait="yes" />
+                Wait="no" />
           </Component>
           <Component Id="CollectorLicense" Guid="*">
             <File Id="LICENSE_txt"
@@ -107,8 +104,8 @@
           <Component Id="ServiceEnvironment" Guid="*">
             <RegistryKey Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\graylog-collector">
               <RegistryValue Name="Environment" Type="multiString" KeyPath="yes">
-                <MultiStringValue>GLC_SERVER__AUTH__ENROLLMENT_ENDPOINT=[SERVERURL]</MultiStringValue>
-                <MultiStringValue>GLC_SERVER__AUTH__ENROLLMENT_TOKEN=[TOKEN]</MultiStringValue>
+                <MultiStringValue Value="GLC_SERVER__AUTH__ENROLLMENT_ENDPOINT=[SERVERURL]" />
+                <MultiStringValue Value="GLC_SERVER__AUTH__ENROLLMENT_TOKEN=[TOKEN]" />
               </RegistryValue>
             </RegistryKey>
           </Component>
@@ -118,15 +115,22 @@
 
     <StandardDirectory Id="CommonAppDataFolder">
       <Directory Id="CommonAppGraylogDir" Name="Graylog">
-        <Directory Id="PROGRAMDATAFOLDER" Name="Collector" />
+        <Directory Id="PROGRAMDATAFOLDER" Name="Collector">
+          <Component Id="ProgramDataDir" Guid="9BB8A27D-C01D-42A9-B5C0-4C1E1E31714C">
+            <CreateFolder />
+          </Component>
+        </Directory>
       </Directory>
     </StandardDirectory>
+
+    <UIRef Id="GraylogUI" />
 
     <Feature Id="Main" Title="Graylog Collector" Level="1">
       <ComponentRef Id="CollectorExe" />
       <ComponentRef Id="CollectorLicense" />
       <ComponentRef Id="InstallStateMirror" />
       <ComponentRef Id="ServiceEnvironment" />
+      <ComponentRef Id="ProgramDataDir" />
     </Feature>
 
     <!-- Immediate: capture the resolved path into CustomActionData for the deferred action -->

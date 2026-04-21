@@ -16,15 +16,15 @@
 
  SPDX-License-Identifier: SSPL-1.0
 -->
-<Project Sdk="WixToolset.Sdk/6.0.0">
+<Project Sdk="WixToolset.Sdk/7.0.0">
   <PropertyGroup>
     <OutputType>Package</OutputType>
+    <Platform>x64</Platform>
+    <AcceptEula>wix7</AcceptEula>
     <OutputName>graylog-collector-$(Version)</OutputName>
-    <DefineConstants>SourceExe=$(SourceExe);LicenseFile=$(LicenseFile)</DefineConstants>
+    <DefineConstants>SourceExe=$(SourceExe);LicenseFile=$(LicenseFile);Version=$(Version)</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="graylog-collector.wxs" />
-    <Compile Include="ui.wxs" />
-    <PackageReference Include="WixToolset.UI.wixext" Version="6.0.0" />
+    <PackageReference Include="WixToolset.UI.wixext" Version="7.0.0" />
   </ItemGroup>
 </Project>
