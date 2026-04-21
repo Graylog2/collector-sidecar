@@ -51,6 +51,26 @@
             <File Id="graylog_collector_exe"
                   Source="$(var.SourceExe)"
                   KeyPath="yes" />
+
+            <ServiceInstall
+                Id="GraylogCollectorService"
+                Name="graylog-collector"
+                DisplayName="Graylog Collector"
+                Description="OpenTelemetry-based log collector, managed by Graylog."
+                Type="ownProcess"
+                Start="auto"
+                ErrorControl="normal"
+                Account="LocalSystem"
+                Arguments="supervisor"
+                Vital="yes" />
+
+            <ServiceControl
+                Id="GraylogCollectorServiceControl"
+                Name="graylog-collector"
+                Start="install"
+                Stop="both"
+                Remove="uninstall"
+                Wait="yes" />
           </Component>
           <Component Id="CollectorLicense" Guid="*">
             <File Id="LICENSE_txt"
