@@ -44,8 +44,21 @@
     <Property Id="ARPNOMODIFY" Value="1" />
     <Property Id="ARPNOREPAIR" Value="1" />
 
-    <Property Id="SERVERURL" Secure="yes" />
-    <Property Id="TOKEN" Secure="yes" />
+    <Property Id="SERVERURL" Secure="yes">
+      <RegistrySearch Id="ExistingServerUrl"
+                      Root="HKLM"
+                      Key="SOFTWARE\Graylog\Collector"
+                      Name="SERVERURL"
+                      Type="raw" />
+    </Property>
+
+    <Property Id="TOKEN" Secure="yes">
+      <RegistrySearch Id="ExistingToken"
+                      Root="HKLM"
+                      Key="SOFTWARE\Graylog\Collector"
+                      Name="TOKEN"
+                      Type="raw" />
+    </Property>
 
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="GraylogDir" Name="Graylog">
