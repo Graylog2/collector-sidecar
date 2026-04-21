@@ -27,13 +27,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"syscall"
-	"time"
 
 	"github.com/Graylog2/collector-sidecar/superv/config"
-	"github.com/Graylog2/collector-sidecar/superv/ownlogs"
-	"github.com/Graylog2/collector-sidecar/superv/persistence"
-	"github.com/Graylog2/collector-sidecar/superv/supervisor"
-	"github.com/Graylog2/collector-sidecar/superv/version"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -250,83 +245,14 @@ func initLogger(loggingCfg config.LoggingConfig, debug bool) (*zap.Logger, error
 	return cfg.Build()
 }
 
-func runSupervisor(cmd *cobra.Command, args []string) error {
+func runSupervisor(cmd *cobra.Command, _ []string) error {
 	cfg, events, err := buildConfig(cmd)
 	if err != nil {
 		return fmt.Errorf("couldn't load config: %w", err)
 	}
 
-	logger, err := initLogger(cfg.Logging, cfg.Debug)
-	if err != nil {
-		return fmt.Errorf("failed to create logger: %w", err)
-	}
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
-	// Create own logs manager for OTLP export
-	ownLogsManager := ownlogs.NewManager(cfg.Telemetry.Logs)
-
-	// Tee stderr core with the swappable OTLP core, preserving
-	// all original logger options (development mode, caller, stacktrace threshold).
-	logger = logger.WithOptions(zap.WrapCore(func(original zapcore.Core) zapcore.Core {
-		return zapcore.NewTee(original, ownLogsManager.Core())
-	}))
-
-	for _, event := range events {
-		event(logger)
-	}
-
-	// Load or create instance UID early so it's available for own_logs restore.
-	instanceUID, err := persistence.LoadOrCreateInstanceUID(cfg.Persistence.Dir)
-	if err != nil {
-		return fmt.Errorf("failed to load instance UID: %w", err)
-	}
-
-	// Restore persisted own_logs settings
-	certPath := filepath.Join(cfg.Keys.Dir, persistence.SigningCertFile)
-	keyPath := filepath.Join(cfg.Keys.Dir, persistence.SigningKeyFile)
-	ownLogsPersist := ownlogs.NewPersistence(cfg.Persistence.Dir, certPath, keyPath)
-	var restoredOwnLogs *ownlogs.Settings
-	if settings, exists, loadErr := ownLogsPersist.Load(); loadErr != nil {
-		logger.Warn("Failed to load persisted own_logs settings", zap.Error(loadErr))
-	} else if exists {
-		logger.Info("Restoring OTLP log export from persisted settings",
-			zap.String("endpoint", settings.Endpoint),
-		)
-		res := ownlogs.BuildResource(supervisor.ServiceName, version.Version(), instanceUID)
-		if applyErr := ownLogsManager.Apply(context.Background(), settings, res); applyErr != nil {
-			logger.Warn("Failed to restore OTLP log export", zap.Error(applyErr))
-		} else {
-			settingsCopy := settings
-			restoredOwnLogs = &settingsCopy
-		}
-	}
-
-	sv, err := supervisor.New(logger.Named("supervisor"), cfg, instanceUID)
-	if err != nil {
-		return fmt.Errorf("failed to create supervisor: %w", err)
-	}
-	sv.SetOwnLogs(ownLogsManager, ownLogsPersist, restoredOwnLogs)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	sigCtx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
-
-	err = sv.Start(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to start supervisor: %w", err)
-	}
-
-	<-sigCtx.Done()
-	stop()
-
-	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancelShutdown()
-	if err := sv.Stop(shutdownCtx); err != nil {
-		return fmt.Errorf("shutdown timeout: %w", err)
-	}
-
-	// Safety net: flush own logs in case supervisor stop was interrupted.
-	_ = ownLogsManager.Shutdown(shutdownCtx)
-
-	return nil
+	return Run(ctx, cfg, events)
 }

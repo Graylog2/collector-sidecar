@@ -20,8 +20,8 @@ package main
 // Generate the OpenTelemetry Collector binary source code.
 //go:generate go tool go.opentelemetry.io/collector/cmd/builder --config ./builder/builder-config.yaml --skip-compilation
 
-// Modify the generated main.go to add customization hooks.
-//go:generate go run ./builder/mod/main.go -main-path ./builder/main.go
+// Modify the generated main.go and main_windows.go to add customization hooks.
+//go:generate go run ./builder/mod/main.go -main-path ./builder/main.go -windows-main-path ./builder/main_windows.go
 
 // Format the generated source code.
 //go:generate gofmt -w -s -l ./builder
