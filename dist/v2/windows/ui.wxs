@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
  Copyright (C)  2026 Graylog, Inc.
 
@@ -16,15 +17,10 @@
 
  SPDX-License-Identifier: SSPL-1.0
 -->
-<Project Sdk="WixToolset.Sdk/6.0.0">
-  <PropertyGroup>
-    <OutputType>Package</OutputType>
-    <OutputName>graylog-collector-$(Version)</OutputName>
-    <DefineConstants>SourceExe=$(SourceExe);LicenseFile=$(LicenseFile)</DefineConstants>
-  </PropertyGroup>
-  <ItemGroup>
-    <Compile Include="graylog-collector.wxs" />
-    <Compile Include="ui.wxs" />
-    <PackageReference Include="WixToolset.UI.wixext" Version="6.0.0" />
-  </ItemGroup>
-</Project>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Fragment>
+    <ui:WixUI Id="WixUI_Minimal" />
+    <WixVariable Id="WixUILicenseRtf" Value="LICENSE.rtf" />
+  </Fragment>
+</Wix>
