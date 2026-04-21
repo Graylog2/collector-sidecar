@@ -20,6 +20,7 @@
   <PropertyGroup>
     <OutputType>Package</OutputType>
     <OutputName>graylog-collector-$(Version)</OutputName>
+    <DefineConstants>SourceExe=$(SourceExe);LicenseFile=$(LicenseFile)</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="graylog-collector.wxs" />

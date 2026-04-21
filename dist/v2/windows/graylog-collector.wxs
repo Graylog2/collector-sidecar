@@ -46,7 +46,19 @@
 
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="GraylogDir" Name="Graylog">
-        <Directory Id="INSTALLFOLDER" Name="Collector" />
+        <Directory Id="INSTALLFOLDER" Name="Collector">
+          <Component Id="CollectorExe" Guid="*">
+            <File Id="graylog_collector_exe"
+                  Source="$(var.SourceExe)"
+                  KeyPath="yes" />
+          </Component>
+          <Component Id="CollectorLicense" Guid="*">
+            <File Id="LICENSE_txt"
+                  Source="$(var.LicenseFile)"
+                  Name="LICENSE"
+                  KeyPath="yes" />
+          </Component>
+        </Directory>
       </Directory>
     </StandardDirectory>
 
@@ -57,7 +69,8 @@
     </StandardDirectory>
 
     <Feature Id="Main" Title="Graylog Collector" Level="1">
-      <!-- Components added in later tasks -->
+      <ComponentRef Id="CollectorExe" />
+      <ComponentRef Id="CollectorLicense" />
     </Feature>
 
   </Package>
