@@ -57,11 +57,12 @@ type Commander struct {
 	logger  *zap.Logger
 	logsDir string
 	cfg     Config
-	mu      sync.Mutex // protects cmd, recoveryDone, stopRecovery
+	mu      sync.Mutex // protects cmd, doneCh, recoveryDone, stopRecovery
 	cmd     *exec.Cmd
 	running atomic.Bool
-	doneCh  chan struct{}
-	exitCh  chan struct{}
+	// doneCh is allocated per process in start() and closed by watch() when
+	// the process exits; consumers (Stop, recoveryLoop) snapshot it under mu.
+	doneCh chan struct{}
 
 	// Log rotation writer (persists across restarts)
 	logWriter *timberjack.Logger
@@ -87,15 +88,12 @@ func New(logger *zap.Logger, logsDir string, cfg Config, backoff *Backoff) (*Com
 		logger:  logger,
 		logsDir: logsDir,
 		cfg:     cfg,
-		doneCh:  make(chan struct{}, 1),
-		exitCh:  make(chan struct{}, 1),
 		backoff: backoff,
 	}, nil
 }
 
 // Start starts the agent process.
-// If the first start succeeds, subsequent crash-recovery restarts run in a background
-// goroutine; use [Commander.Done] to detect when recovery gives up.
+// If the first start succeeds, subsequent crash-recovery restarts run in a background goroutine.
 func (c *Commander) Start(ctx context.Context) error {
 	// Start the process synchronously first so the caller can observe
 	// immediate failures (e.g., missing executable).
@@ -119,24 +117,16 @@ func (c *Commander) start(ctx context.Context) error {
 		return nil // Already running
 	}
 
-	// Drain channels from previous runs
-	select {
-	case <-c.doneCh:
-	default:
-	}
-	select {
-	case <-c.exitCh:
-	default:
-	}
-
 	c.logger.Debug("Starting agent", zap.String("executable", c.cfg.Executable))
 
 	cmd := exec.CommandContext(ctx, c.cfg.Executable, c.cfg.Args...)
 	cmd.Env = c.buildEnv()
 	cmd.SysProcAttr = sysProcAttrs()
+	doneCh := make(chan struct{})
 
 	c.mu.Lock()
 	c.cmd = cmd
+	c.doneCh = doneCh
 	c.mu.Unlock()
 
 	if c.cfg.PassthroughLogs {
@@ -168,37 +158,45 @@ func (c *Commander) startNormal() error {
 			LocalTime:  true,
 		}
 	}
+	cmd := c.cmd
+	doneCh := c.doneCh
+	logWriter := c.logWriter
 	c.mu.Unlock()
 
-	c.cmd.Stdout = c.logWriter
-	c.cmd.Stderr = c.logWriter
+	cmd.Stdout = logWriter
+	cmd.Stderr = logWriter
 
-	if err := c.cmd.Start(); err != nil {
+	if err := cmd.Start(); err != nil {
 		c.running.Store(false)
 		return fmt.Errorf("failed to start agent: %w", err)
 	}
 
-	c.logger.Debug("Agent process started", zap.Int("pid", c.cmd.Process.Pid))
+	c.logger.Debug("Agent process started", zap.Int("pid", cmd.Process.Pid))
 
-	go c.watch()
+	go c.watch(cmd, doneCh)
 
 	return nil
 }
 
 func (c *Commander) startWithPassthroughLogging() error {
-	stdoutPipe, err := c.cmd.StdoutPipe()
+	c.mu.Lock()
+	cmd := c.cmd
+	doneCh := c.doneCh
+	c.mu.Unlock()
+
+	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
 		c.running.Store(false)
 		return fmt.Errorf("stdout pipe: %w", err)
 	}
 
-	stderrPipe, err := c.cmd.StderrPipe()
+	stderrPipe, err := cmd.StderrPipe()
 	if err != nil {
 		c.running.Store(false)
 		return fmt.Errorf("stderr pipe: %w", err)
 	}
 
-	if err := c.cmd.Start(); err != nil {
+	if err := cmd.Start(); err != nil {
 		c.running.Store(false)
 		return fmt.Errorf("failed to start agent: %w", err)
 	}
@@ -208,9 +206,9 @@ func (c *Commander) startWithPassthroughLogging() error {
 	go c.pipeOutput(stdoutPipe, agentLogger, false)
 	go c.pipeOutput(stderrPipe, agentLogger, true)
 
-	c.logger.Debug("Agent process started", zap.Int("pid", c.cmd.Process.Pid))
+	c.logger.Debug("Agent process started", zap.Int("pid", cmd.Process.Pid))
 
-	go c.watch()
+	go c.watch(cmd, doneCh)
 
 	return nil
 }
@@ -242,8 +240,8 @@ func (c *Commander) pipeOutput(pipe io.ReadCloser, logger *zap.Logger, isStderr 
 	}
 }
 
-func (c *Commander) watch() {
-	err := c.cmd.Wait()
+func (c *Commander) watch(cmd *exec.Cmd, doneCh chan struct{}) {
+	err := cmd.Wait()
 
 	var exitError *exec.ExitError
 	if err != nil && !errors.As(err, &exitError) {
@@ -252,14 +250,7 @@ func (c *Commander) watch() {
 
 	c.running.Store(false)
 
-	select {
-	case c.doneCh <- struct{}{}:
-	default:
-	}
-	select {
-	case c.exitCh <- struct{}{}:
-	default:
-	}
+	close(doneCh)
 }
 
 // Stop stops the agent process gracefully.
@@ -270,6 +261,7 @@ func (c *Commander) Stop(ctx context.Context) error {
 	c.mu.Lock()
 	stopRecovery := c.stopRecovery
 	cmd := c.cmd
+	doneCh := c.doneCh
 	c.mu.Unlock()
 
 	if stopRecovery != nil {
@@ -308,7 +300,7 @@ func (c *Commander) Stop(ctx context.Context) error {
 	}()
 
 	select {
-	case <-c.doneCh:
+	case <-doneCh:
 		// Process exited
 	case <-ctx.Done():
 		return ctx.Err()
@@ -348,13 +340,6 @@ func (c *Commander) ReloadConfig() error {
 		return errors.New("agent process is not running")
 	}
 	return sendReloadSignal(cmd.Process)
-}
-
-// Exited returns a channel that signals when the agent process exits.
-// When crash recovery is enabled (MaxRetries >= 1), the recovery loop consumes
-// exit events. Use [Commander.Done] instead to detect when the recovery loop completes.
-func (c *Commander) Exited() <-chan struct{} {
-	return c.exitCh
 }
 
 // Pid returns the agent process PID, or 0 if not running.
@@ -409,6 +394,10 @@ func (c *Commander) recoveryLoop(ctx context.Context) {
 		}
 		firstIteration = false
 
+		c.mu.Lock()
+		doneCh := c.doneCh
+		c.mu.Unlock()
+
 		// Mark as running for stability tracking
 		c.backoff.MarkRunning()
 
@@ -424,7 +413,7 @@ func (c *Commander) recoveryLoop(ctx context.Context) {
 			cancel()
 			return
 
-		case <-c.exitCh:
+		case <-doneCh:
 			// Process exited, check if we should restart
 			exitCode := c.ExitCode()
 
@@ -484,19 +473,4 @@ func (c *Commander) CrashCount() int {
 	c.crashMu.Lock()
 	defer c.crashMu.Unlock()
 	return c.crashCount
-}
-
-// Done returns a channel that signals when the recovery loop has completed.
-// This happens when max retries are exhausted, the process exits cleanly,
-// or the recovery is stopped.
-func (c *Commander) Done() <-chan struct{} {
-	c.mu.Lock()
-	rd := c.recoveryDone
-	c.mu.Unlock()
-
-	if rd != nil {
-		return rd
-	}
-	// Return exitCh if not using recovery
-	return c.exitCh
 }
