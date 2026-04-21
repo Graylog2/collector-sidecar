@@ -184,6 +184,20 @@ package-windows-msi-amd64: prepare-package ## Create Windows MSI package (requir
 		-o dist/pkg/graylog-sidecar-$(WINDOWS_INSTALLER_VERSION).msi \
 		dist/msi-package.wxs
 
+.PHONY: v2-package-windows-msi
+v2-package-windows-msi: ## Build Windows MSI for v2 collector (requires dotnet SDK + wix tool)
+	@mkdir -p dist/pkg
+	dotnet build dist/v2/windows/graylog-collector.wixproj \
+	    -c Release \
+	    -p:Version=$(COLLECTOR_VERSION) \
+	    -p:SourceExe=$(PWD)/graylog-collector-windows-amd64.exe \
+	    -p:LicenseFile=$(PWD)/LICENSE \
+	    -p:OutputPath=$(PWD)/dist/pkg/
+
+.PHONY: v2-sign-windows-msi
+v2-sign-windows-msi: ## Sign v2 Windows MSI (runs in codesigntool Docker container)
+	codesigntool sign dist/pkg/graylog-collector-$(COLLECTOR_VERSION).msi
+
 .PHONY: sign-windows-installer
 sign-windows-installer:
 	# This needs to run in a Docker container with the graylog/internal-codesigntool image
