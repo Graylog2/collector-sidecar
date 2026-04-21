@@ -35,8 +35,9 @@ type Callbacks struct {
 	OnCommand                 func(ctx context.Context, command *protobufs.ServerToAgentCommand) error
 	OnCustomMessage           func(ctx context.Context, customMessage *protobufs.CustomMessage)
 	OnOwnLogs                 func(ctx context.Context, settings *protobufs.TelemetryConnectionSettings)
-	SaveRemoteConfigStatus    func(ctx context.Context, status *protobufs.RemoteConfigStatus)
-	GetEffectiveConfig        func(ctx context.Context) (*protobufs.EffectiveConfig, error)
+	// Deprecated: The callback is not called by the opamp-go library. It's a leftover from a previous implementation.
+	SaveRemoteConfigStatus func(ctx context.Context, status *protobufs.RemoteConfigStatus)
+	GetEffectiveConfig     func(ctx context.Context) (*protobufs.EffectiveConfig, error)
 }
 
 // ToTypesCallbacks converts our Callbacks to opamp-go types.Callbacks.
@@ -58,6 +59,7 @@ func (c *Callbacks) ToTypesCallbacks() types.Callbacks {
 			}
 			return nil
 		},
+		// TODO: This callback is never called by opamp-go. It is a leftover from an old implementation.
 		SaveRemoteConfigStatus: func(ctx context.Context, status *protobufs.RemoteConfigStatus) {
 			if c.SaveRemoteConfigStatus != nil {
 				c.SaveRemoteConfigStatus(ctx, status)
