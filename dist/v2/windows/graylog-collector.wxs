@@ -145,10 +145,10 @@
     <InstallExecuteSequence>
       <Custom Action="PurgeProgramDataSetData"
               Before="PurgeProgramData"
-              Condition='REMOVE_DATA="1" AND REMOVE="ALL"' />
+              Condition='REMOVE_DATA="1" AND REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE' />
       <Custom Action="PurgeProgramData"
               After="RemoveFiles"
-              Condition='REMOVE_DATA="1" AND REMOVE="ALL"' />
+              Condition='REMOVE_DATA="1" AND REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE' />
     </InstallExecuteSequence>
 
   </Package>
