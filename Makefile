@@ -185,7 +185,10 @@ package-windows-msi-amd64: prepare-package ## Create Windows MSI package (requir
 		dist/msi-package.wxs
 
 .PHONY: v2-package-windows-msi
-v2-package-windows-msi: ## Build Windows MSI for v2 collector (requires dotnet SDK + wix tool)
+v2-package-windows-msi: ## Build Windows MSI for v2 collector (Windows only, requires dotnet SDK + wix tool)
+ifneq ($(OS),Windows_NT)
+	$(error v2-package-windows-msi requires Windows (WiX does not support other platforms))
+endif
 	@mkdir -p dist/pkg
 	dotnet build dist/v2/windows/graylog-collector.wixproj \
 	    -c Release \
