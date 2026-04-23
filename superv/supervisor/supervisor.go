@@ -853,10 +853,10 @@ func (s *Supervisor) reconnectClient(ctx context.Context, settings connection.Se
 		return fmt.Errorf("apply connection settings: %w", err)
 	}
 
-	// Check workCtx under mu before assigning. Stop() cancels workCtx while
-	// holding mu, so this check-and-assign is atomic with respect to shutdown.
-	// We use workCtx instead of s.running because s.running is only set at the
-	// end of Start(), but reconnects can happen during the startup window.
+	// Check s.ctx under mu before publishing newClient. Supervisor.Stop() cancels s.ctx while
+	// holding the same mu, so this check-and-assign is atomic with respect to supervisor shutdown.
+	// We use s.ctx instead of s.isRunning because s.isRunning is only set at the end of Start(),
+	// but reconnects can happen during that startup window.
 	s.mu.Lock()
 	if s.ctx.Err() != nil {
 		s.mu.Unlock()
@@ -1043,7 +1043,7 @@ func (s *Supervisor) handleCertificateResponse(settings *protobufs.OpAMPConnecti
 				}
 			}
 		}) {
-			if s.isWorkerStopping() {
+			if s.isStopping() {
 				s.logger.Debug("Skipping post-renewal actions during shutdown")
 			} else {
 				s.logger.Warn("Failed to enqueue post-renewal actions")
@@ -1080,12 +1080,12 @@ func (s *Supervisor) reloadOwnLogsCert(ctx context.Context) error {
 	return s.ownLogsManager.Apply(ctx, *s.currentOwnLogs, res)
 }
 
-func (s *Supervisor) isWorkerStopping() bool {
+func (s *Supervisor) isStopping() bool {
 	return s.ctx != nil && s.ctx.Err() != nil
 }
 
 func (s *Supervisor) isShutdownCancellation(err error) bool {
-	return errors.Is(err, context.Canceled) && s.isWorkerStopping()
+	return errors.Is(err, context.Canceled) && s.isStopping()
 }
 
 // awaitCollectorHealthy polls the health monitor until the collector reports
@@ -1244,14 +1244,14 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 
 			if !s.enqueueWork(clientCtx, func(ctx context.Context) { s.handleRemoteConfig(ctx, cfg) }) {
 				s.logger.Error("Couldn't enqueue remote config update")
-				s.reportRemoteConfigStatus(s.ctx,
+				s.reportRemoteConfigStatus(clientCtx,
 					protobufs.RemoteConfigStatuses_RemoteConfigStatuses_FAILED,
 					"couldn't enqueue remote config update",
 					cfg.GetConfigHash(),
 				)
 			}
 		},
-		OnOpampConnectionSettings: func(ctx context.Context, settings *protobufs.OpAMPConnectionSettings) error {
+		OnOpampConnectionSettings: func(clientCtx context.Context, settings *protobufs.OpAMPConnectionSettings) error {
 			s.logger.Info("Received connection settings update")
 
 			// Phase 1: validate and prepare (synchronous, returns status to opamp-go)
@@ -1265,7 +1265,7 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 			}
 
 			// Phase 2: reconnect (async on worker, can't block callback)
-			if !s.enqueueWork(ctx, func(wCtx context.Context) {
+			if !s.enqueueWork(clientCtx, func(wCtx context.Context) {
 				s.applyConnectionSettings(wCtx, pending)
 			}) {
 				// Enqueue failed (context cancelled during shutdown or opamp-go timeout).
@@ -1300,27 +1300,27 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 			s.logger.Warn("TODO: Received command", zap.String("type", command.GetType().String()))
 			return nil
 		},
-		OnCustomMessage: func(ctx context.Context, customMessage *protobufs.CustomMessage) {
+		OnCustomMessage: func(clientCtx context.Context, customMessage *protobufs.CustomMessage) {
 			s.logger.Debug("Received custom message",
 				zap.String("capability", customMessage.GetCapability()),
 				zap.String("type", customMessage.GetType()),
 			)
 
 			// Forward custom messages to the local OpAMP server (collector)
-			s.forwardCustomMessage(ctx, customMessage)
+			s.forwardCustomMessage(clientCtx, customMessage)
 		},
-		OnOwnLogs: func(ctx context.Context, settings *protobufs.TelemetryConnectionSettings) {
-			if !s.enqueueWork(ctx, func(wCtx context.Context) {
-				s.handleOwnLogs(wCtx, settings)
+		OnOwnLogs: func(clientCtx context.Context, settings *protobufs.TelemetryConnectionSettings) {
+			if !s.enqueueWork(clientCtx, func(ctx context.Context) {
+				s.handleOwnLogs(ctx, settings)
 			}) {
-				if s.isWorkerStopping() {
+				if s.isStopping() {
 					s.logger.Debug("Skipping own_logs apply during shutdown")
 					return
 				}
 				s.logger.Warn("Failed to enqueue own_logs apply")
 			}
 		},
-		SaveRemoteConfigStatus: func(ctx context.Context, status *protobufs.RemoteConfigStatus) {
+		SaveRemoteConfigStatus: func(_ context.Context, status *protobufs.RemoteConfigStatus) {
 			s.logger.Debug("SaveRemoteConfigStatus callback invoked",
 				zap.String("status", status.GetStatus().String()),
 			)
@@ -1340,7 +1340,7 @@ func (s *Supervisor) handleRemoteConfig(ctx context.Context, cfg *protobufs.Agen
 	result, err := s.configManager.ApplyRemoteConfig(cfg)
 	if err != nil {
 		s.logger.Error("Failed to apply remote config", zap.Error(err))
-		s.reportRemoteConfigStatus(s.ctx,
+		s.reportRemoteConfigStatus(ctx,
 			protobufs.RemoteConfigStatuses_RemoteConfigStatuses_FAILED,
 			err.Error(),
 			cfg.GetConfigHash(),
@@ -1358,13 +1358,13 @@ func (s *Supervisor) handleRemoteConfig(ctx context.Context, cfg *protobufs.Agen
 	// On failure we roll back the config file and re-start the collector
 	// with the previous config to avoid leaving it stopped.
 	s.logger.Info("Config changed, restarting collector")
-	if err := s.commander.Restart(s.ctx); err != nil {
+	if err := s.commander.Restart(ctx); err != nil {
 		if s.isShutdownCancellation(err) {
 			s.logger.Debug("Supervisor shutdown interrupted config apply during collector restart")
 			return false
 		}
 		s.logger.Error("Failed to restart collector with new config", zap.Error(err))
-		s.rollbackAndRecover(s.ctx, cfg.GetConfigHash(), err)
+		s.rollbackAndRecover(ctx, cfg.GetConfigHash(), err)
 		return false
 	}
 
@@ -1372,21 +1372,21 @@ func (s *Supervisor) handleRemoteConfig(ctx context.Context, cfg *protobufs.Agen
 	// Commander.Start() returns immediately when crash recovery is
 	// enabled (MaxRetries >= 1), so we must poll health to confirm
 	// the process actually started successfully.
-	if err := s.awaitCollectorHealthy(s.ctx, s.agentCfg.ConfigApplyTimeout); err != nil {
+	if err := s.awaitCollectorHealthy(ctx, s.agentCfg.ConfigApplyTimeout); err != nil {
 		if s.isShutdownCancellation(err) {
 			s.logger.Debug("Supervisor shutdown interrupted config apply while awaiting collector health")
 			return false
 		}
 		s.logger.Error("Collector unhealthy after restart", zap.Error(err))
-		s.rollbackAndRecover(s.ctx, cfg.GetConfigHash(), err)
+		s.rollbackAndRecover(ctx, cfg.GetConfigHash(), err)
 		return false
 	}
 
 	// Report effective config
-	s.reportEffectiveConfig(s.ctx, result.EffectiveConfig)
+	s.reportEffectiveConfig(ctx, result.EffectiveConfig)
 
 	// Report success
-	s.reportRemoteConfigStatus(s.ctx,
+	s.reportRemoteConfigStatus(ctx,
 		protobufs.RemoteConfigStatuses_RemoteConfigStatuses_APPLIED,
 		"",
 		cfg.GetConfigHash(),
