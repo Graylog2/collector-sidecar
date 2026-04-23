@@ -1230,13 +1230,13 @@ func (s *Supervisor) reportEffectiveConfig(ctx context.Context, effectiveConfig 
 // This is extracted to avoid duplication when recreating the client.
 func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 	return &opamp.Callbacks{
-		OnConnect: func(ctx context.Context) {
+		OnConnect: func(_ context.Context) {
 			s.logger.Debug("Connected to OpAMP server", zap.String("endpoint", s.connectionSettingsManager.GetCurrent().Endpoint))
 		},
-		OnConnectFailed: func(ctx context.Context, err error) {
+		OnConnectFailed: func(_ context.Context, err error) {
 			s.logger.Error("Failed to connect to OpAMP server", zap.Error(err))
 		},
-		OnError: func(ctx context.Context, err *protobufs.ServerErrorResponse) {
+		OnError: func(_ context.Context, err *protobufs.ServerErrorResponse) {
 			s.logger.Error("OpAMP server error", zap.Error(fmt.Errorf("%s: %s", err.GetType(), err.GetErrorMessage())))
 		},
 		OnRemoteConfig: func(clientCtx context.Context, cfg *protobufs.AgentRemoteConfig) {
@@ -1291,12 +1291,12 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 			// applyConnectionSettings should send late FAILED/APPLIED after async reconnect.
 			return nil
 		},
-		OnPackagesAvailable: func(ctx context.Context, packages *protobufs.PackagesAvailable) bool {
+		OnPackagesAvailable: func(_ context.Context, packages *protobufs.PackagesAvailable) bool {
 			// TODO: Implement package handling - opamp-go/client/types.PackagesSyncer
 			s.logger.Warn("TODO: Received packages available", zap.String("packages", fmt.Sprintf("%v", packages.GetPackages())))
 			return false
 		},
-		OnCommand: func(ctx context.Context, command *protobufs.ServerToAgentCommand) error {
+		OnCommand: func(_ context.Context, command *protobufs.ServerToAgentCommand) error {
 			s.logger.Warn("TODO: Received command", zap.String("type", command.GetType().String()))
 			return nil
 		},
@@ -1337,7 +1337,7 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 
 // handleRemoteConfig processes the new remote config and restarts the collector if the config has changed.
 func (s *Supervisor) handleRemoteConfig(ctx context.Context, cfg *protobufs.AgentRemoteConfig) bool {
-	result, err := s.configManager.ApplyRemoteConfig(ctx, cfg)
+	result, err := s.configManager.ApplyRemoteConfig(cfg)
 	if err != nil {
 		s.logger.Error("Failed to apply remote config", zap.Error(err))
 		s.reportRemoteConfigStatus(s.ctx,

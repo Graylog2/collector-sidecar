@@ -19,7 +19,6 @@ package configmanager
 
 import (
 	"bytes"
-	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -69,7 +68,7 @@ func New(logger *zap.Logger, cfg Config) *Manager {
 // ApplyRemoteConfig applies the remote configuration from the OpAMP server.
 // It extracts collector.yaml from the remote ConfigMap, merges with local overrides,
 // injects OpAMP extension, and writes the result to OutputPath.
-func (m *Manager) ApplyRemoteConfig(ctx context.Context, remote *protobufs.AgentRemoteConfig) (*ApplyResult, error) {
+func (m *Manager) ApplyRemoteConfig(remote *protobufs.AgentRemoteConfig) (*ApplyResult, error) {
 	if remote == nil {
 		return nil, fmt.Errorf("remote config is nil")
 	}
