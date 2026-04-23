@@ -880,10 +880,7 @@ type pendingReconnect struct {
 // prepareConnectionSettings validates and stages new connection settings.
 // Runs synchronously in the OnOpampConnectionSettings callback so the return
 // value drives opamp-go's ConnectionSettingsStatus reporting.
-func (s *Supervisor) prepareConnectionSettings(
-	ctx context.Context,
-	settings *protobufs.OpAMPConnectionSettings,
-) (*pendingReconnect, error) {
+func (s *Supervisor) prepareConnectionSettings(settings *protobufs.OpAMPConnectionSettings) (*pendingReconnect, error) {
 	if settings == nil {
 		return nil, nil
 	}
@@ -1305,7 +1302,7 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 			s.logger.Info("Received connection settings update")
 
 			// Phase 1: validate and prepare (synchronous, returns status to opamp-go)
-			pending, err := s.prepareConnectionSettings(ctx, settings)
+			pending, err := s.prepareConnectionSettings(settings)
 			if err != nil {
 				return err
 			}
