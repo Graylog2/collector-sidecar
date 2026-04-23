@@ -59,12 +59,6 @@ func (c *Callbacks) ToTypesCallbacks() types.Callbacks {
 			}
 			return nil
 		},
-		// TODO: This callback is never called by opamp-go. It is a leftover from an old implementation.
-		SaveRemoteConfigStatus: func(ctx context.Context, status *protobufs.RemoteConfigStatus) {
-			if c.SaveRemoteConfigStatus != nil {
-				c.SaveRemoteConfigStatus(ctx, status)
-			}
-		},
 		GetEffectiveConfig: func(ctx context.Context) (*protobufs.EffectiveConfig, error) {
 			if c.GetEffectiveConfig != nil {
 				return c.GetEffectiveConfig(ctx)

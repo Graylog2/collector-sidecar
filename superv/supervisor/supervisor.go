@@ -1320,18 +1320,6 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 				s.logger.Warn("Failed to enqueue own_logs apply")
 			}
 		},
-		SaveRemoteConfigStatus: func(_ context.Context, status *protobufs.RemoteConfigStatus) {
-			s.logger.Debug("SaveRemoteConfigStatus callback invoked",
-				zap.String("status", status.GetStatus().String()),
-			)
-			if err := s.configManager.SaveRemoteConfigStatus(
-				status.GetStatus(),
-				status.GetErrorMessage(),
-				status.GetLastRemoteConfigHash(),
-			); err != nil {
-				s.logger.Warn("Failed to persist remote config status from callback", zap.Error(err))
-			}
-		},
 	}
 }
 

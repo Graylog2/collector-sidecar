@@ -28,6 +28,7 @@ import (
 
 	"github.com/open-telemetry/opamp-go/client/types"
 	"github.com/open-telemetry/opamp-go/protobufs"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 	"google.golang.org/protobuf/proto"
@@ -336,10 +337,16 @@ func TestCallbacks_NilHandlers(t *testing.T) {
 	ctx := t.Context()
 
 	// These should not panic
-	typesCallbacks.OnConnect(ctx)
-	typesCallbacks.OnConnectFailed(ctx, errors.New("test"))
-	typesCallbacks.OnError(ctx, &protobufs.ServerErrorResponse{})
-	typesCallbacks.SaveRemoteConfigStatus(ctx, &protobufs.RemoteConfigStatus{})
+	assert.NotPanics(t, func() {
+		typesCallbacks.OnConnect(ctx)
+		typesCallbacks.OnConnectFailed(ctx, errors.New("test"))
+		typesCallbacks.OnError(ctx, &protobufs.ServerErrorResponse{})
+	})
+
+	// This one should panic because we don't want to use it. It's unused in the opamp-go client.
+	assert.Panics(t, func() {
+		typesCallbacks.SaveRemoteConfigStatus(ctx, &protobufs.RemoteConfigStatus{})
+	})
 
 	err := typesCallbacks.OnOpampConnectionSettings(ctx, &protobufs.OpAMPConnectionSettings{})
 	require.NoError(t, err)
@@ -367,23 +374,6 @@ func TestCallbacks_GetEffectiveConfig(t *testing.T) {
 	config, err := typesCallbacks.GetEffectiveConfig(t.Context())
 	require.NoError(t, err)
 	require.Equal(t, expectedConfig, config)
-}
-
-func TestCallbacks_SaveRemoteConfigStatus(t *testing.T) {
-	var savedStatus *protobufs.RemoteConfigStatus
-
-	callbacks := &Callbacks{
-		SaveRemoteConfigStatus: func(ctx context.Context, status *protobufs.RemoteConfigStatus) {
-			savedStatus = status
-		},
-	}
-
-	typesCallbacks := callbacks.ToTypesCallbacks()
-	status := &protobufs.RemoteConfigStatus{
-		LastRemoteConfigHash: []byte("test-hash"),
-	}
-	typesCallbacks.SaveRemoteConfigStatus(t.Context(), status)
-	require.Equal(t, status, savedStatus)
 }
 
 func TestCallbacks_OnMessage_RemoteConfig(t *testing.T) {
