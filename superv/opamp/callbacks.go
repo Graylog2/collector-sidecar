@@ -29,7 +29,7 @@ type Callbacks struct {
 	OnConnect                 func(ctx context.Context)
 	OnConnectFailed           func(ctx context.Context, err error)
 	OnError                   func(ctx context.Context, err *protobufs.ServerErrorResponse)
-	OnRemoteConfig            func(ctx context.Context, config *protobufs.AgentRemoteConfig) bool
+	OnRemoteConfig            func(ctx context.Context, config *protobufs.AgentRemoteConfig)
 	OnOpampConnectionSettings func(ctx context.Context, settings *protobufs.OpAMPConnectionSettings) error
 	OnPackagesAvailable       func(ctx context.Context, packages *protobufs.PackagesAvailable) bool
 	OnCommand                 func(ctx context.Context, command *protobufs.ServerToAgentCommand) error

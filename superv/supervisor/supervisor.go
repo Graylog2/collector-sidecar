@@ -1239,64 +1239,17 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 		OnError: func(ctx context.Context, err *protobufs.ServerErrorResponse) {
 			s.logger.Error("OpAMP server error", zap.Error(fmt.Errorf("%s: %s", err.GetType(), err.GetErrorMessage())))
 		},
-		OnRemoteConfig: func(ctx context.Context, cfg *protobufs.AgentRemoteConfig) bool {
+		OnRemoteConfig: func(clientCtx context.Context, cfg *protobufs.AgentRemoteConfig) {
 			s.logger.Info("Received remote configuration")
 
-			result, err := s.configManager.ApplyRemoteConfig(ctx, cfg)
-			if err != nil {
-				s.logger.Error("Failed to apply remote config", zap.Error(err))
-				s.reportRemoteConfigStatus(ctx,
+			if !s.enqueueWork(clientCtx, func(ctx context.Context) { s.handleRemoteConfig(ctx, cfg) }) {
+				s.logger.Error("Couldn't enqueue remote config update")
+				s.reportRemoteConfigStatus(s.ctx,
 					protobufs.RemoteConfigStatuses_RemoteConfigStatuses_FAILED,
-					err.Error(),
+					"couldn't enqueue remote config update",
 					cfg.GetConfigHash(),
 				)
-				return false
 			}
-
-			if !result.Changed {
-				return true
-			}
-
-			// Restart collector with new config.
-			// Restart = Stop + Start, so if Start fails the collector is down.
-			// On failure we roll back the config file and re-start the collector
-			// with the previous config to avoid leaving it stopped.
-			s.logger.Info("Config changed, restarting collector")
-			if err := s.commander.Restart(ctx); err != nil {
-				if s.isShutdownCancellation(err) {
-					s.logger.Debug("Supervisor shutdown interrupted config apply during collector restart")
-					return false
-				}
-				s.logger.Error("Failed to restart collector with new config", zap.Error(err))
-				s.rollbackAndRecover(ctx, cfg.GetConfigHash(), err)
-				return false
-			}
-
-			// Confirm the collector is healthy with the new config.
-			// Commander.Start() returns immediately when crash recovery is
-			// enabled (MaxRetries >= 1), so we must poll health to confirm
-			// the process actually started successfully.
-			if err := s.awaitCollectorHealthy(ctx, s.agentCfg.ConfigApplyTimeout); err != nil {
-				if s.isShutdownCancellation(err) {
-					s.logger.Debug("Supervisor shutdown interrupted config apply while awaiting collector health")
-					return false
-				}
-				s.logger.Error("Collector unhealthy after restart", zap.Error(err))
-				s.rollbackAndRecover(ctx, cfg.GetConfigHash(), err)
-				return false
-			}
-
-			// Report effective config
-			s.reportEffectiveConfig(ctx, result.EffectiveConfig)
-
-			// Report success
-			s.reportRemoteConfigStatus(ctx,
-				protobufs.RemoteConfigStatuses_RemoteConfigStatuses_APPLIED,
-				"",
-				cfg.GetConfigHash(),
-			)
-
-			return true
 		},
 		OnOpampConnectionSettings: func(ctx context.Context, settings *protobufs.OpAMPConnectionSettings) error {
 			s.logger.Info("Received connection settings update")
@@ -1380,6 +1333,66 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 			}
 		},
 	}
+}
+
+// handleRemoteConfig processes the new remote config and restarts the collector if the config has changed.
+func (s *Supervisor) handleRemoteConfig(ctx context.Context, cfg *protobufs.AgentRemoteConfig) bool {
+	result, err := s.configManager.ApplyRemoteConfig(ctx, cfg)
+	if err != nil {
+		s.logger.Error("Failed to apply remote config", zap.Error(err))
+		s.reportRemoteConfigStatus(s.ctx,
+			protobufs.RemoteConfigStatuses_RemoteConfigStatuses_FAILED,
+			err.Error(),
+			cfg.GetConfigHash(),
+		)
+		return false
+	}
+
+	if !result.Changed {
+		s.logger.Debug("Config unchanged, not restarting collector")
+		return true
+	}
+
+	// Restart collector with new configcontext.Background(), .
+	// Restart = Stop + Start, so if Start fails the collector is down.
+	// On failure we roll back the config file and re-start the collector
+	// with the previous config to avoid leaving it stopped.
+	s.logger.Info("Config changed, restarting collector")
+	if err := s.commander.Restart(s.ctx); err != nil {
+		if s.isShutdownCancellation(err) {
+			s.logger.Debug("Supervisor shutdown interrupted config apply during collector restart")
+			return false
+		}
+		s.logger.Error("Failed to restart collector with new config", zap.Error(err))
+		s.rollbackAndRecover(s.ctx, cfg.GetConfigHash(), err)
+		return false
+	}
+
+	// Confirm the collector is healthy with the new config.
+	// Commander.Start() returns immediately when crash recovery is
+	// enabled (MaxRetries >= 1), so we must poll health to confirm
+	// the process actually started successfully.
+	if err := s.awaitCollectorHealthy(s.ctx, s.agentCfg.ConfigApplyTimeout); err != nil {
+		if s.isShutdownCancellation(err) {
+			s.logger.Debug("Supervisor shutdown interrupted config apply while awaiting collector health")
+			return false
+		}
+		s.logger.Error("Collector unhealthy after restart", zap.Error(err))
+		s.rollbackAndRecover(s.ctx, cfg.GetConfigHash(), err)
+		return false
+	}
+
+	// Report effective config
+	s.reportEffectiveConfig(s.ctx, result.EffectiveConfig)
+
+	// Report success
+	s.reportRemoteConfigStatus(s.ctx,
+		protobufs.RemoteConfigStatuses_RemoteConfigStatuses_APPLIED,
+		"",
+		cfg.GetConfigHash(),
+	)
+
+	return true
 }
 
 // forwardCustomMessage forwards a custom message from the upstream server to the local collector.

@@ -193,12 +193,11 @@ func TestCreateOpAMPCallbacks_OnRemoteConfig_DoesNotRollbackOnShutdownCancellati
 		ctx: ctx,
 	}
 
-	callbacks := s.createOpAMPCallbacks()
 	callbackCtx, callbackCancel := context.WithCancel(context.Background())
 	done := make(chan bool, 1)
 
 	go func() {
-		done <- callbacks.OnRemoteConfig(callbackCtx, &protobufs.AgentRemoteConfig{
+		done <- s.handleRemoteConfig(callbackCtx, &protobufs.AgentRemoteConfig{
 			Config: &protobufs.AgentConfigMap{
 				ConfigMap: map[string]*protobufs.AgentConfigFile{
 					"collector.yaml": {

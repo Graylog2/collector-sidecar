@@ -390,9 +390,8 @@ func TestCallbacks_OnMessage_RemoteConfig(t *testing.T) {
 	var remoteConfigCalled bool
 
 	callbacks := &Callbacks{
-		OnRemoteConfig: func(ctx context.Context, config *protobufs.AgentRemoteConfig) bool {
+		OnRemoteConfig: func(ctx context.Context, config *protobufs.AgentRemoteConfig) {
 			remoteConfigCalled = true
-			return true
 		},
 	}
 
