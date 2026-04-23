@@ -31,8 +31,8 @@ func (s *Supervisor) runWorker() {
 	for {
 		select {
 		case fn := <-s.workQueue:
-			fn(s.workCtx)
-		case <-s.workCtx.Done():
+			fn(s.ctx)
+		case <-s.ctx.Done():
 			return
 		}
 	}
@@ -47,7 +47,7 @@ func (s *Supervisor) enqueueWork(ctx context.Context, fn workFunc) bool {
 	select {
 	case s.workQueue <- fn:
 		return true
-	case <-s.workCtx.Done():
+	case <-s.ctx.Done():
 		return false
 	case <-ctx.Done():
 		return false

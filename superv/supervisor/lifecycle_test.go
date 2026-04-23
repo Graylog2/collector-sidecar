@@ -59,8 +59,8 @@ func newTestSupervisor(t *testing.T) *Supervisor {
 		logger:                    zaptest.NewLogger(t),
 		connectionSettingsManager: connection.NewSettingsManager(zaptest.NewLogger(t), t.TempDir()),
 		workQueue:                 make(chan workFunc),
-		workCtx:                   ctx,
-		workCancel:                cancel,
+		ctx:                       ctx,
+		cancel:                    cancel,
 	}
 	s.connectionSettingsManager.SetCurrent(connection.Settings{
 		Endpoint: "ws://stub.invalid/v1/opamp",
@@ -86,7 +86,7 @@ func newTestSupervisor(t *testing.T) *Supervisor {
 func TestReconnectClient_StopDuringReconnect(t *testing.T) {
 	s := newTestSupervisor(t)
 	s.opampClient = newStubClient(t)
-	s.running = true
+	s.isRunning.Store(true)
 
 	entered := make(chan struct{})
 	barrier := make(chan struct{})
@@ -121,7 +121,7 @@ func TestReconnectClient_StopDuringReconnect(t *testing.T) {
 	})
 
 	// Wait for workCtx to be cancelled, confirming Stop's critical section ran.
-	<-s.workCtx.Done()
+	<-s.ctx.Done()
 
 	// Release the barrier — reconnectClient should see workCtx cancelled.
 	close(barrier)
@@ -161,7 +161,7 @@ func TestReconnectClient_DuringStartupWindow(t *testing.T) {
 func TestReconnectClient_StopCompletesBeforeAssign(t *testing.T) {
 	s := newTestSupervisor(t)
 	s.opampClient = newStubClient(t)
-	s.running = true
+	s.isRunning.Store(true)
 
 	stopCtx, stopCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer stopCancel()
@@ -190,8 +190,8 @@ func TestReconnectClient_StopCompletesBeforeAssign(t *testing.T) {
 func TestEnqueueWork_WorkerStopped(t *testing.T) {
 	s := newTestSupervisor(t)
 
-	s.workCancel()
-	<-s.workCtx.Done()
+	s.cancel()
+	<-s.ctx.Done()
 
 	ok := s.enqueueWork(context.Background(), func(context.Context) {
 		t.Fatal("work item should not run after worker shutdown")
@@ -262,11 +262,11 @@ func TestIntegration_StopDuringConnectionSettingsUpdate(t *testing.T) {
 		logger:                    logger,
 		connectionSettingsManager: connection.NewSettingsManager(logger, t.TempDir()),
 		workQueue:                 make(chan workFunc),
-		workCtx:                   ctx,
-		workCancel:                cancel,
+		ctx:                       ctx,
+		cancel:                    cancel,
 		opampClient:               initialClient,
-		running:                   true,
 	}
+	s.isRunning.Store(true)
 	s.connectionSettingsManager.SetCurrent(connection.Settings{
 		Endpoint: httpURL,
 		TLS:      connection.TLSSettings{Insecure: true},
@@ -313,7 +313,7 @@ func TestIntegration_StopDuringConnectionSettingsUpdate(t *testing.T) {
 	})
 
 	// 9. Wait for workCtx to be cancelled (Stop's critical section completed).
-	<-s.workCtx.Done()
+	<-s.ctx.Done()
 
 	// 10. Release the barrier — reconnectClient will see workCtx cancelled.
 	close(barrier)

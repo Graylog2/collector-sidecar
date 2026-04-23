@@ -85,14 +85,17 @@ type Supervisor struct {
 	opampClient               *opamp.Client
 	opampServer               *opamp.Server
 	mu                        sync.RWMutex
-	running                   bool
 	localServerDraining       atomic.Bool
 
+	// Supervisor lifecycle
+	ctx        context.Context
+	cancel     context.CancelFunc
+	isRunning  atomic.Bool
+	isStarting atomic.Bool
+
 	// Serialized worker for state-mutating operations.
-	workQueue  chan workFunc
-	workCtx    context.Context
-	workCancel context.CancelFunc
-	workWg     sync.WaitGroup
+	workQueue chan workFunc
+	workWg    sync.WaitGroup
 
 	// Pending enrollment CSR (set during enrollment, cleared after completion)
 	pendingCSR []byte
@@ -287,13 +290,16 @@ func (s *Supervisor) shouldAcceptLocalCollectorConnection() bool {
 }
 
 // Start starts the supervisor and begins managing the collector.
-func (s *Supervisor) Start(ctx context.Context) error {
-	s.mu.Lock()
-	if s.running {
-		s.mu.Unlock()
-		return nil
+func (s *Supervisor) Start(parentCtx context.Context) error {
+	if !s.isStarting.CompareAndSwap(false, true) {
+		return fmt.Errorf("already starting")
 	}
-	s.mu.Unlock()
+	if s.isRunning.Load() {
+		return fmt.Errorf("already running")
+	}
+
+	// Initialize the context early so we can rely on it being there.
+	s.ctx, s.cancel = context.WithCancel(parentCtx)
 
 	// Lock is released early because:
 	// 1. Start/Stop are never concurrent (lifecycle contract) — no race on s.running.
@@ -308,7 +314,7 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	s.localServerDraining.Store(false)
 
 	// Initialize authentication
-	if err := s.initAuth(ctx); err != nil {
+	if err := s.initAuth(s.ctx); err != nil {
 		return fmt.Errorf("authentication initialization failed: %w", err)
 	}
 
@@ -366,7 +372,7 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	s.opampServer = opampServer
 
 	// Start local OpAMP server
-	if err := s.opampServer.Start(ctx); err != nil {
+	if err := s.opampServer.Start(s.ctx); err != nil {
 		return err
 	}
 
@@ -376,7 +382,7 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	// ApplyRemoteConfig for extension injection.
 	localEndpoint, err := resolveLocalEndpoint(s.opampServer.Addr())
 	if err != nil {
-		if stopErr := s.opampServer.Stop(ctx); stopErr != nil {
+		if stopErr := s.opampServer.Stop(s.ctx); stopErr != nil {
 			s.logger.Warn("Failed to stop local OpAMP server", zap.Error(stopErr))
 		}
 		return fmt.Errorf("failed to resolve local OpAMP endpoint: %w", err)
@@ -388,7 +394,7 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	// the opamp and health_check extensions to update the local endpoint
 	// (which may have changed if the server binds to an ephemeral port).
 	if err := s.configManager.EnsureBootstrapConfig(); err != nil {
-		if stopErr := s.opampServer.Stop(ctx); stopErr != nil {
+		if stopErr := s.opampServer.Stop(s.ctx); stopErr != nil {
 			s.logger.Warn("Failed to stop local OpAMP server", zap.Error(stopErr))
 		}
 		return fmt.Errorf("failed to ensure bootstrap config: %w", err)
@@ -398,16 +404,15 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	// the OpAMP client starts, otherwise early callbacks block on the
 	// unbuffered channel with no consumer.
 	s.workQueue = make(chan workFunc)
-	s.workCtx, s.workCancel = context.WithCancel(ctx)
 	s.workWg.Add(1)
 	go s.runWorker()
 
 	// Create and start OpAMP client for upstream server
-	opampClient, err := s.createClientFunc(ctx, s.connectionSettingsManager.GetCurrent())
+	opampClient, err := s.createClientFunc(s.ctx, s.connectionSettingsManager.GetCurrent())
 	if err != nil {
-		s.workCancel()
+		s.cancel()
 		s.workWg.Wait()
-		if stopErr := s.opampServer.Stop(ctx); stopErr != nil {
+		if stopErr := s.opampServer.Stop(s.ctx); stopErr != nil {
 			s.logger.Warn("Failed to stop local OpAMP server", zap.Error(stopErr))
 		}
 		return fmt.Errorf("create OpAMP client: %w", err)
@@ -419,17 +424,19 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	s.mu.Unlock()
 
 	// Start the collector agent
-	if err := s.commander.Start(ctx); err != nil {
+	if err := s.commander.Start(s.ctx); err != nil {
 		// Nil out opampClient under lock (it was published above) before stopping,
 		// so callbacks see nil.
 		s.mu.Lock()
 		s.opampClient = nil
 		s.mu.Unlock()
 
-		s.workCancel()
-		opampClient.Stop(ctx)
+		s.cancel()
+		if err := opampClient.Stop(s.ctx); err != nil {
+			s.logger.Warn("Failed to stop local OpAMP client", zap.Error(err))
+		}
 		s.workWg.Wait()
-		if stopErr := opampServer.Stop(ctx); stopErr != nil {
+		if stopErr := opampServer.Stop(s.ctx); stopErr != nil {
 			s.logger.Warn("Failed to stop local OpAMP server during cleanup", zap.Error(stopErr))
 		}
 		return fmt.Errorf("failed to start agent: %w", err)
@@ -438,7 +445,7 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	// Start health monitoring after the collector is running.
 	// The monitor's startup grace period gives the collector time to bind
 	// its health endpoint before the first check.
-	healthCtx, healthCancel := context.WithCancel(ctx)
+	healthCtx, healthCancel := context.WithCancel(s.ctx)
 	s.healthCancel = healthCancel
 	healthUpdates := s.healthMonitor.StartPolling(healthCtx)
 	s.healthWg.Go(func() {
@@ -477,23 +484,20 @@ func (s *Supervisor) Start(ctx context.Context) error {
 		}
 	})
 
-	s.mu.Lock()
-	s.running = true
-	s.mu.Unlock()
+	s.isRunning.Store(true)
+	s.isStarting.Store(false)
 
 	return nil
 }
 
 // Stop stops the supervisor and the managed collector.
 func (s *Supervisor) Stop(ctx context.Context) error {
-	s.mu.Lock()
-	if !s.running {
-		s.mu.Unlock()
+	if !s.isRunning.CompareAndSwap(true, false) {
 		return nil
 	}
-	s.running = false
 	s.localServerDraining.Store(true)
 
+	s.mu.Lock()
 	// Snapshot and nil-out to prevent concurrent use after unlock.
 	client := s.opampClient
 	server := s.opampServer
@@ -503,7 +507,7 @@ func (s *Supervisor) Stop(ctx context.Context) error {
 	// Cancel worker context while still holding mu. This ensures that
 	// reconnectClient (which checks workCtx.Err() under mu) cannot
 	// assign a new client after we've already snapshot s.opampClient.
-	s.workCancel()
+	s.cancel()
 	s.mu.Unlock()
 
 	s.logger.Info("Stopping supervisor")
@@ -560,9 +564,7 @@ func (s *Supervisor) SetOwnLogs(manager *ownlogs.Manager, persistence *ownlogs.P
 
 // IsRunning returns true if the supervisor is running.
 func (s *Supervisor) IsRunning() bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.running
+	return s.isRunning.Load()
 }
 
 // createAgentDescription creates the initial agent description for OpAMP.
@@ -856,7 +858,7 @@ func (s *Supervisor) reconnectClient(ctx context.Context, settings connection.Se
 	// We use workCtx instead of s.running because s.running is only set at the
 	// end of Start(), but reconnects can happen during the startup window.
 	s.mu.Lock()
-	if s.workCtx.Err() != nil {
+	if s.ctx.Err() != nil {
 		s.mu.Unlock()
 		_ = newClient.Stop(ctx)
 		return fmt.Errorf("supervisor stopped during reconnect")
@@ -1082,11 +1084,7 @@ func (s *Supervisor) reloadOwnLogsCert(ctx context.Context) error {
 }
 
 func (s *Supervisor) isWorkerStopping() bool {
-	s.mu.RLock()
-	workCtx := s.workCtx
-	s.mu.RUnlock()
-
-	return workCtx != nil && workCtx.Err() != nil
+	return s.ctx != nil && s.ctx.Err() != nil
 }
 
 func (s *Supervisor) isShutdownCancellation(err error) bool {

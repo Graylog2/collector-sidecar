@@ -108,10 +108,10 @@ func TestCreateOpAMPCallbacks_OnOwnLogs_EnqueuesWork(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	s := &Supervisor{
-		logger:     logger,
-		workQueue:  make(chan workFunc),
-		workCtx:    ctx,
-		workCancel: cancel,
+		logger:    logger,
+		workQueue: make(chan workFunc),
+		ctx:       ctx,
+		cancel:    cancel,
 	}
 	s.workWg.Add(1)
 	go s.runWorker()
@@ -136,10 +136,10 @@ func TestCreateOpAMPCallbacks_OnOwnLogs_EnqueueFailsAfterWorkerStop(t *testing.T
 	ctx, cancel := context.WithCancel(context.Background())
 
 	s := &Supervisor{
-		logger:     logger,
-		workQueue:  make(chan workFunc),
-		workCtx:    ctx,
-		workCancel: cancel,
+		logger:    logger,
+		workQueue: make(chan workFunc),
+		ctx:       ctx,
+		cancel:    cancel,
 	}
 	s.workWg.Add(1)
 	go s.runWorker()
@@ -160,8 +160,8 @@ func TestCreateOpAMPCallbacks_OnRemoteConfig_DoesNotRollbackOnShutdownCancellati
 	core, observed := observer.New(zap.DebugLevel)
 	logger := zap.New(core)
 
-	workCtx, workCancel := context.WithCancel(context.Background())
-	defer workCancel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	tmpDir := t.TempDir()
 	outputPath := filepath.Join(tmpDir, "collector.yaml")
@@ -190,7 +190,7 @@ func TestCreateOpAMPCallbacks_OnRemoteConfig_DoesNotRollbackOnShutdownCancellati
 				StartupGracePeriod: time.Minute,
 			},
 		},
-		workCtx: workCtx,
+		ctx: ctx,
 	}
 
 	callbacks := s.createOpAMPCallbacks()
@@ -228,7 +228,7 @@ service:
 		return observed.FilterMessage("Waiting for startup grace period before health polling").Len() == 1
 	}, time.Second, 10*time.Millisecond)
 
-	workCancel()
+	cancel()
 	callbackCancel()
 
 	require.False(t, <-done)
