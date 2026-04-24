@@ -22,7 +22,7 @@ WINDOWS_INSTALLER_VERSION = $(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)$(subst -,
 # Removing the dot to comply with NuGet versioning (beta.1 -> beta2)
 CHOCOLATEY_VERSION = $(COLLECTOR_VERSION).$(COLLECTOR_REVISION)$(subst .,,$(COLLECTOR_VERSION_SUFFIX))
 
-FMT_ARGS = -f .license.template -ignore '{.github,.idea,changelog,dist/v2}/**' -ignore '**/*.{yml,yaml}' .
+FMT_ARGS = -f .license.template -ignore '{.github,.idea,changelog,dist/v2,out}/**' -ignore '**/*.{yml,yaml}' .
 FMT_ARGS_OTEL = -f .license.template.otel -ignore '**/*.{yml,yaml}' receiver/windowseventlogreceiver
 
 .PHONY: all

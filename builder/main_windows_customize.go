@@ -33,18 +33,22 @@ import (
 // maybeSupervisorService checks whether this process was started as a Windows
 // service with the "supervisor" argument. If so, it runs the supervisor's
 // service handler and returns (true, nil) on clean exit or (true, err) on
-// failure. If this is not a supervisor invocation, it returns (false, nil) so
-// the caller can fall through to the OTel Collector's service handler.
-func maybeSupervisorService(_ otelcol.CollectorSettings) (bool, error) {
+// failure. If this is not a supervisor invocation, it returns (false, false).
+// If the SCM connection fails (interactive mode), it returns (false, true) so
+// the caller skips any further svc.Run calls (StartServiceCtrlDispatcher can
+// only be called once per process).
+func maybeSupervisorService(_ otelcol.CollectorSettings) (handled bool, triedSCM bool) {
 	if len(os.Args) <= 1 || os.Args[1] != "supervisor" {
-		return false, nil
+		return false, false
 	}
 	err := svc.Run("", superv.NewSvcHandler())
 	if errors.Is(err, windows.ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) {
-		return false, nil
+		return false, true
 	}
 	if err != nil {
-		return true, fmt.Errorf("failed to start supervisor service: %w", err)
+		// Service handler failed — treat as handled so the process exits.
+		fmt.Fprintf(os.Stderr, "supervisor service error: %v\n", err)
+		return true, true
 	}
-	return true, nil
+	return true, true
 }

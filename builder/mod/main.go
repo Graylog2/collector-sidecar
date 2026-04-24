@@ -113,9 +113,14 @@ func addSupervisorDispatch(path string) error {
 		}
 		f.Comments = kept
 
-		// Build: if handled, err := maybeSupervisorService(params); handled { return err }
+		// Build:
+		//   if handled, triedSCM := maybeSupervisorService(params); handled {
+		//       return nil
+		//   } else if triedSCM {
+		//       return runInteractive(params)
+		//   }
 		dispatchCall := &ast.AssignStmt{
-			Lhs: []ast.Expr{ast.NewIdent("handled"), ast.NewIdent("err")},
+			Lhs: []ast.Expr{ast.NewIdent("handled"), ast.NewIdent("triedSCM")},
 			Tok: token.DEFINE,
 			Rhs: []ast.Expr{
 				&ast.CallExpr{
@@ -131,7 +136,22 @@ func addSupervisorDispatch(path string) error {
 			Body: &ast.BlockStmt{
 				List: []ast.Stmt{
 					&ast.ReturnStmt{
-						Results: []ast.Expr{ast.NewIdent("err")},
+						Results: []ast.Expr{ast.NewIdent("nil")},
+					},
+				},
+			},
+			Else: &ast.IfStmt{
+				Cond: ast.NewIdent("triedSCM"),
+				Body: &ast.BlockStmt{
+					List: []ast.Stmt{
+						&ast.ReturnStmt{
+							Results: []ast.Expr{
+								&ast.CallExpr{
+									Fun:  ast.NewIdent("runInteractive"),
+									Args: []ast.Expr{ast.NewIdent("params")},
+								},
+							},
+						},
 					},
 				},
 			},
