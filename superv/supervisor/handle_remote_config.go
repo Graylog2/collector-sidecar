@@ -135,12 +135,9 @@ func (s *Supervisor) awaitCollectorHealthy(ctx context.Context, timeout time.Dur
 			// Got an HTTP response but non-2xx — definitive unhealthy signal.
 			endpointReached = true
 			lastStatus = status
-		} else {
+		} else if s.commander.IsRunning() {
 			// Connection error — endpoint not reachable (yet).
-			if s.commander.IsRunning() {
-				s.logger.Debug("Health endpoint unreachable but process alive, waiting",
-					zap.Error(err))
-			}
+			s.logger.Debug("Health endpoint unreachable but process alive, waiting", zap.Error(err))
 		}
 
 		select {

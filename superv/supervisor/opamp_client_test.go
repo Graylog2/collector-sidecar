@@ -38,7 +38,7 @@ func TestSupervisor_NonIdentifyingAttributes_WithCollectorVersion(t *testing.T) 
 
 	attrMap := make(map[string]string)
 	for _, kv := range attrs {
-		attrMap[kv.Key] = kv.Value.GetStringValue()
+		attrMap[kv.GetKey()] = kv.GetValue().GetStringValue()
 	}
 
 	require.Equal(t, "test-host", attrMap["host.name"])
@@ -55,7 +55,7 @@ func TestSupervisor_NonIdentifyingAttributes_WithoutCollectorVersion(t *testing.
 
 	attrMap := make(map[string]string)
 	for _, kv := range attrs {
-		attrMap[kv.Key] = kv.Value.GetStringValue()
+		attrMap[kv.GetKey()] = kv.GetValue().GetStringValue()
 	}
 
 	require.Equal(t, "test-host", attrMap["host.name"])
@@ -68,8 +68,8 @@ func TestSupervisor_InitialComponentHealth_DefaultHealthyWithoutMonitor(t *testi
 	supervisor := &Supervisor{}
 
 	health := supervisor.initialComponentHealth()
-	require.True(t, health.Healthy)
-	require.Empty(t, health.LastError)
+	require.True(t, health.GetHealthy())
+	require.Empty(t, health.GetLastError())
 }
 
 func TestSupervisor_InitialComponentHealth_DefaultHealthyWithoutSample(t *testing.T) {
@@ -81,8 +81,8 @@ func TestSupervisor_InitialComponentHealth_DefaultHealthyWithoutSample(t *testin
 	supervisor := &Supervisor{healthMonitor: monitor}
 
 	health := supervisor.initialComponentHealth()
-	require.True(t, health.Healthy)
-	require.Empty(t, health.LastError)
+	require.True(t, health.GetHealthy())
+	require.Empty(t, health.GetLastError())
 }
 
 func TestSupervisor_InitialComponentHealth_UsesLatestMonitorSample(t *testing.T) {
@@ -103,6 +103,6 @@ func TestSupervisor_InitialComponentHealth_UsesLatestMonitorSample(t *testing.T)
 	supervisor := &Supervisor{healthMonitor: monitor}
 	health := supervisor.initialComponentHealth()
 
-	require.False(t, health.Healthy)
-	require.Equal(t, "Service Unavailable", health.LastError)
+	require.False(t, health.GetHealthy())
+	require.Equal(t, "Service Unavailable", health.GetLastError())
 }

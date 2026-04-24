@@ -71,7 +71,7 @@ type Settings struct {
 // Equal reports whether two settings describe the same logical own-logs
 // configuration. It intentionally ignores TLSConfig because that is derived
 // runtime state rebuilt from the persisted raw TLS material.
-func (s Settings) Equal(other Settings) bool {
+func (s *Settings) Equal(other Settings) bool {
 	return s.Endpoint == other.Endpoint &&
 		maps.Equal(s.Headers, other.Headers) &&
 		s.Insecure == other.Insecure &&

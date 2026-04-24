@@ -50,6 +50,7 @@ func TestServer_OpAMP_WebSocket(t *testing.T) {
 		t.Fatalf("Failed to connect: %v (response: %v)", err, resp)
 	}
 	defer conn.Close()
+	defer resp.Body.Close()
 	t.Log("Connected!")
 
 	// Create a test message
@@ -75,7 +76,7 @@ func TestServer_OpAMP_WebSocket(t *testing.T) {
 	var respMsg protobufs.ServerToAgent
 	err = proto.Unmarshal(respData, &respMsg)
 	require.NoError(t, err)
-	t.Logf("Response instance UID: %x", respMsg.InstanceUid)
+	t.Logf("Response instance UID: %x", respMsg.GetInstanceUid())
 }
 
 func TestServer_OpAMP_HTTP(t *testing.T) {
@@ -118,7 +119,7 @@ func TestServer_OpAMP_HTTP(t *testing.T) {
 	var respMsg protobufs.ServerToAgent
 	err = proto.Unmarshal(respData, &respMsg)
 	require.NoError(t, err)
-	t.Logf("Response instance UID: %x", respMsg.InstanceUid)
+	t.Logf("Response instance UID: %x", respMsg.GetInstanceUid())
 }
 
 func TestServer_OpAMP_HTTP_CSR(t *testing.T) {
@@ -192,15 +193,15 @@ func TestServer_OpAMP_HTTP_CSR(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify we got a certificate back
-	require.NotNil(t, respMsg.ConnectionSettings)
-	require.NotNil(t, respMsg.ConnectionSettings.Opamp)
-	require.NotNil(t, respMsg.ConnectionSettings.Opamp.Certificate)
-	require.NotEmpty(t, respMsg.ConnectionSettings.Opamp.Certificate.Cert)
+	require.NotNil(t, respMsg.GetConnectionSettings())
+	require.NotNil(t, respMsg.GetConnectionSettings().GetOpamp())
+	require.NotNil(t, respMsg.GetConnectionSettings().GetOpamp().GetCertificate())
+	require.NotEmpty(t, respMsg.GetConnectionSettings().GetOpamp().GetCertificate().GetCert())
 
-	t.Logf("Got certificate: %d bytes", len(respMsg.ConnectionSettings.Opamp.Certificate.Cert))
+	t.Logf("Got certificate: %d bytes", len(respMsg.GetConnectionSettings().GetOpamp().GetCertificate().GetCert()))
 
 	// Verify it's a valid PEM certificate
-	block, _ := pem.Decode(respMsg.ConnectionSettings.Opamp.Certificate.Cert)
+	block, _ := pem.Decode(respMsg.GetConnectionSettings().GetOpamp().GetCertificate().GetCert())
 	require.NotNil(t, block)
 	require.Equal(t, "CERTIFICATE", block.Type)
 
@@ -227,9 +228,10 @@ func TestServer_OpAMP_CSR(t *testing.T) {
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
-	conn, _, err := dialer.Dial(wsURL, nil)
+	conn, resp, err := dialer.Dial(wsURL, nil)
 	require.NoError(t, err)
 	defer conn.Close()
+	defer resp.Body.Close()
 
 	// Generate a real CSR for testing
 	_, signingPriv, err := ed25519.GenerateKey(rand.Reader)
@@ -285,15 +287,15 @@ func TestServer_OpAMP_CSR(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify we got a certificate back
-	require.NotNil(t, respMsg.ConnectionSettings)
-	require.NotNil(t, respMsg.ConnectionSettings.Opamp)
-	require.NotNil(t, respMsg.ConnectionSettings.Opamp.Certificate)
-	require.NotEmpty(t, respMsg.ConnectionSettings.Opamp.Certificate.Cert)
+	require.NotNil(t, respMsg.GetConnectionSettings())
+	require.NotNil(t, respMsg.GetConnectionSettings().GetOpamp())
+	require.NotNil(t, respMsg.GetConnectionSettings().GetOpamp().GetCertificate())
+	require.NotEmpty(t, respMsg.GetConnectionSettings().GetOpamp().GetCertificate().GetCert())
 
-	t.Logf("Got certificate: %d bytes", len(respMsg.ConnectionSettings.Opamp.Certificate.Cert))
+	t.Logf("Got certificate: %d bytes", len(respMsg.GetConnectionSettings().GetOpamp().GetCertificate().GetCert()))
 
 	// Verify it's a valid PEM certificate
-	block, _ := pem.Decode(respMsg.ConnectionSettings.Opamp.Certificate.Cert)
+	block, _ := pem.Decode(respMsg.GetConnectionSettings().GetOpamp().GetCertificate().GetCert())
 	require.NotNil(t, block)
 	require.Equal(t, "CERTIFICATE", block.Type)
 
@@ -400,10 +402,10 @@ func TestServer_RequireAuth_EnrollmentJWT(t *testing.T) {
 	err = proto.Unmarshal(respData, &respMsg)
 	require.NoError(t, err)
 
-	require.NotNil(t, respMsg.ConnectionSettings)
-	require.NotNil(t, respMsg.ConnectionSettings.Opamp)
-	require.NotNil(t, respMsg.ConnectionSettings.Opamp.Certificate)
-	require.NotEmpty(t, respMsg.ConnectionSettings.Opamp.Certificate.Cert)
+	require.NotNil(t, respMsg.GetConnectionSettings())
+	require.NotNil(t, respMsg.GetConnectionSettings().GetOpamp())
+	require.NotNil(t, respMsg.GetConnectionSettings().GetOpamp().GetCertificate())
+	require.NotEmpty(t, respMsg.GetConnectionSettings().GetOpamp().GetCertificate().GetCert())
 }
 
 func TestServer_RequireAuth_SupervisorJWT(t *testing.T) {
@@ -475,7 +477,7 @@ func TestServer_RequireAuth_SupervisorJWT(t *testing.T) {
 	err = proto.Unmarshal(respData, &respMsg)
 	require.NoError(t, err)
 
-	certPEM := respMsg.ConnectionSettings.Opamp.Certificate.Cert
+	certPEM := respMsg.GetConnectionSettings().GetOpamp().GetCertificate().GetCert()
 	block, _ := pem.Decode(certPEM)
 	require.NotNil(t, block)
 

@@ -79,7 +79,7 @@ func main() {
 		}
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
-		enc.Encode(jwks)
+		_ = enc.Encode(jwks)
 		return
 	}
 
@@ -112,9 +112,10 @@ func main() {
 	}
 
 	httpServer := &http.Server{
-		Addr:      addr,
-		Handler:   mux,
-		TLSConfig: tlsConfig,
+		Addr:        addr,
+		Handler:     mux,
+		TLSConfig:   tlsConfig,
+		ReadTimeout: 5 * time.Second,
 	}
 
 	// Create enrollment JWT
@@ -152,8 +153,8 @@ func main() {
 	go func() {
 		<-sigCh
 		fmt.Println("\nShutting down...")
-		logger.Sync()
-		httpServer.Close()
+		_ = logger.Sync()
+		_ = httpServer.Close()
 	}()
 
 	// Start server

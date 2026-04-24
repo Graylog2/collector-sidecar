@@ -156,7 +156,7 @@ func newLoggerFromZap(l *zap.Logger) types.Logger {
 	}
 }
 
-// Ensure opampLogger implements types.Logger
+// Ensure opampLogger implements types.Logger.
 var _ types.Logger = (*opampLogger)(nil)
 
 // Client wraps the opamp-go client with supervisor-specific functionality.
@@ -310,7 +310,7 @@ func (c *Client) SetAvailableComponents(components *protobufs.AvailableComponent
 	if components == nil {
 		return fmt.Errorf("components cannot be nil")
 	}
-	if len(components.Hash) == 0 {
+	if len(components.GetHash()) == 0 {
 		return fmt.Errorf("components hash cannot be empty")
 	}
 	return c.opampClient.SetAvailableComponents(components)

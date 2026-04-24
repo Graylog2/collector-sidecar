@@ -208,22 +208,23 @@ func (l *DebugLogger) formatEventData(event Event) []zap.Field {
 	switch event.Kind {
 	case EventHealth:
 		if health, ok := event.Data.(*protobufs.ComponentHealth); ok {
-			fields := []zap.Field{zap.Bool("healthy", health.Healthy)}
-			if health.LastError != "" {
-				fields = append(fields, zap.String("error", health.LastError))
+			fields := []zap.Field{zap.Bool("healthy", health.GetHealthy())}
+			if health.GetLastError() != "" {
+				fields = append(fields, zap.String("error", health.GetLastError()))
 			}
-			if health.StartTimeUnixNano > 0 {
-				fields = append(fields, zap.Time("start_time", time.Unix(0, int64(health.StartTimeUnixNano))))
+			if health.GetStartTimeUnixNano() > 0 {
+				//nolint:gosec // StartTimeUnixNano overflows int64 in year 2262
+				fields = append(fields, zap.Time("start_time", time.Unix(0, int64(health.GetStartTimeUnixNano()))))
 			}
 			return fields
 		}
 
 	case EventConfigStatus:
 		if status, ok := event.Data.(*protobufs.RemoteConfigStatus); ok {
-			statusStr := formatConfigStatus(status.Status)
+			statusStr := formatConfigStatus(status.GetStatus())
 			fields := []zap.Field{zap.String("status", statusStr)}
-			if status.ErrorMessage != "" {
-				fields = append(fields, zap.String("error", status.ErrorMessage))
+			if status.GetErrorMessage() != "" {
+				fields = append(fields, zap.String("error", status.GetErrorMessage()))
 			}
 			return fields
 		}
@@ -231,21 +232,21 @@ func (l *DebugLogger) formatEventData(event Event) []zap.Field {
 	case EventAgentDescription:
 		if desc, ok := event.Data.(*protobufs.AgentDescription); ok {
 			fields := []zap.Field{}
-			for _, attr := range desc.IdentifyingAttributes {
-				fields = append(fields, zap.Any(attr.Key, formatAnyValue(attr.Value)))
+			for _, attr := range desc.GetIdentifyingAttributes() {
+				fields = append(fields, zap.Any(attr.GetKey(), formatAnyValue(attr.GetValue())))
 			}
 			return fields
 		}
 
 	case EventEffectiveConfig:
 		if cfg, ok := event.Data.(*protobufs.EffectiveConfig); ok {
-			if cfg.ConfigMap != nil && cfg.ConfigMap.ConfigMap != nil {
-				for name, file := range cfg.ConfigMap.ConfigMap {
+			if cfg.GetConfigMap() != nil && cfg.ConfigMap.ConfigMap != nil {
+				for name, file := range cfg.GetConfigMap().GetConfigMap() {
 					key := "config"
 					if name != "" {
 						key = name
 					}
-					return []zap.Field{zap.Int(key+"_bytes", len(file.Body))}
+					return []zap.Field{zap.Int(key+"_bytes", len(file.GetBody()))}
 				}
 			}
 			return nil
@@ -270,15 +271,17 @@ func (l *DebugLogger) formatEventData(event Event) []zap.Field {
 	case EventPackageStatus:
 		if pkgs, ok := event.Data.(*protobufs.PackageStatuses); ok {
 			return []zap.Field{
-				zap.Int("packages", len(pkgs.Packages)),
-				zap.String("error", pkgs.ErrorMessage),
+				zap.Int("packages", len(pkgs.GetPackages())),
+				zap.String("error", pkgs.GetErrorMessage()),
 			}
 		}
 
 	case EventCustomCapabilities:
 		if caps, ok := event.Data.(*protobufs.CustomCapabilities); ok {
-			return []zap.Field{zap.Strings("capabilities", caps.Capabilities)}
+			return []zap.Field{zap.Strings("capabilities", caps.GetCapabilities())}
 		}
+	case EventAgentConnect, EventAgentDisconnect, EventAgentMessage:
+		return []zap.Field{zap.Any("data", event.Data)}
 	}
 
 	// Fallback: log raw data for unknown types or full verbosity
@@ -306,7 +309,7 @@ func formatAnyValue(val *protobufs.AnyValue) any {
 	if val == nil {
 		return nil
 	}
-	switch v := val.Value.(type) {
+	switch v := val.GetValue().(type) {
 	case *protobufs.AnyValue_StringValue:
 		return v.StringValue
 	case *protobufs.AnyValue_IntValue:

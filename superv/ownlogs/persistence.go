@@ -44,7 +44,7 @@ func rebuildTLSConfigFromPEM(s Settings) (*tls.Config, error) {
 
 	cfg := &tls.Config{
 		ServerName:         s.TLSServerName,
-		InsecureSkipVerify: s.InsecureSkipVerify,
+		InsecureSkipVerify: s.InsecureSkipVerify, //nolint:gosec // Intentionally configurable
 	}
 
 	if s.TLSMinVersion != "" {

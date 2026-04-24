@@ -99,7 +99,6 @@ func buildConfig(cmd *cobra.Command) (config.Config, []func(logger *zap.Logger),
 			return config.Config{}, nil, fmt.Errorf("supervisor: %w", err)
 		}
 		configFile = file
-
 	}
 
 	if configFile != "" {

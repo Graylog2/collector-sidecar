@@ -252,10 +252,10 @@ func TestClient_SetEffectiveConfig(t *testing.T) {
 	// Verify the config was stored internally
 	ec := client.effectiveConfig.Load()
 	require.NotNil(t, ec)
-	require.NotNil(t, ec.ConfigMap)
-	require.NotNil(t, ec.ConfigMap.ConfigMap)
-	require.Contains(t, ec.ConfigMap.ConfigMap, "collector.yaml")
-	require.Equal(t, []byte("test: config"), ec.ConfigMap.ConfigMap["collector.yaml"].Body)
+	require.NotNil(t, ec.GetConfigMap())
+	require.NotNil(t, ec.GetConfigMap().GetConfigMap())
+	require.Contains(t, ec.GetConfigMap().GetConfigMap(), "collector.yaml")
+	require.Equal(t, []byte("test: config"), ec.GetConfigMap().GetConfigMap()["collector.yaml"].GetBody())
 }
 
 func TestClient_SetEffectiveConfig_RespectsContext(t *testing.T) {

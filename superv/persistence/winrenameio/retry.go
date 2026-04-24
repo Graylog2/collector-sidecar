@@ -56,7 +56,7 @@ func retry(op func() error, isTransient func(error) bool) error {
 		}
 
 		time.Sleep(nextSleep)
-		nextSleep += time.Duration(rand.Int64N(int64(nextSleep)))
+		nextSleep += time.Duration(rand.Int64N(int64(nextSleep))) //nolint:gosec // Doesn't need crypto/rand
 	}
 
 	return bestErr

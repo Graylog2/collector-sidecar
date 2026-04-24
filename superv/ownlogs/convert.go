@@ -20,6 +20,7 @@ package ownlogs
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -37,11 +38,11 @@ func ConvertSettings(proto *protobufs.TelemetryConnectionSettings, clientCertPat
 	if proto == nil {
 		return Settings{}, fmt.Errorf("nil TelemetryConnectionSettings")
 	}
-	if proto.DestinationEndpoint == "" {
+	if proto.GetDestinationEndpoint() == "" {
 		return Settings{}, fmt.Errorf("empty destination endpoint")
 	}
 
-	endpoint := proto.DestinationEndpoint
+	endpoint := proto.GetDestinationEndpoint()
 	var tlsServerName string
 	var logLevel string
 
@@ -80,10 +81,10 @@ func ConvertSettings(proto *protobufs.TelemetryConnectionSettings, clientCertPat
 	}
 
 	// Convert headers
-	if h := proto.GetHeaders(); h != nil && len(h.Headers) > 0 {
-		s.Headers = make(map[string]string, len(h.Headers))
-		for _, header := range h.Headers {
-			s.Headers[header.Key] = header.Value
+	if h := proto.GetHeaders(); h != nil && len(h.GetHeaders()) > 0 {
+		s.Headers = make(map[string]string, len(h.GetHeaders()))
+		for _, header := range h.GetHeaders() {
+			s.Headers[header.GetKey()] = header.GetValue()
 		}
 	}
 
@@ -119,10 +120,10 @@ func ConvertSettings(proto *protobufs.TelemetryConnectionSettings, clientCertPat
 		if proxyURL := proxy.GetUrl(); proxyURL != "" {
 			s.ProxyURL = proxyURL
 		}
-		if proxyHeaders := proxy.GetConnectHeaders(); proxyHeaders != nil && len(proxyHeaders.Headers) > 0 {
-			s.ProxyHeaders = make(map[string]string, len(proxyHeaders.Headers))
-			for _, header := range proxyHeaders.Headers {
-				s.ProxyHeaders[header.Key] = header.Value
+		if proxyHeaders := proxy.GetConnectHeaders(); proxyHeaders != nil && len(proxyHeaders.GetHeaders()) > 0 {
+			s.ProxyHeaders = make(map[string]string, len(proxyHeaders.GetHeaders()))
+			for _, header := range proxyHeaders.GetHeaders() {
+				s.ProxyHeaders[header.GetKey()] = header.GetValue()
 			}
 		}
 	}
@@ -143,11 +144,11 @@ func (s *Settings) LoadClientCert(certPath, keyPath string) error {
 	if certPath == "" || keyPath == "" {
 		return fmt.Errorf("client cert path and key path must not be empty")
 	}
-	certPEM, err := os.ReadFile(certPath)
+	certPEM, err := os.ReadFile(certPath) //nolint:gosec // Trusted path
 	if err != nil {
 		return fmt.Errorf("read client cert %s: %w", certPath, err)
 	}
-	keyPEM, err := os.ReadFile(keyPath)
+	keyPEM, err := os.ReadFile(keyPath) //nolint:gosec // Trusted path
 	if err != nil {
 		return fmt.Errorf("read client key %s: %w", keyPath, err)
 	}
@@ -163,8 +164,11 @@ func (s *Settings) LoadClientCert(certPath, keyPath string) error {
 }
 
 func buildTLSConfig(cert *protobufs.TLSCertificate, tlsSettings *protobufs.TLSConnectionSettings, serverName string) (*tls.Config, error) {
-	if cert == nil && tlsSettings == nil && serverName == "" {
-		return nil, nil
+	if serverName == "" {
+		return nil, errors.New("server name can't be blank")
+	}
+	if cert == nil && tlsSettings == nil {
+		return nil, errors.New("either a certificate or TLS settings is required")
 	}
 
 	cfg := &tls.Config{

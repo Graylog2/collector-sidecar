@@ -57,7 +57,7 @@ func SaveSigningKey(keysDir string, key ed25519.PrivateKey) error {
 func LoadSigningKey(keysDir string) (ed25519.PrivateKey, error) {
 	filePath := filepath.Join(keysDir, SigningKeyFile)
 
-	content, err := os.ReadFile(filePath)
+	content, err := os.ReadFile(filePath) //nolint:gosec // Trusted path
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func SaveEncryptionKey(keysDir string, key []byte) error {
 func LoadEncryptionKey(keysDir string) ([]byte, error) {
 	filePath := filepath.Join(keysDir, encryptionKeyFile)
 
-	content, err := os.ReadFile(filePath)
+	content, err := os.ReadFile(filePath) //nolint:gosec // Trusted path
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +130,7 @@ func SaveCertificate(keysDir string, cert *x509.Certificate) error {
 func LoadCertificate(keysDir string) (*x509.Certificate, error) {
 	filePath := filepath.Join(keysDir, SigningCertFile)
 
-	content, err := os.ReadFile(filePath)
+	content, err := os.ReadFile(filePath) //nolint:gosec // Trusted path
 	if err != nil {
 		return nil, err
 	}

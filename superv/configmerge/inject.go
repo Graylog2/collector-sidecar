@@ -18,6 +18,7 @@
 package configmerge
 
 import (
+	"fmt"
 	"slices"
 
 	"github.com/knadh/koanf/parsers/yaml"
@@ -98,7 +99,9 @@ func InjectServiceExtension(config []byte, extensionName string) ([]byte, error)
 	}
 
 	// Set the updated extensions list
-	k.Set("service::extensions", existingExtensions)
+	if err := k.Set("service::extensions", existingExtensions); err != nil {
+		return nil, fmt.Errorf("couldn't set key service:extensions: %w", err)
+	}
 
 	return k.Marshal(yaml.Parser())
 }

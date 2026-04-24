@@ -82,7 +82,7 @@ type Supervisor struct {
 	localServerDraining       atomic.Bool
 
 	// Supervisor lifecycle
-	ctx        context.Context
+	ctx        context.Context //nolint:containedctx
 	cancel     context.CancelFunc
 	isRunning  atomic.Bool
 	isStarting atomic.Bool

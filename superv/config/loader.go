@@ -61,9 +61,9 @@ func Load(path string) (Config, error) {
 	if err := k.Load(env.Provider("::", env.Opt{
 		Prefix: envPrefix,
 		TransformFunc: func(k, v string) (string, any) {
-			return strings.Replace(
+			return strings.ReplaceAll(
 				strings.ToLower(strings.TrimPrefix(k, envPrefix)),
-				"__", "::", -1), v
+				"__", "::"), v
 		},
 	}), nil); err != nil {
 		return Config{}, err

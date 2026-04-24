@@ -51,7 +51,7 @@ func (s *Supervisor) createAndStartClient(ctx context.Context, settings connecti
 		HeartbeatInterval:    settings.HeartbeatInterval,
 		MaxHeartbeatInterval: s.maxHeartbeatInterval,
 		TLSConfig: &tls.Config{
-			InsecureSkipVerify: settings.TLS.Insecure,
+			InsecureSkipVerify: settings.TLS.Insecure, //nolint:gosec // Intentionally configurable
 			MinVersion:         minVersion,
 			MaxVersion:         maxVersion,
 		},

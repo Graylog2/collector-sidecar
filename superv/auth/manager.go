@@ -76,7 +76,7 @@ func NewManager(logger *zap.Logger, cfg ManagerConfig) *Manager {
 			MaxIdleConns:          100,
 			IdleConnTimeout:       90 * time.Second,
 			TLSHandshakeTimeout:   10 * time.Second,
-			TLSClientConfig:       &tls.Config{InsecureSkipVerify: cfg.InsecureTLS},
+			TLSClientConfig:       &tls.Config{InsecureSkipVerify: cfg.InsecureTLS}, //nolint:gosec // Intentionally configurable
 			ExpectContinueTimeout: 1 * time.Second,
 		}}
 	}
@@ -378,7 +378,11 @@ func (m *Manager) CompleteRenewal(certPEM []byte) error {
 	if !ok {
 		return errors.New("renewed certificate does not contain an Ed25519 public key")
 	}
-	if !bytes.Equal(newPub, signingKey.Public().(ed25519.PublicKey)) {
+	sigPub, ok := signingKey.Public().(ed25519.PublicKey)
+	if !ok {
+		return errors.New("signing key does not contain an Ed25519 public key")
+	}
+	if !bytes.Equal(newPub, sigPub) {
 		return errors.New("public key mismatch: renewed certificate has a different public key")
 	}
 

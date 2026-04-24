@@ -202,7 +202,7 @@ func (m *Manager) GetEffectiveConfig() ([]byte, error) {
 func (m *Manager) RollbackConfig() error {
 	bakPath := m.cfg.OutputPath + ".prev"
 
-	bakContent, err := os.ReadFile(bakPath)
+	bakContent, err := os.ReadFile(bakPath) //nolint:gosec // Trusted path
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("no backup config to roll back to")
@@ -358,7 +358,7 @@ func (m *Manager) mergeLocalOverrides(config []byte) ([]byte, error) {
 	mergedConfig := config
 
 	for _, overridePath := range m.cfg.LocalOverrides {
-		overrideContent, err := os.ReadFile(overridePath)
+		overrideContent, err := os.ReadFile(overridePath) //nolint:gosec // Trusted path
 		if err != nil {
 			m.logger.Warn("Failed to read local override file, skipping",
 				zap.String("path", overridePath),
@@ -417,7 +417,7 @@ func (m *Manager) loadCachedRemoteConfig() ([]byte, bool) {
 	}
 
 	remotePath := filepath.Join(m.cfg.ConfigDir, "remote", filepath.Base(m.cfg.OutputPath))
-	cached, err := os.ReadFile(remotePath)
+	cached, err := os.ReadFile(remotePath) //nolint:gosec // Trusted path
 	if err != nil || len(cached) == 0 {
 		return nil, false
 	}
@@ -468,7 +468,7 @@ func (m *Manager) LoadRemoteConfigStatus() (*protobufs.RemoteConfigStatus, error
 	var data remoteConfigStatusYAML
 	if err := persistence.LoadYAMLFile(".", path, &data); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return nil, nil
+			return nil, nil //nolint:nilnil // This is fine here
 		}
 		return nil, fmt.Errorf("failed to load remote config status: %w", err)
 	}

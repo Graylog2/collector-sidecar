@@ -226,9 +226,9 @@ func TestHealthMonitor_ToComponentHealth(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			health := tc.status.ToComponentHealth(tc.agentProvider)
 
-			assert.Equal(t, tc.expected.healthy, health.Healthy)
-			assert.Equal(t, tc.expected.lastError, health.LastError)
-			assert.Equal(t, tc.expected.startTimeNano, health.StartTimeUnixNano)
+			assert.Equal(t, tc.expected.healthy, health.GetHealthy())
+			assert.Equal(t, tc.expected.lastError, health.GetLastError())
+			assert.Equal(t, tc.expected.startTimeNano, health.GetStartTimeUnixNano())
 		})
 	}
 }

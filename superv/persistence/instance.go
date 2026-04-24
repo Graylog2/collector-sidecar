@@ -83,7 +83,7 @@ func LoadInstanceData(dir string) (*InstanceData, error) {
 		}
 	}
 
-	content, err := os.ReadFile(filePath)
+	content, err := os.ReadFile(filePath) //nolint:gosec // Trusted path
 	if err != nil {
 		return nil, err
 	}

@@ -18,6 +18,8 @@
 package configmerge
 
 import (
+	"fmt"
+
 	"github.com/knadh/koanf/maps"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/rawbytes"
@@ -139,7 +141,9 @@ func InjectSettings(config []byte, settings map[string]any) ([]byte, error) {
 
 	// Inject settings
 	for key, value := range settings {
-		k.Set(key, value)
+		if err := k.Set(key, value); err != nil {
+			return nil, fmt.Errorf("couldn't set key %q: %w", key, err)
+		}
 	}
 
 	return k.Marshal(yaml.Parser())

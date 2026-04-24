@@ -84,8 +84,8 @@ func CreateSupervisorJWT(
 
 // ParseSupervisorJWT parses a supervisor-signed JWT without verifying the signature.
 // Returns the certificate fingerprint from header and the claims.
-func ParseSupervisorJWT(tokenString string) (certFingerprint string, claims *SupervisorClaims, err error) {
-	claims = &SupervisorClaims{}
+func ParseSupervisorJWT(tokenString string) (string, *SupervisorClaims, error) {
+	claims := &SupervisorClaims{}
 
 	// Parse without validation to extract claims and header
 	token, _, err := jwt.NewParser().ParseUnverified(tokenString, claims)
@@ -93,6 +93,7 @@ func ParseSupervisorJWT(tokenString string) (certFingerprint string, claims *Sup
 		return "", nil, err
 	}
 
+	var certFingerprint string
 	// Extract certificate fingerprint from header
 	if fp, ok := token.Header[x5tHeader].(string); ok {
 		certFingerprint = fp

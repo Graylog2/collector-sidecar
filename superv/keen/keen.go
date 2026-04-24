@@ -103,11 +103,11 @@ func (c *Commander) Start(ctx context.Context) error {
 
 	c.mu.Lock()
 	c.recoveryDone = make(chan struct{})
-	recoveryCtx, cancel := context.WithCancel(ctx)
+	recoveryCtx, cancel := context.WithCancel(ctx) //nolint:gosec // Cancel func stored in Commander and called later
 	c.stopRecovery = cancel
 	c.mu.Unlock()
 
-	go c.recoveryLoop(recoveryCtx)
+	go c.recoveryLoop(recoveryCtx) //nolint:gosec // Intentionally using recoveryCtx wrapper for ctx
 
 	return nil
 }
@@ -119,7 +119,7 @@ func (c *Commander) start(ctx context.Context) error {
 
 	c.logger.Debug("Starting agent", zap.String("executable", c.cfg.Executable))
 
-	cmd := exec.CommandContext(ctx, c.cfg.Executable, c.cfg.Args...)
+	cmd := exec.CommandContext(ctx, c.cfg.Executable, c.cfg.Args...) //nolint:gosec // Trusted args
 	cmd.Env = c.buildEnv()
 	cmd.SysProcAttr = sysProcAttrs()
 	doneCh := make(chan struct{})
@@ -295,7 +295,9 @@ func (c *Commander) Stop(ctx context.Context) error {
 		<-waitCtx.Done()
 		if errors.Is(waitCtx.Err(), context.DeadlineExceeded) {
 			c.logger.Debug("Agent not responding to SIGTERM, sending SIGKILL", zap.Int("pid", pid))
-			cmd.Process.Kill()
+			if err := cmd.Process.Kill(); err != nil {
+				c.logger.Warn("Couldn't kill process", zap.Int("pid", pid))
+			}
 		}
 	}()
 

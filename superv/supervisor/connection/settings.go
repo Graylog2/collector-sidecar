@@ -275,9 +275,9 @@ func convertProtoHeaders(h *protobufs.Headers) map[string]string {
 	if h == nil {
 		return nil
 	}
-	result := make(map[string]string, len(h.Headers))
-	for _, header := range h.Headers {
-		result[header.Key] = header.Value
+	result := make(map[string]string, len(h.GetHeaders()))
+	for _, header := range h.GetHeaders() {
+		result[header.GetKey()] = header.GetValue()
 	}
 	return result
 }

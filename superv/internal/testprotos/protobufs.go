@@ -15,31 +15,22 @@
 //
 // SPDX-License-Identifier: SSPL-1.0
 
-package auth
+package testprotos
 
 import (
-	"crypto/ed25519"
-	"crypto/rand"
+	"testing"
 
-	"golang.org/x/crypto/curve25519"
+	"github.com/Graylog2/collector-sidecar/superv/internal/testpki"
+	"github.com/open-telemetry/opamp-go/protobufs"
 )
 
-// GenerateSigningKeypair generates a new Ed25519 keypair for signing.
-func GenerateSigningKeypair() (ed25519.PublicKey, ed25519.PrivateKey, error) {
-	return ed25519.GenerateKey(rand.Reader)
-}
+func CreateTLSCertificate(t *testing.T) *protobufs.TLSCertificate {
+	ca := testpki.GenerateTestCA(t)
+	cert := testpki.GenerateTestCert(t, ca.CertPEM, ca.KeyPEM)
 
-// GenerateEncryptionKeypair generates a new X25519 keypair for encryption.
-func GenerateEncryptionKeypair() ([]byte, []byte, error) {
-	privateKey := make([]byte, curve25519.ScalarSize)
-	if _, err := rand.Read(privateKey); err != nil {
-		return nil, nil, err
+	return &protobufs.TLSCertificate{
+		Cert:       cert.CertPEM,
+		PrivateKey: cert.KeyPEM,
+		CaCert:     ca.CertPEM,
 	}
-
-	publicKey, err := curve25519.X25519(privateKey, curve25519.Basepoint)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return publicKey, privateKey, nil
 }

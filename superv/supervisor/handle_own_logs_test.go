@@ -34,6 +34,7 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/superv/auth"
 	"github.com/Graylog2/collector-sidecar/superv/config"
+	"github.com/Graylog2/collector-sidecar/superv/internal/testprotos"
 	"github.com/Graylog2/collector-sidecar/superv/keen"
 	"github.com/Graylog2/collector-sidecar/superv/ownlogs"
 	"github.com/Graylog2/collector-sidecar/superv/persistence"
@@ -113,7 +114,8 @@ func TestSupervisor_HandleOwnLogs(t *testing.T) {
 		defer ts.Close()
 
 		s.handleOwnLogs(context.Background(), &protobufs.TelemetryConnectionSettings{
-			DestinationEndpoint: ts.URL + "/v1/logs",
+			DestinationEndpoint: ts.URL + "/v1/logs?tls_server_name=localhost",
+			Certificate:         testprotos.CreateTLSCertificate(t),
 		})
 
 		// Verify file was persisted
@@ -138,7 +140,8 @@ func TestSupervisor_HandleOwnLogs(t *testing.T) {
 		defer ts.Close()
 
 		settings := &protobufs.TelemetryConnectionSettings{
-			DestinationEndpoint: ts.URL + "/v1/logs?log_level=info",
+			DestinationEndpoint: ts.URL + "/v1/logs?log_level=info&tls_server_name=localhost",
+			Certificate:         testprotos.CreateTLSCertificate(t),
 		}
 
 		s.handleOwnLogs(context.Background(), settings)

@@ -31,6 +31,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Graylog2/collector-sidecar/superv/internal/testprotos"
 	"github.com/open-telemetry/opamp-go/protobufs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,7 +39,7 @@ import (
 
 // generateTestCA creates a self-signed CA certificate and returns the PEM-encoded
 // certificate and private key.
-func generateTestCA(t *testing.T) (certPEM, keyPEM []byte) {
+func generateTestCA(t *testing.T) ([]byte, []byte) {
 	t.Helper()
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)
@@ -56,16 +57,16 @@ func generateTestCA(t *testing.T) (certPEM, keyPEM []byte) {
 	certDER, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
 	require.NoError(t, err)
 
-	certPEM = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
 	keyDER, err := x509.MarshalECPrivateKey(key)
 	require.NoError(t, err)
-	keyPEM = pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER})
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER})
 	return certPEM, keyPEM
 }
 
 // generateTestCert creates a certificate signed by the given CA (or self-signed
 // if caCertPEM/caKeyPEM are nil). Returns PEM-encoded certificate and private key.
-func generateTestCert(t *testing.T, caCertPEM, caKeyPEM []byte) (certPEM, keyPEM []byte) {
+func generateTestCert(t *testing.T, caCertPEM, caKeyPEM []byte) ([]byte, []byte) {
 	t.Helper()
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)
@@ -102,22 +103,22 @@ func generateTestCert(t *testing.T, caCertPEM, caKeyPEM []byte) (certPEM, keyPEM
 	certDER, err := x509.CreateCertificate(rand.Reader, tmpl, parent, &key.PublicKey, signerKey)
 	require.NoError(t, err)
 
-	certPEM = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
 	keyDER, err := x509.MarshalECPrivateKey(key)
 	require.NoError(t, err)
-	keyPEM = pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER})
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER})
 	return certPEM, keyPEM
 }
 
 // writeTestClientCert creates a temporary client cert/key pair and returns
 // the file paths. Used by ConvertSettings tests which require valid cert paths.
-func writeTestClientCert(t *testing.T) (certPath, keyPath string) {
+func writeTestClientCert(t *testing.T) (string, string) {
 	t.Helper()
 	caCertPEM, caKeyPEM := generateTestCA(t)
 	clientCertPEM, clientKeyPEM := generateTestCert(t, caCertPEM, caKeyPEM)
 	dir := t.TempDir()
-	certPath = filepath.Join(dir, "client.crt")
-	keyPath = filepath.Join(dir, "client.key")
+	certPath := filepath.Join(dir, "client.crt")
+	keyPath := filepath.Join(dir, "client.key")
 	require.NoError(t, os.WriteFile(certPath, clientCertPEM, 0o600))
 	require.NoError(t, os.WriteFile(keyPath, clientKeyPEM, 0o600))
 	return certPath, keyPath
@@ -126,7 +127,8 @@ func writeTestClientCert(t *testing.T) (certPath, keyPath string) {
 func TestConvertSettings_Endpoint(t *testing.T) {
 	certPath, keyPath := writeTestClientCert(t)
 	proto := &protobufs.TelemetryConnectionSettings{
-		DestinationEndpoint: "https://example.com:4318/v1/logs",
+		DestinationEndpoint: "https://example.com:4318/v1/logs?tls_server_name=localhost",
+		Certificate:         testprotos.CreateTLSCertificate(t),
 	}
 	s, err := ConvertSettings(proto, certPath, keyPath)
 	require.NoError(t, err)
@@ -137,7 +139,8 @@ func TestConvertSettings_Endpoint(t *testing.T) {
 func TestConvertSettings_Headers(t *testing.T) {
 	certPath, keyPath := writeTestClientCert(t)
 	proto := &protobufs.TelemetryConnectionSettings{
-		DestinationEndpoint: "https://example.com:4318/v1/logs",
+		DestinationEndpoint: "https://example.com:4318/v1/logs?tls_server_name=localhost",
+		Certificate:         testprotos.CreateTLSCertificate(t),
 		Headers: &protobufs.Headers{
 			Headers: []*protobufs.Header{
 				{Key: "Authorization", Value: "Bearer token123"},
@@ -154,7 +157,8 @@ func TestConvertSettings_Headers(t *testing.T) {
 func TestConvertSettings_InsecureHTTP(t *testing.T) {
 	certPath, keyPath := writeTestClientCert(t)
 	proto := &protobufs.TelemetryConnectionSettings{
-		DestinationEndpoint: "http://example.com:4318/v1/logs",
+		DestinationEndpoint: "http://example.com:4318/v1/logs?tls_server_name=localhost",
+		Certificate:         testprotos.CreateTLSCertificate(t),
 	}
 	s, err := ConvertSettings(proto, certPath, keyPath)
 	require.NoError(t, err)
@@ -167,7 +171,7 @@ func TestConvertSettings_TLSCertificate(t *testing.T) {
 	clientCertPEM, clientKeyPEM := generateTestCert(t, caCertPEM, caKeyPEM)
 
 	proto := &protobufs.TelemetryConnectionSettings{
-		DestinationEndpoint: "https://example.com:4318/v1/logs",
+		DestinationEndpoint: "https://example.com:4318/v1/logs?tls_server_name=localhost",
 		Certificate: &protobufs.TLSCertificate{
 			Cert:       clientCertPEM,
 			PrivateKey: clientKeyPEM,
@@ -191,7 +195,7 @@ func TestConvertSettings_TLSConnectionSettings(t *testing.T) {
 	caCertPEM, _ := generateTestCA(t)
 
 	proto := &protobufs.TelemetryConnectionSettings{
-		DestinationEndpoint: "https://example.com:4318/v1/logs",
+		DestinationEndpoint: "https://example.com:4318/v1/logs?tls_server_name=localhost",
 		Tls: &protobufs.TLSConnectionSettings{
 			CaPemContents:            string(caCertPEM),
 			IncludeSystemCaCertsPool: true,
@@ -213,7 +217,7 @@ func TestConvertSettings_BothCASources(t *testing.T) {
 	tlsCAPEM, _ := generateTestCA(t)
 
 	proto := &protobufs.TelemetryConnectionSettings{
-		DestinationEndpoint: "https://example.com:4318/v1/logs",
+		DestinationEndpoint: "https://example.com:4318/v1/logs?tls_server_name=localhost",
 		Certificate: &protobufs.TLSCertificate{
 			CaCert: caCertPEM,
 		},
@@ -234,7 +238,7 @@ func TestConvertSettings_BothCASources(t *testing.T) {
 func TestConvertSettings_InvalidClientCertificate(t *testing.T) {
 	certPath, keyPath := writeTestClientCert(t)
 	proto := &protobufs.TelemetryConnectionSettings{
-		DestinationEndpoint: "https://example.com:4318/v1/logs",
+		DestinationEndpoint: "https://example.com:4318/v1/logs?tls_server_name=localhost",
 		Certificate: &protobufs.TLSCertificate{
 			Cert:       []byte("invalid pem"),
 			PrivateKey: []byte("invalid pem"),
@@ -248,7 +252,7 @@ func TestConvertSettings_InvalidClientCertificate(t *testing.T) {
 func TestConvertSettings_InvalidCAFromCertificate(t *testing.T) {
 	certPath, keyPath := writeTestClientCert(t)
 	proto := &protobufs.TelemetryConnectionSettings{
-		DestinationEndpoint: "https://example.com:4318/v1/logs",
+		DestinationEndpoint: "https://example.com:4318/v1/logs?tls_server_name=localhost",
 		Certificate: &protobufs.TLSCertificate{
 			CaCert: []byte("invalid ca pem"),
 		},
@@ -261,7 +265,8 @@ func TestConvertSettings_InvalidCAFromCertificate(t *testing.T) {
 func TestConvertSettings_InvalidCAFromTLSSettings(t *testing.T) {
 	certPath, keyPath := writeTestClientCert(t)
 	proto := &protobufs.TelemetryConnectionSettings{
-		DestinationEndpoint: "https://example.com:4318/v1/logs",
+		DestinationEndpoint: "https://example.com:4318/v1/logs?tls_server_name=localhost",
+		Certificate:         testprotos.CreateTLSCertificate(t),
 		Tls: &protobufs.TLSConnectionSettings{
 			CaPemContents: "invalid ca pem",
 		},
@@ -274,7 +279,8 @@ func TestConvertSettings_InvalidCAFromTLSSettings(t *testing.T) {
 func TestConvertSettings_InvalidTLSVersion(t *testing.T) {
 	certPath, keyPath := writeTestClientCert(t)
 	proto := &protobufs.TelemetryConnectionSettings{
-		DestinationEndpoint: "https://example.com:4318/v1/logs",
+		DestinationEndpoint: "https://example.com:4318/v1/logs?tls_server_name=localhost",
+		Certificate:         testprotos.CreateTLSCertificate(t),
 		Tls: &protobufs.TLSConnectionSettings{
 			MinVersion: "1.0",
 		},
@@ -289,7 +295,7 @@ func TestConvertSettings_SystemCACertsWithExistingCA(t *testing.T) {
 	caCertPEM, _ := generateTestCA(t)
 
 	proto := &protobufs.TelemetryConnectionSettings{
-		DestinationEndpoint: "https://example.com:4318/v1/logs",
+		DestinationEndpoint: "https://example.com:4318/v1/logs?tls_server_name=localhost",
 		Certificate: &protobufs.TLSCertificate{
 			CaCert: caCertPEM,
 		},
@@ -306,7 +312,7 @@ func TestConvertSettings_SystemCACertsWithExistingCA(t *testing.T) {
 func TestConvertSettings_TLSMinGreaterThanMax(t *testing.T) {
 	certPath, keyPath := writeTestClientCert(t)
 	proto := &protobufs.TelemetryConnectionSettings{
-		DestinationEndpoint: "https://example.com:4318/v1/logs",
+		DestinationEndpoint: "https://example.com:4318/v1/logs?tls_server_name=localhost",
 		Tls: &protobufs.TLSConnectionSettings{
 			MinVersion: "1.3",
 			MaxVersion: "1.2",
@@ -331,7 +337,8 @@ func TestConvertSettings_EmptyEndpoint(t *testing.T) {
 
 func TestConvertSettings_MissingClientCert(t *testing.T) {
 	proto := &protobufs.TelemetryConnectionSettings{
-		DestinationEndpoint: "https://example.com:4318/v1/logs",
+		DestinationEndpoint: "https://example.com:4318/v1/logs?tls_server_name=localhost",
+		Certificate:         testprotos.CreateTLSCertificate(t),
 	}
 	_, err := ConvertSettings(proto, "", "")
 	require.Error(t, err)
@@ -342,6 +349,7 @@ func TestConvertSettings_TLSServerName(t *testing.T) {
 	certPath, keyPath := writeTestClientCert(t)
 	proto := &protobufs.TelemetryConnectionSettings{
 		DestinationEndpoint: "https://example.com:4318/?tls_server_name=my-cluster-id",
+		Certificate:         testprotos.CreateTLSCertificate(t),
 	}
 	s, err := ConvertSettings(proto, certPath, keyPath)
 	require.NoError(t, err)
@@ -355,6 +363,7 @@ func TestConvertSettings_TLSServerNameWithPath(t *testing.T) {
 	certPath, keyPath := writeTestClientCert(t)
 	proto := &protobufs.TelemetryConnectionSettings{
 		DestinationEndpoint: "https://example.com:4318/v1/logs?tls_server_name=my-cluster-id",
+		Certificate:         testprotos.CreateTLSCertificate(t),
 	}
 	s, err := ConvertSettings(proto, certPath, keyPath)
 	require.NoError(t, err)
@@ -366,6 +375,7 @@ func TestConvertSettings_TLSServerNameWithOtherParams(t *testing.T) {
 	certPath, keyPath := writeTestClientCert(t)
 	proto := &protobufs.TelemetryConnectionSettings{
 		DestinationEndpoint: "https://example.com:4318/v1/logs?foo=bar&tls_server_name=cluster-42&baz=qux",
+		Certificate:         testprotos.CreateTLSCertificate(t),
 	}
 	s, err := ConvertSettings(proto, certPath, keyPath)
 	require.NoError(t, err)
@@ -379,17 +389,18 @@ func TestConvertSettings_NoTLSServerName(t *testing.T) {
 	certPath, keyPath := writeTestClientCert(t)
 	proto := &protobufs.TelemetryConnectionSettings{
 		DestinationEndpoint: "https://example.com:4318/v1/logs",
+		Certificate:         testprotos.CreateTLSCertificate(t),
 	}
-	s, err := ConvertSettings(proto, certPath, keyPath)
-	require.NoError(t, err)
-	assert.Equal(t, "https://example.com:4318/v1/logs", s.Endpoint)
-	assert.Empty(t, s.TLSServerName)
+	_, err := ConvertSettings(proto, certPath, keyPath)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "server name")
 }
 
 func TestConvertSettings_LogLevel(t *testing.T) {
 	certPath, keyPath := writeTestClientCert(t)
 	proto := &protobufs.TelemetryConnectionSettings{
-		DestinationEndpoint: "https://example.com:4318/v1/logs?log_level=debug",
+		DestinationEndpoint: "https://example.com:4318/v1/logs?log_level=debug&tls_server_name=localhost",
+		Certificate:         testprotos.CreateTLSCertificate(t),
 	}
 	s, err := ConvertSettings(proto, certPath, keyPath)
 	require.NoError(t, err)
@@ -400,7 +411,8 @@ func TestConvertSettings_LogLevel(t *testing.T) {
 func TestConvertSettings_LogLevelWithOtherParams(t *testing.T) {
 	certPath, keyPath := writeTestClientCert(t)
 	proto := &protobufs.TelemetryConnectionSettings{
-		DestinationEndpoint: "https://example.com:4318/v1/logs?foo=bar&log_level=warn&baz=qux",
+		DestinationEndpoint: "https://example.com:4318/v1/logs?foo=bar&log_level=warn&baz=qux&tls_server_name=localhost",
+		Certificate:         testprotos.CreateTLSCertificate(t),
 	}
 	s, err := ConvertSettings(proto, certPath, keyPath)
 	require.NoError(t, err)
@@ -413,7 +425,8 @@ func TestConvertSettings_LogLevelWithOtherParams(t *testing.T) {
 func TestConvertSettings_NoLogLevel(t *testing.T) {
 	certPath, keyPath := writeTestClientCert(t)
 	proto := &protobufs.TelemetryConnectionSettings{
-		DestinationEndpoint: "https://example.com:4318/v1/logs",
+		DestinationEndpoint: "https://example.com:4318/v1/logs?tls_server_name=localhost",
+		Certificate:         testprotos.CreateTLSCertificate(t),
 	}
 	s, err := ConvertSettings(proto, certPath, keyPath)
 	require.NoError(t, err)
@@ -460,7 +473,8 @@ func TestLoadClientCert_MissingFiles(t *testing.T) {
 func TestConvertSettings_Proxy(t *testing.T) {
 	certPath, keyPath := writeTestClientCert(t)
 	proto := &protobufs.TelemetryConnectionSettings{
-		DestinationEndpoint: "https://example.com:4318/v1/logs",
+		DestinationEndpoint: "https://example.com:4318/v1/logs?tls_server_name=localhost",
+		Certificate:         testprotos.CreateTLSCertificate(t),
 		Proxy: &protobufs.ProxyConnectionSettings{
 			Url: "http://proxy:8080",
 			ConnectHeaders: &protobufs.Headers{
@@ -479,7 +493,8 @@ func TestConvertSettings_Proxy(t *testing.T) {
 func TestConvertSettings_ProxyNil(t *testing.T) {
 	certPath, keyPath := writeTestClientCert(t)
 	proto := &protobufs.TelemetryConnectionSettings{
-		DestinationEndpoint: "https://example.com:4318/v1/logs",
+		DestinationEndpoint: "https://example.com:4318/v1/logs?tls_server_name=localhost",
+		Certificate:         testprotos.CreateTLSCertificate(t),
 	}
 	s, err := ConvertSettings(proto, certPath, keyPath)
 	require.NoError(t, err)

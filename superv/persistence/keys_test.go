@@ -160,7 +160,7 @@ func TestCertificateFingerprint(t *testing.T) {
 	require.Len(t, fp, 64)
 }
 
-// createTestCertificate creates a self-signed certificate for testing
+// createTestCertificate creates a self-signed certificate for testing.
 func createTestCertificate(t *testing.T) *x509.Certificate {
 	t.Helper()
 

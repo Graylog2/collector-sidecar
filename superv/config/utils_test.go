@@ -25,7 +25,6 @@ import (
 )
 
 func TestDeriveEnrollmentEndpoint(t *testing.T) {
-
 	tests := []struct {
 		input     string
 		output    string

@@ -52,10 +52,10 @@ func RenderErrors(err error) string {
 
 	if joined, ok := err.(interface{ Unwrap() []error }); ok {
 		for _, e := range joined.Unwrap() {
-			sb.WriteString(fmt.Sprintf("  - %v\n", e))
+			_, _ = fmt.Fprintf(&sb, "  - %v\n", e)
 		}
 	} else {
-		sb.WriteString(fmt.Sprintf("  - %v\n", err))
+		_, _ = fmt.Fprintf(&sb, "  - %v\n", err)
 	}
 
 	return sb.String()
