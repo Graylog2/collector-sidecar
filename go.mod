@@ -1,6 +1,6 @@
 module github.com/Graylog2/collector-sidecar
 
-go 1.26.0
+go 1.26.2
 
 tool (
 	github.com/google/addlicense
