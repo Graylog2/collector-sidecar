@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"runtime"
 	"strings"
 
 	"github.com/elastic/go-ucfg"
@@ -40,17 +39,9 @@ func init() {
 	validateConfiguration = flag.Bool("configtest", false, "Validate configuration file and exit.")
 }
 
-func ConfigDefaults() []byte {
-	defaults := []byte(CommonDefaults)
-	if runtime.GOOS == "windows" {
-		defaults = append(defaults, WindowsDefaults...)
-	}
-	return defaults
-}
-
 // Read reads the configuration from a yaml file into the given interface structure.
 // In case path is not set this method reads from the default configuration file.
-func Read(out interface{}, path string) error {
+func Read(sidecarConfig *SidecarConfig, path string) error {
 
 	if path == "" && configurationFile != "" {
 		path = configurationFile
@@ -60,9 +51,8 @@ func Read(out interface{}, path string) error {
 	if err != nil {
 		return fmt.Errorf("[ConfigFile] Failed to read %s: %v. Exiting.", path, err)
 	}
-	// start with configuration defaults
-	filecontent := ConfigDefaults()
 
+	filecontent := []byte{}
 	// append configuration, but strip away possible yaml doc separators
 	scanner := bufio.NewScanner(configfile)
 	for scanner.Scan() {
@@ -73,12 +63,14 @@ func Read(out interface{}, path string) error {
 	}
 	filecontent = expandEnv(filecontent)
 
+	// SidecarConfig implements Initializer, so we don't have to construct it ourselves here.
+	// The platform-specific defaults will be applied by ucfg
 	config, err := yaml.NewConfig(filecontent, ucfg.PathSep("."))
 	if err != nil {
 		return fmt.Errorf("[ConfigFile] YAML config parsing failed on %s: %v. Exiting.", path, err)
 	}
 
-	err = config.Unpack(out, ucfg.PathSep("."))
+	err = config.Unpack(sidecarConfig, ucfg.PathSep("."))
 	if err != nil {
 		return fmt.Errorf("[ConfigFile] Failed to apply config %s: %v. Exiting. ", path, err)
 	}

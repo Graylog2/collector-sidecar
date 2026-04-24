@@ -18,10 +18,11 @@ package backends
 import (
 	"bytes"
 	"fmt"
+	"os"
+
 	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/helpers"
-	"io/ioutil"
 )
 
 func (b *Backend) render() []byte {
@@ -42,7 +43,7 @@ func (b *Backend) renderToFile(context *context.Ctx) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(b.ConfigurationPath, stringConfig, 0600)
+	err = os.WriteFile(b.ConfigurationPath, stringConfig, 0600)
 	return err
 }
 

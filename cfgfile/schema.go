@@ -42,58 +42,25 @@ type SidecarConfig struct {
 	WindowsDriveRange                string        `config:"windows_drive_range"`
 }
 
-// Default Sidecar configuration
-const CommonDefaults = `
-server_url: "http://127.0.0.1:9000/api/"
-server_api_token: ""
-node_id: "file:/etc/graylog/sidecar/node-id"
-update_interval: 10
-tls_skip_verify: false
-send_status: true
-list_log_files: []
-cache_path: "/var/cache/graylog-sidecar"
-log_path: "/var/log/graylog-sidecar"
-log_rotate_max_file_size: "10MiB"
-log_rotate_keep_files: 10
-collector_validation_timeout: "1m"
-collector_shutdown_timeout: "10s"
-collector_configuration_directory: "/var/lib/graylog-sidecar/generated"
-collector_binaries_accesslist:
-  - "/usr/bin/filebeat"
-  - "/usr/bin/packetbeat"
-  - "/usr/bin/metricbeat"
-  - "/usr/bin/heartbeat"
-  - "/usr/bin/auditbeat"
-  - "/usr/bin/journalbeat"
-  - "/usr/lib/graylog-sidecar/filebeat"
-  - "/usr/lib/graylog-sidecar/auditbeat"
-  - "/usr/share/filebeat/bin/filebeat"
-  - "/usr/share/packetbeat/bin/packetbeat"
-  - "/usr/share/metricbeat/bin/metricbeat"
-  - "/usr/share/heartbeat/bin/heartbeat"
-  - "/usr/share/auditbeat/bin/auditbeat"
-  - "/usr/share/journalbeat/bin/journalbeat"
-  - "/usr/bin/nxlog"
-  - "/opt/nxlog/bin/nxlog"
-tags: []
-windows_drive_range: ""
-`
+func (config *SidecarConfig) InitDefaults() {
+	config.ServerUrl = "http://127.0.0.1:9000/api/"
+	config.ServerApiToken = ""
+	config.TlsSkipVerify = false
+	config.CollectorValidationTimeoutString = "1m"
+	config.CollectorShutdownTimeoutString = "10s"
+	config.LogRotateMaxFileSizeString = "10MiB"
+	config.LogRotateKeepFiles = 10
+	config.UpdateInterval = 10
+	config.SendStatus = true
+	config.ListLogFiles = []string{}
+	config.Tags = []string{}
+	// these unset values are overridden by the platform defaults, the rest are computed or required:
+	// NodeId: contains platform dependent path
+	// CachePath: contains platform dependent path
+	// LogPath: contains platform dependent path
+	// CollectorConfigurationDirectory: contains platform dependent path
+	// CollectorBinariesAccesslist: contains platform dependent path
+	// WindowsDriveRange: windows only
 
-// Windows specific options. Gets merged over `CommonDefaults`
-const WindowsDefaults = `
-node_id: "file:C:\\Program Files\\Graylog\\sidecar\\node-id"
-cache_path: "C:\\Program Files\\Graylog\\sidecar\\cache"
-log_path: "C:\\Program Files\\Graylog\\sidecar\\logs"
-collector_configuration_directory: "C:\\Program Files\\Graylog\\sidecar\\generated"
-collector_binaries_accesslist:
-  - "C:\\Program Files\\Graylog\\sidecar\\filebeat.exe"
-  - "C:\\Program Files\\Graylog\\sidecar\\winlogbeat.exe"
-  - "C:\\Program Files\\Filebeat\\filebeat.exe"
-  - "C:\\Program Files\\Packetbeat\\packetbeat.exe"
-  - "C:\\Program Files\\Metricbeat\\metricbeat.exe"
-  - "C:\\Program Files\\Heartbeat\\heartbeat.exe"
-  - "C:\\Program Files\\Auditbeat\\auditbeat.exe"
-  - "C:\\Program Files (x86)\\nxlog\\nxlog.exe"
-  - "C:\\Program Files\\nxlog\\nxlog.exe"
-windows_drive_range: "CDEFGHIJKLMNOPQRSTUVWXYZ"
-`
+	withPlatformDefaults(config)
+}

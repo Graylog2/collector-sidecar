@@ -5,41 +5,41 @@
 <?define UpgradeCode = '716878B0-190F-42A5-A31A-793621AB888E'?>
 
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
-  <Product Name='Graylog Sidecar'
+  <Product Name='$(var.BrandProductDisplay)'
     Id='$(var.ProductId)'
     UpgradeCode='$(var.UpgradeCode)'
     Language='1033'
     Codepage='1252'
     Version='$(var.Version)'
-    Manufacturer='Graylog, Inc.'>
+    Manufacturer='$(var.BrandVendorDisplay)'>
 
     <Package Id='*'
       Keywords='Installer'
-      Description='Graylog Sidecar $(var.Version) Installer'
-      Comments='Graylog Sidecar version $(var.Version) installer.'
-      Manufacturer='Graylog, Inc.'
+      Description='$(var.BrandProductDisplay) $(var.Version) Installer'
+      Comments='$(var.BrandProductDisplay) version $(var.Version) installer.'
+      Manufacturer='$(var.BrandVendorDisplay)'
       InstallerVersion='500'
       Languages='1033'
       Compressed='yes'
       SummaryCodepage='1252' />
 
-    <Media Id='1' Cabinet='GraylogSidecar.cab' EmbedCab='yes' />
+    <Media Id='1' Cabinet='$(var.BrandProductLower).cab' EmbedCab='yes' />
 
-    <Icon Id='graylog-sidecar.exe' SourceFile='$(var.SidecarEXEPath)' />
+    <Icon Id='sidecar.exe' SourceFile='$(var.SidecarEXEPath)' />
 
-    <Property Id='ARPHELPLINK' Value='https://docs.graylog.org/' />
+    <Property Id='ARPHELPLINK' Value='$(var.BrandDocsUrl)' />
     <Property Id='ARPNOMODIFY' Value='1' />
     <Property Id='ARPNOREPAIR' Value='1' />
-    <Property Id='ARPPRODUCTICON' Value='graylog-sidecar.exe' />
-    <Property Id='ARPURLINFOABOUT' Value='https://docs.graylog.org/' />
+    <Property Id='ARPPRODUCTICON' Value='sidecar.exe' />
+    <Property Id='ARPURLINFOABOUT' Value='$(var.BrandDocsUrl)' />
 
     <Directory Id='TARGETDIR' Name='SourceDir'>
       <Directory Id='ProgramFiles64Folder'>
-        <Directory Id='Graylog' Name='Graylog'>
-          <Directory Id='INSTALLDIR' Name='sidecar'>
+        <Directory Id='VendorDir' Name='$(var.BrandWinVendorDir)'>
+          <Directory Id='INSTALLDIR' Name='$(var.BrandWinProductDir)'>
             <Component Id='SidecarExecutable' Guid='7D731672-C35C-4718-BD74-268F496F939E'>
               <File Id='SidecarEXE'
-                Name='graylog-sidecar.exe'
+                Name='$(var.BrandProductLower).exe'
                 Source='$(var.SidecarEXEPath)'
                 KeyPath='yes' />
               <File Id='SidecarLicense'

@@ -46,3 +46,6 @@ dist/collectors/
 
 /sidecar.yml
 resource_windows.syso
+
+# generated at build
+/versioninfo.json

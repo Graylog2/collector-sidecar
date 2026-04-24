@@ -1,9 +1,9 @@
 ; -------------------------------
 ; Start
 
-  Name "Graylog Sidecar"
+  Name "${BRAND_PRODUCT_DISPLAY}"
   !define MUI_FILE "savefile"
-  !define MUI_BRANDINGTEXT "Graylog Sidecar v${VERSION}${VERSION_SUFFIX}"
+  !define MUI_BRANDINGTEXT "${BRAND_PRODUCT_DISPLAY} v${VERSION}${VERSION_SUFFIX}"
   CRCCheck On
   SetCompressor "bzip2"
 
@@ -20,16 +20,16 @@
 
   VIProductVersion "${VERSION}.${REVISION}" ;Required format is X.X.X.X
   VIAddVersionKey "FileVersion" "${VERSION}"
-  VIAddVersionKey "FileDescription" "Graylog Sidecar Installer"
-  VIAddVersionKey "ProductName" "Graylog Sidecar"
+  VIAddVersionKey "FileDescription" "${BRAND_PRODUCT_DISPLAY} Installer"
+  VIAddVersionKey "ProductName" "${BRAND_PRODUCT_DISPLAY}"
   VIAddVersionKey "ProductVersion" "${VERSION}${VERSION_SUFFIX}"
-  VIAddVersionKey "LegalCopyright" "Graylog, Inc."
+  VIAddVersionKey "LegalCopyright" "${BRAND_VENDOR_DISPLAY}"
 
 ;---------------------------------
 ;General
 
   !searchreplace SUFFIX '${VERSION_SUFFIX}' "-" "."
-  OutFile "pkg/graylog_sidecar_installer_${VERSION}-${REVISION}${SUFFIX}.exe"
+  OutFile "pkg/${BRAND_PRODUCT_LOWER}_installer_${VERSION}-${REVISION}${SUFFIX}.exe"
   RequestExecutionLevel admin ;Require admin rights
   ShowInstDetails "show"
   ShowUninstDetails "show"
@@ -66,8 +66,8 @@
 ;--------------------------------
 ;Modern UI Configuration
 
-  !define MUI_ICON "graylog.ico"
-  !define MUI_WELCOMEPAGE_TITLE "Graylog Sidecar ${VERSION}-${REVISION}${SUFFIX} Installation / Upgrade"
+  !define MUI_ICON "${BRAND_ICON_FILE}"
+  !define MUI_WELCOMEPAGE_TITLE "${BRAND_PRODUCT_DISPLAY} ${VERSION}-${REVISION}${SUFFIX} Installation / Upgrade"
   !define MUI_WELCOMEPAGE_TEXT  "This setup is gonna guide you through the installation / upgrade of the Graylog Sidecar.\r\n\r\n \
 		  If an already configured Sidecar is detected ('sidecar.yml' present), it will perform an upgrade.\r\n \r\n\
 		  Click Next to continue."
@@ -110,12 +110,12 @@
   !macro Check_X64
     ${If} ${RunningX64}
       SetRegView 64
-      Strcpy $GraylogDir "$PROGRAMFILES64\Graylog"
+      Strcpy $GraylogDir "$PROGRAMFILES64\${BRAND_WIN_VENDOR_DIR}"
     ${Else}
       SetRegView 32
-      Strcpy $GraylogDir "$PROGRAMFILES32\Graylog"
+      Strcpy $GraylogDir "$PROGRAMFILES32\${BRAND_WIN_VENDOR_DIR}"
     ${EndIf}
-    Strcpy $INSTDIR "$GraylogDir\sidecar"
+    Strcpy $INSTDIR "$GraylogDir\${BRAND_WIN_PRODUCT_DIR}"
     CreateDirectory $INSTDIR
   !macroend
 
@@ -150,22 +150,22 @@ Section "Install"
   SetOverwrite on
   File /oname=sidecar.yml.dist "../sidecar-windows-example.yml"
   File "../LICENSE"
-  File "graylog.ico"
+  File "${BRAND_ICON_FILE}"
 
   ;Stop service to allow binary upgrade
-  !insertmacro _IfKeyExists HKLM "SYSTEM\CurrentControlSet\Services" "graylog-sidecar"
+  !insertmacro _IfKeyExists HKLM "SYSTEM\CurrentControlSet\Services" "${BRAND_PRODUCT_LOWER}"
   Pop $R0
   ${If} $R0 = 1
-    nsExec::ExecToStack '"$INSTDIR\graylog-sidecar.exe" -service stop'
+    nsExec::ExecToStack '"$INSTDIR\${BRAND_PRODUCT_LOWER}.exe" -service stop'
     Pop $0
     Pop $1
     ${LogWrite} "Stopping existing Sidecar Service: [exit $0] Stdout: $1"
   ${EndIf}
 
   ${If} ${RunningX64}
-    File /oname=graylog-sidecar.exe "../build/${VERSION}/windows/amd64/graylog-sidecar.exe"
+    File /oname=${BRAND_PRODUCT_LOWER}.exe "../build/${VERSION}/windows/amd64/graylog-sidecar.exe"
   ${Else}
-    File /oname=graylog-sidecar.exe "../build/${VERSION}/windows/386/graylog-sidecar.exe"
+    File /oname=${BRAND_PRODUCT_LOWER}.exe "../build/${VERSION}/windows/386/graylog-sidecar.exe"
   ${EndIf}
 
   ; Install beats collectors
@@ -179,7 +179,7 @@ Section "Install"
 
   ;When we stop the Sidecar service we also turn it on again
   ${If} $R0 = 1
-    nsExec::ExecToStack '"$INSTDIR\graylog-sidecar.exe" -service start'
+    nsExec::ExecToStack '"$INSTDIR\${BRAND_PRODUCT_LOWER}.exe" -service start'
     Pop $0
     Pop $1
     ${LogWrite} "Restarting existing Sidecar Service: [exit $0] Stdout: $1"
@@ -187,30 +187,30 @@ Section "Install"
 
   WriteUninstaller "$INSTDIR\uninstall.exe"
 
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
-                 "DisplayName" "Graylog Sidecar"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BRAND_REGISTRY_KEY}" \
+                 "DisplayName" "${BRAND_PRODUCT_DISPLAY}"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BRAND_REGISTRY_KEY}" \
                  "UninstallString" "$\"$INSTDIR\uninstall.exe$\""
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
-                 "DisplayIcon" "$\"$INSTDIR\graylog.ico$\""
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BRAND_REGISTRY_KEY}" \
+                 "DisplayIcon" "$\"$INSTDIR\${BRAND_ICON_FILE}$\""
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BRAND_REGISTRY_KEY}" \
                  "QuietUninstallString" "$\"$INSTDIR\uninstall.exe$\" /S"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BRAND_REGISTRY_KEY}" \
                  "DisplayVersion" "${VERSION}${VERSION_SUFFIX}"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BRAND_REGISTRY_KEY}" \
                  "InstallLocation" "$INSTDIR"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
-                 "RegCompany" "Graylog, Inc."
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
-                 "Publisher" "Graylog, Inc."
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
-                 "HelpLink" "https://www.graylog.org"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BRAND_REGISTRY_KEY}" \
+                 "RegCompany" "${BRAND_VENDOR_DISPLAY}"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BRAND_REGISTRY_KEY}" \
+                 "Publisher" "${BRAND_VENDOR_DISPLAY}"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BRAND_REGISTRY_KEY}" \
+                 "HelpLink" "${BRAND_HOMEPAGE_URL}"
 
-  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BRAND_REGISTRY_KEY}" \
                  "NoModify" "1"
-  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BRAND_REGISTRY_KEY}" \
                  "NoRepair" "1"
-  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar" \
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BRAND_REGISTRY_KEY}" \
                  "EstimatedSize" "25000"
 
 
@@ -288,12 +288,12 @@ Section "Post"
 
   ;Install sidecar service
   ${If} $IsUpgrade == 'false'
-    nsExec::ExecToStack '"$INSTDIR\graylog-sidecar.exe" -service install'
+    nsExec::ExecToStack '"$INSTDIR\${BRAND_PRODUCT_LOWER}.exe" -service install'
     Pop $0
     Pop $1
     ${LogWrite} "Installing new Sidecar Service: [exit $0] Stdout: $1"
 
-    nsExec::ExecToStack '"$INSTDIR\graylog-sidecar.exe" -service start'
+    nsExec::ExecToStack '"$INSTDIR\${BRAND_PRODUCT_LOWER}.exe" -service start'
     Pop $0
     Pop $1
     ${LogWrite} "Starting new Sidecar Service: [exit $0] Stdout: $1"
@@ -308,8 +308,8 @@ SectionEnd
 Section "Uninstall"
 
   ;Uninstall system service
-  ExecWait '"$INSTDIR\graylog-sidecar.exe" -service stop'
-  ExecWait '"$INSTDIR\graylog-sidecar.exe" -service uninstall'
+  ExecWait '"$INSTDIR\${BRAND_PRODUCT_LOWER}.exe" -service stop'
+  ExecWait '"$INSTDIR\${BRAND_PRODUCT_LOWER}.exe" -service uninstall'
 
   ;Delete Files
   RMDir /r "$INSTDIR\*.*"
@@ -320,7 +320,7 @@ Section "Uninstall"
   RMDir $GraylogDir
 
   ;Remove uninstall entries in the registry
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\GraylogSidecar"
+  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BRAND_REGISTRY_KEY}"
 
 SectionEnd
 
