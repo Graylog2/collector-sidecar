@@ -23,7 +23,7 @@ import "context"
 // No error return because the worker only handles fire-and-forget operations.
 type workFunc func(ctx context.Context)
 
-// runWorker processes work items sequentially until workCtx is cancelled.
+// runWorker processes work items sequentially until s.ctx is cancelled.
 // Must be started before the OpAMP client (which triggers callbacks that
 // enqueue work) and stopped after the OpAMP client.
 func (s *Supervisor) runWorker() {

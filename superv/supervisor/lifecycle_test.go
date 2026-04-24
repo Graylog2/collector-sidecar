@@ -111,7 +111,7 @@ func TestReconnectClient_StopDuringReconnect(t *testing.T) {
 	// Wait until the factory is entered (createClientFunc is running).
 	<-entered
 
-	// Stop() in a goroutine — it will cancel workCtx and nil out opampClient.
+	// Stop() in a goroutine — it will cancel s.ctx and nil out opampClient.
 	stopCtx, stopCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer stopCancel()
 	var stopErr error
@@ -120,10 +120,10 @@ func TestReconnectClient_StopDuringReconnect(t *testing.T) {
 		stopErr = s.Stop(stopCtx)
 	})
 
-	// Wait for workCtx to be cancelled, confirming Stop's critical section ran.
+	// Wait for s.ctx to be cancelled, confirming Stop's critical section ran.
 	<-s.ctx.Done()
 
-	// Release the barrier — reconnectClient should see workCtx cancelled.
+	// Release the barrier — reconnectClient should see s.ctx cancelled.
 	close(barrier)
 
 	// Wait for both goroutines.
@@ -156,7 +156,7 @@ func TestReconnectClient_DuringStartupWindow(t *testing.T) {
 }
 
 // TestReconnectClient_StopCompletesBeforeAssign verifies that when Stop()
-// fully completes its critical section before reconnectClient checks workCtx,
+// fully completes its critical section before reconnectClient checks s.ctx,
 // the new client is discarded.
 func TestReconnectClient_StopCompletesBeforeAssign(t *testing.T) {
 	s := newTestSupervisor(t)
@@ -168,7 +168,7 @@ func TestReconnectClient_StopCompletesBeforeAssign(t *testing.T) {
 
 	s.createClientFunc = func(_ context.Context, _ connection.Settings) (*opamp.Client, error) {
 		// Call Stop synchronously inside the factory. This means by the time
-		// reconnectClient checks workCtx, Stop has already cancelled it.
+		// reconnectClient checks s.ctx, Stop has already cancelled it.
 		err := s.Stop(stopCtx)
 		require.NoError(t, err)
 		return newStubClient(t), nil
@@ -312,10 +312,10 @@ func TestIntegration_StopDuringConnectionSettingsUpdate(t *testing.T) {
 		stopErr = s.Stop(stopCtx)
 	})
 
-	// 9. Wait for workCtx to be cancelled (Stop's critical section completed).
+	// 9. Wait for s.ctx to be cancelled (Stop's critical section completed).
 	<-s.ctx.Done()
 
-	// 10. Release the barrier — reconnectClient will see workCtx cancelled.
+	// 10. Release the barrier — reconnectClient will see s.ctx cancelled.
 	close(barrier)
 
 	// 11. Wait for both goroutines.

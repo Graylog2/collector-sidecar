@@ -499,7 +499,7 @@ func (s *Supervisor) Stop(ctx context.Context) error {
 	s.opampServer = nil
 
 	// Cancel worker context while still holding mu. This ensures that
-	// reconnectClient (which checks workCtx.Err() under mu) cannot
+	// reconnectClient (which checks s.ctx.Err() under mu) cannot
 	// assign a new client after we've already snapshot s.opampClient.
 	s.cancel()
 	s.mu.Unlock()
