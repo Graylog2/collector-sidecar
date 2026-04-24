@@ -169,10 +169,9 @@ func (s *SettingsManager) GetCurrent() Settings {
 
 // SetCurrent updates the current settings. Clones the provided settings to ensure immutability.
 func (s *SettingsManager) SetCurrent(settings Settings) {
-	newCurrent := settings.clone()
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.current = &newCurrent
+	s.current = new(settings.clone())
 }
 
 // SettingsChanged compares the provided OpAMP settings with the current settings and returns a new Settings struct

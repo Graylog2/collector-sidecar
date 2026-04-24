@@ -557,8 +557,7 @@ func (s *Supervisor) SetOwnLogs(manager *ownlogs.Manager, persistence *ownlogs.P
 	s.ownLogsManager = manager
 	s.ownLogsPersistence = persistence
 	if current != nil {
-		settingsCopy := *current
-		s.currentOwnLogs = &settingsCopy
+		s.currentOwnLogs = new(*current)
 	}
 }
 
@@ -1479,8 +1478,7 @@ func (s *Supervisor) handleOwnLogs(ctx context.Context, settings *protobufs.Tele
 			return
 		}
 	}
-	settingsCopy := converted
-	s.currentOwnLogs = &settingsCopy
+	s.currentOwnLogs = new(converted)
 
 	s.logger.Info("Own logs OTLP export enabled",
 		zap.String("endpoint", converted.Endpoint),

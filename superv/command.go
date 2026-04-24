@@ -295,8 +295,7 @@ func runSupervisor(cmd *cobra.Command, args []string) error {
 		if applyErr := ownLogsManager.Apply(context.Background(), settings, res); applyErr != nil {
 			logger.Warn("Failed to restore OTLP log export", zap.Error(applyErr))
 		} else {
-			settingsCopy := settings
-			restoredOwnLogs = &settingsCopy
+			restoredOwnLogs = new(settings)
 		}
 	}
 

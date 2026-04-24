@@ -259,8 +259,7 @@ func (c *Client) Start(ctx context.Context) error {
 	}
 
 	// Set capabilities (must be after setting components if ReportsAvailableComponents is enabled)
-	caps := c.cfg.Capabilities.ToProto()
-	if err := c.opampClient.SetCapabilities(&caps); err != nil {
+	if err := c.opampClient.SetCapabilities(new(c.cfg.Capabilities.ToProto())); err != nil {
 		return fmt.Errorf("SetCapabilities: %w", err)
 	}
 
