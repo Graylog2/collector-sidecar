@@ -287,22 +287,27 @@ func (c *Commander) Stop(ctx context.Context) error {
 	pid := cmd.Process.Pid
 	c.logger.Debug("Stopping agent process", zap.Int("pid", pid))
 
+	// default graceful shutdown timeout, we set it to zero in case the signal failed.
+	gracefulTimeout := 10 * time.Second
 	if err := sendShutdownSignal(cmd.Process); err != nil {
 		if errors.Is(err, os.ErrProcessDone) || !c.running.Load() {
 			// Process already exited, nothing to do.
 			return nil
 		}
-		return fmt.Errorf("failed to send shutdown signal: %w", err)
+
+		// intentional immediate kill in this case, we cannot signal the process
+		gracefulTimeout = 0 * time.Second
+		c.logger.Warn("Failed to send shutdown signal, force-killing the agent process immediately", zap.Int("pid", pid), zap.Error(err))
 	}
 
 	// Wait with timeout for graceful shutdown
-	waitCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	waitCtx, cancel := context.WithTimeout(ctx, gracefulTimeout)
 	defer cancel()
 
 	go func() {
 		<-waitCtx.Done()
 		if errors.Is(waitCtx.Err(), context.DeadlineExceeded) {
-			c.logger.Debug("Agent not responding to SIGTERM, sending SIGKILL", zap.Int("pid", pid))
+			c.logger.Debug("Agent did not shut down, force-killing the process", zap.Int("pid", pid))
 			cmd.Process.Kill()
 		}
 	}()
