@@ -229,7 +229,7 @@ type LoggingConfig struct {
 }
 
 var linuxDataPathPrefix = "/var/lib/graylog-collector"
-var windowsDataPathPrefix = filepath.Join("C:", "ProgramData", "Graylog", "Collector")
+var windowsDataPathPrefix = filepath.Join(`C:\`, "ProgramData", "Graylog", "Collector")
 
 type platformName string
 

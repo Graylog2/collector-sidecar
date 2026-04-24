@@ -26,11 +26,28 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestWindowsDataPathPrefixIsAbsolute guards against the filepath.Join("C:", ...)
+// pitfall: a bare "C:" is a drive letter, so Join produces a drive-relative path
+// (e.g. "C:ProgramData\..."). The volume-root form `C:\` is required to get an
+// absolute path ("C:\\ProgramData\\..."). Services resolve relative paths
+// against their startup working directory, so a drive-relative default would
+// silently write state to the wrong location.
+func TestWindowsDataPathPrefixIsAbsolute(t *testing.T) {
+	assert.True(t, filepath.IsAbs(windowsDataPathPrefix),
+		"windowsDataPathPrefix must be absolute, got %q", windowsDataPathPrefix)
+}
+
 func TestConfigDefaultsDirectories(t *testing.T) {
 	cfg := DefaultConfig()
 
-	assert.Equal(t, filepath.Join("C:", "ProgramData", "Graylog", "Collector", "supervisor"), cfg.Persistence.Dir)
-	assert.Equal(t, filepath.Join("C:", "ProgramData", "Graylog", "Collector", "storage"), cfg.Agent.StorageDir)
-	assert.Equal(t, filepath.Join("C:", "ProgramData", "Graylog", "Collector", "keys"), cfg.Keys.Dir)
-	assert.Equal(t, filepath.Join("C:", "ProgramData", "Graylog", "Collector", "packages"), cfg.Packages.StorageDir)
+	assert.Equal(t, filepath.Join(`C:\`, "ProgramData", "Graylog", "Collector", "supervisor"), cfg.Persistence.Dir)
+	assert.Equal(t, filepath.Join(`C:\`, "ProgramData", "Graylog", "Collector", "storage"), cfg.Agent.StorageDir)
+	assert.Equal(t, filepath.Join(`C:\`, "ProgramData", "Graylog", "Collector", "keys"), cfg.Keys.Dir)
+	assert.Equal(t, filepath.Join(`C:\`, "ProgramData", "Graylog", "Collector", "packages"), cfg.Packages.StorageDir)
+
+	// Regression: these must all be absolute paths.
+	assert.True(t, filepath.IsAbs(cfg.Persistence.Dir))
+	assert.True(t, filepath.IsAbs(cfg.Agent.StorageDir))
+	assert.True(t, filepath.IsAbs(cfg.Keys.Dir))
+	assert.True(t, filepath.IsAbs(cfg.Packages.StorageDir))
 }
