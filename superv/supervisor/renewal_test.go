@@ -18,11 +18,16 @@
 package supervisor
 
 import (
+	"crypto/ed25519"
+	"crypto/rand"
+	"crypto/x509"
+	"math/big"
 	"testing"
 	"time"
 
 	"github.com/Graylog2/collector-sidecar/superv/auth"
 	"github.com/Graylog2/collector-sidecar/superv/config"
+	"github.com/Graylog2/collector-sidecar/superv/persistence"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
@@ -124,4 +129,35 @@ func TestCheckCertificateRenewal_Scheduling(t *testing.T) {
 		// requestCertificateRenewal will fail (no opampClient) but should still return fallback.
 		require.Equal(t, renewalInterval, delay)
 	})
+}
+
+// newEnrolledAuthManager creates an auth.Manager with a cert having the given
+// NotBefore/NotAfter, suitable for testing renewal scheduling.
+func newEnrolledAuthManager(t *testing.T, notBefore, notAfter time.Time) *auth.Manager {
+	t.Helper()
+	keysDir := t.TempDir()
+
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	tmpl := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		NotBefore:    notBefore,
+		NotAfter:     notAfter,
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+	}
+	certDER, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, pub, priv)
+	require.NoError(t, err)
+
+	require.NoError(t, persistence.SaveSigningKey(keysDir, priv))
+	require.NoError(t, persistence.SaveCertificate(keysDir, func() *x509.Certificate {
+		cert, err := x509.ParseCertificate(certDER)
+		require.NoError(t, err)
+		return cert
+	}()))
+
+	mgr := auth.NewManager(zap.NewNop(), auth.ManagerConfig{KeysDir: keysDir})
+	require.NoError(t, mgr.LoadCredentials())
+	return mgr
 }

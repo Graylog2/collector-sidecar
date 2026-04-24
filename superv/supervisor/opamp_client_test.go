@@ -18,9 +18,15 @@
 package supervisor
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/Graylog2/collector-sidecar/superv/healthmonitor"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 func TestSupervisor_NonIdentifyingAttributes_WithCollectorVersion(t *testing.T) {
@@ -56,4 +62,47 @@ func TestSupervisor_NonIdentifyingAttributes_WithoutCollectorVersion(t *testing.
 	require.NotEmpty(t, attrMap["service.version"])
 	_, hasCollectorVersion := attrMap["collector.version"]
 	require.False(t, hasCollectorVersion, "collector.version should not be present when empty")
+}
+
+func TestSupervisor_InitialComponentHealth_DefaultHealthyWithoutMonitor(t *testing.T) {
+	supervisor := &Supervisor{}
+
+	health := supervisor.initialComponentHealth()
+	require.True(t, health.Healthy)
+	require.Empty(t, health.LastError)
+}
+
+func TestSupervisor_InitialComponentHealth_DefaultHealthyWithoutSample(t *testing.T) {
+	monitor := healthmonitor.New(zap.NewNop(), healthmonitor.Config{
+		Endpoint: "http://localhost:13133/health",
+		Timeout:  time.Second,
+		Interval: time.Second,
+	})
+	supervisor := &Supervisor{healthMonitor: monitor}
+
+	health := supervisor.initialComponentHealth()
+	require.True(t, health.Healthy)
+	require.Empty(t, health.LastError)
+}
+
+func TestSupervisor_InitialComponentHealth_UsesLatestMonitorSample(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+
+	monitor := healthmonitor.New(zap.NewNop(), healthmonitor.Config{
+		Endpoint: server.URL,
+		Timeout:  time.Second,
+		Interval: time.Second,
+	})
+
+	_, err := monitor.CheckHealth(context.Background())
+	require.NoError(t, err)
+
+	supervisor := &Supervisor{healthMonitor: monitor}
+	health := supervisor.initialComponentHealth()
+
+	require.False(t, health.Healthy)
+	require.Equal(t, "Service Unavailable", health.LastError)
 }
