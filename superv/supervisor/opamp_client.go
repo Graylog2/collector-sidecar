@@ -127,6 +127,7 @@ func (s *Supervisor) createOpAMPCallbacks() *opamp.Callbacks {
 		},
 		OnConnectFailed: func(_ context.Context, err error) {
 			s.logger.Error("Failed to connect to OpAMP server", zap.Error(err))
+			s.handleAuthRejection(err)
 		},
 		OnError: func(_ context.Context, err *protobufs.ServerErrorResponse) {
 			s.logger.Error("OpAMP server error", zap.Error(fmt.Errorf("%s: %s", err.GetType(), err.GetErrorMessage())))
