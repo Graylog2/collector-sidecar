@@ -416,6 +416,21 @@ func (m *Manager) CompleteRenewal(certPEM []byte) error {
 	return nil
 }
 
+// ClearCredentials removes all persisted credentials from disk and clears the
+// in-memory signing key and certificate so the manager is no longer considered
+// enrolled. The encryption key is also removed. Missing files are silently
+// skipped.
+func (m *Manager) ClearCredentials() error {
+	if err := persistence.ClearCredentials(m.keysDir); err != nil {
+		return err
+	}
+	m.mu.Lock()
+	m.signingKey = nil
+	m.certificate = nil
+	m.mu.Unlock()
+	return nil
+}
+
 // PrepareRenewal creates a CSR for certificate renewal using the existing keys.
 // Unlike PrepareEnrollment, this does not generate new keypairs or validate tokens.
 func (m *Manager) PrepareRenewal(instanceUID string) ([]byte, error) {
