@@ -104,10 +104,10 @@ func TestCapabilitiesToProto(t *testing.T) {
 	}
 
 	proto := caps.ToProto()
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_AcceptsRemoteConfig != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsEffectiveConfig != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsHealth != 0)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_AcceptsRemoteConfig, proto&protobufs.AgentCapabilities_AgentCapabilities_AcceptsRemoteConfig)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsEffectiveConfig, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsEffectiveConfig)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsHealth, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsHealth)
 }
 
 func TestCapabilitiesToProto_AllCapabilities(t *testing.T) {
@@ -129,21 +129,21 @@ func TestCapabilitiesToProto_AllCapabilities(t *testing.T) {
 	}
 
 	proto := caps.ToProto()
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_AcceptsRemoteConfig != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsEffectiveConfig != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_AcceptsPackages != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsPackageStatuses != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsOwnTraces != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsOwnMetrics != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsOwnLogs != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_AcceptsOpAMPConnectionSettings != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsConnectionSettingsStatus != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_AcceptsRestartCommand != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsHealth != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsRemoteConfig != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsHeartbeat != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsAvailableComponents != 0)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_AcceptsRemoteConfig, proto&protobufs.AgentCapabilities_AgentCapabilities_AcceptsRemoteConfig)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsEffectiveConfig, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsEffectiveConfig)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_AcceptsPackages, proto&protobufs.AgentCapabilities_AgentCapabilities_AcceptsPackages)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsPackageStatuses, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsPackageStatuses)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsOwnTraces, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsOwnTraces)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsOwnMetrics, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsOwnMetrics)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsOwnLogs, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsOwnLogs)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_AcceptsOpAMPConnectionSettings, proto&protobufs.AgentCapabilities_AgentCapabilities_AcceptsOpAMPConnectionSettings)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsConnectionSettingsStatus, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsConnectionSettingsStatus)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_AcceptsRestartCommand, proto&protobufs.AgentCapabilities_AgentCapabilities_AcceptsRestartCommand)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsHealth, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsHealth)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsRemoteConfig, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsRemoteConfig)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsHeartbeat, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsHeartbeat)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsAvailableComponents, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsAvailableComponents)
 }
 
 func TestCapabilitiesToProto_NoCapabilities(t *testing.T) {
@@ -158,7 +158,7 @@ func TestCapabilitiesToProto_AlwaysIncludesReportsStatus(t *testing.T) {
 	caps := Capabilities{}
 	proto := caps.ToProto()
 
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus != 0,
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus,
 		"ReportsStatus must always be set")
 }
 
@@ -170,7 +170,7 @@ func TestCapabilitiesToProto_ReportsStatusAlwaysSet(t *testing.T) {
 	}
 	proto := caps.ToProto()
 
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus != 0,
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus,
 		"ReportsStatus must always be set regardless of other capabilities")
 }
 
@@ -558,7 +558,7 @@ func TestCapabilitiesToProto_ReportsHeartbeat(t *testing.T) {
 	}
 	proto := caps.ToProto()
 
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsHeartbeat != 0,
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsHeartbeat, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsHeartbeat,
 		"ReportsHeartbeat capability should be set")
 }
 
@@ -637,9 +637,9 @@ func TestCapabilitiesToProto_ReportsAvailableComponents(t *testing.T) {
 	proto := caps.ToProto()
 
 	// ReportsStatus is always included (mandatory)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus != 0,
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus,
 		"ReportsStatus should always be set")
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsAvailableComponents != 0,
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsAvailableComponents, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsAvailableComponents,
 		"ReportsAvailableComponents should be set")
 }
 

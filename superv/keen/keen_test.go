@@ -47,7 +47,7 @@ func TestCommander_StartStop(t *testing.T) {
 	err = cmd.start(ctx)
 	require.NoError(t, err)
 	require.True(t, cmd.IsRunning())
-	require.Greater(t, cmd.Pid(), 0)
+	require.Positive(t, cmd.Pid())
 
 	err = cmd.Stop(ctx)
 	require.NoError(t, err)

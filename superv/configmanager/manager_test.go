@@ -299,7 +299,7 @@ service:
 	remote := createTestRemoteConfig("", remoteConfig, []byte("hash-empty-key"))
 
 	result, err := mgr.ApplyRemoteConfig(remote)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, result)
 	assert.Contains(t, err.Error(), "collector.yaml")
 }
@@ -317,7 +317,7 @@ func TestConfigManager_ApplyRemoteConfig_NilRemoteConfig(t *testing.T) {
 
 	// Apply nil config
 	result, err := mgr.ApplyRemoteConfig(nil)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, result)
 	assert.Contains(t, err.Error(), "nil")
 }
@@ -342,7 +342,7 @@ func TestConfigManager_ApplyRemoteConfig_EmptyConfigMap(t *testing.T) {
 	}
 
 	result, err := mgr.ApplyRemoteConfig(remote)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, result)
 	assert.Contains(t, err.Error(), "collector.yaml")
 }
@@ -402,7 +402,7 @@ func TestConfigManager_GetEffectiveConfig(t *testing.T) {
 
 	// Initially, GetEffectiveConfig should fail (file doesn't exist)
 	_, err := mgr.GetEffectiveConfig()
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	// Apply a config first
 	remoteConfig := []byte(`receivers:
@@ -436,7 +436,7 @@ func TestConfigManager_GetEffectiveConfig_EmptyOutputPath(t *testing.T) {
 	mgr := New(logger, cfg)
 
 	_, err := mgr.GetEffectiveConfig()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "output path not configured")
 }
 

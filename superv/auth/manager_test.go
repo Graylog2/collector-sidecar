@@ -153,7 +153,7 @@ func TestManager_GetAuthorizationHeader(t *testing.T) {
 
 	header, err := m.GetAuthorizationHeader()
 	require.NoError(t, err)
-	require.True(t, len(header) > 7)
+	require.Greater(t, len(header), 7)
 	require.Equal(t, "Bearer ", header[:7])
 }
 

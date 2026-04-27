@@ -131,7 +131,7 @@ func TestReconnectClient_StopDuringReconnect(t *testing.T) {
 	stopDone.Wait()
 
 	require.NoError(t, stopErr)
-	assert.ErrorContains(t, reconnectErr, "supervisor stopped")
+	require.ErrorContains(t, reconnectErr, "supervisor stopped")
 
 	s.mu.RLock()
 	assert.Nil(t, s.opampClient)
@@ -178,7 +178,7 @@ func TestReconnectClient_StopCompletesBeforeAssign(t *testing.T) {
 	settings := s.connectionSettingsManager.GetCurrent()
 	err := s.reconnectClient(context.Background(), settings)
 
-	assert.ErrorContains(t, err, "supervisor stopped")
+	require.ErrorContains(t, err, "supervisor stopped")
 
 	s.mu.RLock()
 	assert.Nil(t, s.opampClient)
@@ -323,7 +323,7 @@ func TestIntegration_StopDuringConnectionSettingsUpdate(t *testing.T) {
 	stopDone.Wait()
 
 	require.NoError(t, stopErr)
-	assert.ErrorContains(t, reconnectErr, "supervisor stopped")
+	require.ErrorContains(t, reconnectErr, "supervisor stopped")
 
 	s.mu.RLock()
 	assert.Nil(t, s.opampClient)
