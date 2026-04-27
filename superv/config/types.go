@@ -72,13 +72,14 @@ type BackoffConfig struct {
 
 // AuthConfig configures authentication.
 type AuthConfig struct {
-	EnrollmentEndpoint string            `koanf:"enrollment_endpoint"`
-	EnrollmentToken    string            `koanf:"enrollment_token"`
-	EnrollmentHeaders  map[string]string `koanf:"enrollment_headers"`
-	InsecureTLS        bool              `koanf:"insecure_tls"`
-	JWTLifetime        time.Duration     `koanf:"jwt_lifetime"`
-	RenewalFraction    float64           `koanf:"renewal_fraction"`
-	RenewalInterval    time.Duration     `koanf:"renewal_interval"`
+	EnrollmentEndpoint  string            `koanf:"enrollment_endpoint"`
+	EnrollmentToken     string            `koanf:"enrollment_token"`
+	EnrollmentHeaders   map[string]string `koanf:"enrollment_headers"`
+	InsecureTLS         bool              `koanf:"insecure_tls"`
+	JWTLifetime         time.Duration     `koanf:"jwt_lifetime"`
+	RenewalFraction     float64           `koanf:"renewal_fraction"`
+	RenewalInterval     time.Duration     `koanf:"renewal_interval"`
+	ResetOnAuthRejection bool             `koanf:"reset_on_auth_rejection"`
 }
 
 // KeysConfig configures key storage.
