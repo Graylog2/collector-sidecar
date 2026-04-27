@@ -164,6 +164,18 @@ func CertificateExists(keysDir string) bool {
 	return err == nil
 }
 
+// ClearCredentials removes the signing key, signing certificate, and encryption
+// key files from keysDir. Files that do not exist are silently skipped.
+func ClearCredentials(keysDir string) error {
+	for _, name := range []string{SigningKeyFile, SigningCertFile, encryptionKeyFile} {
+		path := filepath.Join(keysDir, name)
+		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("removing %s: %w", name, err)
+		}
+	}
+	return nil
+}
+
 // CertificateFingerprint returns the SHA-256 fingerprint of the certificate.
 func CertificateFingerprint(keysDir string) (string, error) {
 	cert, err := LoadCertificate(keysDir)
