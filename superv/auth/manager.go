@@ -78,6 +78,16 @@ func NewManager(logger *zap.Logger, cfg ManagerConfig) *Manager {
 			TLSHandshakeTimeout:   10 * time.Second,
 			TLSClientConfig:       &tls.Config{InsecureSkipVerify: cfg.InsecureTLS}, //nolint:gosec // Intentionally configurable
 			ExpectContinueTimeout: 1 * time.Second,
+			// HTTP/2 PING-based liveness: send a PING after 30s of idle on a
+			// connection; close the connection if no PONG returns within 10s.
+			// Evicts half-dead HTTP/2 connections (upstream silently dropped,
+			// no RST reaching the client) in ~40s instead of waiting for the
+			// kernel's ~11-min TCP keepalive ladder. Any inbound frame resets
+			// the SendPingTimeout so healthy traffic is unaffected.
+			HTTP2: &http.HTTP2Config{
+				SendPingTimeout: 30 * time.Second,
+				PingTimeout:     10 * time.Second,
+			},
 		}}
 	}
 
