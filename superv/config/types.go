@@ -221,11 +221,19 @@ type BatchConfig struct {
 	ExportTimeout time.Duration `koanf:"export_timeout"`
 }
 
+type LogRotationConfig struct {
+	MaxSize    int `koanf:"max_size"`    // megabytes before rotation
+	MaxBackups int `koanf:"max_backups"` // number of rotated files to keep
+	MaxAge     int `koanf:"max_age"`     // days to retain rotated files
+}
+
 // LoggingConfig configures logging.
 type LoggingConfig struct {
-	Format string `koanf:"format"` // json | text
-	Level  string `koanf:"level"`  // debug | info | warn | error
-	Color  bool   `koanf:"color"`
+	Format       string            `koanf:"format"` // json | text
+	Level        string            `koanf:"level"`  // debug | info | warn | error
+	Color        bool              `koanf:"color"`
+	File         string            `koanf:"file"` // path to log file
+	FileRotation LogRotationConfig `koanf:"file_rotation"`
 }
 
 var linuxDataPathPrefix = "/var/lib/graylog-collector"
@@ -350,6 +358,16 @@ func DefaultConfig() Config {
 		Logging: LoggingConfig{
 			Format: "json",
 			Level:  "info",
+			Color:  false,
+			File: platformDefaultValue(map[platformName]string{
+				linux:   filepath.Join(linuxDataPathPrefix, "supervisor", "logs", "supervisor.log"),
+				windows: filepath.Join(windowsDataPathPrefix, "supervisor", "logs", "supervisor.log"),
+			}),
+			FileRotation: LogRotationConfig{
+				MaxSize:    25,
+				MaxBackups: 5,
+				MaxAge:     30,
+			},
 		},
 	}
 }

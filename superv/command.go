@@ -18,6 +18,7 @@
 package superv
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -28,6 +29,7 @@ import (
 	"runtime"
 	"syscall"
 
+	"github.com/DeRuina/timberjack"
 	"github.com/Graylog2/collector-sidecar/superv/config"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -228,21 +230,54 @@ func initLogger(loggingCfg config.LoggingConfig, debug bool) (*zap.Logger, error
 		zapLevel = zapcore.InfoLevel
 	}
 
-	var cfg zap.Config
+	var makeEncoderCfg func() zapcore.EncoderConfig
 	if loggingCfg.Format == "json" {
-		cfg = zap.NewProductionConfig()
+		makeEncoderCfg = zap.NewProductionEncoderConfig
 	} else {
-		cfg = zap.NewDevelopmentConfig()
+		makeEncoderCfg = zap.NewDevelopmentEncoderConfig
 	}
-	cfg.Level = zap.NewAtomicLevelAt(zapLevel)
-	cfg.DisableStacktrace = !debug
 
-	if loggingCfg.Color {
+	stderrEncCfg := makeEncoderCfg()
+	fileEncCfg := makeEncoderCfg()
+
+	// color + JSON make no sense, silently ignore color in that case
+	if loggingCfg.Color && loggingCfg.Format != "json" {
 		enableConsoleColors()
-		cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+		stderrEncCfg.EncodeLevel = zapcore.CapitalColorLevelEncoder
+		// no color in file encoder
 	}
 
-	return cfg.Build()
+	var stderrEnc, fileEnc zapcore.Encoder
+	if loggingCfg.Format == "json" {
+		stderrEnc = zapcore.NewJSONEncoder(stderrEncCfg)
+		fileEnc = zapcore.NewJSONEncoder(fileEncCfg)
+	} else {
+		stderrEnc = zapcore.NewConsoleEncoder(stderrEncCfg)
+		fileEnc = zapcore.NewConsoleEncoder(fileEncCfg)
+	}
+
+	cores := []zapcore.Core{
+		zapcore.NewCore(stderrEnc, zapcore.Lock(os.Stderr), zapLevel),
+	}
+	if loggingCfg.File != "" {
+		if err := os.MkdirAll(filepath.Dir(loggingCfg.File), 0750); err != nil {
+			return nil, fmt.Errorf("create log directory: %w", err)
+		}
+		rot := loggingCfg.FileRotation
+		rotator := &timberjack.Logger{
+			Filename:   loggingCfg.File,
+			MaxSize:    cmp.Or(rot.MaxSize, 25),
+			MaxBackups: cmp.Or(rot.MaxBackups, 5),
+			MaxAge:     cmp.Or(rot.MaxAge, 30),
+			LocalTime:  true,
+		}
+		cores = append(cores, zapcore.NewCore(fileEnc, zapcore.AddSync(rotator), zapLevel))
+	}
+	opts := []zap.Option{zap.AddCaller()}
+	if debug {
+		opts = append(opts, zap.AddStacktrace(zap.ErrorLevel))
+	}
+	return zap.New(zapcore.NewTee(cores...), opts...), nil
 }
 
 func runSupervisor(cmd *cobra.Command, _ []string) error {
