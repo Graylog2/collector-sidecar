@@ -19,12 +19,6 @@ package supervisor
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/x509"
-	"encoding/pem"
-	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -34,6 +28,7 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/superv/auth"
 	"github.com/Graylog2/collector-sidecar/superv/config"
+	"github.com/Graylog2/collector-sidecar/superv/internal/testpki"
 	"github.com/Graylog2/collector-sidecar/superv/internal/testprotos"
 	"github.com/Graylog2/collector-sidecar/superv/keen"
 	"github.com/Graylog2/collector-sidecar/superv/ownlogs"
@@ -53,7 +48,10 @@ func TestSupervisor_HandleOwnLogs(t *testing.T) {
 
 		// Write a self-signed cert to the auth manager's expected paths so
 		// ConvertSettings.LoadClientCert can read them.
-		writeTestSigningCert(t, keysDir)
+		cert := testpki.GenerateTestCert(t)
+
+		require.NoError(t, os.WriteFile(filepath.Join(keysDir, persistence.SigningCertFile), cert.CertPEM, 0o600))
+		require.NoError(t, os.WriteFile(filepath.Join(keysDir, persistence.SigningKeyFile), cert.KeyPEM, 0o600))
 
 		authMgr := auth.NewManager(zap.NewNop(), auth.ManagerConfig{
 			KeysDir: keysDir,
@@ -222,30 +220,4 @@ func TestCreateOpAMPCallbacks_OnOwnLogs_EnqueueFailsAfterWorkerStop(t *testing.T
 
 	require.Equal(t, 1, observed.FilterMessage("Skipping own_logs apply during shutdown").Len())
 	require.Zero(t, observed.FilterMessage("Failed to enqueue own_logs apply").Len())
-}
-
-// writeTestSigningCert generates a self-signed ECDSA cert/key pair and writes
-// them to keysDir/signing.crt and keysDir/signing.key for use by auth.Manager.
-func writeTestSigningCert(t *testing.T, keysDir string) {
-	t.Helper()
-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err)
-
-	tmpl := &x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		NotBefore:    time.Now().Add(-time.Hour),
-		NotAfter:     time.Now().Add(time.Hour),
-		KeyUsage:     x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
-	}
-	certDER, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
-	require.NoError(t, err)
-
-	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
-	keyDER, err := x509.MarshalECPrivateKey(key)
-	require.NoError(t, err)
-	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER})
-
-	require.NoError(t, os.WriteFile(filepath.Join(keysDir, persistence.SigningCertFile), certPEM, 0o600))
-	require.NoError(t, os.WriteFile(filepath.Join(keysDir, persistence.SigningKeyFile), keyPEM, 0o600))
 }

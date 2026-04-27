@@ -21,13 +21,14 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Graylog2/collector-sidecar/superv/internal/testpki"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestPersistence_SaveAndLoad(t *testing.T) {
 	dir := t.TempDir()
-	certPath, keyPath := writeTestClientCert(t)
+	certPath, keyPath := writeClientCredentials(t, testpki.GenerateTestCert(t))
 	p := NewPersistence(dir, certPath, keyPath)
 
 	settings := Settings{
@@ -51,17 +52,15 @@ func TestPersistence_SaveAndLoad(t *testing.T) {
 
 func TestPersistence_SaveAndLoad_WithTLS(t *testing.T) {
 	dir := t.TempDir()
-	certPath, keyPath := writeTestClientCert(t)
+	cert := testpki.GenerateTestCert(t)
+	certPath, keyPath := writeClientCredentials(t, cert)
 	p := NewPersistence(dir, certPath, keyPath)
-
-	caCertPEM, caKeyPEM := generateTestCA(t)
-	clientCertPEM, clientKeyPEM := generateTestCert(t, caCertPEM, caKeyPEM)
 
 	settings := Settings{
 		Endpoint:           "https://example.com:4318/v1/logs",
-		CertPEM:            clientCertPEM,
-		KeyPEM:             clientKeyPEM,
-		CACertPEM:          caCertPEM,
+		CertPEM:            cert.CertPEM,
+		KeyPEM:             cert.KeyPEM,
+		CACertPEM:          cert.CACertPEM,
 		TLSMinVersion:      "1.3",
 		InsecureSkipVerify: false,
 	}
@@ -84,14 +83,13 @@ func TestPersistence_SaveAndLoad_WithTLS(t *testing.T) {
 
 func TestPersistence_SaveAndLoad_WithSystemCACertsPool(t *testing.T) {
 	dir := t.TempDir()
-	certPath, keyPath := writeTestClientCert(t)
+	cert := testpki.GenerateTestCert(t)
+	certPath, keyPath := writeClientCredentials(t, cert)
 	p := NewPersistence(dir, certPath, keyPath)
-
-	caCertPEM, _ := generateTestCA(t)
 
 	settings := Settings{
 		Endpoint:                 "https://example.com:4318/v1/logs",
-		CACertPEM:                caCertPEM,
+		CACertPEM:                cert.CACertPEM,
 		IncludeSystemCACertsPool: true,
 	}
 
@@ -108,16 +106,16 @@ func TestPersistence_SaveAndLoad_WithSystemCACertsPool(t *testing.T) {
 
 func TestPersistence_SaveAndLoad_WithDualCASources(t *testing.T) {
 	dir := t.TempDir()
-	certPath, keyPath := writeTestClientCert(t)
+	cert1 := testpki.GenerateTestCert(t)
+	certPath, keyPath := writeClientCredentials(t, cert1)
 	p := NewPersistence(dir, certPath, keyPath)
 
-	caCertPEM, _ := generateTestCA(t)
-	tlsCAPEM, _ := generateTestCA(t) // second, distinct CA
+	cert2 := testpki.GenerateTestCert(t) // second, distinct CA
 
 	settings := Settings{
 		Endpoint:         "https://example.com:4318/v1/logs",
-		CACertPEM:        caCertPEM,
-		TLSCAPemContents: string(tlsCAPEM),
+		CACertPEM:        cert1.CACertPEM,
+		TLSCAPemContents: string(cert2.CACertPEM),
 	}
 
 	err := p.Save(settings)
@@ -126,15 +124,15 @@ func TestPersistence_SaveAndLoad_WithDualCASources(t *testing.T) {
 	loaded, exists, err := p.Load()
 	require.NoError(t, err)
 	require.True(t, exists)
-	assert.Equal(t, caCertPEM, loaded.CACertPEM)
-	assert.Equal(t, string(tlsCAPEM), loaded.TLSCAPemContents)
+	assert.Equal(t, cert1.CACertPEM, loaded.CACertPEM)
+	assert.Equal(t, string(cert2.CACertPEM), loaded.TLSCAPemContents)
 	require.NotNil(t, loaded.TLSConfig)
 	assert.NotNil(t, loaded.TLSConfig.RootCAs)
 }
 
 func TestPersistence_SaveAndLoad_WithTLSServerName(t *testing.T) {
 	dir := t.TempDir()
-	certPath, keyPath := writeTestClientCert(t)
+	certPath, keyPath := writeClientCredentials(t, testpki.GenerateTestCert(t))
 	p := NewPersistence(dir, certPath, keyPath)
 
 	settings := Settings{
@@ -155,7 +153,7 @@ func TestPersistence_SaveAndLoad_WithTLSServerName(t *testing.T) {
 
 func TestPersistence_Delete(t *testing.T) {
 	dir := t.TempDir()
-	certPath, keyPath := writeTestClientCert(t)
+	certPath, keyPath := writeClientCredentials(t, testpki.GenerateTestCert(t))
 	p := NewPersistence(dir, certPath, keyPath)
 
 	// Save then delete
@@ -175,7 +173,7 @@ func TestPersistence_Delete(t *testing.T) {
 
 func TestPersistence_Delete_NoFile(t *testing.T) {
 	dir := t.TempDir()
-	certPath, keyPath := writeTestClientCert(t)
+	certPath, keyPath := writeClientCredentials(t, testpki.GenerateTestCert(t))
 	p := NewPersistence(dir, certPath, keyPath)
 
 	// Deleting when no file exists should not error
@@ -185,7 +183,7 @@ func TestPersistence_Delete_NoFile(t *testing.T) {
 
 func TestPersistence_Load_NoFile(t *testing.T) {
 	dir := t.TempDir()
-	certPath, keyPath := writeTestClientCert(t)
+	certPath, keyPath := writeClientCredentials(t, testpki.GenerateTestCert(t))
 	p := NewPersistence(dir, certPath, keyPath)
 
 	_, exists, err := p.Load()
@@ -195,7 +193,7 @@ func TestPersistence_Load_NoFile(t *testing.T) {
 
 func TestPersistence_SaveAndLoad_WithProxy(t *testing.T) {
 	dir := t.TempDir()
-	certPath, keyPath := writeTestClientCert(t)
+	certPath, keyPath := writeClientCredentials(t, testpki.GenerateTestCert(t))
 	p := NewPersistence(dir, certPath, keyPath)
 
 	settings := Settings{
@@ -216,7 +214,7 @@ func TestPersistence_SaveAndLoad_WithProxy(t *testing.T) {
 
 func TestPersistence_FileLocation(t *testing.T) {
 	dir := t.TempDir()
-	certPath, keyPath := writeTestClientCert(t)
+	certPath, keyPath := writeClientCredentials(t, testpki.GenerateTestCert(t))
 	p := NewPersistence(dir, certPath, keyPath)
 
 	err := p.Save(Settings{Endpoint: "https://example.com:4318/v1/logs"})

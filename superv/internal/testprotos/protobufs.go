@@ -25,8 +25,10 @@ import (
 )
 
 func CreateTLSCertificate(t *testing.T) *protobufs.TLSCertificate {
+	t.Helper()
+
 	ca := testpki.GenerateTestCA(t)
-	cert := testpki.GenerateTestCert(t, ca.CertPEM, ca.KeyPEM)
+	cert := testpki.GenerateTestCert(t, testpki.WithIssuer(ca))
 
 	return &protobufs.TLSCertificate{
 		Cert:       cert.CertPEM,

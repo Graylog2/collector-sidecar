@@ -18,16 +18,13 @@
 package supervisor
 
 import (
-	"crypto/ed25519"
-	"crypto/rand"
-	"crypto/x509"
-	"math/big"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/Graylog2/collector-sidecar/superv/auth"
+	"github.com/Graylog2/collector-sidecar/superv/internal/testpki"
 	"github.com/Graylog2/collector-sidecar/superv/persistence"
 	"github.com/Graylog2/collector-sidecar/superv/supervisor/connection"
 	"github.com/stretchr/testify/require"
@@ -36,12 +33,10 @@ import (
 
 func TestBuildAuthHeaders_Enrolled_GeneratesFreshJWTPerCall(t *testing.T) {
 	keysDir := filepath.Join(t.TempDir(), "keys")
-	pub, priv, err := ed25519.GenerateKey(rand.Reader)
-	require.NoError(t, err)
 
-	cert := createSelfSignedCert(t, pub)
-	require.NoError(t, persistence.SaveSigningKey(keysDir, priv))
-	require.NoError(t, persistence.SaveCertificate(keysDir, cert))
+	cert := testpki.GenerateTestCert(t)
+	require.NoError(t, persistence.SaveSigningKey(keysDir, cert.Key))
+	require.NoError(t, persistence.SaveCertificate(keysDir, cert.Cert))
 
 	authMgr := auth.NewManager(zaptest.NewLogger(t), auth.ManagerConfig{
 		KeysDir:     keysDir,
@@ -86,12 +81,10 @@ func TestBuildAuthHeaders_Enrolled_GeneratesFreshJWTPerCall(t *testing.T) {
 
 func TestBuildAuthHeaders_Enrolled_ErrorBranch(t *testing.T) {
 	keysDir := filepath.Join(t.TempDir(), "keys")
-	pub, priv, err := ed25519.GenerateKey(rand.Reader)
-	require.NoError(t, err)
 
-	cert := createSelfSignedCert(t, pub)
-	require.NoError(t, persistence.SaveSigningKey(keysDir, priv))
-	require.NoError(t, persistence.SaveCertificate(keysDir, cert))
+	cert := testpki.GenerateTestCert(t)
+	require.NoError(t, persistence.SaveSigningKey(keysDir, cert.Key))
+	require.NoError(t, persistence.SaveCertificate(keysDir, cert.Cert))
 
 	// Create manager but do NOT call LoadCredentials() — signingKey remains nil.
 	authMgr := auth.NewManager(zaptest.NewLogger(t), auth.ManagerConfig{
@@ -137,26 +130,4 @@ func TestBuildAuthHeaders_NotEnrolled_StaticEnrollmentJWT(t *testing.T) {
 	require.Equal(t, "bar", headers.Get("X-Foo"))
 	// No HeaderFunc needed when not enrolled.
 	require.Nil(t, headerFunc)
-}
-
-// createSelfSignedCert creates a minimal self-signed ed25519 certificate for testing.
-func createSelfSignedCert(t *testing.T, pub ed25519.PublicKey) *x509.Certificate {
-	t.Helper()
-
-	template := &x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		NotBefore:    time.Now().Add(-time.Hour),
-		NotAfter:     time.Now().Add(24 * time.Hour),
-	}
-
-	// Self-sign using the ed25519 key itself.
-	_, selfSignPriv, err := ed25519.GenerateKey(rand.Reader)
-	require.NoError(t, err)
-
-	certDER, err := x509.CreateCertificate(rand.Reader, template, template, pub, selfSignPriv)
-	require.NoError(t, err)
-
-	cert, err := x509.ParseCertificate(certDER)
-	require.NoError(t, err)
-	return cert
 }
