@@ -236,13 +236,14 @@ type LoggingConfig struct {
 	FileRotation LogRotationConfig `koanf:"file_rotation"`
 }
 
-var linuxDataPathPrefix = "/var/lib/graylog-collector"
+var unixDataPathPrefix = "/var/lib/graylog-collector"
 var windowsDataPathPrefix = filepath.Join(`C:\`, "ProgramData", "Graylog", "Collector")
 
 type platformName string
 
 const windows platformName = "windows"
 const linux platformName = "linux"
+const darwin platformName = "darwin"
 
 func platformDefaultValue[T any](values map[platformName]T) T {
 	if value, ok := values[platformName(runtime.GOOS)]; ok {
@@ -275,7 +276,8 @@ func DefaultConfig() Config {
 		Keys: KeysConfig{
 			// TODO: Branding
 			Dir: platformDefaultValue(map[platformName]string{
-				linux:   filepath.Join(linuxDataPathPrefix, "keys"),
+				linux:   filepath.Join(unixDataPathPrefix, "keys"),
+				darwin:  filepath.Join(unixDataPathPrefix, "keys"),
 				windows: filepath.Join(windowsDataPathPrefix, "keys"),
 			}),
 			Encrypted: false,
@@ -290,7 +292,8 @@ func DefaultConfig() Config {
 			PassthroughLogs:    false,
 			// TODO: Branding
 			StorageDir: platformDefaultValue(map[platformName]string{
-				linux:   filepath.Join(linuxDataPathPrefix, "storage"),
+				linux:   filepath.Join(unixDataPathPrefix, "storage"),
+				darwin:  filepath.Join(unixDataPathPrefix, "storage"),
 				windows: filepath.Join(windowsDataPathPrefix, "storage"),
 			}),
 			Config: AgentConfigMerge{
@@ -326,7 +329,8 @@ func DefaultConfig() Config {
 		Packages: PackagesConfig{
 			// TODO: Branding
 			StorageDir: platformDefaultValue(map[platformName]string{
-				linux:   filepath.Join(linuxDataPathPrefix, "packages"),
+				linux:   filepath.Join(unixDataPathPrefix, "packages"),
+				darwin:  filepath.Join(unixDataPathPrefix, "packages"),
 				windows: filepath.Join(windowsDataPathPrefix, "packages"),
 			}),
 			KeepVersions: 2,
@@ -340,7 +344,8 @@ func DefaultConfig() Config {
 		Persistence: PersistenceConfig{
 			// TODO: Branding
 			Dir: platformDefaultValue(map[platformName]string{
-				linux:   filepath.Join(linuxDataPathPrefix, "supervisor"),
+				linux:   filepath.Join(unixDataPathPrefix, "supervisor"),
+				darwin:  filepath.Join(unixDataPathPrefix, "supervisor"),
 				windows: filepath.Join(windowsDataPathPrefix, "supervisor"),
 			}),
 		},
@@ -360,7 +365,8 @@ func DefaultConfig() Config {
 			Level:  "info",
 			Color:  false,
 			File: platformDefaultValue(map[platformName]string{
-				linux:   filepath.Join(linuxDataPathPrefix, "supervisor", "logs", "supervisor.log"),
+				linux:   filepath.Join(unixDataPathPrefix, "supervisor", "logs", "supervisor.log"),
+				darwin:  filepath.Join(unixDataPathPrefix, "supervisor", "logs", "supervisor.log"),
 				windows: filepath.Join(windowsDataPathPrefix, "supervisor", "logs", "supervisor.log"),
 			}),
 			FileRotation: LogRotationConfig{
