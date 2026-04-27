@@ -27,6 +27,16 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+func doPOST(t *testing.T, client *http.Client, url string, data []byte) (*http.Response, error) {
+	t.Helper()
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, url, bytes.NewReader(data))
+	require.NoError(t, err)
+
+	req.Header.Set("Content-Type", "application/x-protobuf")
+
+	return client.Do(req)
+}
+
 func TestServer_OpAMP_WebSocket(t *testing.T) {
 	server, err := New()
 	require.NoError(t, err)
@@ -101,11 +111,8 @@ func TestServer_OpAMP_HTTP(t *testing.T) {
 	data, err := proto.Marshal(msg)
 	require.NoError(t, err)
 
-	// Create HTTP client that trusts the test server
-	client := server.Client()
-
 	// Send POST request
-	resp, err := client.Post(httpURL, "application/x-protobuf", bytes.NewReader(data))
+	resp, err := doPOST(t, server.Client(), httpURL, data)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -170,8 +177,7 @@ func TestServer_OpAMP_HTTP_CSR(t *testing.T) {
 	data, err := proto.Marshal(msg)
 	require.NoError(t, err)
 
-	client := server.Client()
-	resp, err := client.Post(httpURL, "application/x-protobuf", bytes.NewReader(data))
+	resp, err := doPOST(t, server.Client(), httpURL, data)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	t.Log("Sent CSR message via HTTP")
@@ -324,8 +330,7 @@ func TestServer_RequireAuth_Unauthenticated(t *testing.T) {
 	data, err := proto.Marshal(msg)
 	require.NoError(t, err)
 
-	client := server.Client()
-	resp, err := client.Post(httpURL, "application/x-protobuf", bytes.NewReader(data))
+	resp, err := doPOST(t, server.Client(), httpURL, data)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -382,7 +387,7 @@ func TestServer_RequireAuth_EnrollmentJWT(t *testing.T) {
 	require.NoError(t, err)
 
 	client := server.Client()
-	req, err := http.NewRequest(http.MethodPost, httpURL, bytes.NewReader(data))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, httpURL, bytes.NewReader(data))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/x-protobuf")
 	req.Header.Set("Authorization", "Bearer "+enrollmentJWT)
@@ -458,7 +463,7 @@ func TestServer_RequireAuth_SupervisorJWT(t *testing.T) {
 	require.NoError(t, err)
 
 	client := server.Client()
-	req, err := http.NewRequest(http.MethodPost, httpURL, bytes.NewReader(data))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, httpURL, bytes.NewReader(data))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/x-protobuf")
 	req.Header.Set("Authorization", "Bearer "+enrollmentJWT)
@@ -496,7 +501,7 @@ func TestServer_RequireAuth_SupervisorJWT(t *testing.T) {
 	data2, err := proto.Marshal(msg2)
 	require.NoError(t, err)
 
-	req2, err := http.NewRequest(http.MethodPost, httpURL, bytes.NewReader(data2))
+	req2, err := http.NewRequestWithContext(t.Context(), http.MethodPost, httpURL, bytes.NewReader(data2))
 	require.NoError(t, err)
 	req2.Header.Set("Content-Type", "application/x-protobuf")
 	req2.Header.Set("Authorization", "Bearer "+supervisorJWT)
