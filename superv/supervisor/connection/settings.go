@@ -253,7 +253,10 @@ func (s *SettingsManager) TryLoadPersisted() (Settings, bool, error) {
 }
 
 func (s *SettingsManager) Persist(settings Settings) error {
-	return persistence.WriteYAMLFile(".", s.filePath, &settings)
+	if err := persistence.WriteYAMLFile(".", s.filePath, &settings); err != nil {
+		return fmt.Errorf("persist settings: %w", err)
+	}
+	return nil
 }
 
 // StageNext stages the provided settings but does not yet make them current. This allows the caller to persist the

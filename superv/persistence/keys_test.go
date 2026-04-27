@@ -66,8 +66,7 @@ func TestLoadSigningKey_NotExists(t *testing.T) {
 	dir := t.TempDir()
 
 	_, err := LoadSigningKey(dir)
-	require.Error(t, err)
-	require.True(t, os.IsNotExist(err))
+	require.ErrorIs(t, err, os.ErrNotExist)
 }
 
 func TestSaveAndLoadEncryptionKey(t *testing.T) {

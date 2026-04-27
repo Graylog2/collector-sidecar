@@ -19,12 +19,18 @@
 
 package winrenameio
 
-import "os"
+import (
+	"fmt"
+	"os"
+)
 
 // ReplaceFile atomically replaces the destination file with the source file.
 //
 // On non-Windows platforms, this is a simple os.Rename, which is atomic on
 // POSIX systems when source and destination are on the same filesystem.
 func ReplaceFile(source, destination string) error {
-	return os.Rename(source, destination)
+	if err := os.Rename(source, destination); err != nil {
+		return fmt.Errorf("renaming file: %w", err)
+	}
+	return nil
 }

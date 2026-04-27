@@ -24,6 +24,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/pem"
+	"fmt"
 )
 
 // OIDEncryptionPublicKey is the OID for X25519 encryption public key extension.
@@ -54,12 +55,20 @@ func CreateCSR(signingKey ed25519.PrivateKey, instanceUID string, encryptionPubK
 		}
 	}
 
-	return x509.CreateCertificateRequest(rand.Reader, template, signingKey)
+	csr, err := x509.CreateCertificateRequest(rand.Reader, template, signingKey)
+	if err != nil {
+		return nil, fmt.Errorf("creating certificate request: %w", err)
+	}
+	return csr, nil
 }
 
 // ParseCSR parses a DER-encoded CSR.
 func ParseCSR(csrDER []byte) (*x509.CertificateRequest, error) {
-	return x509.ParseCertificateRequest(csrDER)
+	csr, err := x509.ParseCertificateRequest(csrDER)
+	if err != nil {
+		return nil, fmt.Errorf("parsing certificate request: %w", err)
+	}
+	return csr, nil
 }
 
 // EncodeCSRToPEM encodes a DER-encoded CSR to PEM format.

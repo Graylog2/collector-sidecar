@@ -457,7 +457,10 @@ func (m *Manager) SaveRemoteConfigStatus(status protobufs.RemoteConfigStatuses, 
 	}
 
 	path := filepath.Join(m.cfg.ConfigDir, remoteConfigStatusFile)
-	return persistence.WriteYAMLFile(".", path, data)
+	if err := persistence.WriteYAMLFile(".", path, data); err != nil {
+		return fmt.Errorf("writing remote config status: %w", err)
+	}
+	return nil
 }
 
 // LoadRemoteConfigStatus loads the persisted remote config status from disk.

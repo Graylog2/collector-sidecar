@@ -145,7 +145,7 @@ func NewPersistence(dataDir, clientCertPath, clientKeyPath string) *Persistence 
 // does not exist.
 func (p *Persistence) Delete() error {
 	if err := os.Remove(p.filePath); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return err
+		return fmt.Errorf("removing own logs settings file: %w", err)
 	}
 	return nil
 }
@@ -169,7 +169,10 @@ func (p *Persistence) Save(s Settings) error {
 		ProxyHeaders:             s.ProxyHeaders,
 		LogLevel:                 s.LogLevel,
 	}
-	return persistence.WriteYAMLFile(".", p.filePath, &ps)
+	if err := persistence.WriteYAMLFile(".", p.filePath, &ps); err != nil {
+		return fmt.Errorf("writing own logs settings: %w", err)
+	}
+	return nil
 }
 
 // Load reads persisted settings from disk and rebuilds the TLS config.
@@ -180,7 +183,7 @@ func (p *Persistence) Load() (Settings, bool, error) {
 		if errors.Is(err, os.ErrNotExist) {
 			return Settings{}, false, nil
 		}
-		return Settings{}, true, err
+		return Settings{}, true, fmt.Errorf("loading own logs settings: %w", err)
 	}
 
 	s := Settings{

@@ -20,6 +20,7 @@
 package keen
 
 import (
+	"fmt"
 	"os"
 	"syscall"
 )
@@ -31,9 +32,15 @@ func sysProcAttrs() *syscall.SysProcAttr {
 }
 
 func sendShutdownSignal(process *os.Process) error {
-	return process.Signal(syscall.SIGTERM)
+	if err := process.Signal(syscall.SIGTERM); err != nil {
+		return fmt.Errorf("sending SIGTERM: %w", err)
+	}
+	return nil
 }
 
 func sendReloadSignal(process *os.Process) error {
-	return process.Signal(syscall.SIGHUP)
+	if err := process.Signal(syscall.SIGHUP); err != nil {
+		return fmt.Errorf("sending SIGHUP: %w", err)
+	}
+	return nil
 }

@@ -318,7 +318,11 @@ func parseCertificatePEM(certPEM []byte) (*x509.Certificate, error) {
 	if block == nil || block.Type != "CERTIFICATE" {
 		return nil, errors.New("invalid certificate PEM")
 	}
-	return x509.ParseCertificate(block.Bytes)
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("parsing certificate: %w", err)
+	}
+	return cert, nil
 }
 
 // CertificateNeedsRenewal returns true if the certificate has passed the renewal

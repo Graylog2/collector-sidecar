@@ -305,7 +305,7 @@ func (c *Commander) Stop(ctx context.Context) error {
 	case <-doneCh:
 		// Process exited
 	case <-ctx.Done():
-		return ctx.Err()
+		return fmt.Errorf("waiting for process: %w", ctx.Err())
 	}
 
 	return nil

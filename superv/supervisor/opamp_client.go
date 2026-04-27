@@ -269,7 +269,10 @@ func (s *Supervisor) setClientAvailableComponents(ctx context.Context, client *o
 		availableComponents = (&components.Components{}).ToProto()
 	}
 	s.collectorVersion = collectorVersion
-	return client.SetAvailableComponents(availableComponents)
+	if err := client.SetAvailableComponents(availableComponents); err != nil {
+		return fmt.Errorf("setting available components: %w", err)
+	}
+	return nil
 }
 
 // discoverComponents discovers available components from the collector.

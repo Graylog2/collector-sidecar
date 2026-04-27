@@ -86,7 +86,7 @@ func InjectServiceExtension(config []byte, extensionName string) ([]byte, error)
 	// Load existing config
 	if len(config) > 0 {
 		if err := k.Load(rawbytes.Provider(config), yaml.Parser()); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("loading config: %w", err)
 		}
 	}
 
@@ -103,7 +103,11 @@ func InjectServiceExtension(config []byte, extensionName string) ([]byte, error)
 		return nil, fmt.Errorf("couldn't set key service:extensions: %w", err)
 	}
 
-	return k.Marshal(yaml.Parser())
+	out, err := k.Marshal(yaml.Parser())
+	if err != nil {
+		return nil, fmt.Errorf("marshaling config: %w", err)
+	}
+	return out, nil
 }
 
 // InjectDisableTelemetryMetrics injects configuration to disable the telemetry metrics.

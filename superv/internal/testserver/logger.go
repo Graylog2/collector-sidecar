@@ -20,6 +20,7 @@ package testserver
 import (
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -342,5 +343,8 @@ func (l *DebugLogger) shouldLog(kind EventKind) bool {
 
 // Sync flushes any buffered log entries.
 func (l *DebugLogger) Sync() error {
-	return l.logger.Sync()
+	if err := l.logger.Sync(); err != nil {
+		return fmt.Errorf("syncing zap logger: %w", err)
+	}
+	return nil
 }

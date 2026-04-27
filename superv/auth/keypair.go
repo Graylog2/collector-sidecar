@@ -20,25 +20,30 @@ package auth
 import (
 	"crypto/ed25519"
 	"crypto/rand"
+	"fmt"
 
 	"golang.org/x/crypto/curve25519"
 )
 
 // GenerateSigningKeypair generates a new Ed25519 keypair for signing.
 func GenerateSigningKeypair() (ed25519.PublicKey, ed25519.PrivateKey, error) {
-	return ed25519.GenerateKey(rand.Reader)
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		return nil, nil, fmt.Errorf("generating Ed25519 keypair: %w", err)
+	}
+	return pub, priv, nil
 }
 
 // GenerateEncryptionKeypair generates a new X25519 keypair for encryption.
 func GenerateEncryptionKeypair() ([]byte, []byte, error) {
 	privateKey := make([]byte, curve25519.ScalarSize)
 	if _, err := rand.Read(privateKey); err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("reading random bytes: %w", err)
 	}
 
 	publicKey, err := curve25519.X25519(privateKey, curve25519.Basepoint)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("deriving X25519 public key: %w", err)
 	}
 
 	return publicKey, privateKey, nil

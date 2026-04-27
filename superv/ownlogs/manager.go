@@ -180,7 +180,9 @@ func (m *Manager) Disable(ctx context.Context) error {
 	m.mu.Unlock()
 
 	if oldProvider != nil {
-		return oldProvider.Shutdown(ctx)
+		if err := oldProvider.Shutdown(ctx); err != nil {
+			return fmt.Errorf("shutting down log provider: %w", err)
+		}
 	}
 	return nil
 }
@@ -223,7 +225,11 @@ func buildHTTPExporter(ctx context.Context, s Settings) (sdklog.Exporter, error)
 	if httpClient != nil {
 		opts = append(opts, otlploghttp.WithHTTPClient(httpClient))
 	}
-	return otlploghttp.New(ctx, opts...)
+	exp, err := otlploghttp.New(ctx, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("creating OTLP HTTP log exporter: %w", err)
+	}
+	return exp, nil
 }
 
 func buildGRPCExporter(ctx context.Context, s Settings) (sdklog.Exporter, error) {
@@ -243,7 +249,11 @@ func buildGRPCExporter(ctx context.Context, s Settings) (sdklog.Exporter, error)
 	if len(s.Headers) > 0 {
 		opts = append(opts, otlploggrpc.WithHeaders(s.Headers))
 	}
-	return otlploggrpc.New(ctx, opts...)
+	exp, err := otlploggrpc.New(ctx, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("creating OTLP gRPC log exporter: %w", err)
+	}
+	return exp, nil
 }
 
 func newHTTPClient(s Settings) (*http.Client, error) {

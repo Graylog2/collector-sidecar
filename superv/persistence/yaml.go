@@ -18,6 +18,8 @@
 package persistence
 
 import (
+	"fmt"
+
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/structs"
@@ -28,12 +30,12 @@ func marshalStruct(delimiter string, data any) ([]byte, error) {
 	k := koanf.New(delimiter)
 
 	if err := k.Load(structs.Provider(data, "koanf"), nil); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("loading struct: %w", err)
 	}
 
 	buf, err := k.Marshal(yaml.Parser())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("marshaling YAML: %w", err)
 	}
 
 	return buf, nil
@@ -73,11 +75,11 @@ func LoadYAMLFile(delimiter string, filePath string, dest any) error {
 	k := koanf.New(delimiter)
 
 	if err := k.Load(file.Provider(filePath), yaml.Parser()); err != nil {
-		return err
+		return fmt.Errorf("loading YAML file: %w", err)
 	}
 
 	if err := k.Unmarshal("", dest); err != nil {
-		return err
+		return fmt.Errorf("unmarshaling YAML: %w", err)
 	}
 
 	return nil

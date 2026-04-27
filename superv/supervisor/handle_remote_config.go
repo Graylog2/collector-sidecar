@@ -113,7 +113,7 @@ func (s *Supervisor) awaitCollectorHealthy(ctx context.Context, timeout time.Dur
 		select {
 		case <-timer.C:
 		case <-ctx.Done():
-			return ctx.Err()
+			return fmt.Errorf("startup grace period: %w", ctx.Err())
 		}
 	}
 

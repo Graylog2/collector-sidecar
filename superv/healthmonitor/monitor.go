@@ -19,6 +19,7 @@ package healthmonitor
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"sync"
@@ -141,14 +142,14 @@ func (m *Monitor) CheckHealth(ctx context.Context) (*HealthStatus, error) {
 	if err != nil {
 		status.ErrorMessage = err.Error()
 		m.setLastStatus(status)
-		return status, err
+		return status, fmt.Errorf("creating health check request: %w", err)
 	}
 
 	resp, err := m.client.Do(req)
 	if err != nil {
 		status.ErrorMessage = err.Error()
 		m.setLastStatus(status)
-		return status, err
+		return status, fmt.Errorf("performing health check request: %w", err)
 	}
 	defer func() {
 		_, _ = io.Copy(io.Discard, resp.Body)

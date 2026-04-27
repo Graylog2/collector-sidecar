@@ -14,6 +14,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -34,7 +35,11 @@ func doPOST(t *testing.T, client *http.Client, url string, data []byte) (*http.R
 
 	req.Header.Set("Content-Type", "application/x-protobuf")
 
-	return client.Do(req)
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("performing POST request: %w", err)
+	}
+	return resp, nil
 }
 
 func TestServer_OpAMP_WebSocket(t *testing.T) {

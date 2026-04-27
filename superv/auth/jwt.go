@@ -79,7 +79,11 @@ func CreateSupervisorJWT(
 	// Header required by server
 	token.Header[cttHeader] = "agent"
 
-	return token.SignedString(privateKey)
+	signed, err := token.SignedString(privateKey)
+	if err != nil {
+		return "", fmt.Errorf("signing JWT: %w", err)
+	}
+	return signed, nil
 }
 
 // ParseSupervisorJWT parses a supervisor-signed JWT without verifying the signature.
@@ -90,7 +94,7 @@ func ParseSupervisorJWT(tokenString string) (string, *SupervisorClaims, error) {
 	// Parse without validation to extract claims and header
 	token, _, err := jwt.NewParser().ParseUnverified(tokenString, claims)
 	if err != nil {
-		return "", nil, err
+		return "", nil, fmt.Errorf("parsing JWT: %w", err)
 	}
 
 	var certFingerprint string
@@ -123,7 +127,7 @@ func VerifySupervisorJWT(tokenString string, cert *x509.Certificate) error {
 	})
 
 	if err != nil {
-		return err
+		return fmt.Errorf("parsing JWT: %w", err)
 	}
 
 	if !token.Valid {

@@ -337,7 +337,7 @@ func (s *Supervisor) Start(parentCtx context.Context) error {
 		StableAfter:         s.agentCfg.Restart.StableAfter,
 	}))
 	if err != nil {
-		return err
+		return fmt.Errorf("creating commander: %w", err)
 	}
 	s.commander = cmd
 
@@ -361,13 +361,13 @@ func (s *Supervisor) Start(parentCtx context.Context) error {
 		ListenEndpoint: s.localServerCfg.Endpoint,
 	}, serverCallbacks)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating local OpAMP server: %w", err)
 	}
 	s.opampServer = opampServer
 
 	// Start local OpAMP server
 	if err := s.opampServer.Start(s.ctx); err != nil {
-		return err
+		return fmt.Errorf("starting local OpAMP server: %w", err)
 	}
 
 	// Resolve the runtime-bound local OpAMP endpoint and update the config

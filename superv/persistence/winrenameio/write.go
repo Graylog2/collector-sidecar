@@ -230,7 +230,10 @@ func (pf *PendingFile) Cleanup() error {
 	}
 	pf.done = true
 	_ = pf.File.Close()
-	return os.Remove(pf.Name())
+	if err := os.Remove(pf.Name()); err != nil {
+		return fmt.Errorf("winrenameio: removing temp file: %w", err)
+	}
+	return nil
 }
 
 // Option configures [NewPendingFile].

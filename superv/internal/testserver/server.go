@@ -171,7 +171,11 @@ func (s *Server) CreateEnrollmentJWT(issuer string, expiry time.Duration) (strin
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
 	token.Header["kid"] = s.KeyID
 
-	return token.SignedString(s.ServerPrivateKey)
+	signed, err := token.SignedString(s.ServerPrivateKey)
+	if err != nil {
+		return "", fmt.Errorf("signing JWT: %w", err)
+	}
+	return signed, nil
 }
 
 // SetRemoteConfig sets the configuration to send to agents.
@@ -613,7 +617,7 @@ func (s *Server) handleCSRRequest(csrPEM []byte, agent *AgentConnection) *protob
 func (s *Server) signCSR(csr *x509.CertificateRequest) (*x509.Certificate, error) {
 	serialNumber, err := rand.Int(rand.Reader, big.NewInt(1<<62))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("generating serial number: %w", err)
 	}
 
 	template := &x509.Certificate{
@@ -645,17 +649,21 @@ func (s *Server) signCSR(csr *x509.CertificateRequest) (*x509.Certificate, error
 
 	certDER, err := x509.CreateCertificate(rand.Reader, template, caTemplate, csr.PublicKey, s.CAPrivateKey)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating certificate: %w", err)
 	}
 
-	return x509.ParseCertificate(certDER)
+	cert, err := x509.ParseCertificate(certDER)
+	if err != nil {
+		return nil, fmt.Errorf("parsing signed certificate: %w", err)
+	}
+	return cert, nil
 }
 
 // Send sends a message to the agent.
 func (a *AgentConnection) Send(msg *protobufs.ServerToAgent) error {
 	data, err := proto.Marshal(msg)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshaling message: %w", err)
 	}
 
 	a.mu.Lock()
@@ -663,7 +671,10 @@ func (a *AgentConnection) Send(msg *protobufs.ServerToAgent) error {
 	if a.Conn == nil {
 		return fmt.Errorf("agent %s is connected via HTTP polling, not WebSocket", a.InstanceUID)
 	}
-	return a.Conn.WriteMessage(websocket.BinaryMessage, data)
+	if err := a.Conn.WriteMessage(websocket.BinaryMessage, data); err != nil {
+		return fmt.Errorf("writing websocket message: %w", err)
+	}
+	return nil
 }
 
 // LastSeen returns when the agent was last seen.

@@ -200,5 +200,9 @@ func initLogger(level, format string) (*zap.Logger, error) {
 	}
 	cfg.Level = zap.NewAtomicLevelAt(zapLevel)
 
-	return cfg.Build()
+	logger, err := cfg.Build()
+	if err != nil {
+		return nil, fmt.Errorf("building logger: %w", err)
+	}
+	return logger, nil
 }

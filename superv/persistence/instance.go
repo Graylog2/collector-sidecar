@@ -60,7 +60,7 @@ func LoadOrCreateInstanceUID(dir string) (string, error) {
 	// Marshal to YAML
 	content, err := yaml.Marshal(data)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("marshaling instance data: %w", err)
 	}
 
 	// Write file with read-only permissions
@@ -85,12 +85,12 @@ func LoadInstanceData(dir string) (*InstanceData, error) {
 
 	content, err := os.ReadFile(filePath) //nolint:gosec // Trusted path
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading instance file: %w", err)
 	}
 
 	var data InstanceData
 	if err := yaml.Unmarshal(content, &data); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshaling instance data: %w", err)
 	}
 
 	return &data, nil

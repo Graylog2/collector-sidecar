@@ -18,6 +18,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -43,7 +44,7 @@ func Load(path string) (Config, error) {
 	// Load defaults first using structs provider
 	defaults := DefaultConfig()
 	if err := k.Load(structs.Provider(defaults, "koanf"), nil); err != nil {
-		return Config{}, err
+		return Config{}, fmt.Errorf("loading defaults: %w", err)
 	}
 
 	if path != "" {
@@ -51,7 +52,7 @@ func Load(path string) (Config, error) {
 		if err := k.Load(file.Provider(path), yaml.Parser()); err != nil {
 			// It's okay to run the supervisor without config file
 			if !os.IsNotExist(err) {
-				return Config{}, err
+				return Config{}, fmt.Errorf("loading config file: %w", err)
 			}
 		}
 	}
@@ -66,12 +67,12 @@ func Load(path string) (Config, error) {
 				"__", "::"), v
 		},
 	}), nil); err != nil {
-		return Config{}, err
+		return Config{}, fmt.Errorf("loading environment variables: %w", err)
 	}
 
 	var cfg Config
 	if err := k.Unmarshal("", &cfg); err != nil {
-		return Config{}, err
+		return Config{}, fmt.Errorf("unmarshaling config: %w", err)
 	}
 
 	return cfg, nil

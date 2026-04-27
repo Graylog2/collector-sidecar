@@ -20,6 +20,7 @@ package opamp
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"sync"
 
@@ -88,7 +89,7 @@ func (s *Server) Start(_ context.Context) error {
 	}
 
 	if err := srv.Start(settings); err != nil {
-		return err
+		return fmt.Errorf("starting OpAMP server: %w", err)
 	}
 
 	s.mu.Lock()
@@ -107,7 +108,10 @@ func (s *Server) Stop(ctx context.Context) error {
 	if srv == nil {
 		return nil
 	}
-	return srv.Stop(ctx)
+	if err := srv.Stop(ctx); err != nil {
+		return fmt.Errorf("stopping OpAMP server: %w", err)
+	}
+	return nil
 }
 
 // Addr returns the server's listen address.
