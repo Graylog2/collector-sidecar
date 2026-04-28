@@ -57,7 +57,7 @@ func main() {
 	flag.Parse()
 
 	if showVersion {
-		fmt.Println(version.Version())
+		fmt.Println(version.Version()) //nolint:forbidigo
 		os.Exit(0)
 	}
 
