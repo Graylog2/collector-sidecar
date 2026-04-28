@@ -1,0 +1,124 @@
+# See: https://golangci-lint.run/docs/configuration/file/
+version: "2"
+
+issues:
+  max-issues-per-linter: 0 # Show all
+  max-same-issues: 0 # Show all
+
+linters:
+  # We enable all linters and disable the ones we don't want. That way we
+  # can discover new interesting linters when they get added to golangci-lint.
+  default: "all"
+
+  exclusions:
+    rules:
+      - path: "_test\\.go"
+        linters:
+          - "forcetypeassert"
+          - "goconst"
+          - "gosec"
+
+      - path: "cmd/testserver/.+\\.go"
+        linters:
+          - "forbidigo"
+
+  disable:
+    # TODO: Needs fixes before we can enable them
+    - "nilnil"
+
+    # Maybe we want those?
+    - "err113"
+    - "errcheck"
+    - "errchkjson"
+    - "gochecknoglobals"
+    - "ireturn"
+    - "lll"
+    - "musttag"
+    - "perfsprint"
+    - "prealloc"
+
+    # Keep disabled
+    - "contextcheck"
+    - "cyclop"
+    - "dogsled"
+    - "embeddedstructfieldcheck"
+    - "exhaustruct"
+    - "funcorder"
+    - "funlen"
+    - "gocyclo"
+    - "gocognit"
+    - "godox"
+    - "goprintffuncname"
+    - "gosmopolitan"
+    - "mnd"
+    - "nestif"
+    - "nlreturn"
+    - "noinlineerr"
+    - "paralleltest"
+    - "revive"
+    - "tagliatelle"
+    - "testpackage"
+    - "varnamelen"
+    - "wsl"
+    - "wsl_v5"
+
+  settings:
+    depguard:
+      rules:
+        main:
+          deny:
+            - pkg: "github.com/pkg/errors"
+              desc: "Should be replaced by standard lib errors package"
+
+    # Add forbidden patterns here.
+    #forbidigo:
+    #  forbid:
+    #  - pattern: "..."
+
+    lll:
+      line-length: 150
+
+    revive:
+      severity: "error"
+      enable-all-rules: true
+      rules:
+        - name: "add-constant"
+          disabled: true
+
+        - name: "cognitive-complexity"
+          disabled: true
+
+        - name: "confusing-naming"
+          disabled: true
+
+        - name: "confusing-results"
+          disabled: true
+
+        - name: "cyclomatic"
+          disabled: true
+
+        - name: "exported"
+          disabled: true
+
+        - name: "flag-parameter"
+          disabled: true
+
+        - name: "function-length"
+          disabled: true
+
+        - name: "line-length-limit"
+          disabled: true
+
+        - name: "max-public-structs"
+          disabled: true
+
+        - name: "nested-structs"
+          disabled: true
+
+        - name: "package-comments"
+          disabled: true
+
+        - name: "unchecked-type-assertion"
+          disabled: true
+          exclude:
+            - "_test\\.go"
