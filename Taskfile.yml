@@ -79,3 +79,22 @@ tasks:
       - task: fmt:check
       - go generate .
       - task: builder:build:all
+
+  package:windows:msi:
+    desc: 'Build Windows MSI installer (Windows only; requires dotnet SDK + WiX 7) — replaces `make v2-package-windows-msi`'
+    platforms: [windows]
+    deps: [builder:build:windows:amd64]
+    cmds:
+      - mkdir -p dist/pkg
+      - >-
+        dotnet build dist/v2/windows/graylog-collector.wixproj
+        -c Release
+        -p:Version={{.COLLECTOR_VERSION}}
+        -p:SourceExe={{.ROOT_DIR}}/graylog-collector-windows-amd64.exe
+        -p:LicenseFile={{.ROOT_DIR}}/LICENSE
+        -p:OutputPath={{.ROOT_DIR}}/dist/pkg/
+
+  package:windows:msi:sign:
+    desc: 'Sign Windows MSI via codesigntool — replaces `make v2-sign-windows-msi`'
+    cmds:
+      - codesigntool sign dist/pkg/graylog-collector-{{.COLLECTOR_VERSION}}.msi
