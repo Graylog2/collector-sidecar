@@ -28,6 +28,7 @@ import (
 
 	"github.com/open-telemetry/opamp-go/client/types"
 	"github.com/open-telemetry/opamp-go/protobufs"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 	"google.golang.org/protobuf/proto"
@@ -103,10 +104,10 @@ func TestCapabilitiesToProto(t *testing.T) {
 	}
 
 	proto := caps.ToProto()
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_AcceptsRemoteConfig != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsEffectiveConfig != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsHealth != 0)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_AcceptsRemoteConfig, proto&protobufs.AgentCapabilities_AgentCapabilities_AcceptsRemoteConfig)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsEffectiveConfig, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsEffectiveConfig)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsHealth, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsHealth)
 }
 
 func TestCapabilitiesToProto_AllCapabilities(t *testing.T) {
@@ -128,21 +129,21 @@ func TestCapabilitiesToProto_AllCapabilities(t *testing.T) {
 	}
 
 	proto := caps.ToProto()
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_AcceptsRemoteConfig != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsEffectiveConfig != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_AcceptsPackages != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsPackageStatuses != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsOwnTraces != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsOwnMetrics != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsOwnLogs != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_AcceptsOpAMPConnectionSettings != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsConnectionSettingsStatus != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_AcceptsRestartCommand != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsHealth != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsRemoteConfig != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsHeartbeat != 0)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsAvailableComponents != 0)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_AcceptsRemoteConfig, proto&protobufs.AgentCapabilities_AgentCapabilities_AcceptsRemoteConfig)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsEffectiveConfig, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsEffectiveConfig)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_AcceptsPackages, proto&protobufs.AgentCapabilities_AgentCapabilities_AcceptsPackages)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsPackageStatuses, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsPackageStatuses)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsOwnTraces, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsOwnTraces)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsOwnMetrics, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsOwnMetrics)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsOwnLogs, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsOwnLogs)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_AcceptsOpAMPConnectionSettings, proto&protobufs.AgentCapabilities_AgentCapabilities_AcceptsOpAMPConnectionSettings)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsConnectionSettingsStatus, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsConnectionSettingsStatus)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_AcceptsRestartCommand, proto&protobufs.AgentCapabilities_AgentCapabilities_AcceptsRestartCommand)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsHealth, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsHealth)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsRemoteConfig, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsRemoteConfig)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsHeartbeat, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsHeartbeat)
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsAvailableComponents, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsAvailableComponents)
 }
 
 func TestCapabilitiesToProto_NoCapabilities(t *testing.T) {
@@ -157,7 +158,7 @@ func TestCapabilitiesToProto_AlwaysIncludesReportsStatus(t *testing.T) {
 	caps := Capabilities{}
 	proto := caps.ToProto()
 
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus != 0,
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus,
 		"ReportsStatus must always be set")
 }
 
@@ -169,7 +170,7 @@ func TestCapabilitiesToProto_ReportsStatusAlwaysSet(t *testing.T) {
 	}
 	proto := caps.ToProto()
 
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus != 0,
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus,
 		"ReportsStatus must always be set regardless of other capabilities")
 }
 
@@ -251,10 +252,10 @@ func TestClient_SetEffectiveConfig(t *testing.T) {
 	// Verify the config was stored internally
 	ec := client.effectiveConfig.Load()
 	require.NotNil(t, ec)
-	require.NotNil(t, ec.ConfigMap)
-	require.NotNil(t, ec.ConfigMap.ConfigMap)
-	require.Contains(t, ec.ConfigMap.ConfigMap, "collector.yaml")
-	require.Equal(t, []byte("test: config"), ec.ConfigMap.ConfigMap["collector.yaml"].Body)
+	require.NotNil(t, ec.GetConfigMap())
+	require.NotNil(t, ec.GetConfigMap().GetConfigMap())
+	require.Contains(t, ec.GetConfigMap().GetConfigMap(), "collector.yaml")
+	require.Equal(t, []byte("test: config"), ec.GetConfigMap().GetConfigMap()["collector.yaml"].GetBody())
 }
 
 func TestClient_SetEffectiveConfig_RespectsContext(t *testing.T) {
@@ -336,10 +337,16 @@ func TestCallbacks_NilHandlers(t *testing.T) {
 	ctx := t.Context()
 
 	// These should not panic
-	typesCallbacks.OnConnect(ctx)
-	typesCallbacks.OnConnectFailed(ctx, errors.New("test"))
-	typesCallbacks.OnError(ctx, &protobufs.ServerErrorResponse{})
-	typesCallbacks.SaveRemoteConfigStatus(ctx, &protobufs.RemoteConfigStatus{})
+	assert.NotPanics(t, func() {
+		typesCallbacks.OnConnect(ctx)
+		typesCallbacks.OnConnectFailed(ctx, errors.New("test"))
+		typesCallbacks.OnError(ctx, &protobufs.ServerErrorResponse{})
+	})
+
+	// This one should panic because we don't want to use it. It's unused in the opamp-go client.
+	assert.Panics(t, func() {
+		typesCallbacks.SaveRemoteConfigStatus(ctx, &protobufs.RemoteConfigStatus{})
+	})
 
 	err := typesCallbacks.OnOpampConnectionSettings(ctx, &protobufs.OpAMPConnectionSettings{})
 	require.NoError(t, err)
@@ -369,30 +376,12 @@ func TestCallbacks_GetEffectiveConfig(t *testing.T) {
 	require.Equal(t, expectedConfig, config)
 }
 
-func TestCallbacks_SaveRemoteConfigStatus(t *testing.T) {
-	var savedStatus *protobufs.RemoteConfigStatus
-
-	callbacks := &Callbacks{
-		SaveRemoteConfigStatus: func(ctx context.Context, status *protobufs.RemoteConfigStatus) {
-			savedStatus = status
-		},
-	}
-
-	typesCallbacks := callbacks.ToTypesCallbacks()
-	status := &protobufs.RemoteConfigStatus{
-		LastRemoteConfigHash: []byte("test-hash"),
-	}
-	typesCallbacks.SaveRemoteConfigStatus(t.Context(), status)
-	require.Equal(t, status, savedStatus)
-}
-
 func TestCallbacks_OnMessage_RemoteConfig(t *testing.T) {
 	var remoteConfigCalled bool
 
 	callbacks := &Callbacks{
-		OnRemoteConfig: func(ctx context.Context, config *protobufs.AgentRemoteConfig) bool {
+		OnRemoteConfig: func(ctx context.Context, config *protobufs.AgentRemoteConfig) {
 			remoteConfigCalled = true
-			return true
 		},
 	}
 
@@ -569,7 +558,7 @@ func TestCapabilitiesToProto_ReportsHeartbeat(t *testing.T) {
 	}
 	proto := caps.ToProto()
 
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsHeartbeat != 0,
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsHeartbeat, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsHeartbeat,
 		"ReportsHeartbeat capability should be set")
 }
 
@@ -648,9 +637,9 @@ func TestCapabilitiesToProto_ReportsAvailableComponents(t *testing.T) {
 	proto := caps.ToProto()
 
 	// ReportsStatus is always included (mandatory)
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus != 0,
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsStatus,
 		"ReportsStatus should always be set")
-	require.True(t, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsAvailableComponents != 0,
+	require.Equal(t, protobufs.AgentCapabilities_AgentCapabilities_ReportsAvailableComponents, proto&protobufs.AgentCapabilities_AgentCapabilities_ReportsAvailableComponents,
 		"ReportsAvailableComponents should be set")
 }
 

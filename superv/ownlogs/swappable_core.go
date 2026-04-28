@@ -18,6 +18,7 @@
 package ownlogs
 
 import (
+	"fmt"
 	"sync/atomic"
 
 	"go.uber.org/zap/zapcore"
@@ -97,7 +98,10 @@ func (s *swappableCore) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	if len(s.fields) > 0 {
 		inner = inner.With(s.fields)
 	}
-	return inner.Write(ent, fields)
+	if err := inner.Write(ent, fields); err != nil {
+		return fmt.Errorf("writing log entry: %w", err)
+	}
+	return nil
 }
 
 func (s *swappableCore) Sync() error {
@@ -105,5 +109,8 @@ func (s *swappableCore) Sync() error {
 	if inner == nil {
 		return nil
 	}
-	return inner.Sync()
+	if err := inner.Sync(); err != nil {
+		return fmt.Errorf("syncing log core: %w", err)
+	}
+	return nil
 }

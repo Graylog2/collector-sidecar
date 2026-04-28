@@ -169,8 +169,8 @@ func TestBackoff_DefaultConfig(t *testing.T) {
 	cfg := DefaultBackoffConfig()
 	require.Equal(t, 1*time.Second, cfg.InitialInterval)
 	require.Equal(t, 30*time.Second, cfg.MaxInterval)
-	require.Equal(t, 2.0, cfg.Multiplier)
-	require.Equal(t, 0.5, cfg.RandomizationFactor)
+	require.InEpsilon(t, 2.0, cfg.Multiplier, 0.0001)
+	require.InEpsilon(t, 0.5, cfg.RandomizationFactor, 0.0001)
 	require.Equal(t, 5, cfg.MaxRetries)
 	require.Equal(t, 30*time.Second, cfg.StableAfter)
 }

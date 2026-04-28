@@ -154,48 +154,48 @@ func TestComponents_ToProto(t *testing.T) {
 
 	proto := components.ToProto()
 	require.NotNil(t, proto)
-	require.NotNil(t, proto.Components)
+	require.NotNil(t, proto.GetComponents())
 
 	// Check receivers
-	receiver, ok := proto.Components["receiver/otlp"]
+	receiver, ok := proto.GetComponents()["receiver/otlp"]
 	assert.True(t, ok)
-	assert.NotNil(t, receiver.Metadata)
+	assert.NotNil(t, receiver.GetMetadata())
 	// Check metadata contains package and version
 	var hasPackage, hasVersion bool
-	for _, kv := range receiver.Metadata {
-		if kv.Key == "component.package" {
+	for _, kv := range receiver.GetMetadata() {
+		if kv.GetKey() == "component.package" {
 			hasPackage = true
-			assert.Contains(t, kv.Value.GetStringValue(), "otlpreceiver")
+			assert.Contains(t, kv.GetValue().GetStringValue(), "otlpreceiver")
 		}
-		if kv.Key == "component.version" {
+		if kv.GetKey() == "component.version" {
 			hasVersion = true
-			assert.Equal(t, "v0.144.0", kv.Value.GetStringValue())
+			assert.Equal(t, "v0.144.0", kv.GetValue().GetStringValue())
 		}
 	}
 	assert.True(t, hasPackage, "should have component.package metadata")
 	assert.True(t, hasVersion, "should have component.version metadata")
 
-	_, ok = proto.Components["receiver/prometheus"]
+	_, ok = proto.GetComponents()["receiver/prometheus"]
 	assert.True(t, ok)
 
 	// Check processors
-	_, ok = proto.Components["processor/batch"]
+	_, ok = proto.GetComponents()["processor/batch"]
 	assert.True(t, ok)
 
 	// Check exporters
-	_, ok = proto.Components["exporter/logging"]
+	_, ok = proto.GetComponents()["exporter/logging"]
 	assert.True(t, ok)
 
 	// Check extensions
-	_, ok = proto.Components["extension/health_check"]
+	_, ok = proto.GetComponents()["extension/health_check"]
 	assert.True(t, ok)
 
 	// Check connectors
-	_, ok = proto.Components["connector/forward"]
+	_, ok = proto.GetComponents()["connector/forward"]
 	assert.True(t, ok)
 
 	// Total count
-	assert.Len(t, proto.Components, 6)
+	assert.Len(t, proto.GetComponents(), 6)
 }
 
 func TestComponents_ToProto_Nil(t *testing.T) {
@@ -208,7 +208,7 @@ func TestComponents_ToProto_Empty(t *testing.T) {
 	components := &Components{}
 	proto := components.ToProto()
 	require.NotNil(t, proto)
-	assert.Empty(t, proto.Components)
+	assert.Empty(t, proto.GetComponents())
 }
 
 func TestComponents_Count(t *testing.T) {
@@ -317,11 +317,11 @@ func TestToProto_HashIsDeterministic(t *testing.T) {
 	proto2 := components.ToProto()
 
 	// Hash should be set
-	assert.NotEmpty(t, proto1.Hash)
-	assert.NotEmpty(t, proto2.Hash)
+	assert.NotEmpty(t, proto1.GetHash())
+	assert.NotEmpty(t, proto2.GetHash())
 
 	// Hash should be deterministic
-	assert.Equal(t, proto1.Hash, proto2.Hash)
+	assert.Equal(t, proto1.GetHash(), proto2.GetHash())
 }
 
 func TestToProto_EmptyComponentsHasHash(t *testing.T) {
@@ -329,8 +329,8 @@ func TestToProto_EmptyComponentsHasHash(t *testing.T) {
 	proto := components.ToProto()
 
 	assert.NotNil(t, proto)
-	assert.NotEmpty(t, proto.Hash, "empty components should still have a hash")
-	assert.Empty(t, proto.Components)
+	assert.NotEmpty(t, proto.GetHash(), "empty components should still have a hash")
+	assert.Empty(t, proto.GetComponents())
 }
 
 func TestSplitModule(t *testing.T) {

@@ -21,6 +21,7 @@ import (
 	"context"
 	"os/exec"
 	"runtime"
+	"sync"
 	"testing"
 	"time"
 
@@ -55,7 +56,7 @@ func TestCommander_StartStop(t *testing.T) {
 	err = cmd.start(ctx)
 	require.NoError(t, err)
 	require.True(t, cmd.IsRunning())
-	require.Greater(t, cmd.Pid(), 0)
+	require.Positive(t, cmd.Pid())
 
 	err = cmd.Stop(ctx)
 	require.NoError(t, err)
@@ -119,8 +120,12 @@ func TestCommander_ExitedChannel(t *testing.T) {
 	err = cmd.start(ctx)
 	require.NoError(t, err)
 
+	cmd.mu.Lock()
+	doneCh := cmd.doneCh
+	cmd.mu.Unlock()
+
 	select {
-	case <-cmd.Exited():
+	case <-doneCh:
 		// Expected
 	case <-time.After(5 * time.Second):
 		t.Fatal("timeout waiting for process to exit")
@@ -159,6 +164,43 @@ func TestCommander_Restart(t *testing.T) {
 	cmd.Stop(ctx)
 }
 
+func TestCommander_StopConcurrentCallers(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows")
+	}
+
+	logger := zaptest.NewLogger(t)
+	logsDir := t.TempDir()
+
+	cmd, err := New(logger, logsDir, Config{
+		Executable: "/bin/sh",
+		Args: []string{
+			"-c",
+			`trap 'sleep 0.2; exit 0' TERM; while true; do sleep 1; done`,
+		},
+	}, NewBackoff(BackoffConfig{MaxRetries: 0}))
+	require.NoError(t, err)
+
+	require.NoError(t, cmd.start(context.Background()))
+
+	errCh := make(chan error, 2)
+	var wg sync.WaitGroup
+	for range 2 {
+		wg.Go(func() {
+			stopCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+			errCh <- cmd.Stop(stopCtx)
+		})
+	}
+
+	wg.Wait()
+	close(errCh)
+
+	for err := range errCh {
+		require.NoError(t, err)
+	}
+}
+
 func TestCommander_CrashRecovery(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping on Windows - need different test binary")
@@ -188,7 +230,7 @@ func TestCommander_CrashRecovery(t *testing.T) {
 
 	// Wait for max retries to be exhausted
 	select {
-	case <-cmd.Done():
+	case <-cmd.recoveryDone:
 		// Expected - process gave up after max retries
 	case <-ctx.Done():
 		t.Fatal("timeout waiting for crash recovery to exhaust retries")
@@ -223,7 +265,7 @@ func TestCommander_CrashRecovery_GracefulExit(t *testing.T) {
 
 	// Wait for recovery loop to finish
 	select {
-	case <-cmd.Done():
+	case <-cmd.recoveryDone:
 		// Expected - process exited cleanly, no restart
 	case <-ctx.Done():
 		t.Fatal("timeout waiting for clean exit")
@@ -301,7 +343,7 @@ func TestCommander_CrashRecovery_StopDuringRecovery(t *testing.T) {
 
 	// Wait for recovery loop to finish
 	select {
-	case <-cmd.Done():
+	case <-cmd.recoveryDone:
 		// Expected
 	case <-time.After(1 * time.Second):
 		t.Fatal("timeout waiting for recovery loop to stop")

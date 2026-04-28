@@ -57,9 +57,9 @@ func SaveSigningKey(keysDir string, key ed25519.PrivateKey) error {
 func LoadSigningKey(keysDir string) (ed25519.PrivateKey, error) {
 	filePath := filepath.Join(keysDir, SigningKeyFile)
 
-	content, err := os.ReadFile(filePath)
+	content, err := os.ReadFile(filePath) //nolint:gosec // Trusted path
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading signing key: %w", err)
 	}
 
 	block, _ := pem.Decode(content)
@@ -99,9 +99,9 @@ func SaveEncryptionKey(keysDir string, key []byte) error {
 func LoadEncryptionKey(keysDir string) ([]byte, error) {
 	filePath := filepath.Join(keysDir, encryptionKeyFile)
 
-	content, err := os.ReadFile(filePath)
+	content, err := os.ReadFile(filePath) //nolint:gosec // Trusted path
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading encryption key: %w", err)
 	}
 
 	block, _ := pem.Decode(content)
@@ -130,9 +130,9 @@ func SaveCertificate(keysDir string, cert *x509.Certificate) error {
 func LoadCertificate(keysDir string) (*x509.Certificate, error) {
 	filePath := filepath.Join(keysDir, SigningCertFile)
 
-	content, err := os.ReadFile(filePath)
+	content, err := os.ReadFile(filePath) //nolint:gosec // Trusted path
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading certificate file: %w", err)
 	}
 
 	block, _ := pem.Decode(content)
@@ -140,7 +140,11 @@ func LoadCertificate(keysDir string) (*x509.Certificate, error) {
 		return nil, errors.New("failed to decode PEM block")
 	}
 
-	return x509.ParseCertificate(block.Bytes)
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("parsing certificate: %w", err)
+	}
+	return cert, nil
 }
 
 // SigningKeyExists returns true if the signing key file exists.

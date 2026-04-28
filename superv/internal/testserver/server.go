@@ -171,7 +171,11 @@ func (s *Server) CreateEnrollmentJWT(issuer string, expiry time.Duration) (strin
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
 	token.Header["kid"] = s.KeyID
 
-	return token.SignedString(s.ServerPrivateKey)
+	signed, err := token.SignedString(s.ServerPrivateKey)
+	if err != nil {
+		return "", fmt.Errorf("signing JWT: %w", err)
+	}
+	return signed, nil
 }
 
 // SetRemoteConfig sets the configuration to send to agents.
@@ -223,7 +227,7 @@ func (s *Server) HandleJWKS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(jwks)
+	_ = json.NewEncoder(w).Encode(jwks)
 }
 
 // AuthResult contains the result of authentication verification.
@@ -407,7 +411,7 @@ func (s *Server) handleHTTPOpAMP(w http.ResponseWriter, r *http.Request) {
 	// Send response
 	w.Header().Set("Content-Type", "application/x-protobuf")
 	w.WriteHeader(http.StatusOK)
-	w.Write(respData)
+	_, _ = w.Write(respData)
 }
 
 // handleAgentConnection handles an individual agent WebSocket connection.
@@ -454,7 +458,7 @@ func (s *Server) handleAgentConnection(conn *websocket.Conn) {
 func (s *Server) getOrCreateAgent(msg *protobufs.AgentToServer, conn *websocket.Conn) *AgentConnection {
 	var instanceUID string
 	if msg.InstanceUid != nil {
-		instanceUID = fmt.Sprintf("%x", msg.InstanceUid)
+		instanceUID = fmt.Sprintf("%x", msg.GetInstanceUid())
 	}
 
 	s.mu.Lock()
@@ -491,28 +495,28 @@ func (s *Server) processMessage(msg *protobufs.AgentToServer, agent *AgentConnec
 	s.emit(EventAgentMessage, agent.InstanceUID, msg)
 
 	// Emit specific events based on message content
-	if msg.Health != nil {
-		s.emit(EventHealth, agent.InstanceUID, msg.Health)
+	if msg.GetHealth() != nil {
+		s.emit(EventHealth, agent.InstanceUID, msg.GetHealth())
 	}
 
-	if msg.AgentDescription != nil {
-		s.emit(EventAgentDescription, agent.InstanceUID, msg.AgentDescription)
+	if msg.GetAgentDescription() != nil {
+		s.emit(EventAgentDescription, agent.InstanceUID, msg.GetAgentDescription())
 	}
 
-	if msg.RemoteConfigStatus != nil {
-		s.emit(EventConfigStatus, agent.InstanceUID, msg.RemoteConfigStatus)
+	if msg.GetRemoteConfigStatus() != nil {
+		s.emit(EventConfigStatus, agent.InstanceUID, msg.GetRemoteConfigStatus())
 	}
 
-	if msg.EffectiveConfig != nil {
-		s.emit(EventEffectiveConfig, agent.InstanceUID, msg.EffectiveConfig)
+	if msg.GetEffectiveConfig() != nil {
+		s.emit(EventEffectiveConfig, agent.InstanceUID, msg.GetEffectiveConfig())
 	}
 
-	if msg.PackageStatuses != nil {
-		s.emit(EventPackageStatus, agent.InstanceUID, msg.PackageStatuses)
+	if msg.GetPackageStatuses() != nil {
+		s.emit(EventPackageStatus, agent.InstanceUID, msg.GetPackageStatuses())
 	}
 
-	if msg.CustomCapabilities != nil {
-		s.emit(EventCustomCapabilities, agent.InstanceUID, msg.CustomCapabilities)
+	if msg.GetCustomCapabilities() != nil {
+		s.emit(EventCustomCapabilities, agent.InstanceUID, msg.GetCustomCapabilities())
 	}
 
 	return s.createResponse(msg, agent)
@@ -521,7 +525,7 @@ func (s *Server) processMessage(msg *protobufs.AgentToServer, agent *AgentConnec
 // createResponse creates a response for an agent message.
 func (s *Server) createResponse(msg *protobufs.AgentToServer, agent *AgentConnection) *protobufs.ServerToAgent {
 	response := &protobufs.ServerToAgent{
-		InstanceUid: msg.InstanceUid,
+		InstanceUid: msg.GetInstanceUid(),
 	}
 
 	// Handle CSR request
@@ -541,7 +545,7 @@ func (s *Server) createResponse(msg *protobufs.AgentToServer, agent *AgentConnec
 	remoteConfig := s.remoteConfig
 	s.mu.RUnlock()
 
-	if remoteConfig != nil && msg.Capabilities&uint64(protobufs.AgentCapabilities_AgentCapabilities_AcceptsRemoteConfig) != 0 {
+	if remoteConfig != nil && msg.GetCapabilities()&uint64(protobufs.AgentCapabilities_AgentCapabilities_AcceptsRemoteConfig) != 0 {
 		response.RemoteConfig = remoteConfig
 	}
 
@@ -613,7 +617,7 @@ func (s *Server) handleCSRRequest(csrPEM []byte, agent *AgentConnection) *protob
 func (s *Server) signCSR(csr *x509.CertificateRequest) (*x509.Certificate, error) {
 	serialNumber, err := rand.Int(rand.Reader, big.NewInt(1<<62))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("generating serial number: %w", err)
 	}
 
 	template := &x509.Certificate{
@@ -645,17 +649,21 @@ func (s *Server) signCSR(csr *x509.CertificateRequest) (*x509.Certificate, error
 
 	certDER, err := x509.CreateCertificate(rand.Reader, template, caTemplate, csr.PublicKey, s.CAPrivateKey)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating certificate: %w", err)
 	}
 
-	return x509.ParseCertificate(certDER)
+	cert, err := x509.ParseCertificate(certDER)
+	if err != nil {
+		return nil, fmt.Errorf("parsing signed certificate: %w", err)
+	}
+	return cert, nil
 }
 
 // Send sends a message to the agent.
 func (a *AgentConnection) Send(msg *protobufs.ServerToAgent) error {
 	data, err := proto.Marshal(msg)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshaling message: %w", err)
 	}
 
 	a.mu.Lock()
@@ -663,7 +671,10 @@ func (a *AgentConnection) Send(msg *protobufs.ServerToAgent) error {
 	if a.Conn == nil {
 		return fmt.Errorf("agent %s is connected via HTTP polling, not WebSocket", a.InstanceUID)
 	}
-	return a.Conn.WriteMessage(websocket.BinaryMessage, data)
+	if err := a.Conn.WriteMessage(websocket.BinaryMessage, data); err != nil {
+		return fmt.Errorf("writing websocket message: %w", err)
+	}
+	return nil
 }
 
 // LastSeen returns when the agent was last seen.

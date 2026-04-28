@@ -68,6 +68,6 @@ func TestResolveLocalEndpoint(t *testing.T) {
 
 func TestResolveLocalEndpoint_Error(t *testing.T) {
 	_, err := resolveLocalEndpoint(":::54321")
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "cannot parse")
 }

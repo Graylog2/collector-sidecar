@@ -19,27 +19,21 @@ package auth
 
 import (
 	"crypto/ed25519"
-	"crypto/rand"
-	"crypto/x509"
-	"crypto/x509/pkix"
-	"math/big"
 	"testing"
 	"time"
 
+	"github.com/Graylog2/collector-sidecar/superv/internal/testpki"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
 )
 
 func TestCreateSupervisorJWT(t *testing.T) {
-	pub, priv, err := ed25519.GenerateKey(rand.Reader)
-	require.NoError(t, err)
-
-	cert := createTestCert(t, pub)
+	cert := createTestCert(t)
 
 	instanceUID := "01HQ3K5V7X2M4N8P9R0S1T2U3V"
 	lifetime := 5 * time.Minute
 
-	token, err := CreateSupervisorJWT(priv, cert, instanceUID, lifetime)
+	token, err := CreateSupervisorJWT(cert.Key, cert.Cert, instanceUID, lifetime)
 	require.NoError(t, err)
 	require.NotEmpty(t, token)
 
@@ -47,14 +41,14 @@ func TestCreateSupervisorJWT(t *testing.T) {
 	certFP, claims, err := ParseSupervisorJWT(token)
 	require.NoError(t, err)
 
-	require.Equal(t, CertificateHexFingerprint(cert), certFP)
+	require.Equal(t, CertificateHexFingerprint(cert.Cert), certFP)
 	require.Equal(t, instanceUID, claims.Subject)
 	require.WithinDuration(t, time.Now(), claims.IssuedAt.Time, time.Second)
 	require.WithinDuration(t, time.Now().Add(lifetime), claims.ExpiresAt.Time, time.Second)
 
 	t.Run("SetsHeaders", func(t *testing.T) {
 		tk, _, err := jwt.NewParser().ParseUnverified(token, claims)
-		require.Nil(t, err)
+		require.NoError(t, err)
 
 		require.Len(t, tk.Header["x5t#S256"], 44)
 		require.Equal(t, "agent", tk.Header["ctt"])
@@ -62,34 +56,25 @@ func TestCreateSupervisorJWT(t *testing.T) {
 }
 
 func TestVerifySupervisorJWT(t *testing.T) {
-	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	cert := createTestCert(t)
+
+	token, err := CreateSupervisorJWT(cert.Key, cert.Cert, "test-uid", 5*time.Minute)
 	require.NoError(t, err)
 
-	cert := createTestCert(t, pub)
-
-	token, err := CreateSupervisorJWT(priv, cert, "test-uid", 5*time.Minute)
-	require.NoError(t, err)
-
-	err = VerifySupervisorJWT(token, cert)
+	err = VerifySupervisorJWT(token, cert.Cert)
 	require.NoError(t, err)
 }
 
 func TestVerifySupervisorJWT_WrongKey(t *testing.T) {
-	_, priv, err := ed25519.GenerateKey(rand.Reader)
-	require.NoError(t, err)
-
-	otherPub, _, err := ed25519.GenerateKey(rand.Reader)
-	require.NoError(t, err)
-
 	// Create cert with the signing key's public key
-	cert := createTestCert(t, priv.Public().(ed25519.PublicKey))
+	cert := createTestCert(t)
+	wrongCert := createTestCert(t)
 
-	token, err := CreateSupervisorJWT(priv, cert, "test-uid", 5*time.Minute)
+	token, err := CreateSupervisorJWT(cert.Key, cert.Cert, "test-uid", 5*time.Minute)
 	require.NoError(t, err)
 
 	// Try to verify with a cert containing different public key
-	wrongCert := createTestCert(t, otherPub)
-	err = VerifySupervisorJWT(token, wrongCert)
+	err = VerifySupervisorJWT(token, wrongCert.Cert)
 	require.Error(t, err)
 }
 
@@ -102,12 +87,10 @@ func TestParseSupervisorJWT_InvalidFormat(t *testing.T) {
 }
 
 func TestSupervisorClaims_IsExpired(t *testing.T) {
-	pub, priv, err := ed25519.GenerateKey(rand.Reader)
-	require.NoError(t, err)
-	cert := createTestCert(t, pub)
+	cert := createTestCert(t)
 
 	// Create an already expired token
-	token, err := CreateSupervisorJWT(priv, cert, "test", -time.Hour)
+	token, err := CreateSupervisorJWT(cert.Key, cert.Cert, "test", -time.Hour)
 	require.NoError(t, err)
 
 	_, claims, err := ParseSupervisorJWT(token)
@@ -115,7 +98,7 @@ func TestSupervisorClaims_IsExpired(t *testing.T) {
 	require.True(t, claims.IsExpired())
 
 	// Create a valid token
-	token2, err := CreateSupervisorJWT(priv, cert, "test", time.Hour)
+	token2, err := CreateSupervisorJWT(cert.Key, cert.Cert, "test", time.Hour)
 	require.NoError(t, err)
 
 	_, claims2, err := ParseSupervisorJWT(token2)
@@ -124,12 +107,10 @@ func TestSupervisorClaims_IsExpired(t *testing.T) {
 }
 
 func TestSupervisorClaims_IsExpiringSoon(t *testing.T) {
-	pub, priv, err := ed25519.GenerateKey(rand.Reader)
-	require.NoError(t, err)
-	cert := createTestCert(t, pub)
+	cert := createTestCert(t)
 
 	// Create token expiring in 30 minutes
-	token, err := CreateSupervisorJWT(priv, cert, "test", 30*time.Minute)
+	token, err := CreateSupervisorJWT(cert.Key, cert.Cert, "test", 30*time.Minute)
 	require.NoError(t, err)
 
 	_, claims, err := ParseSupervisorJWT(token)
@@ -148,65 +129,29 @@ func TestBearerToken(t *testing.T) {
 }
 
 func TestCertificateFingerprint(t *testing.T) {
-	seed := make([]byte, ed25519.SeedSize) // Deterministic for testing
-
-	priv := ed25519.NewKeyFromSeed(seed)
-	pub, ok := priv.Public().(ed25519.PublicKey)
-	require.True(t, ok)
-
 	// Create a certificate that always has the same fingerprint.
-	template := &x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Subject: pkix.Name{
-			CommonName: "test-instance-uid",
-		},
-		NotBefore: time.UnixMilli(0),
-		NotAfter:  time.UnixMilli(10),
-		KeyUsage:  x509.KeyUsageDigitalSignature,
-	}
-
-	// Self-sign the certificate
-	signPriv := ed25519.NewKeyFromSeed(seed)
-	certDER, err := x509.CreateCertificate(rand.Reader, template, template, pub, signPriv)
-	require.NoError(t, err)
-
-	cert, err := x509.ParseCertificate(certDER)
-	require.NoError(t, err)
+	cert := testpki.GenerateTestCert(t,
+		testpki.WithSubject("test-instance-uid"),
+		testpki.WithSeed(make([]byte, ed25519.SeedSize)),
+		testpki.WithNotBefore(time.UnixMilli(0)),
+		testpki.WithNotAfter(time.UnixMilli(10)))
 
 	t.Run("Hex", func(t *testing.T) {
-		fp := CertificateHexFingerprint(cert)
+		fp := CertificateHexFingerprint(cert.Cert)
 		require.NotEmpty(t, fp)
-		require.Equal(t, "02438c90d57d85802339a884786ffaf1f638e272b9ceebc6018ad474d45f22fa", fp)
+		require.Equal(t, "9a5a9c5a7e8309bf2c8d2952ba34151691a8e529a5b8c4da5214df7f822edcbb", fp)
 	})
 
 	t.Run("Base64URL", func(t *testing.T) {
-		fp := CertificateB64URLFingerprint(cert)
+		fp := CertificateB64URLFingerprint(cert.Cert)
 		require.NotEmpty(t, fp)
-		require.Equal(t, "AkOMkNV9hYAjOaiEeG_68fY44nK5zuvGAYrUdNRfIvo=", fp)
+		require.Equal(t, "mlqcWn6DCb8sjSlSujQVFpGo5SmluMTaUhTff4Iu3Ls=", fp)
 	})
 }
 
 // createTestCert creates a self-signed certificate for testing.
-func createTestCert(t *testing.T, pub ed25519.PublicKey) *x509.Certificate {
+func createTestCert(t *testing.T) testpki.Cert {
 	t.Helper()
 
-	template := &x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Subject: pkix.Name{
-			CommonName: "test-instance-uid",
-		},
-		NotBefore: time.Now(),
-		NotAfter:  time.Now().Add(24 * time.Hour),
-		KeyUsage:  x509.KeyUsageDigitalSignature,
-	}
-
-	// Self-sign the certificate
-	priv := ed25519.NewKeyFromSeed(make([]byte, ed25519.SeedSize)) // Deterministic for testing
-	certDER, err := x509.CreateCertificate(rand.Reader, template, template, pub, priv)
-	require.NoError(t, err)
-
-	cert, err := x509.ParseCertificate(certDER)
-	require.NoError(t, err)
-
-	return cert
+	return testpki.GenerateTestCert(t, testpki.WithSubject("test-instance-uid"))
 }

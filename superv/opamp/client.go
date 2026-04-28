@@ -156,7 +156,7 @@ func newLoggerFromZap(l *zap.Logger) types.Logger {
 	}
 }
 
-// Ensure opampLogger implements types.Logger
+// Ensure opampLogger implements types.Logger.
 var _ types.Logger = (*opampLogger)(nil)
 
 // Client wraps the opamp-go client with supervisor-specific functionality.
@@ -259,8 +259,7 @@ func (c *Client) Start(ctx context.Context) error {
 	}
 
 	// Set capabilities (must be after setting components if ReportsAvailableComponents is enabled)
-	caps := c.cfg.Capabilities.ToProto()
-	if err := c.opampClient.SetCapabilities(&caps); err != nil {
+	if err := c.opampClient.SetCapabilities(new(c.cfg.Capabilities.ToProto())); err != nil {
 		return fmt.Errorf("SetCapabilities: %w", err)
 	}
 
@@ -287,7 +286,7 @@ func (c *Client) Stop(ctx context.Context) error {
 	}
 	err := c.opampClient.Stop(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("stopping OpAMP client: %w", err)
 	}
 	c.started.Store(false)
 	return nil
@@ -296,13 +295,19 @@ func (c *Client) Stop(ctx context.Context) error {
 // SetAgentDescription updates the agent description.
 // Can be called before or after Start() — opamp-go stores state internally.
 func (c *Client) SetAgentDescription(desc *protobufs.AgentDescription) error {
-	return c.opampClient.SetAgentDescription(desc)
+	if err := c.opampClient.SetAgentDescription(desc); err != nil {
+		return fmt.Errorf("setting agent description: %w", err)
+	}
+	return nil
 }
 
 // SetHealth updates the agent health status.
 // Can be called before or after Start() — opamp-go stores state internally.
 func (c *Client) SetHealth(health *protobufs.ComponentHealth) error {
-	return c.opampClient.SetHealth(health)
+	if err := c.opampClient.SetHealth(health); err != nil {
+		return fmt.Errorf("setting health: %w", err)
+	}
+	return nil
 }
 
 // SetAvailableComponents updates the available components reported to the server.
@@ -311,10 +316,13 @@ func (c *Client) SetAvailableComponents(components *protobufs.AvailableComponent
 	if components == nil {
 		return fmt.Errorf("components cannot be nil")
 	}
-	if len(components.Hash) == 0 {
+	if len(components.GetHash()) == 0 {
 		return fmt.Errorf("components hash cannot be empty")
 	}
-	return c.opampClient.SetAvailableComponents(components)
+	if err := c.opampClient.SetAvailableComponents(components); err != nil {
+		return fmt.Errorf("setting available components: %w", err)
+	}
+	return nil
 }
 
 // SetEffectiveConfig updates the effective configuration reported to the server.
@@ -331,7 +339,10 @@ func (c *Client) SetEffectiveConfig(ctx context.Context, config map[string]*prot
 	}
 
 	// Trigger the OpAMP client to fetch and send the effective config via callback
-	return c.opampClient.UpdateEffectiveConfig(ctx)
+	if err := c.opampClient.UpdateEffectiveConfig(ctx); err != nil {
+		return fmt.Errorf("updating effective config: %w", err)
+	}
+	return nil
 }
 
 // UpdateEffectiveConfig updates the effective configuration.
@@ -339,7 +350,10 @@ func (c *Client) UpdateEffectiveConfig(ctx context.Context) error {
 	if !c.started.Load() {
 		return errors.New("client not started")
 	}
-	return c.opampClient.UpdateEffectiveConfig(ctx)
+	if err := c.opampClient.UpdateEffectiveConfig(ctx); err != nil {
+		return fmt.Errorf("updating effective config: %w", err)
+	}
+	return nil
 }
 
 // SetRemoteConfigStatus sets the remote config status.
@@ -347,7 +361,10 @@ func (c *Client) SetRemoteConfigStatus(status *protobufs.RemoteConfigStatus) err
 	if !c.started.Load() {
 		return errors.New("client not started")
 	}
-	return c.opampClient.SetRemoteConfigStatus(status)
+	if err := c.opampClient.SetRemoteConfigStatus(status); err != nil {
+		return fmt.Errorf("setting remote config status: %w", err)
+	}
+	return nil
 }
 
 // SetInitialRemoteConfigStatus sets the remote config status to include in
@@ -361,13 +378,16 @@ func (c *Client) SetInitialRemoteConfigStatus(status *protobufs.RemoteConfigStat
 // This is used for certificate enrollment — the csrPEM should be a PEM-encoded CSR.
 // Can be called before or after Start() — opamp-go stores state internally.
 func (c *Client) RequestConnectionSettings(csrPEM []byte) error {
-	return c.opampClient.RequestConnectionSettings(&protobufs.ConnectionSettingsRequest{
+	if err := c.opampClient.RequestConnectionSettings(&protobufs.ConnectionSettingsRequest{
 		Opamp: &protobufs.OpAMPConnectionSettingsRequest{
 			CertificateRequest: &protobufs.CertificateRequest{
 				Csr: csrPEM,
 			},
 		},
-	})
+	}); err != nil {
+		return fmt.Errorf("requesting connection settings: %w", err)
+	}
+	return nil
 }
 
 // parseInstanceUID parses a string as a UUID and returns a 16-byte InstanceUid.

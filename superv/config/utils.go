@@ -42,7 +42,7 @@ func DeriveEnrollmentEndpoint(enrollmentURL string) (string, error) {
 	}
 	path = cmp.Or(strings.TrimSuffix(path, "/"), DefaultOpAMPPath)
 	if !strings.HasSuffix(path, DefaultOpAMPPath) {
-		path = path + DefaultOpAMPPath
+		path += DefaultOpAMPPath
 	}
 
 	endpoint := &url.URL{

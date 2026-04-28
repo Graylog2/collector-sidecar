@@ -85,7 +85,7 @@ func Discover(ctx context.Context, cfg DiscoverConfig) (*Components, error) {
 	ctx, cancel := context.WithTimeout(ctx, cfg.Timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, cfg.Executable, "components")
+	cmd := exec.CommandContext(ctx, cfg.Executable, "components") //nolint:gosec // Trusted executable value
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("run components command: %w", err)
@@ -144,7 +144,7 @@ func (c *Components) ToProto() *protobufs.AvailableComponents {
 	}
 
 	// Compute hash of components
-	result.Hash = computeComponentsHash(result.Components)
+	result.Hash = computeComponentsHash(result.GetComponents())
 
 	return result
 }
@@ -205,7 +205,7 @@ func componentToDetails(comp Component) *protobufs.ComponentDetails {
 
 // splitModule splits a module string like "go.opentelemetry.io/collector/receiver/otlpreceiver v0.144.0"
 // into package and version parts.
-func splitModule(module string) (pkg, version string) {
+func splitModule(module string) (string, string) {
 	// Find the last space which separates package from version
 	idx := strings.LastIndex(module, " ")
 	if idx == -1 {

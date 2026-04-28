@@ -71,7 +71,7 @@ func ValidateEnrollmentJWT(tokenString string, keys []JWK) (*EnrollmentClaims, e
 		if errors.Is(err, jwt.ErrSignatureInvalid) {
 			return nil, errors.New("invalid JWT signature")
 		}
-		return nil, err
+		return nil, fmt.Errorf("parsing JWT: %w", err)
 	}
 
 	if !token.Valid {

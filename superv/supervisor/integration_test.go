@@ -366,9 +366,10 @@ func sendCSRViaOpAMP(t *testing.T, serverURL, instanceUID string, csrPEM []byte)
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
-	conn, _, err := dialer.Dial(wsURL, nil)
+	conn, resp, err := dialer.Dial(wsURL, nil)
 	require.NoError(t, err)
 	defer conn.Close()
+	defer resp.Body.Close()
 
 	// Create instance UID bytes (truncate or pad to 16 bytes)
 	uidBytes := make([]byte, 16)
@@ -402,10 +403,10 @@ func sendCSRViaOpAMP(t *testing.T, serverURL, instanceUID string, csrPEM []byte)
 	require.NoError(t, err)
 
 	// Verify we got a certificate back
-	require.NotNil(t, respMsg.ConnectionSettings, "expected connection settings in response")
-	require.NotNil(t, respMsg.ConnectionSettings.Opamp, "expected opamp settings in response")
-	require.NotNil(t, respMsg.ConnectionSettings.Opamp.Certificate, "expected certificate in response")
-	certPEM := respMsg.ConnectionSettings.Opamp.Certificate.Cert
+	require.NotNil(t, respMsg.GetConnectionSettings(), "expected connection settings in response")
+	require.NotNil(t, respMsg.GetConnectionSettings().GetOpamp(), "expected opamp settings in response")
+	require.NotNil(t, respMsg.GetConnectionSettings().GetOpamp().GetCertificate(), "expected certificate in response")
+	certPEM := respMsg.GetConnectionSettings().GetOpamp().GetCertificate().GetCert()
 	require.NotEmpty(t, certPEM, "expected non-empty certificate")
 
 	// Verify it's a valid PEM certificate

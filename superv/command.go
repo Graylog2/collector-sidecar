@@ -96,13 +96,12 @@ func buildConfig(cmd *cobra.Command) (config.Config, []func(logger *zap.Logger),
 			return config.Config{}, nil, fmt.Errorf("supervisor: %w", err)
 		}
 		configFile = file
-
 	}
 
 	if configFile != "" {
 		absPath, err := filepath.Abs(configFile)
 		if err != nil {
-			return config.Config{}, nil, err
+			return config.Config{}, nil, fmt.Errorf("resolving config path: %w", err)
 		}
 		configFile = absPath
 
@@ -117,7 +116,7 @@ func buildConfig(cmd *cobra.Command) (config.Config, []func(logger *zap.Logger),
 
 	cfg, err := config.Load(configFile)
 	if err != nil {
-		return config.Config{}, nil, err
+		return config.Config{}, nil, fmt.Errorf("loading config: %w", err)
 	}
 
 	if cmd.Flag("endpoint").Changed {
@@ -181,7 +180,7 @@ func buildConfig(cmd *cobra.Command) (config.Config, []func(logger *zap.Logger),
 	if isDev, _ := cmd.Flags().GetBool("dev"); isDev {
 		absPath, err := filepath.Abs("./data")
 		if err != nil {
-			return config.Config{}, nil, err
+			return config.Config{}, nil, fmt.Errorf("resolving dev data path: %w", err)
 		}
 		cfg.Persistence.Dir = filepath.Join(absPath, "supervisor")
 		cfg.Agent.StorageDir = filepath.Join(absPath, "storage")

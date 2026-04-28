@@ -169,10 +169,9 @@ func (s *SettingsManager) GetCurrent() Settings {
 
 // SetCurrent updates the current settings. Clones the provided settings to ensure immutability.
 func (s *SettingsManager) SetCurrent(settings Settings) {
-	newCurrent := settings.clone()
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.current = &newCurrent
+	s.current = new(settings.clone())
 }
 
 // SettingsChanged compares the provided OpAMP settings with the current settings and returns a new Settings struct
@@ -254,7 +253,10 @@ func (s *SettingsManager) TryLoadPersisted() (Settings, bool, error) {
 }
 
 func (s *SettingsManager) Persist(settings Settings) error {
-	return persistence.WriteYAMLFile(".", s.filePath, &settings)
+	if err := persistence.WriteYAMLFile(".", s.filePath, &settings); err != nil {
+		return fmt.Errorf("persist settings: %w", err)
+	}
+	return nil
 }
 
 // StageNext stages the provided settings but does not yet make them current. This allows the caller to persist the
@@ -276,9 +278,9 @@ func convertProtoHeaders(h *protobufs.Headers) map[string]string {
 	if h == nil {
 		return nil
 	}
-	result := make(map[string]string, len(h.Headers))
-	for _, header := range h.Headers {
-		result[header.Key] = header.Value
+	result := make(map[string]string, len(h.GetHeaders()))
+	for _, header := range h.GetHeaders() {
+		result[header.GetKey()] = header.GetValue()
 	}
 	return result
 }

@@ -85,5 +85,8 @@ func (stage *stagedUnixFile) Cleanup() error {
 // writeFileAtomic writes content to path atomically using renameio.
 // This provides safe atomic writes on Unix systems.
 func writeFileAtomic(path string, content []byte, perm fs.FileMode) error {
-	return renameio.WriteFile(path, content, perm)
+	if err := renameio.WriteFile(path, content, perm); err != nil {
+		return fmt.Errorf("writing file atomically: %w", err)
+	}
+	return nil
 }

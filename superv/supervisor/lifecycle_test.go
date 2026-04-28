@@ -59,8 +59,8 @@ func newTestSupervisor(t *testing.T) *Supervisor {
 		logger:                    zaptest.NewLogger(t),
 		connectionSettingsManager: connection.NewSettingsManager(zaptest.NewLogger(t), t.TempDir()),
 		workQueue:                 make(chan workFunc),
-		workCtx:                   ctx,
-		workCancel:                cancel,
+		ctx:                       ctx,
+		cancel:                    cancel,
 	}
 	s.connectionSettingsManager.SetCurrent(connection.Settings{
 		Endpoint: "ws://stub.invalid/v1/opamp",
@@ -86,7 +86,7 @@ func newTestSupervisor(t *testing.T) *Supervisor {
 func TestReconnectClient_StopDuringReconnect(t *testing.T) {
 	s := newTestSupervisor(t)
 	s.opampClient = newStubClient(t)
-	s.running = true
+	s.isRunning.Store(true)
 
 	entered := make(chan struct{})
 	barrier := make(chan struct{})
@@ -111,7 +111,7 @@ func TestReconnectClient_StopDuringReconnect(t *testing.T) {
 	// Wait until the factory is entered (createClientFunc is running).
 	<-entered
 
-	// Stop() in a goroutine — it will cancel workCtx and nil out opampClient.
+	// Stop() in a goroutine — it will cancel s.ctx and nil out opampClient.
 	stopCtx, stopCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer stopCancel()
 	var stopErr error
@@ -120,10 +120,10 @@ func TestReconnectClient_StopDuringReconnect(t *testing.T) {
 		stopErr = s.Stop(stopCtx)
 	})
 
-	// Wait for workCtx to be cancelled, confirming Stop's critical section ran.
-	<-s.workCtx.Done()
+	// Wait for s.ctx to be cancelled, confirming Stop's critical section ran.
+	<-s.ctx.Done()
 
-	// Release the barrier — reconnectClient should see workCtx cancelled.
+	// Release the barrier — reconnectClient should see s.ctx cancelled.
 	close(barrier)
 
 	// Wait for both goroutines.
@@ -131,7 +131,7 @@ func TestReconnectClient_StopDuringReconnect(t *testing.T) {
 	stopDone.Wait()
 
 	require.NoError(t, stopErr)
-	assert.ErrorContains(t, reconnectErr, "supervisor stopped")
+	require.ErrorContains(t, reconnectErr, "supervisor stopped")
 
 	s.mu.RLock()
 	assert.Nil(t, s.opampClient)
@@ -156,19 +156,19 @@ func TestReconnectClient_DuringStartupWindow(t *testing.T) {
 }
 
 // TestReconnectClient_StopCompletesBeforeAssign verifies that when Stop()
-// fully completes its critical section before reconnectClient checks workCtx,
+// fully completes its critical section before reconnectClient checks s.ctx,
 // the new client is discarded.
 func TestReconnectClient_StopCompletesBeforeAssign(t *testing.T) {
 	s := newTestSupervisor(t)
 	s.opampClient = newStubClient(t)
-	s.running = true
+	s.isRunning.Store(true)
 
 	stopCtx, stopCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer stopCancel()
 
 	s.createClientFunc = func(_ context.Context, _ connection.Settings) (*opamp.Client, error) {
 		// Call Stop synchronously inside the factory. This means by the time
-		// reconnectClient checks workCtx, Stop has already cancelled it.
+		// reconnectClient checks s.ctx, Stop has already cancelled it.
 		err := s.Stop(stopCtx)
 		require.NoError(t, err)
 		return newStubClient(t), nil
@@ -178,7 +178,7 @@ func TestReconnectClient_StopCompletesBeforeAssign(t *testing.T) {
 	settings := s.connectionSettingsManager.GetCurrent()
 	err := s.reconnectClient(context.Background(), settings)
 
-	assert.ErrorContains(t, err, "supervisor stopped")
+	require.ErrorContains(t, err, "supervisor stopped")
 
 	s.mu.RLock()
 	assert.Nil(t, s.opampClient)
@@ -190,8 +190,8 @@ func TestReconnectClient_StopCompletesBeforeAssign(t *testing.T) {
 func TestEnqueueWork_WorkerStopped(t *testing.T) {
 	s := newTestSupervisor(t)
 
-	s.workCancel()
-	<-s.workCtx.Done()
+	s.cancel()
+	<-s.ctx.Done()
 
 	ok := s.enqueueWork(context.Background(), func(context.Context) {
 		t.Fatal("work item should not run after worker shutdown")
@@ -262,11 +262,11 @@ func TestIntegration_StopDuringConnectionSettingsUpdate(t *testing.T) {
 		logger:                    logger,
 		connectionSettingsManager: connection.NewSettingsManager(logger, t.TempDir()),
 		workQueue:                 make(chan workFunc),
-		workCtx:                   ctx,
-		workCancel:                cancel,
+		ctx:                       ctx,
+		cancel:                    cancel,
 		opampClient:               initialClient,
-		running:                   true,
 	}
+	s.isRunning.Store(true)
 	s.connectionSettingsManager.SetCurrent(connection.Settings{
 		Endpoint: httpURL,
 		TLS:      connection.TLSSettings{Insecure: true},
@@ -312,10 +312,10 @@ func TestIntegration_StopDuringConnectionSettingsUpdate(t *testing.T) {
 		stopErr = s.Stop(stopCtx)
 	})
 
-	// 9. Wait for workCtx to be cancelled (Stop's critical section completed).
-	<-s.workCtx.Done()
+	// 9. Wait for s.ctx to be cancelled (Stop's critical section completed).
+	<-s.ctx.Done()
 
-	// 10. Release the barrier — reconnectClient will see workCtx cancelled.
+	// 10. Release the barrier — reconnectClient will see s.ctx cancelled.
 	close(barrier)
 
 	// 11. Wait for both goroutines.
@@ -323,7 +323,7 @@ func TestIntegration_StopDuringConnectionSettingsUpdate(t *testing.T) {
 	stopDone.Wait()
 
 	require.NoError(t, stopErr)
-	assert.ErrorContains(t, reconnectErr, "supervisor stopped")
+	require.ErrorContains(t, reconnectErr, "supervisor stopped")
 
 	s.mu.RLock()
 	assert.Nil(t, s.opampClient)

@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Graylog2/collector-sidecar/superv/internal/testpki"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zapcore"
@@ -41,7 +42,7 @@ func TestNewCoreFromFile_NoFile(t *testing.T) {
 
 func TestNewCoreFromFile_ValidFile(t *testing.T) {
 	dir := t.TempDir()
-	certPath, keyPath := writeTestClientCert(t)
+	certPath, keyPath := writeClientCredentials(t, testpki.GenerateTestCert(t))
 
 	// Write a valid own-logs.yaml via Persistence
 	p := NewPersistence(dir, certPath, keyPath)
@@ -83,7 +84,7 @@ func TestNewCoreFromFile_InvalidYAML(t *testing.T) {
 
 func TestNewCoreFromFile_ShutdownIdempotent(t *testing.T) {
 	dir := t.TempDir()
-	certPath, keyPath := writeTestClientCert(t)
+	certPath, keyPath := writeClientCredentials(t, testpki.GenerateTestCert(t))
 
 	p := NewPersistence(dir, certPath, keyPath)
 	err := p.Save(Settings{

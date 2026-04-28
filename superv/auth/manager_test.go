@@ -22,17 +22,16 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
-	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/Graylog2/collector-sidecar/superv/internal/testpki"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
@@ -41,16 +40,14 @@ import (
 )
 
 func TestManager_GetSigningKeyPath(t *testing.T) {
-	logger := zaptest.NewLogger(t)
-	m := NewManager(logger, ManagerConfig{KeysDir: "/tmp/test-keys"})
+	m := NewManager(zaptest.NewLogger(t), ManagerConfig{KeysDir: "/tmp/test-keys"})
 
 	got := m.GetSigningKeyPath()
 	require.Equal(t, filepath.Join("/tmp/test-keys", persistence.SigningKeyFile), got)
 }
 
 func TestManager_GetSigningCertPath(t *testing.T) {
-	logger := zaptest.NewLogger(t)
-	m := NewManager(logger, ManagerConfig{KeysDir: "/tmp/test-keys"})
+	m := NewManager(zaptest.NewLogger(t), ManagerConfig{KeysDir: "/tmp/test-keys"})
 
 	got := m.GetSigningCertPath()
 	require.Equal(t, filepath.Join("/tmp/test-keys", persistence.SigningCertFile), got)
@@ -60,19 +57,19 @@ func TestManager_IsEnrolled(t *testing.T) {
 	dir := t.TempDir()
 	keysDir := filepath.Join(dir, "keys")
 
-	logger := zaptest.NewLogger(t)
-	m := NewManager(logger, ManagerConfig{KeysDir: keysDir})
+	m := NewManager(zaptest.NewLogger(t), ManagerConfig{KeysDir: keysDir})
 
 	// Initially not enrolled
 	require.False(t, m.IsEnrolled())
 
-	// Create keys and cert
-	_, priv, _ := ed25519.GenerateKey(rand.Reader)
-	_ = persistence.SaveSigningKey(keysDir, priv)
+	cert := testpki.GenerateTestCert(t)
+
+	require.NoError(t, persistence.SaveSigningKey(keysDir, cert.Key))
+
 	require.False(t, m.IsEnrolled()) // Still missing cert
 
-	cert := createManagerTestCert(t, priv.Public().(ed25519.PublicKey))
-	_ = persistence.SaveCertificate(keysDir, cert)
+	require.NoError(t, persistence.SaveCertificate(keysDir, cert.Cert))
+
 	require.True(t, m.IsEnrolled())
 }
 
@@ -80,28 +77,23 @@ func TestManager_LoadCredentials(t *testing.T) {
 	dir := t.TempDir()
 	keysDir := filepath.Join(dir, "keys")
 
-	// Create credentials
-	_, priv, _ := ed25519.GenerateKey(rand.Reader)
-	_ = persistence.SaveSigningKey(keysDir, priv)
-
-	cert := createManagerTestCert(t, priv.Public().(ed25519.PublicKey))
-	_ = persistence.SaveCertificate(keysDir, cert)
+	cert := testpki.GenerateTestCert(t)
+	require.NoError(t, persistence.SaveSigningKey(keysDir, cert.Key))
+	require.NoError(t, persistence.SaveCertificate(keysDir, cert.Cert))
 
 	// Load them
-	logger := zaptest.NewLogger(t)
-	m := NewManager(logger, ManagerConfig{KeysDir: keysDir})
+	m := NewManager(zaptest.NewLogger(t), ManagerConfig{KeysDir: keysDir})
 
 	err := m.LoadCredentials()
 	require.NoError(t, err)
 	require.NotNil(t, m.Certificate())
-	require.Equal(t, CertificateHexFingerprint(cert), m.CertFingerprint())
+	require.Equal(t, CertificateHexFingerprint(cert.Cert), m.CertFingerprint())
 }
 
 func TestManager_LoadCredentials_NotEnrolled(t *testing.T) {
 	dir := t.TempDir()
 
-	logger := zaptest.NewLogger(t)
-	m := NewManager(logger, ManagerConfig{KeysDir: dir})
+	m := NewManager(zaptest.NewLogger(t), ManagerConfig{KeysDir: dir})
 
 	err := m.LoadCredentials()
 	require.Error(t, err)
@@ -111,15 +103,11 @@ func TestManager_GenerateJWT(t *testing.T) {
 	dir := t.TempDir()
 	keysDir := filepath.Join(dir, "keys")
 
-	// Create credentials
-	_, priv, _ := ed25519.GenerateKey(rand.Reader)
-	_ = persistence.SaveSigningKey(keysDir, priv)
+	cert := testpki.GenerateTestCert(t, testpki.WithSubject("test-instance-uid"))
+	require.NoError(t, persistence.SaveSigningKey(keysDir, cert.Key))
+	require.NoError(t, persistence.SaveCertificate(keysDir, cert.Cert))
 
-	cert := createManagerTestCert(t, priv.Public().(ed25519.PublicKey))
-	_ = persistence.SaveCertificate(keysDir, cert)
-
-	logger := zaptest.NewLogger(t)
-	m := NewManager(logger, ManagerConfig{
+	m := NewManager(zaptest.NewLogger(t), ManagerConfig{
 		KeysDir:     keysDir,
 		JWTLifetime: 5 * time.Minute,
 	})
@@ -132,21 +120,20 @@ func TestManager_GenerateJWT(t *testing.T) {
 	require.NotEmpty(t, jwtToken)
 
 	// Verify the JWT
-	err = VerifySupervisorJWT(jwtToken, cert)
+	err = VerifySupervisorJWT(jwtToken, cert.Cert)
 	require.NoError(t, err)
 
 	// Parse and check claims
 	certFP, claims, err := ParseSupervisorJWT(jwtToken)
 	require.NoError(t, err)
 	require.Equal(t, "test-instance-uid", claims.Subject)
-	require.Equal(t, CertificateHexFingerprint(cert), certFP)
+	require.Equal(t, CertificateHexFingerprint(cert.Cert), certFP)
 }
 
 func TestManager_GenerateJWT_NotLoaded(t *testing.T) {
 	dir := t.TempDir()
 
-	logger := zaptest.NewLogger(t)
-	m := NewManager(logger, ManagerConfig{KeysDir: dir})
+	m := NewManager(zaptest.NewLogger(t), ManagerConfig{KeysDir: dir})
 
 	_, err := m.GenerateJWT()
 	require.Error(t, err)
@@ -157,20 +144,16 @@ func TestManager_GetAuthorizationHeader(t *testing.T) {
 	dir := t.TempDir()
 	keysDir := filepath.Join(dir, "keys")
 
-	// Create credentials
-	_, priv, _ := ed25519.GenerateKey(rand.Reader)
-	_ = persistence.SaveSigningKey(keysDir, priv)
+	cert := testpki.GenerateTestCert(t)
+	require.NoError(t, persistence.SaveSigningKey(keysDir, cert.Key))
+	require.NoError(t, persistence.SaveCertificate(keysDir, cert.Cert))
 
-	cert := createManagerTestCert(t, priv.Public().(ed25519.PublicKey))
-	_ = persistence.SaveCertificate(keysDir, cert)
-
-	logger := zaptest.NewLogger(t)
-	m := NewManager(logger, ManagerConfig{KeysDir: keysDir})
+	m := NewManager(zaptest.NewLogger(t), ManagerConfig{KeysDir: keysDir})
 	_ = m.LoadCredentials()
 
 	header, err := m.GetAuthorizationHeader()
 	require.NoError(t, err)
-	require.True(t, len(header) > 7)
+	require.Greater(t, len(header), 7)
 	require.Equal(t, "Bearer ", header[:7])
 }
 
@@ -197,7 +180,7 @@ func TestManager_PrepareAndCompleteEnrollment(t *testing.T) {
 				},
 			}
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(jwks)
+			_ = json.NewEncoder(w).Encode(jwks)
 
 		default:
 			w.WriteHeader(http.StatusNotFound)
@@ -212,8 +195,7 @@ func TestManager_PrepareAndCompleteEnrollment(t *testing.T) {
 		},
 	})
 
-	logger := zaptest.NewLogger(t)
-	m := NewManager(logger, ManagerConfig{
+	m := NewManager(zaptest.NewLogger(t), ManagerConfig{
 		KeysDir:    keysDir,
 		HTTPClient: server.Client(),
 	})
@@ -237,14 +219,10 @@ func TestManager_PrepareAndCompleteEnrollment(t *testing.T) {
 	require.Equal(t, "test-instance", csr.Subject.CommonName)
 
 	// Simulate server signing the CSR and returning a certificate
-	cert := signCSRForTest(t, csr)
-	certPEM := pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: cert.Raw,
-	})
+	cert := testpki.GenerateTestCert(t, testpki.WithCSR(csr))
 
 	// Phase 2: Complete enrollment with certificate from server
-	err = m.CompleteEnrollment(certPEM)
+	err = m.CompleteEnrollment(cert.CertPEM)
 	require.NoError(t, err)
 
 	// Verify enrollment completed
@@ -262,8 +240,7 @@ func TestManager_PrepareAndCompleteEnrollment(t *testing.T) {
 func TestManager_PrepareEnrollment_InvalidEndpoint(t *testing.T) {
 	dir := t.TempDir()
 
-	logger := zaptest.NewLogger(t)
-	m := NewManager(logger, ManagerConfig{KeysDir: dir})
+	m := NewManager(zaptest.NewLogger(t), ManagerConfig{KeysDir: dir})
 
 	_, err := m.PrepareEnrollment(context.Background(), "", "ey", "test-instance")
 	require.Error(t, err)
@@ -273,8 +250,7 @@ func TestManager_PrepareEnrollment_InvalidEndpoint(t *testing.T) {
 func TestManager_PrepareEnrollment_InvalidToken(t *testing.T) {
 	dir := t.TempDir()
 
-	logger := zaptest.NewLogger(t)
-	m := NewManager(logger, ManagerConfig{KeysDir: dir})
+	m := NewManager(zaptest.NewLogger(t), ManagerConfig{KeysDir: dir})
 
 	_, err := m.PrepareEnrollment(context.Background(), "https://example.com", "", "test-instance")
 	require.Error(t, err)
@@ -284,8 +260,7 @@ func TestManager_PrepareEnrollment_InvalidToken(t *testing.T) {
 func TestManager_CompleteEnrollment_NoPending(t *testing.T) {
 	dir := t.TempDir()
 
-	logger := zaptest.NewLogger(t)
-	m := NewManager(logger, ManagerConfig{KeysDir: dir})
+	m := NewManager(zaptest.NewLogger(t), ManagerConfig{KeysDir: dir})
 
 	// Try to complete without preparing first
 	err := m.CompleteEnrollment([]byte("some-cert"))
@@ -293,96 +268,8 @@ func TestManager_CompleteEnrollment_NoPending(t *testing.T) {
 	require.ErrorContains(t, err, "no pending enrollment")
 }
 
-// signCSRForTest signs a CSR and returns a certificate (for testing).
-func signCSRForTest(t *testing.T, csr *x509.CertificateRequest) *x509.Certificate {
-	t.Helper()
-
-	// Generate CA key for signing
-	_, caPriv, _ := ed25519.GenerateKey(rand.Reader)
-
-	template := &x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Subject:      csr.Subject,
-		NotBefore:    time.Now(),
-		NotAfter:     time.Now().Add(24 * time.Hour),
-		KeyUsage:     x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
-	}
-
-	caTemplate := &x509.Certificate{
-		SerialNumber:          big.NewInt(1),
-		Subject:               pkix.Name{CommonName: "Test CA"},
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(365 * 24 * time.Hour),
-		IsCA:                  true,
-		KeyUsage:              x509.KeyUsageCertSign,
-		BasicConstraintsValid: true,
-	}
-
-	certDER, err := x509.CreateCertificate(rand.Reader, template, caTemplate, csr.PublicKey, caPriv)
-	require.NoError(t, err)
-
-	cert, err := x509.ParseCertificate(certDER)
-	require.NoError(t, err)
-
-	return cert
-}
-
-// createManagerTestCert creates a self-signed certificate for testing.
-func createManagerTestCert(t *testing.T, pub ed25519.PublicKey) *x509.Certificate {
-	t.Helper()
-
-	// Use a deterministic private key for self-signing
-	seed := make([]byte, ed25519.SeedSize)
-	priv := ed25519.NewKeyFromSeed(seed)
-
-	return createManagerTestCertWithKey(t, pub, priv)
-}
-
-func createManagerTestCertWithKey(t *testing.T, pub ed25519.PublicKey, signingKey ed25519.PrivateKey) *x509.Certificate {
-	t.Helper()
-
-	template := &x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Subject: pkix.Name{
-			CommonName: "test-instance-uid",
-		},
-		NotBefore: time.Now(),
-		NotAfter:  time.Now().Add(24 * time.Hour),
-		KeyUsage:  x509.KeyUsageDigitalSignature,
-	}
-
-	certDER, err := x509.CreateCertificate(rand.Reader, template, template, pub, signingKey)
-	require.NoError(t, err)
-
-	cert, err := x509.ParseCertificate(certDER)
-	require.NoError(t, err)
-
-	return cert
-}
-
-func createManagerTestCertWithValidity(t *testing.T, pub ed25519.PublicKey, notBefore, notAfter time.Time) *x509.Certificate {
-	t.Helper()
-	seed := make([]byte, ed25519.SeedSize)
-	signingKey := ed25519.NewKeyFromSeed(seed)
-	template := &x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Subject:      pkix.Name{CommonName: "test-instance-uid"},
-		NotBefore:    notBefore,
-		NotAfter:     notAfter,
-		KeyUsage:     x509.KeyUsageDigitalSignature,
-	}
-	certDER, err := x509.CreateCertificate(rand.Reader, template, template, pub, signingKey)
-	require.NoError(t, err)
-	cert, err := x509.ParseCertificate(certDER)
-	require.NoError(t, err)
-	return cert
-}
-
 func TestManager_CertificateNeedsRenewal(t *testing.T) {
 	logger := zaptest.NewLogger(t)
-	_, pub, _ := ed25519.GenerateKey(rand.Reader)
-	pubKey := pub.Public().(ed25519.PublicKey)
 
 	t.Run("no cert loaded returns false", func(t *testing.T) {
 		m := NewManager(logger, ManagerConfig{})
@@ -391,10 +278,12 @@ func TestManager_CertificateNeedsRenewal(t *testing.T) {
 
 	t.Run("cert valid now to now+24h fraction 0.75 returns false", func(t *testing.T) {
 		now := time.Now()
-		cert := createManagerTestCertWithValidity(t, pubKey, now, now.Add(24*time.Hour))
+		cert := testpki.GenerateTestCert(t,
+			testpki.WithNotBefore(now),
+			testpki.WithNotAfter(now.Add(24*time.Hour)))
 		m := NewManager(logger, ManagerConfig{})
 		m.mu.Lock()
-		m.certificate = cert
+		m.certificate = cert.Cert
 		m.mu.Unlock()
 		// threshold is now + 18h, which is in the future
 		require.False(t, m.CertificateNeedsRenewal(0.75))
@@ -402,10 +291,12 @@ func TestManager_CertificateNeedsRenewal(t *testing.T) {
 
 	t.Run("cert valid from 24h ago to 1h from now fraction 0.75 returns true", func(t *testing.T) {
 		now := time.Now()
-		cert := createManagerTestCertWithValidity(t, pubKey, now.Add(-24*time.Hour), now.Add(time.Hour))
+		cert := testpki.GenerateTestCert(t,
+			testpki.WithNotBefore(now.Add(-24*time.Hour)),
+			testpki.WithNotAfter(now.Add(time.Hour)))
 		m := NewManager(logger, ManagerConfig{})
 		m.mu.Lock()
-		m.certificate = cert
+		m.certificate = cert.Cert
 		m.mu.Unlock()
 		// lifetime = 25h, threshold = -24h + 0.75*25h = -24h + 18.75h = -5.25h (in the past)
 		require.True(t, m.CertificateNeedsRenewal(0.75))
@@ -413,10 +304,12 @@ func TestManager_CertificateNeedsRenewal(t *testing.T) {
 
 	t.Run("expired cert returns true", func(t *testing.T) {
 		now := time.Now()
-		cert := createManagerTestCertWithValidity(t, pubKey, now.Add(-48*time.Hour), now.Add(-1*time.Hour))
+		cert := testpki.GenerateTestCert(t,
+			testpki.WithNotBefore(now.Add(-48*time.Hour)),
+			testpki.WithNotAfter(now.Add(-1*time.Hour)))
 		m := NewManager(logger, ManagerConfig{})
 		m.mu.Lock()
-		m.certificate = cert
+		m.certificate = cert.Cert
 		m.mu.Unlock()
 		require.True(t, m.CertificateNeedsRenewal(0.75))
 	})
@@ -424,8 +317,6 @@ func TestManager_CertificateNeedsRenewal(t *testing.T) {
 
 func TestManager_CertificateExpired(t *testing.T) {
 	logger := zaptest.NewLogger(t)
-	_, pub, _ := ed25519.GenerateKey(rand.Reader)
-	pubKey := pub.Public().(ed25519.PublicKey)
 
 	t.Run("no cert loaded returns false", func(t *testing.T) {
 		m := NewManager(logger, ManagerConfig{})
@@ -434,20 +325,24 @@ func TestManager_CertificateExpired(t *testing.T) {
 
 	t.Run("cert not expired returns false", func(t *testing.T) {
 		now := time.Now()
-		cert := createManagerTestCertWithValidity(t, pubKey, now, now.Add(24*time.Hour))
+		cert := testpki.GenerateTestCert(t,
+			testpki.WithNotBefore(now),
+			testpki.WithNotAfter(now.Add(24*time.Hour)))
 		m := NewManager(logger, ManagerConfig{})
 		m.mu.Lock()
-		m.certificate = cert
+		m.certificate = cert.Cert
 		m.mu.Unlock()
 		require.False(t, m.CertificateExpired())
 	})
 
 	t.Run("cert expired returns true", func(t *testing.T) {
 		now := time.Now()
-		cert := createManagerTestCertWithValidity(t, pubKey, now.Add(-48*time.Hour), now.Add(-1*time.Hour))
+		cert := testpki.GenerateTestCert(t,
+			testpki.WithNotBefore(now.Add(-48*time.Hour)),
+			testpki.WithNotAfter(now.Add(-1*time.Hour)))
 		m := NewManager(logger, ManagerConfig{})
 		m.mu.Lock()
-		m.certificate = cert
+		m.certificate = cert.Cert
 		m.mu.Unlock()
 		require.True(t, m.CertificateExpired())
 	})
@@ -470,12 +365,11 @@ func TestManager_PrepareRenewal(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create cert with Organization
-	cert := createManagerTestCert(t, signingPriv.Public().(ed25519.PublicKey))
-	err = persistence.SaveCertificate(keysDir, cert)
+	cert := testpki.GenerateTestCert(t)
+	err = persistence.SaveCertificate(keysDir, cert.Cert)
 	require.NoError(t, err)
 
-	logger := zaptest.NewLogger(t)
-	m := NewManager(logger, ManagerConfig{KeysDir: keysDir})
+	m := NewManager(zaptest.NewLogger(t), ManagerConfig{KeysDir: keysDir})
 	err = m.LoadCredentials()
 	require.NoError(t, err)
 
@@ -512,8 +406,7 @@ func TestManager_PrepareRenewal(t *testing.T) {
 func TestManager_PrepareRenewal_NotLoaded(t *testing.T) {
 	dir := t.TempDir()
 
-	logger := zaptest.NewLogger(t)
-	m := NewManager(logger, ManagerConfig{KeysDir: dir})
+	m := NewManager(zaptest.NewLogger(t), ManagerConfig{KeysDir: dir})
 
 	_, err := m.PrepareRenewal("test-instance-uid")
 	require.Error(t, err)
@@ -530,28 +423,32 @@ func TestManager_CompleteRenewal(t *testing.T) {
 	require.NoError(t, err)
 
 	now := time.Now()
-	oldCert := createManagerTestCertWithValidity(t, priv.Public().(ed25519.PublicKey), now.Add(-24*time.Hour), now.Add(time.Hour))
-	err = persistence.SaveCertificate(keysDir, oldCert)
+	oldCert := testpki.GenerateTestCert(t,
+		testpki.WithPrivateKey(priv),
+		testpki.WithNotBefore(now.Add(-24*time.Hour)),
+		testpki.WithNotAfter(now.Add(time.Hour)))
+	err = persistence.SaveCertificate(keysDir, oldCert.Cert)
 	require.NoError(t, err)
 
-	logger := zaptest.NewLogger(t)
-	m := NewManager(logger, ManagerConfig{KeysDir: keysDir})
+	m := NewManager(zaptest.NewLogger(t), ManagerConfig{KeysDir: keysDir})
 	err = m.LoadCredentials()
 	require.NoError(t, err)
 
-	newCert := createManagerTestCertWithValidity(t, priv.Public().(ed25519.PublicKey), now, now.Add(24*time.Hour))
-	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: newCert.Raw})
+	newCert := testpki.GenerateTestCert(t,
+		testpki.WithPrivateKey(priv),
+		testpki.WithNotBefore(now),
+		testpki.WithNotAfter(now.Add(24*time.Hour)))
 
-	err = m.CompleteRenewal(certPEM)
+	err = m.CompleteRenewal(newCert.CertPEM)
 	require.NoError(t, err)
 
 	// In-memory certificate updated
-	require.Equal(t, newCert.NotAfter.Unix(), m.Certificate().NotAfter.Unix())
+	require.Equal(t, newCert.Cert.NotAfter.Unix(), m.Certificate().NotAfter.Unix())
 
 	// Persisted certificate updated
 	persisted, err := persistence.LoadCertificate(keysDir)
 	require.NoError(t, err)
-	require.Equal(t, newCert.NotAfter.Unix(), persisted.NotAfter.Unix())
+	require.Equal(t, newCert.Cert.NotAfter.Unix(), persisted.NotAfter.Unix())
 }
 
 func TestManager_CompleteRenewal_WrongKey(t *testing.T) {
@@ -564,27 +461,31 @@ func TestManager_CompleteRenewal_WrongKey(t *testing.T) {
 	require.NoError(t, err)
 
 	now := time.Now()
-	oldCert := createManagerTestCertWithValidity(t, priv.Public().(ed25519.PublicKey), now.Add(-24*time.Hour), now.Add(time.Hour))
-	err = persistence.SaveCertificate(keysDir, oldCert)
+	oldCert := testpki.GenerateTestCert(t,
+		testpki.WithPrivateKey(priv),
+		testpki.WithNotBefore(now.Add(-24*time.Hour)),
+		testpki.WithNotAfter(now.Add(1*time.Hour)))
+	err = persistence.SaveCertificate(keysDir, oldCert.Cert)
 	require.NoError(t, err)
 
-	logger := zaptest.NewLogger(t)
-	m := NewManager(logger, ManagerConfig{KeysDir: keysDir})
+	m := NewManager(zaptest.NewLogger(t), ManagerConfig{KeysDir: keysDir})
 	err = m.LoadCredentials()
 	require.NoError(t, err)
 
 	// Create cert with a different key
 	_, differentPriv, err := GenerateSigningKeypair()
 	require.NoError(t, err)
-	newCert := createManagerTestCertWithValidity(t, differentPriv.Public().(ed25519.PublicKey), now, now.Add(48*time.Hour))
-	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: newCert.Raw})
+	newCert := testpki.GenerateTestCert(t,
+		testpki.WithPrivateKey(differentPriv),
+		testpki.WithNotBefore(now),
+		testpki.WithNotAfter(now.Add(48*time.Hour)))
 
-	err = m.CompleteRenewal(certPEM)
+	err = m.CompleteRenewal(newCert.CertPEM)
 	require.Error(t, err)
 	require.ErrorContains(t, err, "public key mismatch")
 
 	// Old cert still loaded
-	require.Equal(t, oldCert.NotAfter.Unix(), m.Certificate().NotAfter.Unix())
+	require.Equal(t, oldCert.Cert.NotAfter.Unix(), m.Certificate().NotAfter.Unix())
 }
 
 func TestManager_CompleteRenewal_NotAfterNotExtended(t *testing.T) {
@@ -597,25 +498,29 @@ func TestManager_CompleteRenewal_NotAfterNotExtended(t *testing.T) {
 	require.NoError(t, err)
 
 	now := time.Now()
-	oldCert := createManagerTestCertWithValidity(t, priv.Public().(ed25519.PublicKey), now.Add(-24*time.Hour), now.Add(time.Hour))
-	err = persistence.SaveCertificate(keysDir, oldCert)
+	oldCert := testpki.GenerateTestCert(t,
+		testpki.WithPrivateKey(priv),
+		testpki.WithNotBefore(now.Add(-24*time.Hour)),
+		testpki.WithNotAfter(now.Add(time.Hour)))
+	err = persistence.SaveCertificate(keysDir, oldCert.Cert)
 	require.NoError(t, err)
 
-	logger := zaptest.NewLogger(t)
-	m := NewManager(logger, ManagerConfig{KeysDir: keysDir})
+	m := NewManager(zaptest.NewLogger(t), ManagerConfig{KeysDir: keysDir})
 	err = m.LoadCredentials()
 	require.NoError(t, err)
 
 	// New cert with same NotAfter as old cert
-	newCert := createManagerTestCertWithValidity(t, priv.Public().(ed25519.PublicKey), now, oldCert.NotAfter)
-	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: newCert.Raw})
+	newCert := testpki.GenerateTestCert(t,
+		testpki.WithPrivateKey(priv),
+		testpki.WithNotBefore(now),
+		testpki.WithNotAfter(oldCert.Cert.NotAfter))
 
-	err = m.CompleteRenewal(certPEM)
+	err = m.CompleteRenewal(newCert.CertPEM)
 	require.Error(t, err)
 	require.ErrorContains(t, err, "NotAfter")
 
 	// Old cert still loaded
-	require.Equal(t, oldCert.NotAfter.Unix(), m.Certificate().NotAfter.Unix())
+	require.Equal(t, oldCert.Cert.NotAfter.Unix(), m.Certificate().NotAfter.Unix())
 }
 
 func TestManager_CompleteRenewal_InvalidPEM(t *testing.T) {
@@ -628,12 +533,14 @@ func TestManager_CompleteRenewal_InvalidPEM(t *testing.T) {
 	require.NoError(t, err)
 
 	now := time.Now()
-	oldCert := createManagerTestCertWithValidity(t, priv.Public().(ed25519.PublicKey), now.Add(-24*time.Hour), now.Add(time.Hour))
-	err = persistence.SaveCertificate(keysDir, oldCert)
+	oldCert := testpki.GenerateTestCert(t,
+		testpki.WithPrivateKey(priv),
+		testpki.WithNotBefore(now.Add(-24*time.Hour)),
+		testpki.WithNotAfter(now.Add(time.Hour)))
+	err = persistence.SaveCertificate(keysDir, oldCert.Cert)
 	require.NoError(t, err)
 
-	logger := zaptest.NewLogger(t)
-	m := NewManager(logger, ManagerConfig{KeysDir: keysDir})
+	m := NewManager(zaptest.NewLogger(t), ManagerConfig{KeysDir: keysDir})
 	err = m.LoadCredentials()
 	require.NoError(t, err)
 
@@ -645,33 +552,27 @@ func TestManager_CompleteRenewal_InvalidPEM(t *testing.T) {
 func TestManager_CompleteRenewal_ChangedCommonName(t *testing.T) {
 	dir := t.TempDir()
 	keysDir := filepath.Join(dir, "keys")
-	logger := zaptest.NewLogger(t)
-
 	_, priv, err := ed25519.GenerateKey(rand.Reader)
 	require.NoError(t, err)
 	require.NoError(t, persistence.SaveSigningKey(keysDir, priv))
 
-	oldCert := createManagerTestCertWithValidity(t, priv.Public().(ed25519.PublicKey), time.Now(), time.Now().Add(1*time.Hour))
-	require.NoError(t, persistence.SaveCertificate(keysDir, oldCert))
+	now := time.Now()
+	oldCert := testpki.GenerateTestCert(t,
+		testpki.WithPrivateKey(priv),
+		testpki.WithNotBefore(now),
+		testpki.WithNotAfter(now.Add(time.Hour)))
+	require.NoError(t, persistence.SaveCertificate(keysDir, oldCert.Cert))
 
-	m := NewManager(logger, ManagerConfig{KeysDir: keysDir})
+	m := NewManager(zaptest.NewLogger(t), ManagerConfig{KeysDir: keysDir})
 	require.NoError(t, m.LoadCredentials())
 
-	// Create new cert with different CN but same key
-	seed := make([]byte, ed25519.SeedSize)
-	signingKey := ed25519.NewKeyFromSeed(seed)
-	template := &x509.Certificate{
-		SerialNumber: big.NewInt(2),
-		Subject:      pkix.Name{CommonName: "different-uid"},
-		NotBefore:    time.Now(),
-		NotAfter:     time.Now().Add(48 * time.Hour),
-		KeyUsage:     x509.KeyUsageDigitalSignature,
-	}
-	certDER, err := x509.CreateCertificate(rand.Reader, template, template, priv.Public(), signingKey)
-	require.NoError(t, err)
-	newCertPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+	newCert := testpki.GenerateTestCert(t,
+		testpki.WithSubject("different-uid"),
+		testpki.WithPrivateKey(priv),
+		testpki.WithNotBefore(now),
+		testpki.WithNotAfter(now.Add(time.Hour)))
 
-	err = m.CompleteRenewal(newCertPEM)
+	err = m.CompleteRenewal(newCert.CertPEM)
 	require.Error(t, err)
 	require.ErrorContains(t, err, "CommonName changed")
 }
@@ -679,8 +580,7 @@ func TestManager_CompleteRenewal_ChangedCommonName(t *testing.T) {
 func TestManager_CompleteRenewal_NotLoaded(t *testing.T) {
 	dir := t.TempDir()
 
-	logger := zaptest.NewLogger(t)
-	m := NewManager(logger, ManagerConfig{KeysDir: dir})
+	m := NewManager(zaptest.NewLogger(t), ManagerConfig{KeysDir: dir})
 
 	err := m.CompleteRenewal([]byte("anything"))
 	require.Error(t, err)

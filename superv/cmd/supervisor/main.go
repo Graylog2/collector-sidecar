@@ -57,7 +57,7 @@ func main() {
 	flag.Parse()
 
 	if showVersion {
-		fmt.Println(version.Version())
+		fmt.Println(version.Version()) //nolint:forbidigo
 		os.Exit(0)
 	}
 
@@ -141,8 +141,7 @@ func main() {
 		if applyErr := ownLogsManager.Apply(context.Background(), settings, res); applyErr != nil {
 			logger.Warn("Failed to restore OTLP log export", zap.Error(applyErr))
 		} else {
-			settingsCopy := settings
-			restoredOwnLogs = &settingsCopy
+			restoredOwnLogs = new(settings)
 		}
 	}
 
@@ -201,5 +200,9 @@ func initLogger(level, format string) (*zap.Logger, error) {
 	}
 	cfg.Level = zap.NewAtomicLevelAt(zapLevel)
 
-	return cfg.Build()
+	logger, err := cfg.Build()
+	if err != nil {
+		return nil, fmt.Errorf("building logger: %w", err)
+	}
+	return logger, nil
 }

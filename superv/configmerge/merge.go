@@ -18,6 +18,8 @@
 package configmerge
 
 import (
+	"fmt"
+
 	"github.com/knadh/koanf/maps"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/rawbytes"
@@ -70,7 +72,7 @@ func MergeConfigs(base, override []byte) ([]byte, error) {
 	// Load base config
 	if len(base) > 0 {
 		if err := k.Load(rawbytes.Provider(base), yaml.Parser()); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("loading base config: %w", err)
 		}
 	}
 
@@ -78,12 +80,16 @@ func MergeConfigs(base, override []byte) ([]byte, error) {
 	if len(override) > 0 {
 		if err := k.Load(rawbytes.Provider(override), yaml.Parser(),
 			koanf.WithMergeFunc(collectorConfigMerge)); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("loading override config: %w", err)
 		}
 	}
 
 	// Marshal back to YAML
-	return k.Marshal(yaml.Parser())
+	out, err := k.Marshal(yaml.Parser())
+	if err != nil {
+		return nil, fmt.Errorf("marshaling merged config: %w", err)
+	}
+	return out, nil
 }
 
 // MergeMultiple merges multiple YAML configurations in order with collector-aware semantics.
@@ -104,11 +110,15 @@ func MergeMultiple(configs ...[]byte) ([]byte, error) {
 		}
 
 		if err := k.Load(rawbytes.Provider(cfg), yaml.Parser(), opts...); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("loading config %d: %w", i, err)
 		}
 	}
 
-	return k.Marshal(yaml.Parser())
+	out, err := k.Marshal(yaml.Parser())
+	if err != nil {
+		return nil, fmt.Errorf("marshaling merged config: %w", err)
+	}
+	return out, nil
 }
 
 // HasPipelines returns true if the config has at least one pipeline defined
@@ -133,14 +143,20 @@ func InjectSettings(config []byte, settings map[string]any) ([]byte, error) {
 	// Load existing config
 	if len(config) > 0 {
 		if err := k.Load(rawbytes.Provider(config), yaml.Parser()); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("loading config: %w", err)
 		}
 	}
 
 	// Inject settings
 	for key, value := range settings {
-		k.Set(key, value)
+		if err := k.Set(key, value); err != nil {
+			return nil, fmt.Errorf("couldn't set key %q: %w", key, err)
+		}
 	}
 
-	return k.Marshal(yaml.Parser())
+	out, err := k.Marshal(yaml.Parser())
+	if err != nil {
+		return nil, fmt.Errorf("marshaling config: %w", err)
+	}
+	return out, nil
 }

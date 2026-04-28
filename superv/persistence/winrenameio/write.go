@@ -171,27 +171,29 @@ func NewPendingFile(path string, opts ...Option) (*PendingFile, error) {
 // atomically replaces the destination via [ReplaceFile].
 //
 // After a successful call, [PendingFile.Cleanup] is a no-op.
-func (pf *PendingFile) CloseAtomicallyReplace() (retErr error) {
+func (pf *PendingFile) CloseAtomicallyReplace() error {
 	if pf.done {
 		return fmt.Errorf("winrenameio: already closed")
 	}
 	pf.done = true
 
-	tmpName := pf.File.Name()
+	tmpName := pf.Name()
 	closed := false
+	success := false
 	defer func() {
-		if retErr != nil {
-			if !closed {
-				_ = pf.File.Close()
-			}
-			_ = os.Remove(tmpName)
+		if success {
+			return
 		}
+		if !closed {
+			_ = pf.File.Close()
+		}
+		_ = os.Remove(tmpName)
 	}()
 
-	if err := pf.File.Sync(); err != nil {
+	if err := pf.Sync(); err != nil {
 		return fmt.Errorf("winrenameio: syncing temp file: %w", err)
 	}
-	if err := pf.File.Chmod(pf.perm); err != nil {
+	if err := pf.Chmod(pf.perm); err != nil {
 		return fmt.Errorf("winrenameio: setting permissions: %w", err)
 	}
 	if err := pf.File.Close(); err != nil {
@@ -202,6 +204,7 @@ func (pf *PendingFile) CloseAtomicallyReplace() (retErr error) {
 	if err := ReplaceFile(tmpName, pf.path); err != nil {
 		return fmt.Errorf("winrenameio: replacing file: %w", err)
 	}
+	success = true
 	return nil
 }
 
@@ -215,7 +218,7 @@ func (pf *PendingFile) Close() error {
 	}
 	pf.done = true
 	closeErr := pf.File.Close()
-	removeErr := os.Remove(pf.File.Name())
+	removeErr := os.Remove(pf.Name())
 	return errors.Join(closeErr, removeErr)
 }
 
@@ -227,12 +230,15 @@ func (pf *PendingFile) Cleanup() error {
 	}
 	pf.done = true
 	_ = pf.File.Close()
-	return os.Remove(pf.File.Name())
+	if err := os.Remove(pf.Name()); err != nil {
+		return fmt.Errorf("winrenameio: removing temp file: %w", err)
+	}
+	return nil
 }
 
 // Option configures [NewPendingFile].
 type Option interface {
-	apply(*PendingFile)
+	apply(pf *PendingFile)
 }
 
 type staticPermissions struct {

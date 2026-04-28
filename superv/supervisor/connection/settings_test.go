@@ -152,9 +152,9 @@ func TestToTLSVersion(t *testing.T) {
 		version, err := ToTLSVersion(test.input)
 
 		if test.expectErr {
-			assert.Error(t, err)
+			require.Error(t, err)
 		} else {
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		}
 
 		require.Equal(t, test.expected, version)

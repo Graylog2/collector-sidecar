@@ -18,7 +18,6 @@
 package configmanager
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -80,7 +79,7 @@ service:
 	remote := createTestRemoteConfig("collector.yaml", remoteConfig, []byte("hash1"))
 
 	// Apply the config
-	result, err := mgr.ApplyRemoteConfig(context.Background(), remote)
+	result, err := mgr.ApplyRemoteConfig(remote)
 	require.NoError(t, err)
 	assert.True(t, result.Changed)
 	assert.NotEmpty(t, result.EffectiveConfig)
@@ -100,14 +99,14 @@ service:
 	assert.Contains(t, string(content), "level: none")
 
 	// Apply the same config again - should return Changed=false
-	result2, err := mgr.ApplyRemoteConfig(context.Background(), remote)
+	result2, err := mgr.ApplyRemoteConfig(remote)
 	require.NoError(t, err)
 	assert.False(t, result2.Changed)
 	assert.Equal(t, []byte("hash1"), result2.ConfigHash)
 
 	// Apply a new config with different hash
 	remote2 := createTestRemoteConfig("collector.yaml", remoteConfig, []byte("hash2"))
-	result3, err := mgr.ApplyRemoteConfig(context.Background(), remote2)
+	result3, err := mgr.ApplyRemoteConfig(remote2)
 	require.NoError(t, err)
 	assert.True(t, result3.Changed)
 	assert.Equal(t, []byte("hash2"), result3.ConfigHash)
@@ -162,7 +161,7 @@ service:
 	remote := createTestRemoteConfig("collector.yaml", remoteConfig, []byte("hash-override"))
 
 	// Apply the config
-	result, err := mgr.ApplyRemoteConfig(context.Background(), remote)
+	result, err := mgr.ApplyRemoteConfig(remote)
 	require.NoError(t, err)
 	assert.True(t, result.Changed)
 
@@ -226,7 +225,7 @@ service:
 
 	remote := createTestRemoteConfig("collector.yaml", remoteConfig, []byte("hash-multi"))
 
-	result, err := mgr.ApplyRemoteConfig(context.Background(), remote)
+	result, err := mgr.ApplyRemoteConfig(remote)
 	require.NoError(t, err)
 	assert.True(t, result.Changed)
 
@@ -267,7 +266,7 @@ service:
 	remote := createTestRemoteConfig("collector.yaml", remoteConfig, []byte("hash-missing"))
 
 	// Should succeed even with missing override file
-	result, err := mgr.ApplyRemoteConfig(context.Background(), remote)
+	result, err := mgr.ApplyRemoteConfig(remote)
 	require.NoError(t, err)
 	assert.True(t, result.Changed)
 }
@@ -299,8 +298,8 @@ service:
 	// Use empty string key - this should now fail as we require "collector.yaml"
 	remote := createTestRemoteConfig("", remoteConfig, []byte("hash-empty-key"))
 
-	result, err := mgr.ApplyRemoteConfig(context.Background(), remote)
-	assert.Error(t, err)
+	result, err := mgr.ApplyRemoteConfig(remote)
+	require.Error(t, err)
 	assert.Nil(t, result)
 	assert.Contains(t, err.Error(), "collector.yaml")
 }
@@ -317,8 +316,8 @@ func TestConfigManager_ApplyRemoteConfig_NilRemoteConfig(t *testing.T) {
 	mgr := New(logger, cfg)
 
 	// Apply nil config
-	result, err := mgr.ApplyRemoteConfig(context.Background(), nil)
-	assert.Error(t, err)
+	result, err := mgr.ApplyRemoteConfig(nil)
+	require.Error(t, err)
 	assert.Nil(t, result)
 	assert.Contains(t, err.Error(), "nil")
 }
@@ -342,8 +341,8 @@ func TestConfigManager_ApplyRemoteConfig_EmptyConfigMap(t *testing.T) {
 		ConfigHash: []byte("hash-empty"),
 	}
 
-	result, err := mgr.ApplyRemoteConfig(context.Background(), remote)
-	assert.Error(t, err)
+	result, err := mgr.ApplyRemoteConfig(remote)
+	require.Error(t, err)
 	assert.Nil(t, result)
 	assert.Contains(t, err.Error(), "collector.yaml")
 }
@@ -373,7 +372,7 @@ service:
 
 	remote := createTestRemoteConfig("collector.yaml", remoteConfig, []byte("hash-no-opamp"))
 
-	result, err := mgr.ApplyRemoteConfig(context.Background(), remote)
+	result, err := mgr.ApplyRemoteConfig(remote)
 	require.NoError(t, err)
 	assert.True(t, result.Changed)
 
@@ -403,7 +402,7 @@ func TestConfigManager_GetEffectiveConfig(t *testing.T) {
 
 	// Initially, GetEffectiveConfig should fail (file doesn't exist)
 	_, err := mgr.GetEffectiveConfig()
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	// Apply a config first
 	remoteConfig := []byte(`receivers:
@@ -416,7 +415,7 @@ service:
 `)
 
 	remote := createTestRemoteConfig("collector.yaml", remoteConfig, []byte("hash-get"))
-	_, err = mgr.ApplyRemoteConfig(context.Background(), remote)
+	_, err = mgr.ApplyRemoteConfig(remote)
 	require.NoError(t, err)
 
 	// Now GetEffectiveConfig should succeed
@@ -437,7 +436,7 @@ func TestConfigManager_GetEffectiveConfig_EmptyOutputPath(t *testing.T) {
 	mgr := New(logger, cfg)
 
 	_, err := mgr.GetEffectiveConfig()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "output path not configured")
 }
 
@@ -462,7 +461,7 @@ func TestConfigManager_GetConfigHash(t *testing.T) {
   otlp:
 `)
 	remote := createTestRemoteConfig("collector.yaml", remoteConfig, []byte("my-hash-123"))
-	_, err := mgr.ApplyRemoteConfig(context.Background(), remote)
+	_, err := mgr.ApplyRemoteConfig(remote)
 	require.NoError(t, err)
 
 	// Now GetConfigHash should return the hash
@@ -488,7 +487,7 @@ func TestConfigManager_StoresRemoteConfigs(t *testing.T) {
 `)
 
 	remote := createTestRemoteConfig("collector.yaml", remoteConfig, []byte("hash-store"))
-	_, err := mgr.ApplyRemoteConfig(context.Background(), remote)
+	_, err := mgr.ApplyRemoteConfig(remote)
 	require.NoError(t, err)
 
 	// Check that the remote config was stored
@@ -527,7 +526,7 @@ func TestApplyRemoteConfig_CreatesBackupFile(t *testing.T) {
 
 	// First apply — no backup expected (nothing to back up)
 	cfg1 := createTestRemoteConfig("collector.yaml", []byte("receivers:\n  otlp:\n"), []byte("hash1"))
-	result1, err := mgr.ApplyRemoteConfig(context.Background(), cfg1)
+	result1, err := mgr.ApplyRemoteConfig(cfg1)
 	require.NoError(t, err)
 	require.True(t, result1.Changed)
 
@@ -536,7 +535,7 @@ func TestApplyRemoteConfig_CreatesBackupFile(t *testing.T) {
 
 	// Second apply — backup of first config expected
 	cfg2 := createTestRemoteConfig("collector.yaml", []byte("receivers:\n  otlp:\n  filelog:\n"), []byte("hash2"))
-	result2, err := mgr.ApplyRemoteConfig(context.Background(), cfg2)
+	result2, err := mgr.ApplyRemoteConfig(cfg2)
 	require.NoError(t, err)
 	require.True(t, result2.Changed)
 
@@ -557,14 +556,14 @@ func TestApplyRemoteConfig_PreviousHashTracked(t *testing.T) {
 
 	// Apply first config
 	cfg1 := createTestRemoteConfig("collector.yaml", []byte("receivers:\n  otlp:\n"), []byte("hash1"))
-	_, err := mgr.ApplyRemoteConfig(context.Background(), cfg1)
+	_, err := mgr.ApplyRemoteConfig(cfg1)
 	require.NoError(t, err)
 	assert.Nil(t, mgr.previousHash, "previousHash should be nil after first apply")
 	assert.Equal(t, []byte("hash1"), mgr.lastHash)
 
 	// Apply second config
 	cfg2 := createTestRemoteConfig("collector.yaml", []byte("receivers:\n  filelog:\n"), []byte("hash2"))
-	_, err = mgr.ApplyRemoteConfig(context.Background(), cfg2)
+	_, err = mgr.ApplyRemoteConfig(cfg2)
 	require.NoError(t, err)
 	assert.Equal(t, []byte("hash1"), mgr.previousHash, "previousHash should be hash1 after second apply")
 	assert.Equal(t, []byte("hash2"), mgr.lastHash)
@@ -581,11 +580,11 @@ func TestRollbackConfig_RestoresPreviousConfig(t *testing.T) {
 
 	// Apply two configs so we have a .prev
 	cfg1 := createTestRemoteConfig("collector.yaml", []byte("version: 1\n"), []byte("hash1"))
-	_, err := mgr.ApplyRemoteConfig(context.Background(), cfg1)
+	_, err := mgr.ApplyRemoteConfig(cfg1)
 	require.NoError(t, err)
 
 	cfg2 := createTestRemoteConfig("collector.yaml", []byte("version: 2\n"), []byte("hash2"))
-	_, err = mgr.ApplyRemoteConfig(context.Background(), cfg2)
+	_, err = mgr.ApplyRemoteConfig(cfg2)
 	require.NoError(t, err)
 
 	// Rollback
@@ -696,7 +695,7 @@ func TestApplyRemoteConfig_InjectsHealthCheckExtension(t *testing.T) {
 	})
 
 	cfg := createTestRemoteConfig("collector.yaml", []byte("receivers:\n  otlp:\n"), []byte("hash1"))
-	result, err := mgr.ApplyRemoteConfig(context.Background(), cfg)
+	result, err := mgr.ApplyRemoteConfig(cfg)
 	require.NoError(t, err)
 	require.True(t, result.Changed)
 
@@ -723,13 +722,13 @@ func TestSetLastConfigHash_SkipsUnchangedConfig(t *testing.T) {
 
 	// ApplyRemoteConfig with the same hash should be a no-op
 	cfg := createTestRemoteConfig("collector.yaml", []byte("receivers:\n  otlp:\n"), []byte("hash1"))
-	result, err := mgr.ApplyRemoteConfig(context.Background(), cfg)
+	result, err := mgr.ApplyRemoteConfig(cfg)
 	require.NoError(t, err)
 	require.False(t, result.Changed, "config with same hash should not be re-applied")
 
 	// ApplyRemoteConfig with a different hash should apply
 	cfg2 := createTestRemoteConfig("collector.yaml", []byte("receivers:\n  filelog:\n"), []byte("hash2"))
-	result2, err := mgr.ApplyRemoteConfig(context.Background(), cfg2)
+	result2, err := mgr.ApplyRemoteConfig(cfg2)
 	require.NoError(t, err)
 	require.True(t, result2.Changed, "config with different hash should be applied")
 }
@@ -747,7 +746,7 @@ func TestSetLastConfigHash_NotRestoredAfterFailure(t *testing.T) {
 	// where the hash is NOT restored), the same config hash should be
 	// re-applied so the server gets a fresh attempt.
 	cfg := createTestRemoteConfig("collector.yaml", []byte("receivers:\n  otlp:\n"), []byte("hash1"))
-	result, err := mgr.ApplyRemoteConfig(context.Background(), cfg)
+	result, err := mgr.ApplyRemoteConfig(cfg)
 	require.NoError(t, err)
 	require.True(t, result.Changed, "config should be applied when lastHash is not set")
 }
