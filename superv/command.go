@@ -36,6 +36,8 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+const jsonLoggingFormat = "json"
+
 func GetCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "supervisor",
@@ -230,7 +232,7 @@ func initLogger(loggingCfg config.LoggingConfig, debug bool) (*zap.Logger, error
 	}
 
 	var makeEncoderCfg func() zapcore.EncoderConfig
-	if loggingCfg.Format == "json" {
+	if loggingCfg.Format == jsonLoggingFormat {
 		makeEncoderCfg = zap.NewProductionEncoderConfig
 	} else {
 		makeEncoderCfg = zap.NewDevelopmentEncoderConfig
@@ -240,14 +242,14 @@ func initLogger(loggingCfg config.LoggingConfig, debug bool) (*zap.Logger, error
 	fileEncCfg := makeEncoderCfg()
 
 	// color + JSON make no sense, silently ignore color in that case
-	if loggingCfg.Color && loggingCfg.Format != "json" {
+	if loggingCfg.Color && loggingCfg.Format != jsonLoggingFormat {
 		enableConsoleColors()
 		stderrEncCfg.EncodeLevel = zapcore.CapitalColorLevelEncoder
 		// no color in file encoder
 	}
 
 	var stderrEnc, fileEnc zapcore.Encoder
-	if loggingCfg.Format == "json" {
+	if loggingCfg.Format == jsonLoggingFormat {
 		stderrEnc = zapcore.NewJSONEncoder(stderrEncCfg)
 		fileEnc = zapcore.NewJSONEncoder(fileEncCfg)
 	} else {
