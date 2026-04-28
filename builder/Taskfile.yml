@@ -1,0 +1,102 @@
+# Copyright (C)  2026 Graylog, Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the Server Side Public License, version 1,
+# as published by MongoDB, Inc.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# Server Side Public License for more details.
+#
+# You should have received a copy of the Server Side Public License
+# along with this program. If not, see
+# <http://www.mongodb.com/licensing/server-side-public-license>.
+#
+# SPDX-License-Identifier: SSPL-1.0
+
+version: '3'
+
+vars:
+  GOTEST_FLAGS: '-vet=all -race'
+  # OUT_DIR is the repo root, where binaries are emitted to match Makefile output paths.
+  OUT_DIR: '{{.ROOT_DIR}}'
+
+tasks:
+  generate:
+    desc: 'Regenerate the OCB-built collector main.go (runs `go generate` from repo root)'
+    dir: '{{.ROOT_DIR}}'
+    cmds:
+      - go generate .
+
+  test:
+    desc: 'Run unit tests for the builder module'
+    cmds:
+      - go test {{.GOTEST_FLAGS}}{{if .CI}} -v{{end}} ./...
+
+  build:
+    desc: 'Build the collector for the host OS/arch (replaces `make v2`)'
+    deps: [generate, license-check]
+    cmds:
+      - go build -ldflags "{{.V2_LDFLAGS}}" -o {{.OUT_DIR}}/graylog-collector .
+
+  license-check:
+    desc: 'Verify license headers (non-mutating; matches `make v2` precondition)'
+    dir: '{{.ROOT_DIR}}'
+    cmds:
+      - go tool github.com/google/addlicense -check -f .license.template -ignore '{.github,.idea,changelog,dist/v2,out}/**' -ignore '**/*.{yml,yaml}' .
+
+  build:linux:amd64:
+    desc: 'Cross-compile collector for linux/amd64'
+    env:
+      GOOS: linux
+      GOARCH: amd64
+      CGO_ENABLED: '0'
+    cmds:
+      - go build -ldflags "{{.V2_LDFLAGS}}" -o {{.OUT_DIR}}/graylog-collector-linux-amd64 .
+
+  build:linux:arm64:
+    desc: 'Cross-compile collector for linux/arm64'
+    env:
+      GOOS: linux
+      GOARCH: arm64
+      CGO_ENABLED: '0'
+    cmds:
+      - go build -ldflags "{{.V2_LDFLAGS}}" -o {{.OUT_DIR}}/graylog-collector-linux-arm64 .
+
+  build:darwin:amd64:
+    desc: 'Cross-compile collector for darwin/amd64'
+    env:
+      GOOS: darwin
+      GOARCH: amd64
+      CGO_ENABLED: '0'
+    cmds:
+      - go build -ldflags "{{.V2_LDFLAGS}}" -o {{.OUT_DIR}}/graylog-collector-darwin-amd64 .
+
+  build:darwin:arm64:
+    desc: 'Cross-compile collector for darwin/arm64'
+    env:
+      GOOS: darwin
+      GOARCH: arm64
+      CGO_ENABLED: '0'
+    cmds:
+      - go build -ldflags "{{.V2_LDFLAGS}}" -o {{.OUT_DIR}}/graylog-collector-darwin-arm64 .
+
+  build:windows:amd64:
+    desc: 'Cross-compile collector for windows/amd64 (CGO enabled per Makefile note about pure-Go DNS resolver)'
+    env:
+      GOOS: windows
+      GOARCH: amd64
+      CGO_ENABLED: '1'
+      CC: x86_64-w64-mingw32-gcc
+    cmds:
+      - go build -ldflags "{{.V2_LDFLAGS}}" -o {{.OUT_DIR}}/graylog-collector-windows-amd64.exe .
+
+  build:all:
+    desc: 'Build collector for all five supported platforms'
+    deps:
+      - build:linux:amd64
+      - build:linux:arm64
+      - build:darwin:amd64
+      - build:darwin:arm64
+      - build:windows:amd64

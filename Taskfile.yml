@@ -1,0 +1,81 @@
+version: '3'
+
+# IMPORTANT: Version values are duplicated in version.mk for the v1 Makefile path.
+# When bumping the version, update BOTH this file and version.mk. See V2.md.
+
+vars:
+  COLLECTOR_VERSION_MAJOR: '2'
+  COLLECTOR_VERSION_MINOR: '0'
+  COLLECTOR_VERSION_PATCH: '0'
+  COLLECTOR_VERSION: '{{.COLLECTOR_VERSION_MAJOR}}.{{.COLLECTOR_VERSION_MINOR}}.{{.COLLECTOR_VERSION_PATCH}}'
+  COLLECTOR_VERSION_SUFFIX: '-SNAPSHOT'
+  COLLECTOR_REVISION: '1'
+  GIT_REV:
+    sh: git rev-parse --short HEAD
+  V2_LDFLAGS: >-
+    -s
+    -X github.com/Graylog2/collector-sidecar/superv/version.version={{.COLLECTOR_VERSION}}{{.COLLECTOR_VERSION_SUFFIX}}
+    -X github.com/Graylog2/collector-sidecar/superv/version.commit={{.GIT_REV}}
+  WINDOWS_INSTALLER_VERSION: '{{.COLLECTOR_VERSION}}-{{.COLLECTOR_REVISION}}{{.COLLECTOR_VERSION_SUFFIX | replace "-" "."}}'
+
+includes:
+  'receiver:winlog':
+    taskfile: ./receiver/windowseventlogreceiver/Taskfile.yml
+    dir: ./receiver/windowseventlogreceiver
+  superv:
+    taskfile: ./superv/Taskfile.yml
+    dir: ./superv
+  builder:
+    taskfile: ./builder/Taskfile.yml
+    dir: ./builder
+    vars:
+      V2_LDFLAGS: '{{.V2_LDFLAGS}}'
+
+tasks:
+  default:
+    desc: 'Show available tasks'
+    cmds:
+      - task -l
+    silent: true
+
+  fmt:
+    desc: 'Format Go sources and apply license headers'
+    cmds:
+      - gofmt -w -s -l .
+      - go tool github.com/google/addlicense -f .license.template.otel -ignore '**/*.{yml,yaml}' receiver/windowseventlogreceiver
+      - go tool github.com/google/addlicense -f .license.template -ignore '{.github,.idea,changelog,dist/v2,out}/**' -ignore '**/*.{yml,yaml}' .
+
+  fmt:check:
+    desc: 'Verify license headers and formatting (non-mutating)'
+    cmds:
+      - go tool github.com/google/addlicense -check -f .license.template.otel -ignore '**/*.{yml,yaml}' receiver/windowseventlogreceiver
+      - go tool github.com/google/addlicense -check -f .license.template -ignore '{.github,.idea,changelog,dist/v2,out}/**' -ignore '**/*.{yml,yaml}' .
+      - test -z "$(gofmt -l .)" || (echo 'gofmt found unformatted files' && gofmt -l . && exit 1)
+
+  v2:test:
+    desc: 'Run unit tests for all v2 modules (replaces `make v2test`)'
+    deps:
+      - builder:test
+      - superv:test
+      - receiver:winlog:test
+
+  v2:build:
+    desc: 'Build the collector for the host OS/arch (alias for builder:build; replaces `make v2`)'
+    cmds:
+      - task: builder:build
+
+  v2:vuln:
+    desc: 'Run govulncheck across all v2 modules'
+    cmds:
+      - go tool govulncheck ./...
+      - go tool govulncheck -C builder ./...
+      - go tool govulncheck -C superv ./...
+      - go tool govulncheck -C receiver/windowseventlogreceiver ./...
+
+  v2:all:
+    desc: 'Cross-compile collector for all platforms with full preflight (replaces `make v2all`)'
+    deps: [v2:vuln]
+    cmds:
+      - task: fmt:check
+      - go generate .
+      - task: builder:build:all

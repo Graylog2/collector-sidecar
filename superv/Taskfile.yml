@@ -1,0 +1,15 @@
+version: '3'
+
+vars:
+  GOTEST_FLAGS: '-vet=all -race'
+
+tasks:
+  test:
+    desc: 'Run unit tests for the supervisor module'
+    cmds:
+      - go test {{.GOTEST_FLAGS}}{{if .CI}} -v{{end}} ./...
+
+  test:race:
+    desc: 'Run supervisor tests with explicit race detector (alias for test; here for parity with build:race conventions)'
+    cmds:
+      - go test -vet=all -race ./...
