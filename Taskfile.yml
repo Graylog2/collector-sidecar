@@ -95,12 +95,19 @@ tasks:
       - task: vulncheck
       - task: builder:build:all
 
+  package:windows:exe:sign:
+    desc: 'Sign Windows MSI'
+    if: '{{if eq .SIGN_EXE "true"}}'
+    cmds:
+      - codesigntool sign {{.ROOT_DIR}}/graylog-collector-windows-amd64.exe
+
   package:windows:msi:
     desc: 'Build Windows MSI installer (Windows only; requires dotnet SDK + WiX 7)'
     platforms: [windows]
     deps: [builder:build:windows:amd64]
     cmds:
       - mkdir -p dist/pkg
+      - task: package:windows:exe:sign
       - >-
         dotnet build dist/v2/windows/graylog-collector.wixproj
         -c Release
