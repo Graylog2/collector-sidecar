@@ -87,6 +87,13 @@ func TestSupervisor_ConfigManagerIntegration(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	dir := t.TempDir()
 
+	executable := "/bin/sleep"
+	args := []string{"1"}
+	if runtime.GOOS == "windows" {
+		executable = "powershell"
+		args = []string{"-NoProfile", "-Command", "Start-Sleep -Seconds 1"}
+	}
+
 	cfg := config.Config{
 		Server: config.ServerConfig{
 			Endpoint: "ws://localhost:4320/v1/opamp",
@@ -95,8 +102,8 @@ func TestSupervisor_ConfigManagerIntegration(t *testing.T) {
 			Endpoint: "localhost:4321",
 		},
 		Agent: config.AgentConfig{
-			Executable: "/bin/sleep",
-			Args:       []string{"1"},
+			Executable: executable,
+			Args:       args,
 			Health: config.HealthConfig{
 				Endpoint: "http://localhost:13133/health",
 				Interval: 10 * time.Second,
