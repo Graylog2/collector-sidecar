@@ -22,6 +22,10 @@
   <!-- UpgradeCode: MINT ONCE, NEVER CHANGE. -->
   <?define UpgradeCode = "C57C74A4-E5B1-4014-A0FC-17E9A4DB5A2B" ?>
 
+  <!-- Do not set ProductCode on the Package element. Major upgrades require
+       each MSI package to have a new ProductCode while sharing the stable
+       UpgradeCode below. WiX generates a new ProductCode automatically when
+       ProductCode is omitted. -->
   <Package
       Name="Graylog Collector"
       Manufacturer="Graylog, Inc."
@@ -31,6 +35,18 @@
       Language="1033"
       Compressed="yes">
 
+    <!-- MajorUpgrade only upgrades installed products with a lower MSI
+         ProductVersion. Windows Installer compares only the first three numeric
+         fields: major.minor.build. Changing only a fourth version field, file
+         version, package name, or binary contents still leaves the MSI version
+         unchanged and can register a duplicate product when installed with
+         "msiexec /i file.msi".
+
+         Release builds must bump one of the first three Version fields. For
+         local same-version test rebuilds during development, uninstall the existing
+         product first or temporarily use AllowSameVersionUpgrades with the known
+         downgrade risk.
+         For details see: https://docs.firegiant.com/wix/schema/wxs/majorupgrade/ -->
     <MajorUpgrade
         DowngradeErrorMessage="A newer version of Graylog Collector is already installed."
         Schedule="afterInstallExecute" />
