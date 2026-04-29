@@ -1,22 +1,31 @@
 version: '3'
 
-# IMPORTANT: Version values are duplicated in version.mk for the v1 Makefile path.
-# When bumping the version, update BOTH this file and version.mk. See V2.md.
+dotenv:
+  - version.env
 
 vars:
-  COLLECTOR_VERSION_MAJOR: '2'
-  COLLECTOR_VERSION_MINOR: '0'
-  COLLECTOR_VERSION_PATCH: '0'
+  COLLECTOR_VERSION_MAJOR: '{{.COLLECTOR_VERSION_MAJOR}}'
+  COLLECTOR_VERSION_MINOR: '{{.COLLECTOR_VERSION_MINOR}}'
+  COLLECTOR_VERSION_PATCH: '{{.COLLECTOR_VERSION_PATCH}}'
   COLLECTOR_VERSION: '{{.COLLECTOR_VERSION_MAJOR}}.{{.COLLECTOR_VERSION_MINOR}}.{{.COLLECTOR_VERSION_PATCH}}'
-  COLLECTOR_VERSION_SUFFIX: '-SNAPSHOT'
-  COLLECTOR_REVISION: '1'
+  COLLECTOR_VERSION_SUFFIX: '{{.COLLECTOR_VERSION_SUFFIX}}'
+  COLLECTOR_REVISION: '{{.COLLECTOR_REVISION}}'
   GIT_REV:
     sh: git rev-parse --short HEAD
-  V2_LDFLAGS: >-
+  GO_LDFLAGS: >-
     -s
     -X github.com/Graylog2/collector-sidecar/superv/version.version={{.COLLECTOR_VERSION}}{{.COLLECTOR_VERSION_SUFFIX}}
     -X github.com/Graylog2/collector-sidecar/superv/version.commit={{.GIT_REV}}
   WINDOWS_INSTALLER_VERSION: '{{.COLLECTOR_VERSION}}-{{.COLLECTOR_REVISION}}{{.COLLECTOR_VERSION_SUFFIX | replace "-" "."}}'
+  FMT_ARGS: >-
+    -f .license.template
+    -ignore '{.github,.idea,changelog,dist/pkg,dist/v2,out}/**'
+    -ignore '**/*.{yml,yaml}'
+    .
+  FMT_ARGS_OTEL: >-
+    -f .license.template.otel
+    -ignore '**/*.{yml,yaml}'
+    receiver/windowseventlogreceiver
 
 includes:
   'receiver:winlog':
@@ -29,59 +38,65 @@ includes:
     taskfile: ./builder/Taskfile.yml
     dir: ./builder
     vars:
-      V2_LDFLAGS: '{{.V2_LDFLAGS}}'
+      GO_LDFLAGS: '{{.GO_LDFLAGS}}'
 
 tasks:
   default:
     desc: 'Show available tasks'
     cmds:
-      - task -l
+      - go tool task -l
     silent: true
+
+  clean:
+    desc: "Cleanup artifacts and build directories"
+    cmds:
+      - rm -vf graylog-collector*
+      - rm -vrf dist/v2/windows/obj
+      - rm -vrf dist/pkg
 
   fmt:
     desc: 'Format Go sources and apply license headers'
     cmds:
       - gofmt -w -s -l .
-      - go tool github.com/google/addlicense -f .license.template.otel -ignore '**/*.{yml,yaml}' receiver/windowseventlogreceiver
-      - go tool github.com/google/addlicense -f .license.template -ignore '{.github,.idea,changelog,dist/v2,out}/**' -ignore '**/*.{yml,yaml}' .
+      - go tool github.com/google/addlicense {{.FMT_ARGS_OTEL}}
+      - go tool github.com/google/addlicense {{.FMT_ARGS}}
 
   fmt:check:
     desc: 'Verify license headers and formatting (non-mutating)'
     cmds:
-      - go tool github.com/google/addlicense -check -f .license.template.otel -ignore '**/*.{yml,yaml}' receiver/windowseventlogreceiver
-      - go tool github.com/google/addlicense -check -f .license.template -ignore '{.github,.idea,changelog,dist/v2,out}/**' -ignore '**/*.{yml,yaml}' .
+      - go tool github.com/google/addlicense -check {{.FMT_ARGS_OTEL}}
+      - go tool github.com/google/addlicense -check {{.FMT_ARGS}}
       - test -z "$(gofmt -l .)" || (echo 'gofmt found unformatted files' && gofmt -l . && exit 1)
 
-  v2:test:
-    desc: 'Run unit tests for all v2 modules (replaces `make v2test`)'
-    deps:
-      - builder:test
-      - superv:test
-      - receiver:winlog:test
+  test:
+    desc: 'Run unit tests for all modules'
+    cmds: # We use cmds instead of deps to have deterministic order and output
+      - task: receiver:winlog:test
+      - task: superv:test
+      - task: builder:test
 
-  v2:build:
-    desc: 'Build the collector for the host OS/arch (alias for builder:build; replaces `make v2`)'
+  build:
+    desc: 'Build the collector for the host OS/arch'
     cmds:
       - task: builder:build
 
-  v2:vuln:
-    desc: 'Run govulncheck across all v2 modules'
+  vulncheck:
+    desc: 'Run govulncheck for all modules'
     cmds:
       - go tool govulncheck ./...
       - go tool govulncheck -C builder ./...
       - go tool govulncheck -C superv ./...
       - go tool govulncheck -C receiver/windowseventlogreceiver ./...
 
-  v2:all:
-    desc: 'Cross-compile collector for all platforms with full preflight (replaces `make v2all`)'
-    deps: [v2:vuln]
+  all:
+    desc: 'Cross-compile collector for all platforms with full preflight'
     cmds:
       - task: fmt:check
-      - go generate .
+      - task: vulncheck
       - task: builder:build:all
 
   package:windows:msi:
-    desc: 'Build Windows MSI installer (Windows only; requires dotnet SDK + WiX 7) — replaces `make v2-package-windows-msi`'
+    desc: 'Build Windows MSI installer (Windows only; requires dotnet SDK + WiX 7)'
     platforms: [windows]
     deps: [builder:build:windows:amd64]
     cmds:
@@ -95,6 +110,6 @@ tasks:
         -p:OutputPath={{.ROOT_DIR}}/dist/pkg/
 
   package:windows:msi:sign:
-    desc: 'Sign Windows MSI via codesigntool — replaces `make v2-sign-windows-msi`'
+    desc: 'Sign Windows MSI'
     cmds:
       - codesigntool sign dist/pkg/graylog-collector-{{.COLLECTOR_VERSION}}.msi

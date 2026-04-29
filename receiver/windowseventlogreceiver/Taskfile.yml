@@ -1,16 +1,10 @@
 version: '3'
 
 vars:
-  GOTEST_FLAGS: '-vet=all -race'
+  GOTEST_FLAGS: '-vet=all{{if ne .OS "windows"}} -race{{end}}{{if .CI}} -v{{end}}'
 
 tasks:
   test:
     desc: 'Run unit tests for the windowseventlogreceiver module'
     cmds:
-      - go test {{.GOTEST_FLAGS}}{{if .CI}} -v{{end}} ./...
-
-  license-check:
-    desc: 'Verify license headers in the receiver module (non-mutating)'
-    dir: '{{.ROOT_DIR}}'
-    cmds:
-      - go tool github.com/google/addlicense -check -f .license.template.otel -ignore '**/*.{yml,yaml}' receiver/windowseventlogreceiver
+      - go test {{.GOTEST_FLAGS}} ./...

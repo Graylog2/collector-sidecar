@@ -21,14 +21,14 @@
     "StringFileInfo": {
         "Comments": "",
         "CompanyName": "Graylog, Inc.",
-        "FileDescription": "Graylog Sidecar",
+        "FileDescription": "Graylog Collector",
         "FileVersion": "",
         "InternalName": "",
         "LegalCopyright": "Graylog, Inc.",
         "LegalTrademarks": "",
         "OriginalFilename": "",
         "PrivateBuild": "",
-        "ProductName": "Graylog Sidecar",
+        "ProductName": "Graylog Collector",
         "ProductVersion": "v1.0.0.0",
         "SpecialBuild": ""
     },
