@@ -51,6 +51,7 @@ tasks:
     desc: "Cleanup artifacts and build directories"
     cmds:
       - rm -vf graylog-collector*
+      - rm -vf builder/resource_windows.syso
       - rm -vrf dist/v2/windows/obj
       - rm -vrf dist/pkg
 
