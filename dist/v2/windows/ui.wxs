@@ -78,21 +78,21 @@
                  Transparent="yes" NoPrefix="yes"
                  Text="Enter the enrollment details for this collector." />
 
-        <Control Id="ServerUrlLabel" Type="Text"
+        <Control Id="EnrollEndpointLabel" Type="Text"
                  X="20" Y="60" Width="330" Height="14"
                  Text="Graylog server URL:" Transparent="yes" />
 
-        <Control Id="ServerUrlEdit" Type="Edit"
+        <Control Id="EnrollEndpointEdit" Type="Edit"
                  X="20" Y="76" Width="330" Height="17"
-                 Property="SERVERURL" Text="[SERVERURL]" />
+                 Property="ENROLLENDPOINT" Text="[ENROLLENDPOINT]" />
 
-        <Control Id="TokenLabel" Type="Text"
+        <Control Id="EnrollTokenLabel" Type="Text"
                  X="20" Y="110" Width="330" Height="14"
                  Text="Enrollment token:" Transparent="yes" />
 
-        <Control Id="TokenEdit" Type="Edit"
+        <Control Id="EnrollTokenEdit" Type="Edit"
                  X="20" Y="126" Width="330" Height="17"
-                 Property="TOKEN" Password="yes" Text="[TOKEN]" />
+                 Property="ENROLLTOKEN" Password="yes" Text="[ENROLLTOKEN]" />
 
         <Control Id="BottomLine" Type="Line"
                  X="0" Y="234" Width="370" Height="0" />
@@ -107,7 +107,7 @@
                  X="236" Y="243" Width="56" Height="17"
                  Default="yes" Text="Next">
           <Publish Event="NewDialog" Value="VerifyReadyDlg"
-                   Condition='SERVERURL&lt;&gt;"" AND TOKEN&lt;&gt;""' />
+                   Condition='ENROLLENDPOINT&lt;&gt;"" AND ENROLLTOKEN&lt;&gt;""' />
         </Control>
 
         <Control Id="Cancel" Type="PushButton"

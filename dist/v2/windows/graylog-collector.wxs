@@ -57,19 +57,19 @@
     <Property Id="ARPPRODUCTICON" Value="graylog.ico" />
     <Property Id="ARPHELPLINK" Value="https://docs.graylog.org/" />
     <Property Id="ARPURLINFOABOUT" Value="https://www.graylog.org/" />
-    <Property Id="SERVERURL" Secure="yes">
-      <RegistrySearch Id="ExistingServerUrl"
+    <Property Id="ENROLLENDPOINT" Secure="yes">
+      <RegistrySearch Id="ExistingEnrollEndpoint"
                       Root="HKLM"
                       Key="SOFTWARE\Graylog\Collector"
-                      Name="SERVERURL"
+                      Name="ENROLLENDPOINT"
                       Type="raw" />
     </Property>
 
-    <Property Id="TOKEN" Secure="yes">
-      <RegistrySearch Id="ExistingToken"
+    <Property Id="ENROLLTOKEN" Secure="yes">
+      <RegistrySearch Id="ExistingEnrollToken"
                       Root="HKLM"
                       Key="SOFTWARE\Graylog\Collector"
-                      Name="TOKEN"
+                      Name="ENROLLTOKEN"
                       Type="raw" />
     </Property>
 
@@ -112,16 +112,16 @@
 
           <Component Id="InstallStateMirror" Guid="*">
             <RegistryKey Root="HKLM" Key="SOFTWARE\Graylog\Collector">
-              <RegistryValue Name="SERVERURL" Type="string" Value="[SERVERURL]" KeyPath="yes" />
-              <RegistryValue Name="TOKEN"     Type="string" Value="[TOKEN]" />
+              <RegistryValue Name="ENROLLENDPOINT" Type="string" Value="[ENROLLENDPOINT]" KeyPath="yes" />
+              <RegistryValue Name="ENROLLTOKEN"    Type="string" Value="[ENROLLTOKEN]" />
             </RegistryKey>
           </Component>
 
           <Component Id="ServiceEnvironment" Guid="*">
             <RegistryKey Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\graylog-collector">
               <RegistryValue Name="Environment" Type="multiString" KeyPath="yes">
-                <MultiStringValue Value="GLC_SERVER__AUTH__ENROLLMENT_ENDPOINT=[SERVERURL]" />
-                <MultiStringValue Value="GLC_SERVER__AUTH__ENROLLMENT_TOKEN=[TOKEN]" />
+                <MultiStringValue Value="GLC_SERVER__AUTH__ENROLLMENT_ENDPOINT=[ENROLLENDPOINT]" />
+                <MultiStringValue Value="GLC_SERVER__AUTH__ENROLLMENT_TOKEN=[ENROLLTOKEN]" />
               </RegistryValue>
             </RegistryKey>
           </Component>
