@@ -21,6 +21,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -40,7 +41,9 @@ func TestWriteFileCreatesParentDirsAndWritesContent(t *testing.T) {
 
 	info, err := os.Stat(filePath)
 	require.NoError(t, err)
-	require.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	if runtime.GOOS != "windows" {
+		require.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	}
 }
 
 func TestStageFileCommitWritesContent(t *testing.T) {
