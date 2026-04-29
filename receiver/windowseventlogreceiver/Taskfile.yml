@@ -1,7 +1,7 @@
 version: '3'
 
 vars:
-  GOTEST_FLAGS: '-vet=all{{if ne .OS "windows"}} -race{{end}}{{if .CI}} -v{{end}}'
+  GOTEST_FLAGS: '-vet=all{{if ne OS "windows"}} -race{{end}}{{if .CI}} -v{{end}}'
 
 tasks:
   test:
