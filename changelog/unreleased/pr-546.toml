@@ -1,0 +1,5 @@
+type = "f"
+message = "Fix/auth manager http2 ping keepalive."
+
+issues = ["542"]
+pulls = ["546"]
