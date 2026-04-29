@@ -113,7 +113,7 @@ tasks:
       - >-
         dotnet build dist/v2/windows/graylog-collector.wixproj
         -c Release
-        -p:Version={{.COLLECTOR_VERSION}}
+        -p:Version={{.COLLECTOR_VERSION}}.{{.COLLECTOR_BUILD}}
         -p:SourceExe={{.ROOT_DIR}}/graylog-collector-windows-amd64.exe
         -p:LicenseFile={{.ROOT_DIR}}/LICENSE
         -p:OutputPath={{.ROOT_DIR}}/dist/pkg/

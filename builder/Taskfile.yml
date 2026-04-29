@@ -97,11 +97,11 @@ tasks:
         -product-ver-major="{{.COLLECTOR_VERSION_MAJOR}}"
         -product-ver-minor="{{.COLLECTOR_VERSION_MINOR}}"
         -product-ver-patch="{{.COLLECTOR_VERSION_PATCH}}"
-        -product-ver-build="{{.COLLECTOR_BUILD}}"
+        -product-ver-build="{{.COLLECTOR_REVISION}}"
         -ver-major="{{.COLLECTOR_VERSION_MAJOR}}"
         -ver-minor="{{.COLLECTOR_VERSION_MINOR}}"
         -ver-patch="{{.COLLECTOR_VERSION_PATCH}}"
-        -ver-build="{{.COLLECTOR_BUILD}}"
+        -ver-build="{{.COLLECTOR_REVISION}}"
         -o {{.TASKFILE_DIR}}/resource_windows.syso
 
       - task: build:do
