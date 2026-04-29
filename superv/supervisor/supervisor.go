@@ -24,6 +24,7 @@ import (
 	"maps"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -44,6 +45,7 @@ import (
 	"github.com/Graylog2/collector-sidecar/superv/keen"
 	"github.com/Graylog2/collector-sidecar/superv/opamp"
 	"github.com/Graylog2/collector-sidecar/superv/ownlogs"
+	"github.com/Graylog2/collector-sidecar/superv/persistence"
 )
 
 const (
@@ -103,6 +105,10 @@ type Supervisor struct {
 	// settings. Defaults to createAndStartClient; overridden in tests for
 	// interleaving control.
 	createClientFunc func(ctx context.Context, settings connection.Settings) (*opamp.Client, error)
+
+	// exitFn is called when the supervisor must terminate. Defaults to os.Exit;
+	// overridden in tests to capture the exit code without actually exiting.
+	exitFn func(int)
 
 	// ownLogsManager manages OTLP export of the supervisor's own logs.
 	ownLogsManager     *ownlogs.Manager
@@ -237,12 +243,50 @@ func New(logger *zap.Logger, cfg config.Config, instanceUID string) (*Supervisor
 		renewalBackoffCfg:         cfg.Server.Connection.RetryBackoff,
 	}
 	s.createClientFunc = s.createAndStartClient
+	s.exitFn = os.Exit
 	return s, nil
 }
 
 // InstanceUID returns the supervisor's unique instance identifier.
 func (s *Supervisor) InstanceUID() string {
 	return s.instanceUID
+}
+
+// handleAuthRejection is called from OnConnectFailed. When the error indicates a
+// 401 Unauthorized response, and the supervisor is already enrolled, and
+// auth.reset_on_auth_rejection is enabled, all persisted credentials are
+// cleared and the process exits so the service manager can trigger a fresh
+// enrollment. The function is a no-op for non-401 errors and for 401s that
+// arrive while enrollment is still in progress.
+func (s *Supervisor) handleAuthRejection(err error) {
+	if err == nil {
+		return
+	}
+	errMsg := err.Error()
+	if !strings.Contains(errMsg, "401") && !strings.Contains(strings.ToLower(errMsg), "unauthorized") {
+		return
+	}
+	if !s.authManager.IsEnrolled() {
+		s.logger.Warn("Authentication rejected (401) during enrollment; retry will continue")
+		return
+	}
+	if !s.authCfg.ResetOnAuthRejection {
+		s.logger.Warn("Authentication rejected (401) with existing credentials; auth.reset_on_auth_rejection is disabled, so recovery requires manual removal of persisted credentials")
+		return
+	}
+	s.logger.Error("Authentication rejected (401) with existing credentials; clearing credentials, instance UID, and own_logs persistence and exiting to trigger re-enrollment")
+	if clearErr := s.authManager.ClearCredentials(); clearErr != nil {
+		s.logger.Error("Failed to clear credentials before exit", zap.Error(clearErr))
+	}
+	if clearErr := persistence.ClearInstanceUID(s.persistenceDir); clearErr != nil {
+		s.logger.Error("Failed to clear instance UID before exit", zap.Error(clearErr))
+	}
+	if s.ownLogsPersistence != nil {
+		if clearErr := s.ownLogsPersistence.Delete(); clearErr != nil {
+			s.logger.Error("Failed to clear own_logs persistence before exit", zap.Error(clearErr))
+		}
+	}
+	s.exitFn(1)
 }
 
 // expandArgs expands template placeholders in agent args.

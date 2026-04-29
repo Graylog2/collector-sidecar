@@ -71,6 +71,16 @@ func LoadOrCreateInstanceUID(dir string) (string, error) {
 	return data.InstanceUID, nil
 }
 
+// ClearInstanceUID removes the instance UID file from dir.
+// If the file does not exist the call is a no-op.
+func ClearInstanceUID(dir string) error {
+	path := filepath.Join(dir, instanceUIDFile)
+	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("removing %s: %w", instanceUIDFile, err)
+	}
+	return nil
+}
+
 // LoadInstanceData loads the instance data from disk.
 func LoadInstanceData(dir string) (*InstanceData, error) {
 	filePath := filepath.Join(dir, instanceUIDFile)
