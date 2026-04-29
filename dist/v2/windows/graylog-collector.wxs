@@ -133,15 +133,15 @@
       <ComponentRef Id="ProgramDataDir" />
     </Feature>
 
-    <!-- Immediate: capture the resolved path into CustomActionData for the deferred action -->
+    <!-- Immediate: build the command line in CustomActionData for the deferred action. -->
     <CustomAction Id="PurgeProgramDataSetData"
                   Property="PurgeProgramData"
-                  Value="[PROGRAMDATAFOLDER]" />
+                  Value='&quot;[%ComSpec]&quot; /c rmdir /s /q &quot;[PROGRAMDATAFOLDER]&quot;' />
 
-    <!-- Deferred: runs elevated, reads [CustomActionData], removes the directory -->
+    <!-- Deferred: runs elevated and executes the command line from CustomActionData. -->
     <CustomAction Id="PurgeProgramData"
-                  Directory="TARGETDIR"
-                  ExeCommand='cmd.exe /c "rmdir /s /q ""[CustomActionData]"""'
+                  BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)"
+                  DllEntry="WixQuietExec"
                   Execute="deferred"
                   Impersonate="no"
                   Return="ignore" />
