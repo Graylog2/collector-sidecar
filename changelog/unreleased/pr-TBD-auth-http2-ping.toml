@@ -1,7 +1,0 @@
-# Rename this file to pr-<N>.toml when the PR number is known, and fill
-# `issues = ["..."]` with the paired upstream-issue number.
-type = "a"
-message = "Add HTTP/2 PING keepalive to `auth.Manager`'s HTTP client so half-dead JWKS / enrollment / CSR connections are detected in ~40s instead of waiting for the kernel's ~11-minute TCP keepalive ladder."
-
-issues = [""]
-pulls = [""]
