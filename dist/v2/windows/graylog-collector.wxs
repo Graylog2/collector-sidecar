@@ -71,7 +71,7 @@
                 Id="GraylogCollectorService"
                 Name="graylog-collector"
                 DisplayName="Graylog Collector"
-                Description="OpenTelemetry-based log collector, managed by Graylog."
+                Description="Managed Graylog log collector."
                 Type="ownProcess"
                 Start="auto"
                 ErrorControl="normal"
