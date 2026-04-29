@@ -87,6 +87,7 @@ func Run(ctx context.Context, cfg config.Config, events []func(*zap.Logger)) err
 	defer runCancel()
 
 	if err := sv.Start(runCtx); err != nil {
+		logger.Error("Failed to start supervisor", zap.Error(err))
 		return fmt.Errorf("failed to start supervisor: %w", err)
 	}
 
