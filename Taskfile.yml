@@ -97,7 +97,6 @@ tasks:
 
   package:windows:exe:sign:
     desc: 'Sign Windows MSI'
-    if: '{{if eq .SIGN_EXE "true"}}'
     cmds:
       - codesigntool sign {{.ROOT_DIR}}/graylog-collector-windows-amd64.exe
 
@@ -107,7 +106,8 @@ tasks:
     deps: [builder:build:windows:amd64]
     cmds:
       - mkdir -p dist/pkg
-      - task: package:windows:exe:sign
+      # TODO: Enable .exe signing?
+      #- task: package:windows:exe:sign
       - >-
         dotnet build dist/v2/windows/graylog-collector.wixproj
         -c Release
