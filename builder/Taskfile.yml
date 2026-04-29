@@ -1,0 +1,119 @@
+# Copyright (C)  2026 Graylog, Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the Server Side Public License, version 1,
+# as published by MongoDB, Inc.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# Server Side Public License for more details.
+#
+# You should have received a copy of the Server Side Public License
+# along with this program. If not, see
+# <http://www.mongodb.com/licensing/server-side-public-license>.
+#
+# SPDX-License-Identifier: SSPL-1.0
+
+version: '3'
+
+vars:
+  GOTEST_FLAGS: '-vet=all{{if ne OS "windows"}} -race{{end}}{{if .CI}} -v{{end}}'
+  OUT_DIR: '{{.ROOT_DIR}}'
+
+tasks:
+  generate:
+    desc: 'Regenerate the OCB-built collector source code'
+    dir: '{{.ROOT_DIR}}'
+    cmds:
+      - go generate .
+
+  test:
+    desc: 'Run unit tests for the builder module'
+    cmds:
+      - go test {{.GOTEST_FLAGS}} ./...
+
+  build:
+    desc: 'Build the collector for the host OS/arch'
+    cmds:
+      - task: generate
+      - go build -ldflags "{{.GO_LDFLAGS}}" -o {{.OUT_DIR}}/graylog-collector .
+
+  build:do:
+    internal: true
+    env:
+      GOOS: '{{.BUILD_OS}}'
+      GOARCH: '{{.BUILD_ARCH}}'
+      CGO_ENABLED: '{{if ne .CGO_ENABLED "1"}}0{{else}}1{{end}}'
+    deps: [generate]
+    cmds:
+      - go build -ldflags "{{.GO_LDFLAGS}}" -o {{.OUT_DIR}}/graylog-collector-{{.BUILD_OS}}-{{.BUILD_ARCH}}{{.BIN_SUFFIX}} .
+
+  build:linux:amd64:
+    desc: 'Cross-compile collector for linux/amd64'
+    cmds:
+      - task: build:do
+        vars:
+          BUILD_OS: linux
+          BUILD_ARCH: amd64
+
+  build:linux:arm64:
+    desc: 'Cross-compile collector for linux/arm64'
+    cmds:
+      - task: build:do
+        vars:
+          BUILD_OS: linux
+          BUILD_ARCH: arm64
+
+  build:darwin:amd64:
+    desc: 'Cross-compile collector for darwin/amd64'
+    cmds:
+      - task: build:do
+        vars:
+          BUILD_OS: darwin
+          BUILD_ARCH: amd64
+
+  build:darwin:arm64:
+    desc: 'Cross-compile collector for darwin/arm64'
+    cmds:
+      - task: build:do
+        vars:
+          BUILD_OS: darwin
+          BUILD_ARCH: arm64
+
+  build:windows:amd64:
+    desc: 'Cross-compile collector for windows/amd64'
+    dir: '{{.ROOT_DIR}}'
+    cmds:
+      - >-
+        go tool goversioninfo -64
+        -product-version="{{.COLLECTOR_VERSION}}"
+        -ver-major="{{.COLLECTOR_VERSION_MAJOR}}"
+        -product-ver-minor="{{.COLLECTOR_VERSION_MINOR}}"
+        -product-ver-patch="{{.COLLECTOR_VERSION_PATCH}}"
+        -product-ver-build="{{.COLLECTOR_REVISION}}"
+        -file-version="{{.COLLECTOR_VERSION}}"
+        -ver-major="{{.COLLECTOR_VERSION_MAJOR}}"
+        -ver-minor="{{.COLLECTOR_VERSION_MINOR}}"
+        -ver-patch="{{.COLLECTOR_VERSION_PATCH}}"
+        -ver-build="{{.COLLECTOR_REVISION}}"
+        -o {{.TASKFILE_DIR}}/resource_windows.syso
+
+      - task: build:do
+        vars:
+          BUILD_OS: windows
+          BUILD_ARCH: amd64
+          BIN_SUFFIX: '.exe'
+          # Build with CGO enabled on Windows to avoid the problematic pure-go DNS resolver.
+          # See: https://github.com/prometheus/prometheus/issues/11480
+          #      https://pkg.go.dev/net#hdr-Name_Resolution
+          CGO_ENABLED: '1'
+
+  build:all:
+    desc: 'Build collector for all supported platforms'
+    cmds:
+      - task: build:linux:amd64
+      - task: build:linux:arm64
+      - task: build:darwin:amd64
+      - task: build:darwin:arm64
+      - task: build:windows:amd64
