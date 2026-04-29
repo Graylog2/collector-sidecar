@@ -10,7 +10,6 @@ vars:
   COLLECTOR_VERSION: '{{.COLLECTOR_VERSION_MAJOR}}.{{.COLLECTOR_VERSION_MINOR}}.{{.COLLECTOR_VERSION_PATCH}}'
   COLLECTOR_VERSION_SUFFIX: '{{.COLLECTOR_VERSION_SUFFIX}}'
   COLLECTOR_REVISION: '{{.COLLECTOR_REVISION}}'
-  COLLECTOR_BUILD: '{{now | unixEpoch}}'
   GIT_REV:
     sh: git rev-parse --short HEAD
   GO_LDFLAGS: >-
@@ -113,7 +112,7 @@ tasks:
       - >-
         dotnet build dist/v2/windows/graylog-collector.wixproj
         -c Release
-        -p:Version={{.COLLECTOR_VERSION}}.{{.COLLECTOR_BUILD}}
+        -p:Version={{.COLLECTOR_VERSION}}
         -p:SourceExe={{.ROOT_DIR}}/graylog-collector-windows-amd64.exe
         -p:LicenseFile={{.ROOT_DIR}}/LICENSE
         -p:OutputPath={{.ROOT_DIR}}/dist/pkg/
