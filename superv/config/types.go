@@ -237,7 +237,7 @@ type LoggingConfig struct {
 }
 
 var unixDataPathPrefix = "/var/lib/graylog-collector"
-var windowsDataPathPrefix = filepath.Join(`C:\`, "ProgramData", "Graylog", "Collector")
+var WindowsDataPathPrefix = filepath.Join(`C:\`, "ProgramData", "Graylog", "Collector")
 
 type platformName string
 
@@ -278,7 +278,7 @@ func DefaultConfig() Config {
 			Dir: platformDefaultValue(map[platformName]string{
 				linux:   filepath.Join(unixDataPathPrefix, "keys"),
 				darwin:  filepath.Join(unixDataPathPrefix, "keys"),
-				windows: filepath.Join(windowsDataPathPrefix, "keys"),
+				windows: filepath.Join(WindowsDataPathPrefix, "keys"),
 			}),
 			Encrypted: false,
 		},
@@ -294,7 +294,7 @@ func DefaultConfig() Config {
 			StorageDir: platformDefaultValue(map[platformName]string{
 				linux:   filepath.Join(unixDataPathPrefix, "storage"),
 				darwin:  filepath.Join(unixDataPathPrefix, "storage"),
-				windows: filepath.Join(windowsDataPathPrefix, "storage"),
+				windows: filepath.Join(WindowsDataPathPrefix, "storage"),
 			}),
 			Config: AgentConfigMerge{
 				MergeStrategy: "deep",
@@ -331,7 +331,7 @@ func DefaultConfig() Config {
 			StorageDir: platformDefaultValue(map[platformName]string{
 				linux:   filepath.Join(unixDataPathPrefix, "packages"),
 				darwin:  filepath.Join(unixDataPathPrefix, "packages"),
-				windows: filepath.Join(windowsDataPathPrefix, "packages"),
+				windows: filepath.Join(WindowsDataPathPrefix, "packages"),
 			}),
 			KeepVersions: 2,
 			Verification: VerificationConfig{
@@ -346,7 +346,7 @@ func DefaultConfig() Config {
 			Dir: platformDefaultValue(map[platformName]string{
 				linux:   filepath.Join(unixDataPathPrefix, "supervisor"),
 				darwin:  filepath.Join(unixDataPathPrefix, "supervisor"),
-				windows: filepath.Join(windowsDataPathPrefix, "supervisor"),
+				windows: filepath.Join(WindowsDataPathPrefix, "supervisor"),
 			}),
 		},
 		Telemetry: TelemetryConfig{
@@ -367,7 +367,7 @@ func DefaultConfig() Config {
 			File: platformDefaultValue(map[platformName]string{
 				linux:   filepath.Join(unixDataPathPrefix, "supervisor", "logs", "supervisor.log"),
 				darwin:  filepath.Join(unixDataPathPrefix, "supervisor", "logs", "supervisor.log"),
-				windows: filepath.Join(windowsDataPathPrefix, "supervisor", "logs", "supervisor.log"),
+				windows: filepath.Join(WindowsDataPathPrefix, "supervisor", "logs", "supervisor.log"),
 			}),
 			FileRotation: LogRotationConfig{
 				MaxSize:    25,

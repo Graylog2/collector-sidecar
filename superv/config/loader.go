@@ -20,6 +20,8 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/knadh/koanf/parsers/yaml"
@@ -32,6 +34,9 @@ import (
 const envPrefix = "GLC_"
 
 func DefaultConfigPaths() []string {
+	if runtime.GOOS == "windows" {
+		return []string{filepath.Join(WindowsDataPathPrefix, "config", "supervisor.yaml")}
+	}
 	return []string{"/etc/graylog/collector/supervisor.yaml", "./supervisor.yaml"}
 }
 

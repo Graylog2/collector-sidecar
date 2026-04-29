@@ -33,8 +33,8 @@ import (
 // against their startup working directory, so a drive-relative default would
 // silently write state to the wrong location.
 func TestWindowsDataPathPrefixIsAbsolute(t *testing.T) {
-	assert.True(t, filepath.IsAbs(windowsDataPathPrefix),
-		"windowsDataPathPrefix must be absolute, got %q", windowsDataPathPrefix)
+	assert.True(t, filepath.IsAbs(WindowsDataPathPrefix),
+		"windowsDataPathPrefix must be absolute, got %q", WindowsDataPathPrefix)
 }
 
 func TestConfigDefaultsDirectories(t *testing.T) {
