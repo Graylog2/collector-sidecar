@@ -190,10 +190,11 @@ func buildConfig(cmd *cobra.Command) (config.Config, []func(logger *zap.Logger),
 		cfg.Packages.StorageDir = filepath.Join(absPath, "packages")
 		cfg.Logging.Format = "text"
 		cfg.Logging.Color = true
+		cfg.Logging.File = ""
 
 		events = append(events, func(logger *zap.Logger) {
 			logger.Debug("DEV mode activated", zap.String("data-dir", cfg.Persistence.Dir),
-				zap.String("logging-format", cfg.Logging.Format), zap.String("logging-color", "true"))
+				zap.String("logging-format", cfg.Logging.Format), zap.String("logging-color", "true"), zap.String("logging-output", "stderr"))
 		})
 	}
 	if isDebug, _ := cmd.Flags().GetBool("debug"); isDebug {
