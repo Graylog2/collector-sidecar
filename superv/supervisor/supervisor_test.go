@@ -19,6 +19,7 @@ package supervisor
 
 import (
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -86,6 +87,13 @@ func TestSupervisor_ConfigManagerIntegration(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	dir := t.TempDir()
 
+	executable := "/bin/sleep"
+	args := []string{"1"}
+	if runtime.GOOS == "windows" {
+		executable = "powershell"
+		args = []string{"-NoProfile", "-Command", "Start-Sleep -Seconds 1"}
+	}
+
 	cfg := config.Config{
 		Server: config.ServerConfig{
 			Endpoint: "ws://localhost:4320/v1/opamp",
@@ -94,8 +102,8 @@ func TestSupervisor_ConfigManagerIntegration(t *testing.T) {
 			Endpoint: "localhost:4321",
 		},
 		Agent: config.AgentConfig{
-			Executable: "/bin/sleep",
-			Args:       []string{"1"},
+			Executable: executable,
+			Args:       args,
 			Health: config.HealthConfig{
 				Endpoint: "http://localhost:13133/health",
 				Interval: 10 * time.Second,
@@ -253,7 +261,11 @@ func TestSupervisor_BuildCollectorEnv(t *testing.T) {
 
 		env := s.buildCollectorEnv()
 
-		require.Equal(t, "/var/lib/graylog-sidecar", env["GLC_INTERNAL_PERSISTENCE_DIR"])
+		if runtime.GOOS != "windows" {
+			require.Equal(t, "/var/lib/graylog-sidecar", env["GLC_INTERNAL_PERSISTENCE_DIR"])
+		} else {
+			require.Equal(t, "\\var\\lib\\graylog-sidecar", env["GLC_INTERNAL_PERSISTENCE_DIR"])
+		}
 	})
 
 	t.Run("sets storage path", func(t *testing.T) {
@@ -268,7 +280,11 @@ func TestSupervisor_BuildCollectorEnv(t *testing.T) {
 
 		env := s.buildCollectorEnv()
 
-		require.Equal(t, "/var/lib/graylog-sidecar/storage", env["GLC_INTERNAL_STORAGE_PATH"])
+		if runtime.GOOS != "windows" {
+			require.Equal(t, "/var/lib/graylog-sidecar/storage", env["GLC_INTERNAL_STORAGE_PATH"])
+		} else {
+			require.Equal(t, "\\var\\lib\\graylog-sidecar\\storage", env["GLC_INTERNAL_STORAGE_PATH"])
+		}
 	})
 
 	t.Run("merges user-configured env vars", func(t *testing.T) {

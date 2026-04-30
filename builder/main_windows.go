@@ -13,8 +13,12 @@ import (
 )
 
 func run(params otelcol.CollectorSettings) error {
-	// No need to supply service name when startup is invoked through
-	// the Service Control Manager directly.
+	if handled, triedSCM := maybeSupervisorService(params); handled {
+		return nil
+	} else if triedSCM {
+		return runInteractive(params)
+	}
+
 	if err := svc.Run("", otelcol.NewSvcHandler(params)); err != nil {
 		if errors.Is(err, windows.ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) {
 			// Per https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-startservicectrldispatchera#return-value

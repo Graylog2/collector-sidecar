@@ -15,16 +15,18 @@
 //
 // SPDX-License-Identifier: SSPL-1.0
 
-package main
+//go:build windows
 
-// Generate the OpenTelemetry Collector binary source code.
-//go:generate go tool go.opentelemetry.io/collector/cmd/builder --config ./builder/builder-config.yaml --skip-compilation
+package config
 
-// Modify the generated main.go and main_windows.go to add customization hooks.
-//go:generate go run ./builder/mod/main.go -main-path ./builder/main.go -windows-main-path ./builder/main_windows.go
+import (
+	"testing"
 
-// Format the generated source code.
-//go:generate gofmt -w -s -l ./builder
+	"github.com/stretchr/testify/require"
+)
 
-// Add license headers to the generated source code.
-//go:generate go tool github.com/google/addlicense -f .license.template -ignore **/*.yaml ./builder
+func TestDefaultConfigPaths(t *testing.T) {
+	paths := DefaultConfigPaths()
+
+	require.Contains(t, paths, "C:\\ProgramData\\Graylog\\collector\\config\\supervisor.yaml")
+}

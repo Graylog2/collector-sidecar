@@ -102,19 +102,20 @@ type LocalServer struct {
 
 // AgentConfig configures the managed collector agent.
 type AgentConfig struct {
-	Executable         string            `koanf:"executable"`
-	Args               []string          `koanf:"args"`
-	Env                map[string]string `koanf:"env"`
-	ConfigApplyTimeout time.Duration     `koanf:"config_apply_timeout"`
-	BootstrapTimeout   time.Duration     `koanf:"bootstrap_timeout"`
-	PassthroughLogs    bool              `koanf:"passthrough_logs"`
-	StorageDir         string            `koanf:"storage_dir"`
-	Config             AgentConfigMerge  `koanf:"config"`
-	Health             HealthConfig      `koanf:"health"`
-	Reload             ReloadConfig      `koanf:"reload"`
-	Restart            RestartConfig     `koanf:"restart"`
-	Shutdown           ShutdownConfig    `koanf:"shutdown"`
-	Sidecar            Sidecar           `koanf:"sidecar"`
+	Executable         string             `koanf:"executable"`
+	Args               []string           `koanf:"args"`
+	Env                map[string]string  `koanf:"env"`
+	ConfigApplyTimeout time.Duration      `koanf:"config_apply_timeout"`
+	BootstrapTimeout   time.Duration      `koanf:"bootstrap_timeout"`
+	PassthroughLogs    bool               `koanf:"passthrough_logs"`
+	Logging            AgentLoggingConfig `koanf:"logging"`
+	StorageDir         string             `koanf:"storage_dir"`
+	Config             AgentConfigMerge   `koanf:"config"`
+	Health             HealthConfig       `koanf:"health"`
+	Reload             ReloadConfig       `koanf:"reload"`
+	Restart            RestartConfig      `koanf:"restart"`
+	Shutdown           ShutdownConfig     `koanf:"shutdown"`
+	Sidecar            Sidecar            `koanf:"sidecar"`
 }
 
 // AgentConfigMerge configures how agent configs are merged.
@@ -221,20 +222,36 @@ type BatchConfig struct {
 	ExportTimeout time.Duration `koanf:"export_timeout"`
 }
 
-// LoggingConfig configures logging.
-type LoggingConfig struct {
-	Format string `koanf:"format"` // json | text
-	Level  string `koanf:"level"`  // debug | info | warn | error
-	Color  bool   `koanf:"color"`
+type LogRotationConfig struct {
+	MaxSize    int `koanf:"max_size"`    // megabytes before rotation
+	MaxBackups int `koanf:"max_backups"` // number of rotated files to keep
+	MaxAge     int `koanf:"max_age"`     // days to retain rotated files
 }
 
-var linuxDataPathPrefix = "/var/lib/graylog-collector"
-var windowsDataPathPrefix = filepath.Join("C:", "ProgramData", "Graylog", "Collector")
+// LoggingConfig configures logging.
+type LoggingConfig struct {
+	Format       string            `koanf:"format"` // json | text
+	Level        string            `koanf:"level"`  // debug | info | warn | error
+	Color        bool              `koanf:"color"`
+	File         string            `koanf:"file"` // path to log file
+	FileRotation LogRotationConfig `koanf:"file_rotation"`
+}
+
+// AgentLoggingConfig is a subset of LoggingConfig in this file: we don't allow setting color or format
+type AgentLoggingConfig struct {
+	Level        string            `koanf:"level"` // debug | info | warn | error
+	File         string            `koanf:"file"`  // path to log file
+	FileRotation LogRotationConfig `koanf:"file_rotation"`
+}
+
+var unixDataPathPrefix = "/var/lib/graylog-collector"
+var WindowsDataPathPrefix = filepath.Join(`C:\`, "ProgramData", "Graylog", "Collector")
 
 type platformName string
 
 const windows platformName = "windows"
 const linux platformName = "linux"
+const darwin platformName = "darwin"
 
 func platformDefaultValue[T any](values map[platformName]T) T {
 	if value, ok := values[platformName(runtime.GOOS)]; ok {
@@ -267,8 +284,9 @@ func DefaultConfig() Config {
 		Keys: KeysConfig{
 			// TODO: Branding
 			Dir: platformDefaultValue(map[platformName]string{
-				linux:   filepath.Join(linuxDataPathPrefix, "keys"),
-				windows: filepath.Join(windowsDataPathPrefix, "keys"),
+				linux:   filepath.Join(unixDataPathPrefix, "keys"),
+				darwin:  filepath.Join(unixDataPathPrefix, "keys"),
+				windows: filepath.Join(WindowsDataPathPrefix, "keys"),
 			}),
 			Encrypted: false,
 		},
@@ -280,10 +298,24 @@ func DefaultConfig() Config {
 			ConfigApplyTimeout: 5 * time.Second,
 			BootstrapTimeout:   3 * time.Second,
 			PassthroughLogs:    false,
+			Logging: AgentLoggingConfig{
+				Level: "info",
+				File: platformDefaultValue(map[platformName]string{
+					linux:   filepath.Join(unixDataPathPrefix, "supervisor", "logs", "agent.log"),
+					darwin:  filepath.Join(unixDataPathPrefix, "supervisor", "logs", "agent.log"),
+					windows: filepath.Join(WindowsDataPathPrefix, "supervisor", "logs", "agent.log"),
+				}),
+				FileRotation: LogRotationConfig{
+					MaxSize:    25,
+					MaxBackups: 5,
+					MaxAge:     30,
+				},
+			},
 			// TODO: Branding
 			StorageDir: platformDefaultValue(map[platformName]string{
-				linux:   filepath.Join(linuxDataPathPrefix, "storage"),
-				windows: filepath.Join(windowsDataPathPrefix, "storage"),
+				linux:   filepath.Join(unixDataPathPrefix, "storage"),
+				darwin:  filepath.Join(unixDataPathPrefix, "storage"),
+				windows: filepath.Join(WindowsDataPathPrefix, "storage"),
 			}),
 			Config: AgentConfigMerge{
 				MergeStrategy: "deep",
@@ -318,8 +350,9 @@ func DefaultConfig() Config {
 		Packages: PackagesConfig{
 			// TODO: Branding
 			StorageDir: platformDefaultValue(map[platformName]string{
-				linux:   filepath.Join(linuxDataPathPrefix, "packages"),
-				windows: filepath.Join(windowsDataPathPrefix, "packages"),
+				linux:   filepath.Join(unixDataPathPrefix, "packages"),
+				darwin:  filepath.Join(unixDataPathPrefix, "packages"),
+				windows: filepath.Join(WindowsDataPathPrefix, "packages"),
 			}),
 			KeepVersions: 2,
 			Verification: VerificationConfig{
@@ -332,8 +365,9 @@ func DefaultConfig() Config {
 		Persistence: PersistenceConfig{
 			// TODO: Branding
 			Dir: platformDefaultValue(map[platformName]string{
-				linux:   filepath.Join(linuxDataPathPrefix, "supervisor"),
-				windows: filepath.Join(windowsDataPathPrefix, "supervisor"),
+				linux:   filepath.Join(unixDataPathPrefix, "supervisor"),
+				darwin:  filepath.Join(unixDataPathPrefix, "supervisor"),
+				windows: filepath.Join(WindowsDataPathPrefix, "supervisor"),
 			}),
 		},
 		Telemetry: TelemetryConfig{
@@ -350,6 +384,17 @@ func DefaultConfig() Config {
 		Logging: LoggingConfig{
 			Format: "json",
 			Level:  "info",
+			Color:  false,
+			File: platformDefaultValue(map[platformName]string{
+				linux:   filepath.Join(unixDataPathPrefix, "supervisor", "logs", "supervisor.log"),
+				darwin:  filepath.Join(unixDataPathPrefix, "supervisor", "logs", "supervisor.log"),
+				windows: filepath.Join(WindowsDataPathPrefix, "supervisor", "logs", "supervisor.log"),
+			}),
+			FileRotation: LogRotationConfig{
+				MaxSize:    25,
+				MaxBackups: 5,
+				MaxAge:     30,
+			},
 		},
 	}
 }

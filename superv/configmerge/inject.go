@@ -122,3 +122,13 @@ func InjectDisableTelemetryMetrics(config []byte) ([]byte, error) {
 	}
 	return result, nil
 }
+
+func InjectTelemetryLogs(config []byte, level string) ([]byte, error) {
+	result, err := InjectSettings(config, map[string]any{
+		"service::telemetry::logs::level": level,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}

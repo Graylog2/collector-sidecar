@@ -181,3 +181,101 @@ func TestAddCustomizationCallsInvalidGoFile(t *testing.T) {
 		t.Errorf("unexpected error message: %v", err)
 	}
 }
+
+const validMainWindowsGo = `package main
+
+import (
+	"errors"
+	"fmt"
+	"go.opentelemetry.io/collector/otelcol"
+	"golang.org/x/sys/windows"
+	"golang.org/x/sys/windows/svc"
+)
+
+func run(params otelcol.CollectorSettings) error {
+	// No need to supply service name when startup is invoked through
+	// the Service Control Manager directly.
+	if err := svc.Run("", otelcol.NewSvcHandler(params)); err != nil {
+		if errors.Is(err, windows.ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) {
+			return runInteractive(params)
+		}
+		return fmt.Errorf("failed to start collector server: %w", err)
+	}
+	return nil
+}
+`
+
+const mainWindowsGoWithoutRun = `package main
+
+func main() {
+	println("hello")
+}
+`
+
+func TestAddSupervisorDispatch(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "main_windows.go")
+	if err := os.WriteFile(path, []byte(validMainWindowsGo), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := addSupervisorDispatch(path); err != nil {
+		t.Fatalf("addSupervisorDispatch failed: %v", err)
+	}
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(string(content), "maybeSupervisorService(params)") {
+		t.Errorf("expected maybeSupervisorService(params) call to be inserted")
+	}
+
+	dispatchIdx := strings.Index(string(content), "maybeSupervisorService(params)")
+	svcRunIdx := strings.Index(string(content), "svc.Run")
+	if dispatchIdx >= svcRunIdx {
+		t.Errorf("maybeSupervisorService should appear before svc.Run")
+	}
+}
+
+func TestAddSupervisorDispatchIdempotent(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "main_windows.go")
+	if err := os.WriteFile(path, []byte(validMainWindowsGo), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := addSupervisorDispatch(path); err != nil {
+		t.Fatalf("first call failed: %v", err)
+	}
+	if err := addSupervisorDispatch(path); err != nil {
+		t.Fatalf("second call failed: %v", err)
+	}
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	count := strings.Count(string(content), "maybeSupervisorService(params)")
+	if count != 1 {
+		t.Errorf("expected exactly 1 maybeSupervisorService call, found %d", count)
+	}
+}
+
+func TestAddSupervisorDispatchMissingRunFunc(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "main_windows.go")
+	if err := os.WriteFile(path, []byte(mainWindowsGoWithoutRun), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	err := addSupervisorDispatch(path)
+	if err == nil {
+		t.Fatal("expected error when run function is missing")
+	}
+	if !strings.Contains(err.Error(), "could not find run function") {
+		t.Errorf("unexpected error message: %v", err)
+	}
+}

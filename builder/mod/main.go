@@ -37,17 +37,150 @@ const (
 
 func main() {
 	mainPath := flag.String("main-path", "", "path to the generated OTel Collector main.go file to modify")
+	windowsMainPath := flag.String("windows-main-path", "", "path to the generated OTel Collector main_windows.go file to modify")
 	flag.Parse()
 
-	if *mainPath == "" {
-		_, _ = fmt.Fprintln(os.Stderr, "error: -main-path is required")
+	if *mainPath == "" && *windowsMainPath == "" {
+		_, _ = fmt.Fprintln(os.Stderr, "error: at least one of -main-path or -windows-main-path is required")
 		os.Exit(1)
 	}
 
-	if err := addCustomizationCalls(*mainPath); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
+	if *mainPath != "" {
+		if err := addCustomizationCalls(*mainPath); err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
 	}
+
+	if *windowsMainPath != "" {
+		if err := addSupervisorDispatch(*windowsMainPath); err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+	}
+}
+
+const supervisorDispatchCallback = "maybeSupervisorService"
+
+// addSupervisorDispatch inserts a supervisor dispatch call at the beginning of
+// the run() function in main_windows.go. This allows the supervisor's Windows
+// service handler to intercept before the OTel Collector's handler runs.
+func addSupervisorDispatch(path string) error {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+	if err != nil {
+		return fmt.Errorf("failed to parse file: %w", err)
+	}
+
+	found := false
+	alreadyExists := false
+	ast.Inspect(f, func(n ast.Node) bool {
+		fn, ok := n.(*ast.FuncDecl)
+		if !ok || fn.Name.Name != "run" {
+			return true
+		}
+
+		for _, stmt := range fn.Body.List {
+			ifStmt, ok := stmt.(*ast.IfStmt)
+			if !ok || ifStmt.Init == nil {
+				continue
+			}
+			assignStmt, ok := ifStmt.Init.(*ast.AssignStmt)
+			if !ok {
+				continue
+			}
+			callExpr, ok := assignStmt.Rhs[0].(*ast.CallExpr)
+			if !ok {
+				continue
+			}
+			if ident, ok := callExpr.Fun.(*ast.Ident); ok && ident.Name == supervisorDispatchCallback {
+				alreadyExists = true
+				return false
+			}
+		}
+
+		// Remove comments inside the function body that would be misplaced
+		// by the AST insertion. Go's formatter associates comments by position,
+		// so prepending a statement shifts everything.
+		bodyStart := fn.Body.Lbrace
+		firstStmtPos := fn.Body.List[0].Pos()
+		var kept []*ast.CommentGroup
+		for _, cg := range f.Comments {
+			if cg.Pos() > bodyStart && cg.End() < firstStmtPos {
+				continue
+			}
+			kept = append(kept, cg)
+		}
+		f.Comments = kept
+
+		// Build:
+		//   if handled, triedSCM := maybeSupervisorService(params); handled {
+		//       return nil
+		//   } else if triedSCM {
+		//       return runInteractive(params)
+		//   }
+		dispatchCall := &ast.AssignStmt{
+			Lhs: []ast.Expr{ast.NewIdent("handled"), ast.NewIdent("triedSCM")},
+			Tok: token.DEFINE,
+			Rhs: []ast.Expr{
+				&ast.CallExpr{
+					Fun:  ast.NewIdent(supervisorDispatchCallback),
+					Args: []ast.Expr{ast.NewIdent("params")},
+				},
+			},
+		}
+
+		ifStmt := &ast.IfStmt{
+			Init: dispatchCall,
+			Cond: ast.NewIdent("handled"),
+			Body: &ast.BlockStmt{
+				List: []ast.Stmt{
+					&ast.ReturnStmt{
+						Results: []ast.Expr{ast.NewIdent("nil")},
+					},
+				},
+			},
+			Else: &ast.IfStmt{
+				Cond: ast.NewIdent("triedSCM"),
+				Body: &ast.BlockStmt{
+					List: []ast.Stmt{
+						&ast.ReturnStmt{
+							Results: []ast.Expr{
+								&ast.CallExpr{
+									Fun:  ast.NewIdent("runInteractive"),
+									Args: []ast.Expr{ast.NewIdent("params")},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		fn.Body.List = append([]ast.Stmt{ifStmt}, fn.Body.List...)
+		found = true
+		return false
+	})
+
+	if alreadyExists {
+		return nil
+	}
+
+	if !found {
+		return fmt.Errorf("could not find run function in %s", path)
+	}
+
+	out, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("failed to open file for writing: %w", err)
+	}
+	defer out.Close()
+
+	if err := format.Node(out, fset, f); err != nil {
+		return fmt.Errorf("failed to write modified file: %w", err)
+	}
+
+	return nil
 }
 
 func addCustomizationCalls(path string) error {

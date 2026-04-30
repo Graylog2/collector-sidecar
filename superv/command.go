@@ -18,6 +18,7 @@
 package superv
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -27,17 +28,15 @@ import (
 	"path/filepath"
 	"runtime"
 	"syscall"
-	"time"
 
+	"github.com/DeRuina/timberjack"
 	"github.com/Graylog2/collector-sidecar/superv/config"
-	"github.com/Graylog2/collector-sidecar/superv/ownlogs"
-	"github.com/Graylog2/collector-sidecar/superv/persistence"
-	"github.com/Graylog2/collector-sidecar/superv/supervisor"
-	"github.com/Graylog2/collector-sidecar/superv/version"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
+
+const jsonLoggingFormat = "json"
 
 func GetCommand() *cobra.Command {
 	cmd := &cobra.Command{
@@ -187,14 +186,16 @@ func buildConfig(cmd *cobra.Command) (config.Config, []func(logger *zap.Logger),
 		}
 		cfg.Persistence.Dir = filepath.Join(absPath, "supervisor")
 		cfg.Agent.StorageDir = filepath.Join(absPath, "storage")
+		cfg.Agent.Logging.File = filepath.Join(absPath, "supervisor", "logs", "agent.log")
 		cfg.Keys.Dir = filepath.Join(absPath, "keys")
 		cfg.Packages.StorageDir = filepath.Join(absPath, "packages")
 		cfg.Logging.Format = "text"
 		cfg.Logging.Color = true
+		cfg.Logging.File = ""
 
 		events = append(events, func(logger *zap.Logger) {
 			logger.Debug("DEV mode activated", zap.String("data-dir", cfg.Persistence.Dir),
-				zap.String("logging-format", cfg.Logging.Format), zap.String("logging-color", "true"))
+				zap.String("logging-format", cfg.Logging.Format), zap.String("logging-color", "true"), zap.String("logging-output", "stderr"))
 		})
 	}
 	if isDebug, _ := cmd.Flags().GetBool("debug"); isDebug {
@@ -232,103 +233,64 @@ func initLogger(loggingCfg config.LoggingConfig, debug bool) (*zap.Logger, error
 		zapLevel = zapcore.InfoLevel
 	}
 
-	var cfg zap.Config
-	if loggingCfg.Format == "json" {
-		cfg = zap.NewProductionConfig()
+	var makeEncoderCfg func() zapcore.EncoderConfig
+	if loggingCfg.Format == jsonLoggingFormat {
+		makeEncoderCfg = zap.NewProductionEncoderConfig
 	} else {
-		cfg = zap.NewDevelopmentConfig()
+		makeEncoderCfg = zap.NewDevelopmentEncoderConfig
 	}
-	cfg.Level = zap.NewAtomicLevelAt(zapLevel)
-	cfg.DisableStacktrace = !debug
 
-	if loggingCfg.Color {
+	stderrEncCfg := makeEncoderCfg()
+	fileEncCfg := makeEncoderCfg()
+
+	// color + JSON make no sense, silently ignore color in that case
+	if loggingCfg.Color && loggingCfg.Format != jsonLoggingFormat {
 		enableConsoleColors()
-		cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+		stderrEncCfg.EncodeLevel = zapcore.CapitalColorLevelEncoder
+		// no color in file encoder
 	}
 
-	logger, err := cfg.Build()
-	if err != nil {
-		return nil, fmt.Errorf("building logger: %w", err)
+	var stderrEnc, fileEnc zapcore.Encoder
+	if loggingCfg.Format == jsonLoggingFormat {
+		stderrEnc = zapcore.NewJSONEncoder(stderrEncCfg)
+		fileEnc = zapcore.NewJSONEncoder(fileEncCfg)
+	} else {
+		stderrEnc = zapcore.NewConsoleEncoder(stderrEncCfg)
+		fileEnc = zapcore.NewConsoleEncoder(fileEncCfg)
 	}
-	return logger, nil
+
+	cores := []zapcore.Core{
+		zapcore.NewCore(stderrEnc, zapcore.Lock(os.Stderr), zapLevel),
+	}
+	if loggingCfg.File != "" {
+		if err := os.MkdirAll(filepath.Dir(loggingCfg.File), 0750); err != nil {
+			return nil, fmt.Errorf("create log directory: %w", err)
+		}
+		rot := loggingCfg.FileRotation
+		rotator := &timberjack.Logger{
+			Filename:   loggingCfg.File,
+			MaxSize:    cmp.Or(rot.MaxSize, 25),
+			MaxBackups: cmp.Or(rot.MaxBackups, 5),
+			MaxAge:     cmp.Or(rot.MaxAge, 30),
+			LocalTime:  true,
+		}
+		cores = append(cores, zapcore.NewCore(fileEnc, zapcore.AddSync(rotator), zapLevel))
+	}
+	opts := []zap.Option{zap.AddCaller()}
+	if debug {
+		opts = append(opts, zap.AddStacktrace(zap.ErrorLevel))
+	}
+	return zap.New(zapcore.NewTee(cores...), opts...), nil
 }
 
-func runSupervisor(cmd *cobra.Command, args []string) error {
+func runSupervisor(cmd *cobra.Command, _ []string) error {
 	cfg, events, err := buildConfig(cmd)
 	if err != nil {
 		return fmt.Errorf("couldn't load config: %w", err)
 	}
 
-	logger, err := initLogger(cfg.Logging, cfg.Debug)
-	if err != nil {
-		return fmt.Errorf("failed to create logger: %w", err)
-	}
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
-	// Create own logs manager for OTLP export
-	ownLogsManager := ownlogs.NewManager(cfg.Telemetry.Logs)
-
-	// Tee stderr core with the swappable OTLP core, preserving
-	// all original logger options (development mode, caller, stacktrace threshold).
-	logger = logger.WithOptions(zap.WrapCore(func(original zapcore.Core) zapcore.Core {
-		return zapcore.NewTee(original, ownLogsManager.Core())
-	}))
-
-	for _, event := range events {
-		event(logger)
-	}
-
-	// Load or create instance UID early so it's available for own_logs restore.
-	instanceUID, err := persistence.LoadOrCreateInstanceUID(cfg.Persistence.Dir)
-	if err != nil {
-		return fmt.Errorf("failed to load instance UID: %w", err)
-	}
-
-	// Restore persisted own_logs settings
-	certPath := filepath.Join(cfg.Keys.Dir, persistence.SigningCertFile)
-	keyPath := filepath.Join(cfg.Keys.Dir, persistence.SigningKeyFile)
-	ownLogsPersist := ownlogs.NewPersistence(cfg.Persistence.Dir, certPath, keyPath)
-	var restoredOwnLogs *ownlogs.Settings
-	if settings, exists, loadErr := ownLogsPersist.Load(); loadErr != nil {
-		logger.Warn("Failed to load persisted own_logs settings", zap.Error(loadErr))
-	} else if exists {
-		logger.Info("Restoring OTLP log export from persisted settings",
-			zap.String("endpoint", settings.Endpoint),
-		)
-		res := ownlogs.BuildResource(supervisor.ServiceName, version.Version(), instanceUID)
-		if applyErr := ownLogsManager.Apply(context.Background(), settings, res); applyErr != nil {
-			logger.Warn("Failed to restore OTLP log export", zap.Error(applyErr))
-		} else {
-			restoredOwnLogs = new(settings)
-		}
-	}
-
-	sv, err := supervisor.New(logger.Named("supervisor"), cfg, instanceUID)
-	if err != nil {
-		return fmt.Errorf("failed to create supervisor: %w", err)
-	}
-	sv.SetOwnLogs(ownLogsManager, ownLogsPersist, restoredOwnLogs)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	sigCtx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
-
-	err = sv.Start(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to start supervisor: %w", err)
-	}
-
-	<-sigCtx.Done()
-	stop()
-
-	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancelShutdown()
-	if err := sv.Stop(shutdownCtx); err != nil {
-		return fmt.Errorf("shutdown timeout: %w", err)
-	}
-
-	// Safety net: flush own logs in case supervisor stop was interrupted.
-	_ = ownLogsManager.Shutdown(shutdownCtx)
-
-	return nil
+	return Run(ctx, cfg, events)
 }

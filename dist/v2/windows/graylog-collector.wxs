@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Copyright (C)  2026 Graylog, Inc.
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the Server Side Public License, version 1,
+ as published by MongoDB, Inc.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ Server Side Public License for more details.
+
+ You should have received a copy of the Server Side Public License
+ along with this program. If not, see
+ <http://www.mongodb.com/licensing/server-side-public-license>.
+
+ SPDX-License-Identifier: SSPL-1.0
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <!-- UpgradeCode: MINT ONCE, NEVER CHANGE. -->
+  <?define UpgradeCode = "C57C74A4-E5B1-4014-A0FC-17E9A4DB5A2B" ?>
+
+  <!-- Do not set ProductCode on the Package element. Major upgrades require
+       each MSI package to have a new ProductCode while sharing the stable
+       UpgradeCode below. WiX generates a new ProductCode automatically when
+       ProductCode is omitted. -->
+  <Package
+      Name="Graylog Collector"
+      Manufacturer="Graylog, Inc."
+      Version="$(Version)"
+      UpgradeCode="$(var.UpgradeCode)"
+      Scope="perMachine"
+      Language="1033"
+      Compressed="yes">
+
+    <!-- MajorUpgrade only upgrades installed products with a lower MSI
+         ProductVersion. Windows Installer compares only the first three numeric
+         fields: major.minor.build. Changing only a fourth version field, file
+         version, package name, or binary contents still leaves the MSI version
+         unchanged and can register a duplicate product when installed with
+         "msiexec /i file.msi".
+
+         Release builds must bump one of the first three Version fields. For
+         local same-version test rebuilds during development, uninstall the existing
+         product first or temporarily use AllowSameVersionUpgrades with the known
+         downgrade risk.
+         For details see: https://docs.firegiant.com/wix/schema/wxs/majorupgrade/ -->
+    <MajorUpgrade
+        DowngradeErrorMessage="A newer version of Graylog Collector is already installed."
+        Schedule="afterInstallExecute" />
+
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="graylog.ico" SourceFile="graylog.ico" />
+    <Property Id="ARPPRODUCTICON" Value="graylog.ico" />
+    <Property Id="ARPHELPLINK" Value="https://docs.graylog.org/" />
+    <Property Id="ARPURLINFOABOUT" Value="https://www.graylog.org/" />
+    <Property Id="ENROLLENDPOINT" Secure="yes">
+      <RegistrySearch Id="ExistingEnrollEndpoint"
+                      Root="HKLM"
+                      Key="SOFTWARE\Graylog\Collector"
+                      Name="ENROLLENDPOINT"
+                      Type="raw" />
+    </Property>
+
+    <Property Id="ENROLLTOKEN" Secure="yes">
+      <RegistrySearch Id="ExistingEnrollToken"
+                      Root="HKLM"
+                      Key="SOFTWARE\Graylog\Collector"
+                      Name="ENROLLTOKEN"
+                      Type="raw" />
+    </Property>
+
+    <Property Id="REMOVE_DATA" Secure="yes" Value="0" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="GraylogDir" Name="Graylog">
+        <Directory Id="INSTALLFOLDER" Name="Collector">
+          <Component Id="CollectorExe" Guid="*">
+            <File Id="graylog_collector_exe"
+                  Source="$(var.SourceExe)"
+                  KeyPath="yes" />
+
+            <ServiceInstall
+                Id="GraylogCollectorService"
+                Name="graylog-collector"
+                DisplayName="Graylog Collector"
+                Description="Managed Graylog log collector."
+                Type="ownProcess"
+                Start="auto"
+                ErrorControl="normal"
+                Account="LocalSystem"
+                Arguments="supervisor"
+                Vital="yes" />
+
+            <ServiceControl
+                Id="GraylogCollectorServiceControl"
+                Name="graylog-collector"
+                Start="install"
+                Stop="both"
+                Remove="uninstall"
+                Wait="no" />
+          </Component>
+          <Component Id="CollectorLicense" Guid="*">
+            <File Id="LICENSE_txt"
+                  Source="$(var.LicenseFile)"
+                  Name="LICENSE"
+                  KeyPath="yes" />
+          </Component>
+
+          <Component Id="InstallStateMirror" Guid="*">
+            <RegistryKey Root="HKLM" Key="SOFTWARE\Graylog\Collector">
+              <RegistryValue Name="ENROLLENDPOINT" Type="string" Value="[ENROLLENDPOINT]" KeyPath="yes" />
+              <RegistryValue Name="ENROLLTOKEN"    Type="string" Value="[ENROLLTOKEN]" />
+            </RegistryKey>
+          </Component>
+
+          <Component Id="ServiceEnvironment" Guid="*">
+            <RegistryKey Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\graylog-collector">
+              <RegistryValue Name="Environment" Type="multiString" KeyPath="yes">
+                <MultiStringValue Value="GLC_SERVER__AUTH__ENROLLMENT_ENDPOINT=[ENROLLENDPOINT]" />
+                <MultiStringValue Value="GLC_SERVER__AUTH__ENROLLMENT_TOKEN=[ENROLLTOKEN]" />
+              </RegistryValue>
+            </RegistryKey>
+          </Component>
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="CommonAppDataFolder">
+      <Directory Id="CommonAppGraylogDir" Name="Graylog">
+        <Directory Id="PROGRAMDATAFOLDER" Name="Collector">
+          <Component Id="ProgramDataDir" Guid="9BB8A27D-C01D-42A9-B5C0-4C1E1E31714C">
+            <CreateFolder />
+          </Component>
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+
+    <UIRef Id="GraylogUI" />
+
+    <Feature Id="Main" Title="Graylog Collector" Level="1">
+      <ComponentRef Id="CollectorExe" />
+      <ComponentRef Id="CollectorLicense" />
+      <ComponentRef Id="InstallStateMirror" />
+      <ComponentRef Id="ServiceEnvironment" />
+      <ComponentRef Id="ProgramDataDir" />
+    </Feature>
+
+    <!-- Immediate: build the command line in CustomActionData for the deferred action. -->
+    <CustomAction Id="PurgeProgramDataSetData"
+                  Property="PurgeProgramData"
+                  Value='&quot;[%ComSpec]&quot; /c rmdir /s /q &quot;[PROGRAMDATAFOLDER]&quot;' />
+
+    <!-- Deferred: runs elevated and executes the command line from CustomActionData. -->
+    <CustomAction Id="PurgeProgramData"
+                  BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)"
+                  DllEntry="WixQuietExec"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <InstallExecuteSequence>
+      <Custom Action="PurgeProgramDataSetData"
+              Before="PurgeProgramData"
+              Condition='REMOVE_DATA="1" AND REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE' />
+      <Custom Action="PurgeProgramData"
+              After="RemoveFiles"
+              Condition='REMOVE_DATA="1" AND REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE' />
+    </InstallExecuteSequence>
+
+  </Package>
+</Wix>

@@ -22,7 +22,7 @@ WINDOWS_INSTALLER_VERSION = $(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)$(subst -,
 # Removing the dot to comply with NuGet versioning (beta.1 -> beta2)
 CHOCOLATEY_VERSION = $(COLLECTOR_VERSION).$(COLLECTOR_REVISION)$(subst .,,$(COLLECTOR_VERSION_SUFFIX))
 
-FMT_ARGS = -f .license.template -ignore '{.github,.idea,changelog,dist/v2}/**' -ignore '**/*.{yml,yaml}' .
+FMT_ARGS = -f .license.template -ignore '{.github,.idea,changelog,dist/v2,out}/**' -ignore '**/*.{yml,yaml}' .
 FMT_ARGS_OTEL = -f .license.template.otel -ignore '**/*.{yml,yaml}' receiver/windowseventlogreceiver
 
 .PHONY: all
@@ -183,6 +183,23 @@ package-windows-msi-amd64: prepare-package ## Create Windows MSI package (requir
 		-D WinlogbeatEXEPath=dist/collectors/winlogbeat/windows/x86_64/winlogbeat.exe \
 		-o dist/pkg/graylog-sidecar-$(WINDOWS_INSTALLER_VERSION).msi \
 		dist/msi-package.wxs
+
+.PHONY: v2-package-windows-msi
+v2-package-windows-msi: ## Build Windows MSI for v2 collector (Windows only, requires dotnet SDK + wix tool)
+ifneq ($(OS),Windows_NT)
+	$(error v2-package-windows-msi requires Windows (WiX does not support other platforms))
+endif
+	@mkdir -p dist/pkg
+	dotnet build dist/v2/windows/graylog-collector.wixproj \
+	    -c Release \
+	    -p:Version=$(COLLECTOR_VERSION) \
+	    -p:SourceExe=$(PWD)/graylog-collector-windows-amd64.exe \
+	    -p:LicenseFile=$(PWD)/LICENSE \
+	    -p:OutputPath=$(PWD)/dist/pkg/
+
+.PHONY: v2-sign-windows-msi
+v2-sign-windows-msi: ## Sign v2 Windows MSI (runs in codesigntool Docker container)
+	codesigntool sign dist/pkg/graylog-collector-$(COLLECTOR_VERSION).msi
 
 .PHONY: sign-windows-installer
 sign-windows-installer:

@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Copyright (C)  2026 Graylog, Inc.
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the Server Side Public License, version 1,
+ as published by MongoDB, Inc.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ Server Side Public License for more details.
+
+ You should have received a copy of the Server Side Public License
+ along with this program. If not, see
+ <http://www.mongodb.com/licensing/server-side-public-license>.
+
+ SPDX-License-Identifier: SSPL-1.0
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Fragment>
+    <WixVariable Id="WixUILicenseRtf" Value="LICENSE.rtf" />
+
+    <!--
+      Self-contained UI: no WixUI template overrides.
+      Flow: WelcomeDlg → LicenseAgreementDlg → ConfigurationDlg → VerifyReadyDlg → install
+      Standard dialogs are referenced from WixToolset.UI.wixext via DialogRef.
+    -->
+    <UI Id="GraylogUI">
+      <TextStyle Id="WixUI_Font_Normal" FaceName="Tahoma" Size="8" />
+      <TextStyle Id="WixUI_Font_Bigger" FaceName="Tahoma" Size="12" />
+      <TextStyle Id="WixUI_Font_Title" FaceName="Tahoma" Size="9" Bold="yes" />
+      <Property Id="DefaultUIFont" Value="WixUI_Font_Normal" />
+      <Property Id="ARPNOMODIFY" Value="1" />
+
+      <DialogRef Id="ErrorDlg" />
+      <DialogRef Id="FatalError" />
+      <DialogRef Id="FilesInUse" />
+      <DialogRef Id="MsiRMFilesInUse" />
+      <DialogRef Id="PrepareDlg" />
+      <DialogRef Id="ProgressDlg" />
+      <DialogRef Id="ResumeDlg" />
+      <DialogRef Id="UserExit" />
+
+      <!-- First-time install flow -->
+      <Publish Dialog="WelcomeDlg" Control="Next"
+               Event="NewDialog" Value="LicenseAgreementDlg" />
+
+      <Publish Dialog="LicenseAgreementDlg" Control="Back"
+               Event="NewDialog" Value="WelcomeDlg" />
+      <Publish Dialog="LicenseAgreementDlg" Control="Next"
+               Event="NewDialog" Value="ConfigurationDlg"
+               Condition='LicenseAccepted = "1"' />
+
+      <Publish Dialog="VerifyReadyDlg" Control="Back"
+               Event="NewDialog" Value="ConfigurationDlg" />
+
+      <Publish Dialog="ExitDialog" Control="Finish"
+               Event="EndDialog" Value="Return" Order="999" />
+
+      <!-- Custom configuration dialog -->
+      <Dialog Id="ConfigurationDlg"
+              Width="370" Height="270"
+              Title="Graylog Collector Setup"
+              NoMinimize="yes">
+
+        <Control Id="BannerBitmap" Type="Bitmap"
+                 X="0" Y="0" Width="370" Height="44"
+                 TabSkip="no" Text="WixUI_Bmp_Banner" />
+
+        <Control Id="Title" Type="Text"
+                 X="15" Y="6" Width="200" Height="15"
+                 Transparent="yes" NoPrefix="yes"
+                 Text="{\WixUI_Font_Title}Configure Graylog Collector" />
+
+        <Control Id="Description" Type="Text"
+                 X="25" Y="23" Width="280" Height="15"
+                 Transparent="yes" NoPrefix="yes"
+                 Text="Enter the enrollment details for this collector." />
+
+        <Control Id="EnrollEndpointLabel" Type="Text"
+                 X="20" Y="60" Width="330" Height="14"
+                 Text="Graylog server URL:" Transparent="yes" />
+
+        <Control Id="EnrollEndpointEdit" Type="Edit"
+                 X="20" Y="76" Width="330" Height="17"
+                 Property="ENROLLENDPOINT" Text="[ENROLLENDPOINT]" />
+
+        <Control Id="EnrollTokenLabel" Type="Text"
+                 X="20" Y="110" Width="330" Height="14"
+                 Text="Enrollment token:" Transparent="yes" />
+
+        <Control Id="EnrollTokenEdit" Type="Edit"
+                 X="20" Y="126" Width="330" Height="17"
+                 Property="ENROLLTOKEN" Password="yes" Text="[ENROLLTOKEN]" />
+
+        <Control Id="BottomLine" Type="Line"
+                 X="0" Y="234" Width="370" Height="0" />
+
+        <Control Id="Back" Type="PushButton"
+                 X="180" Y="243" Width="56" Height="17"
+                 Text="Back">
+          <Publish Event="NewDialog" Value="LicenseAgreementDlg" />
+        </Control>
+
+        <Control Id="Next" Type="PushButton"
+                 X="236" Y="243" Width="56" Height="17"
+                 Default="yes" Text="Next">
+          <Publish Event="NewDialog" Value="VerifyReadyDlg"
+                   Condition='ENROLLENDPOINT&lt;&gt;"" AND ENROLLTOKEN&lt;&gt;""' />
+        </Control>
+
+        <Control Id="Cancel" Type="PushButton"
+                 X="304" Y="243" Width="56" Height="17"
+                 Cancel="yes" Text="Cancel">
+          <Publish Event="SpawnDialog" Value="CancelDlg" />
+        </Control>
+      </Dialog>
+    </UI>
+
+    <UIRef Id="WixUI_Common" />
+  </Fragment>
+</Wix>

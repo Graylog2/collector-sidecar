@@ -29,6 +29,15 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
+func lookPath(t *testing.T, name string) string {
+	t.Helper()
+	path, err := exec.LookPath(name)
+	if err != nil {
+		t.Skipf("%s not found in PATH: %v", name, err)
+	}
+	return path
+}
+
 func TestCommander_StartStop(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping on Windows - need different test binary")
@@ -38,7 +47,7 @@ func TestCommander_StartStop(t *testing.T) {
 	logsDir := t.TempDir()
 
 	cmd, err := New(logger, logsDir, Config{
-		Executable: "/bin/sleep",
+		Executable: lookPath(t, "sleep"),
 		Args:       []string{"60"},
 	}, NewBackoff(DefaultBackoffConfig()))
 	require.NoError(t, err)
@@ -63,7 +72,7 @@ func TestCommander_StartAlreadyRunning(t *testing.T) {
 	logsDir := t.TempDir()
 
 	cmd, err := New(logger, logsDir, Config{
-		Executable: "/bin/sleep",
+		Executable: lookPath(t, "sleep"),
 		Args:       []string{"60"},
 	}, NewBackoff(DefaultBackoffConfig()))
 	require.NoError(t, err)
@@ -83,7 +92,7 @@ func TestCommander_StopNotRunning(t *testing.T) {
 	logsDir := t.TempDir()
 
 	cmd, err := New(logger, logsDir, Config{
-		Executable: "/bin/sleep",
+		Executable: lookPath(t, "sleep"),
 		Args:       []string{"60"},
 	}, NewBackoff(DefaultBackoffConfig()))
 	require.NoError(t, err)
@@ -134,7 +143,7 @@ func TestCommander_Restart(t *testing.T) {
 	logsDir := t.TempDir()
 
 	cmd, err := New(logger, logsDir, Config{
-		Executable: "/bin/sleep",
+		Executable: lookPath(t, "sleep"),
 		Args:       []string{"60"},
 	}, NewBackoff(BackoffConfig{MaxRetries: 0})) // Disable restart so we don't have to take care of the async recovery look startup
 	require.NoError(t, err)
@@ -201,7 +210,7 @@ func TestCommander_CrashRecovery(t *testing.T) {
 
 	// Use a command that exits immediately (simulates crash)
 	cmd, err := New(logger, t.TempDir(), Config{
-		Executable: "/bin/false", // Always exits with code 1
+		Executable: lookPath(t, "false"), // Always exits with code 1
 		Args:       []string{},
 	}, NewBackoff(BackoffConfig{ // Configure backoff with short delays for testing
 		InitialInterval:     10 * time.Millisecond,
@@ -239,7 +248,7 @@ func TestCommander_CrashRecovery_GracefulExit(t *testing.T) {
 
 	// Use a command that exits cleanly (exit code 0)
 	cmd, err := New(logger, t.TempDir(), Config{
-		Executable: "/bin/true", // Always exits with code 0
+		Executable: lookPath(t, "true"), // Always exits with code 0
 		Args:       []string{},
 	}, NewBackoff(BackoffConfig{
 		InitialInterval:     10 * time.Millisecond,
@@ -278,7 +287,7 @@ func TestCommander_Stop_DuringAsyncStartup(t *testing.T) {
 	// asynchronously. Calling Stop() before cmd.Start() populates cmd.Process
 	// must not panic.
 	cmd, err := New(logger, t.TempDir(), Config{
-		Executable: "/bin/sleep",
+		Executable: lookPath(t, "sleep"),
 		Args:       []string{"60"},
 	}, NewBackoff(BackoffConfig{
 		InitialInterval:     10 * time.Millisecond,
@@ -310,7 +319,7 @@ func TestCommander_CrashRecovery_StopDuringRecovery(t *testing.T) {
 
 	// Use a command that exits immediately but would retry forever
 	cmd, err := New(logger, t.TempDir(), Config{
-		Executable: "/bin/false",
+		Executable: lookPath(t, "false"),
 		Args:       []string{},
 	}, NewBackoff(BackoffConfig{
 		InitialInterval:     50 * time.Millisecond,
