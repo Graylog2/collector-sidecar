@@ -189,7 +189,7 @@ func generateTLSConfig() (*tls.Config, error) {
 	}
 
 	// Self-sign the certificate
-	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &publicKey, privateKey)
+	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, publicKey, privateKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create certificate: %w", err)
 	}
