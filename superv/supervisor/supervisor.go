@@ -197,6 +197,7 @@ func New(logger *zap.Logger, cfg config.Config, instanceUID string) (*Supervisor
 		LocalEndpoint:  cfg.LocalServer.Endpoint,
 		InstanceUID:    instanceUID,
 		HealthCheck:    healthCheck,
+		AgentLogLevel:  cfg.Agent.Logging.Level,
 	})
 
 	// Restore the last applied config hash so ApplyRemoteConfig can skip
@@ -328,6 +329,7 @@ func (s *Supervisor) Start(parentCtx context.Context) error {
 		Args:            expandedArgs,
 		Env:             s.buildCollectorEnv(),
 		PassthroughLogs: s.agentCfg.PassthroughLogs,
+		Logging:         s.agentCfg.Logging,
 	}, keen.NewBackoff(keen.BackoffConfig{
 		InitialInterval:     s.agentCfg.Restart.InitialInterval,
 		MaxInterval:         s.agentCfg.Restart.MaxInterval,

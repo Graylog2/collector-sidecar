@@ -102,19 +102,20 @@ type LocalServer struct {
 
 // AgentConfig configures the managed collector agent.
 type AgentConfig struct {
-	Executable         string            `koanf:"executable"`
-	Args               []string          `koanf:"args"`
-	Env                map[string]string `koanf:"env"`
-	ConfigApplyTimeout time.Duration     `koanf:"config_apply_timeout"`
-	BootstrapTimeout   time.Duration     `koanf:"bootstrap_timeout"`
-	PassthroughLogs    bool              `koanf:"passthrough_logs"`
-	StorageDir         string            `koanf:"storage_dir"`
-	Config             AgentConfigMerge  `koanf:"config"`
-	Health             HealthConfig      `koanf:"health"`
-	Reload             ReloadConfig      `koanf:"reload"`
-	Restart            RestartConfig     `koanf:"restart"`
-	Shutdown           ShutdownConfig    `koanf:"shutdown"`
-	Sidecar            Sidecar           `koanf:"sidecar"`
+	Executable         string             `koanf:"executable"`
+	Args               []string           `koanf:"args"`
+	Env                map[string]string  `koanf:"env"`
+	ConfigApplyTimeout time.Duration      `koanf:"config_apply_timeout"`
+	BootstrapTimeout   time.Duration      `koanf:"bootstrap_timeout"`
+	PassthroughLogs    bool               `koanf:"passthrough_logs"`
+	Logging            AgentLoggingConfig `koanf:"logging"`
+	StorageDir         string             `koanf:"storage_dir"`
+	Config             AgentConfigMerge   `koanf:"config"`
+	Health             HealthConfig       `koanf:"health"`
+	Reload             ReloadConfig       `koanf:"reload"`
+	Restart            RestartConfig      `koanf:"restart"`
+	Shutdown           ShutdownConfig     `koanf:"shutdown"`
+	Sidecar            Sidecar            `koanf:"sidecar"`
 }
 
 // AgentConfigMerge configures how agent configs are merged.
@@ -236,6 +237,13 @@ type LoggingConfig struct {
 	FileRotation LogRotationConfig `koanf:"file_rotation"`
 }
 
+// AgentLoggingConfig is a subset of LoggingConfig in this file: we don't allow setting color or format
+type AgentLoggingConfig struct {
+	Level        string            `koanf:"level"` // debug | info | warn | error
+	File         string            `koanf:"file"`  // path to log file
+	FileRotation LogRotationConfig `koanf:"file_rotation"`
+}
+
 var unixDataPathPrefix = "/var/lib/graylog-collector"
 var WindowsDataPathPrefix = filepath.Join(`C:\`, "ProgramData", "Graylog", "Collector")
 
@@ -290,6 +298,19 @@ func DefaultConfig() Config {
 			ConfigApplyTimeout: 5 * time.Second,
 			BootstrapTimeout:   3 * time.Second,
 			PassthroughLogs:    false,
+			Logging: AgentLoggingConfig{
+				Level: "info",
+				File: platformDefaultValue(map[platformName]string{
+					linux:   filepath.Join(unixDataPathPrefix, "supervisor", "logs", "agent.log"),
+					darwin:  filepath.Join(unixDataPathPrefix, "supervisor", "logs", "agent.log"),
+					windows: filepath.Join(WindowsDataPathPrefix, "supervisor", "logs", "agent.log"),
+				}),
+				FileRotation: LogRotationConfig{
+					MaxSize:    25,
+					MaxBackups: 5,
+					MaxAge:     30,
+				},
+			},
 			// TODO: Branding
 			StorageDir: platformDefaultValue(map[platformName]string{
 				linux:   filepath.Join(unixDataPathPrefix, "storage"),
