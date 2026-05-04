@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Graylog2/collector-sidecar/superv/persistence"
 	"github.com/gorilla/websocket"
 	"github.com/open-telemetry/opamp-go/protobufs"
 	"github.com/stretchr/testify/require"
@@ -34,7 +35,6 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/superv/auth"
 	"github.com/Graylog2/collector-sidecar/superv/internal/testserver"
-	"github.com/Graylog2/collector-sidecar/superv/persistence"
 )
 
 func TestIntegration_Enrollment(t *testing.T) {
@@ -54,6 +54,8 @@ func TestIntegration_Enrollment(t *testing.T) {
 	keysDir := filepath.Join(dir, "keys")
 	logger := zaptest.NewLogger(t)
 
+	require.NoError(t, persistence.InitIdentity(logger, dir, keysDir))
+
 	// Create auth manager with test server's HTTP client
 	authMgr := auth.NewManager(logger.Named("auth"), auth.ManagerConfig{
 		KeysDir:     keysDir,
@@ -65,7 +67,7 @@ func TestIntegration_Enrollment(t *testing.T) {
 	require.False(t, authMgr.IsEnrolled())
 
 	// Load instance UID
-	instanceUID, err := persistence.LoadOrCreateInstanceUID(dir)
+	instanceUID, err := persistence.LoadInstanceUID(dir)
 	require.NoError(t, err)
 
 	// Phase 1: Prepare enrollment (validates JWT, generates keys, creates CSR)
@@ -117,13 +119,15 @@ func TestIntegration_EnrollmentPersistence(t *testing.T) {
 	keysDir := filepath.Join(dir, "keys")
 	logger := zaptest.NewLogger(t)
 
+	require.NoError(t, persistence.InitIdentity(logger, dir, keysDir))
+
 	// First: prepare and complete enrollment
 	authMgr1 := auth.NewManager(logger.Named("auth1"), auth.ManagerConfig{
 		KeysDir:    keysDir,
 		HTTPClient: server.Client(),
 	})
 
-	instanceUID, _ := persistence.LoadOrCreateInstanceUID(dir)
+	instanceUID, _ := persistence.LoadInstanceUID(dir)
 
 	// Prepare enrollment
 	result, err := authMgr1.PrepareEnrollment(context.Background(), server.URL(), enrollmentToken, instanceUID)
@@ -173,6 +177,8 @@ func TestIntegration_JWTExpiry(t *testing.T) {
 	keysDir := filepath.Join(dir, "keys")
 	logger := zaptest.NewLogger(t)
 
+	require.NoError(t, persistence.InitIdentity(logger, dir, keysDir))
+
 	// Create manager with very short JWT lifetime (2 seconds)
 	authMgr := auth.NewManager(logger.Named("auth"), auth.ManagerConfig{
 		KeysDir:     keysDir,
@@ -180,7 +186,7 @@ func TestIntegration_JWTExpiry(t *testing.T) {
 		HTTPClient:  server.Client(),
 	})
 
-	instanceUID, _ := persistence.LoadOrCreateInstanceUID(dir)
+	instanceUID, _ := persistence.LoadInstanceUID(dir)
 
 	// Prepare enrollment
 	result, err := authMgr.PrepareEnrollment(context.Background(), server.URL(), enrollmentToken, instanceUID)
@@ -292,6 +298,8 @@ func TestIntegration_CertificateRenewal(t *testing.T) {
 	keysDir := filepath.Join(dir, "keys")
 	logger := zaptest.NewLogger(t)
 
+	require.NoError(t, persistence.InitIdentity(logger, dir, keysDir))
+
 	// Create auth manager with test server's HTTP client
 	authMgr := auth.NewManager(logger.Named("auth"), auth.ManagerConfig{
 		KeysDir:     keysDir,
@@ -300,7 +308,7 @@ func TestIntegration_CertificateRenewal(t *testing.T) {
 	})
 
 	// Load instance UID
-	instanceUID, err := persistence.LoadOrCreateInstanceUID(dir)
+	instanceUID, err := persistence.LoadInstanceUID(dir)
 	require.NoError(t, err)
 
 	// Phase 1: Complete enrollment

@@ -18,6 +18,7 @@
 package persistence
 
 import (
+	"crypto/ecdh"
 	"crypto/ed25519"
 	"crypto/sha256"
 	"crypto/x509"
@@ -96,7 +97,7 @@ func SaveEncryptionKey(keysDir string, key []byte) error {
 }
 
 // LoadEncryptionKey loads an X25519 private key from disk.
-func LoadEncryptionKey(keysDir string) ([]byte, error) {
+func LoadEncryptionKey(keysDir string) (*ecdh.PrivateKey, error) {
 	filePath := filepath.Join(keysDir, encryptionKeyFile)
 
 	content, err := os.ReadFile(filePath) //nolint:gosec // Trusted path
@@ -112,7 +113,12 @@ func LoadEncryptionKey(keysDir string) ([]byte, error) {
 		return nil, fmt.Errorf("unexpected PEM block type: %q", block.Type)
 	}
 
-	return block.Bytes, nil
+	privateKey, err := ecdh.X25519().NewPrivateKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("parsing X25519 private key: %w", err)
+	}
+
+	return privateKey, nil
 }
 
 // SaveCertificate saves an X.509 certificate to disk in PEM format.

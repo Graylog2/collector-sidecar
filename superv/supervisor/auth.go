@@ -35,9 +35,7 @@ func (s *Supervisor) initAuth(ctx context.Context) error {
 			return fmt.Errorf("failed to load credentials: %w", err)
 		}
 
-		s.logger.Info("Credentials loaded",
-			zap.String("cert_fingerprint", s.authManager.CertFingerprint()),
-		)
+		s.logger.Info("Credentials loaded", zap.String("cert_fingerprint", s.authManager.CertFingerprint()))
 		return nil
 	}
 
@@ -49,7 +47,6 @@ func (s *Supervisor) initAuth(ctx context.Context) error {
 		return fmt.Errorf("not enrolled and no enrollment token configured")
 	}
 
-	s.logger.Info("Preparing enrollment")
 	result, err := s.authManager.PrepareEnrollment(ctx, s.authCfg.EnrollmentEndpoint, s.authCfg.EnrollmentToken, s.instanceUID)
 	if err != nil {
 		return fmt.Errorf("enrollment preparation failed: %w", err)
@@ -57,8 +54,6 @@ func (s *Supervisor) initAuth(ctx context.Context) error {
 
 	// Store CSR to send via OpAMP after connection is established
 	s.pendingCSR = result.CSRPEM
-
-	s.logger.Info("Enrollment prepared, CSR ready for submission via OpAMP")
 
 	return nil
 }

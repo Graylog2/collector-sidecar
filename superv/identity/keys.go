@@ -15,14 +15,13 @@
 //
 // SPDX-License-Identifier: SSPL-1.0
 
-package auth
+package identity
 
 import (
+	"crypto/ecdh"
 	"crypto/ed25519"
 	"crypto/rand"
 	"fmt"
-
-	"golang.org/x/crypto/curve25519"
 )
 
 // GenerateSigningKeypair generates a new Ed25519 keypair for signing.
@@ -36,15 +35,10 @@ func GenerateSigningKeypair() (ed25519.PublicKey, ed25519.PrivateKey, error) {
 
 // GenerateEncryptionKeypair generates a new X25519 keypair for encryption.
 func GenerateEncryptionKeypair() ([]byte, []byte, error) {
-	privateKey := make([]byte, curve25519.ScalarSize)
-	if _, err := rand.Read(privateKey); err != nil {
-		return nil, nil, fmt.Errorf("reading random bytes: %w", err)
-	}
-
-	publicKey, err := curve25519.X25519(privateKey, curve25519.Basepoint)
+	privateKey, err := ecdh.X25519().GenerateKey(rand.Reader)
 	if err != nil {
-		return nil, nil, fmt.Errorf("deriving X25519 public key: %w", err)
+		return nil, nil, fmt.Errorf("generating X25519 keypair: %w", err)
 	}
 
-	return publicKey, privateKey, nil
+	return privateKey.PublicKey().Bytes(), privateKey.Bytes(), nil
 }

@@ -54,9 +54,6 @@ func (s *Supervisor) handleCertificateResponse(settings *protobufs.OpAMPConnecti
 		s.pendingCSR = nil
 		s.mu.Unlock()
 
-		s.logger.Info("Enrollment completed successfully",
-			zap.String("cert_fingerprint", s.authManager.CertFingerprint()),
-		)
 		return true, nil
 	}
 

@@ -110,8 +110,7 @@ type Supervisor struct {
 	currentOwnLogs     *ownlogs.Settings
 }
 
-// New creates a new Supervisor instance. The instanceUID must be obtained from
-// [persistence.LoadOrCreateInstanceUID] before calling New.
+// New creates a new Supervisor instance.
 func New(logger *zap.Logger, cfg config.Config, instanceUID string) (*Supervisor, error) {
 	// Create auth manager
 	authMgr := auth.NewManager(logger.Named("auth"), auth.ManagerConfig{

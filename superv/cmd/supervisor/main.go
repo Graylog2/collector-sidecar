@@ -120,8 +120,12 @@ func main() {
 		return zapcore.NewTee(original, ownLogsManager.Core())
 	}))
 
+	if err := persistence.InitIdentity(logger, cfg.Persistence.Dir, cfg.Keys.Dir); err != nil {
+		logger.Fatal("Couldn't ensure identity", zap.Error(err))
+	}
+
 	// Load or create instance UID early so it's available for own_logs restore.
-	instanceUID, err := persistence.LoadOrCreateInstanceUID(cfg.Persistence.Dir)
+	instanceUID, err := persistence.LoadInstanceUID(cfg.Persistence.Dir)
 	if err != nil {
 		logger.Fatal("Failed to load instance UID", zap.Error(err))
 	}

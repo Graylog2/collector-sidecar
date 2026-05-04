@@ -277,8 +277,12 @@ func runSupervisor(cmd *cobra.Command, args []string) error {
 		event(logger)
 	}
 
+	if err := persistence.InitIdentity(logger, cfg.Persistence.Dir, cfg.Keys.Dir); err != nil {
+		return fmt.Errorf("couldn't ensure identity: %w", err)
+	}
+
 	// Load or create instance UID early so it's available for own_logs restore.
-	instanceUID, err := persistence.LoadOrCreateInstanceUID(cfg.Persistence.Dir)
+	instanceUID, err := persistence.LoadInstanceUID(cfg.Persistence.Dir)
 	if err != nil {
 		return fmt.Errorf("failed to load instance UID: %w", err)
 	}

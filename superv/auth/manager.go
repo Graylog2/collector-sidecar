@@ -33,10 +33,8 @@ import (
 	"time"
 
 	"github.com/Graylog2/collector-sidecar/superv/config"
-	"go.uber.org/zap"
-	"golang.org/x/crypto/curve25519"
-
 	"github.com/Graylog2/collector-sidecar/superv/persistence"
+	"go.uber.org/zap"
 )
 
 // Manager handles authentication including enrollment, key management, and JWT generation.
@@ -53,8 +51,6 @@ type Manager struct {
 	certificate *x509.Certificate
 
 	// Enrollment state (before CSR is submitted)
-	pendingSigningKey    ed25519.PrivateKey
-	pendingEncryptionKey []byte
 	pendingEnrollmentJWT string
 }
 
@@ -101,10 +97,9 @@ func (m *Manager) GetSigningCertPath() string {
 	return filepath.Join(m.keysDir, persistence.SigningCertFile)
 }
 
-// IsEnrolled returns true if the supervisor has valid credentials.
+// IsEnrolled returns true if the supervisor has a certificate.
 func (m *Manager) IsEnrolled() bool {
-	return persistence.SigningKeyExists(m.keysDir) &&
-		persistence.CertificateExists(m.keysDir)
+	return persistence.CertificateExists(m.keysDir)
 }
 
 // LoadCredentials loads existing credentials from disk.
@@ -119,10 +114,30 @@ func (m *Manager) LoadCredentials() error {
 		return fmt.Errorf("failed to load certificate: %w", err)
 	}
 
+	if err := verifyKeyCertPair(signingKey, cert); err != nil {
+		return err
+	}
+
 	m.mu.Lock()
 	m.signingKey = signingKey
 	m.certificate = cert
 	m.mu.Unlock()
+	return nil
+}
+
+// verifyKeyCertPair returns an error if the signing key does not pair with the certificate.
+func verifyKeyCertPair(signingKey ed25519.PrivateKey, cert *x509.Certificate) error {
+	certPub, ok := cert.PublicKey.(ed25519.PublicKey)
+	if !ok {
+		return errors.New("certificate public key is not Ed25519")
+	}
+	keyPub, ok := signingKey.Public().(ed25519.PublicKey)
+	if !ok {
+		return errors.New("signing key public key is not Ed25519")
+	}
+	if !bytes.Equal(certPub, keyPub) {
+		return errors.New("signing key does not match certificate public key")
+	}
 	return nil
 }
 
@@ -132,7 +147,7 @@ type EnrollmentResult struct {
 	CSRPEM []byte
 }
 
-// PrepareEnrollment validates the enrollment JWT, generates keypairs, and creates a CSR.
+// PrepareEnrollment validates the enrollment JWT and creates a CSR using the persisted keypairs.
 // The CSR should be submitted via the OpAMP protocol using connection_settings_request.
 // After receiving the certificate from the server, call CompleteEnrollment.
 func (m *Manager) PrepareEnrollment(ctx context.Context, enrollmentEndpoint, enrollmentToken, instanceUID string) (*EnrollmentResult, error) {
@@ -168,33 +183,25 @@ func (m *Manager) PrepareEnrollment(ctx context.Context, enrollmentEndpoint, enr
 		zap.String("id", claims.ID),
 	)
 
-	// Generate signing keypair
-	m.logger.Debug("Generating signing keypair")
-	_, signingPriv, err := GenerateSigningKeypair()
+	m.logger.Debug("Loading signing keypair")
+	signingPriv, err := persistence.LoadSigningKey(m.keysDir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate signing keypair: %w", err)
+		return nil, fmt.Errorf("failed to load signing keypair: %w", err)
 	}
 
-	// Generate encryption keypair
-	m.logger.Debug("Generating encryption keypair")
-	encPub, encPriv, err := GenerateEncryptionKeypair()
+	m.logger.Debug("Loading encryption keypair")
+	encPriv, err := persistence.LoadEncryptionKey(m.keysDir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate encryption keypair: %w", err)
+		return nil, fmt.Errorf("failed to load encryption keypair: %w", err)
 	}
 
-	// Create CSR
 	m.logger.Debug("Creating CSR")
-	csrDER, err := CreateCSR(signingPriv, instanceUID, encPub)
+	csrDER, err := CreateCSR(signingPriv, instanceUID, encPriv.PublicKey().Bytes())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create CSR: %w", err)
 	}
 
-	// Store pending credentials (will be saved when certificate is received).
-	// HasPendingEnrollment and EnrollmentJWT read these fields under RLock
-	// from other goroutines, so writes must be protected.
 	m.mu.Lock()
-	m.pendingSigningKey = signingPriv
-	m.pendingEncryptionKey = encPriv
 	m.pendingEnrollmentJWT = enrollmentToken
 	m.mu.Unlock()
 
@@ -210,12 +217,11 @@ func (m *Manager) PrepareEnrollment(ctx context.Context, enrollmentEndpoint, enr
 // The certPEM should be the certificate received in the OpAMP connection_settings response.
 func (m *Manager) CompleteEnrollment(certPEM []byte) error {
 	m.mu.RLock()
-	pendingSigningKey := m.pendingSigningKey
-	pendingEncryptionKey := m.pendingEncryptionKey
+	pendingEnrollmentJWT := m.pendingEnrollmentJWT
 	m.mu.RUnlock()
 
-	if pendingSigningKey == nil {
-		return errors.New("no pending enrollment - call PrepareEnrollment first")
+	if pendingEnrollmentJWT == "" {
+		return errors.New("no enrollment pending")
 	}
 
 	cert, err := parseCertificatePEM(certPEM)
@@ -223,14 +229,12 @@ func (m *Manager) CompleteEnrollment(certPEM []byte) error {
 		return fmt.Errorf("failed to parse certificate: %w", err)
 	}
 
-	// Save credentials
-	m.logger.Debug("Saving credentials")
-	if err := persistence.SaveSigningKey(m.keysDir, pendingSigningKey); err != nil {
-		return fmt.Errorf("failed to save signing key: %w", err)
+	signingKey, err := persistence.LoadSigningKey(m.keysDir)
+	if err != nil {
+		return fmt.Errorf("failed to load signing key: %w", err)
 	}
-
-	if err := persistence.SaveEncryptionKey(m.keysDir, pendingEncryptionKey); err != nil {
-		return fmt.Errorf("failed to save encryption key: %w", err)
+	if err := verifyKeyCertPair(signingKey, cert); err != nil {
+		return err
 	}
 
 	if err := persistence.SaveCertificate(m.keysDir, cert); err != nil {
@@ -239,10 +243,8 @@ func (m *Manager) CompleteEnrollment(certPEM []byte) error {
 
 	// Update manager state and clear pending state atomically.
 	m.mu.Lock()
-	m.signingKey = pendingSigningKey
+	m.signingKey = signingKey
 	m.certificate = cert
-	m.pendingSigningKey = nil
-	m.pendingEncryptionKey = nil
 	m.pendingEnrollmentJWT = ""
 	m.mu.Unlock()
 
@@ -257,7 +259,7 @@ func (m *Manager) CompleteEnrollment(certPEM []byte) error {
 func (m *Manager) HasPendingEnrollment() bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	return m.pendingSigningKey != nil
+	return m.pendingEnrollmentJWT != ""
 }
 
 // GenerateJWT generates a new JWT for authenticating with the OpAMP server.
@@ -377,17 +379,8 @@ func (m *Manager) CompleteRenewal(certPEM []byte) error {
 		return fmt.Errorf("failed to parse certificate: %w", err)
 	}
 
-	// Reject if the server issued a cert for a different key
-	newPub, ok := newCert.PublicKey.(ed25519.PublicKey)
-	if !ok {
-		return errors.New("renewed certificate does not contain an Ed25519 public key")
-	}
-	sigPub, ok := signingKey.Public().(ed25519.PublicKey)
-	if !ok {
-		return errors.New("signing key does not contain an Ed25519 public key")
-	}
-	if !bytes.Equal(newPub, sigPub) {
-		return errors.New("public key mismatch: renewed certificate has a different public key")
+	if err := verifyKeyCertPair(signingKey, newCert); err != nil {
+		return fmt.Errorf("verifying received certificate: %w", err)
 	}
 
 	// Reject if subject identity changed
@@ -421,7 +414,7 @@ func (m *Manager) CompleteRenewal(certPEM []byte) error {
 }
 
 // PrepareRenewal creates a CSR for certificate renewal using the existing keys.
-// Unlike PrepareEnrollment, this does not generate new keypairs or validate tokens.
+// Unlike PrepareEnrollment, this does not validate an enrollment token.
 func (m *Manager) PrepareRenewal(instanceUID string) ([]byte, error) {
 	m.mu.RLock()
 	signingKey := m.signingKey
@@ -432,19 +425,12 @@ func (m *Manager) PrepareRenewal(instanceUID string) ([]byte, error) {
 		return nil, errors.New("credentials not loaded")
 	}
 
-	// Load encryption private key from disk and derive public key
 	encPriv, err := persistence.LoadEncryptionKey(m.keysDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load encryption key: %w", err)
 	}
 
-	encPub, err := curve25519.X25519(encPriv, curve25519.Basepoint)
-	if err != nil {
-		return nil, fmt.Errorf("failed to derive encryption public key: %w", err)
-	}
-
-	// Create CSR with existing signing key
-	csrDER, err := CreateCSR(signingKey, instanceUID, encPub)
+	csrDER, err := CreateCSR(signingKey, instanceUID, encPriv.PublicKey().Bytes())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create renewal CSR: %w", err)
 	}

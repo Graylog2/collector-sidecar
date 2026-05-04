@@ -22,6 +22,7 @@ import (
 	"crypto/rand"
 	"testing"
 
+	"github.com/Graylog2/collector-sidecar/superv/identity"
 	"github.com/stretchr/testify/require"
 )
 
@@ -29,7 +30,7 @@ func TestCreateCSR(t *testing.T) {
 	_, priv, err := ed25519.GenerateKey(rand.Reader)
 	require.NoError(t, err)
 
-	encPub, _, err := GenerateEncryptionKeypair()
+	encPub, _, err := identity.GenerateEncryptionKeypair()
 	require.NoError(t, err)
 
 	instanceUID := "01HQ3K5V7X2M4N8P9R0S1T2U3V"
@@ -62,7 +63,7 @@ func TestCreateCSR_IncludesEncryptionKey(t *testing.T) {
 	_, priv, err := ed25519.GenerateKey(rand.Reader)
 	require.NoError(t, err)
 
-	encPub, _, err := GenerateEncryptionKeypair()
+	encPub, _, err := identity.GenerateEncryptionKeypair()
 	require.NoError(t, err)
 
 	csrDER, err := CreateCSR(priv, "test-uid", encPub)

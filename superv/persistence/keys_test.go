@@ -18,6 +18,7 @@
 package persistence
 
 import (
+	"crypto/ecdh"
 	"crypto/ed25519"
 	"crypto/rand"
 	"os"
@@ -26,7 +27,6 @@ import (
 
 	"github.com/Graylog2/collector-sidecar/superv/internal/testpki"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/curve25519"
 )
 
 func TestSaveAndLoadSigningKey(t *testing.T) {
@@ -74,11 +74,10 @@ func TestSaveAndLoadEncryptionKey(t *testing.T) {
 	keysDir := filepath.Join(dir, "keys")
 
 	// Generate X25519 keypair
-	priv := make([]byte, curve25519.ScalarSize)
-	_, err := rand.Read(priv)
+	priv, err := ecdh.X25519().GenerateKey(rand.Reader)
 	require.NoError(t, err)
 
-	err = SaveEncryptionKey(keysDir, priv)
+	err = SaveEncryptionKey(keysDir, priv.Bytes())
 	require.NoError(t, err)
 
 	loaded, err := LoadEncryptionKey(keysDir)
@@ -131,9 +130,9 @@ func TestKeysExist(t *testing.T) {
 	require.True(t, SigningKeyExists(keysDir))
 
 	// Create encryption key
-	encPriv := make([]byte, curve25519.ScalarSize)
-	_, _ = rand.Read(encPriv)
-	require.NoError(t, SaveEncryptionKey(keysDir, encPriv))
+	encPriv, err := ecdh.X25519().GenerateKey(rand.Reader)
+	require.NoError(t, err)
+	require.NoError(t, SaveEncryptionKey(keysDir, encPriv.Bytes()))
 	require.True(t, EncryptionKeyExists(keysDir))
 
 	// Create certificate
