@@ -19,14 +19,18 @@ package keen
 
 import (
 	"context"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 func lookPath(t *testing.T, name string) string {
@@ -169,7 +173,8 @@ func TestCommander_StopConcurrentCallers(t *testing.T) {
 		t.Skip("Skipping on Windows")
 	}
 
-	logger := zaptest.NewLogger(t)
+	core, observed := observer.New(zap.DebugLevel)
+	logger := zap.New(core)
 	logsDir := t.TempDir()
 
 	cmd, err := New(logger, logsDir, Config{
@@ -183,22 +188,84 @@ func TestCommander_StopConcurrentCallers(t *testing.T) {
 
 	require.NoError(t, cmd.start(context.Background()))
 
+	start := make(chan struct{})
 	errCh := make(chan error, 2)
 	var wg sync.WaitGroup
 	for range 2 {
 		wg.Go(func() {
+			<-start
 			stopCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
 			errCh <- cmd.Stop(stopCtx)
 		})
 	}
 
+	close(start)
 	wg.Wait()
 	close(errCh)
 
 	for err := range errCh {
 		require.NoError(t, err)
 	}
+	require.Equal(t, 1, observed.FilterMessage("Stopping agent process").Len())
+}
+
+func TestCommander_StopAfterRecoveryCancellationSharesInFlightStop(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows")
+	}
+
+	core, observed := observer.New(zap.DebugLevel)
+	logger := zap.New(core)
+
+	// The trap signals readiness via a file so the test can wait until the
+	// SIGTERM handler is installed. Without this, SIGTERM may arrive before
+	// the trap is in place, sh dies immediately, and Stop returns too fast
+	// to deterministically observe the in-flight state.
+	readyFile := filepath.Join(t.TempDir(), "ready")
+	cmd, err := New(logger, t.TempDir(), Config{
+		Executable: "/bin/sh",
+		Args: []string{
+			"-c",
+			`trap 'sleep 0.5; exit 0' TERM; touch "$1"; while true; do sleep 0.1; done`,
+			"--",
+			readyFile,
+		},
+	}, NewBackoff(BackoffConfig{MaxRetries: 0}))
+	require.NoError(t, err)
+
+	require.NoError(t, cmd.Start(context.Background()))
+	require.Eventually(t, func() bool {
+		_, err := os.Stat(readyFile)
+		return err == nil && cmd.IsRunning() && cmd.Pid() > 0
+	}, 2*time.Second, 10*time.Millisecond)
+
+	cmd.mu.Lock()
+	stopRecovery := cmd.stopRecovery
+	recoveryDone := cmd.recoveryDone
+	cmd.mu.Unlock()
+	require.NotNil(t, stopRecovery)
+
+	stopRecovery()
+	// Wait until the recovery loop has entered its own Stop call so the
+	// manual Stop below deterministically takes the piggyback path.
+	require.Eventually(t, func() bool {
+		cmd.mu.Lock()
+		defer cmd.mu.Unlock()
+		return cmd.stopState != nil
+	}, time.Second, 10*time.Millisecond)
+
+	stopCtx, stopCancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer stopCancel()
+	require.NoError(t, cmd.Stop(stopCtx))
+
+	select {
+	case <-recoveryDone:
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for recovery loop to stop")
+	}
+
+	require.Equal(t, 1, observed.FilterMessage("Stopping agent process").Len())
 }
 
 func TestCommander_CrashRecovery(t *testing.T) {

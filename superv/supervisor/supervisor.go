@@ -515,13 +515,16 @@ func (s *Supervisor) Stop(ctx context.Context) error {
 	}
 	s.healthWg.Wait()
 
+	// Disconnect the local OpAMP clients before stopping the collector process to avoid error logs.
+	if server != nil {
+		server.DisconnectAll()
+	}
+
 	if s.commander != nil {
 		if err := s.commander.Stop(ctx); err != nil {
 			s.logger.Error("Error stopping agent", zap.Error(err))
 		}
 	}
-
-	server.DisconnectAll()
 
 	if client != nil {
 		if err := client.Stop(ctx); err != nil {
