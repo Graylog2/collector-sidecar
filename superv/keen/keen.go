@@ -52,14 +52,23 @@ type Config struct {
 	LogRotation     LogRotationConfig
 }
 
+// stopState tracks an in-flight Stop call so concurrent callers can piggyback.
+// The primary caller sets err before closing done; piggyback callers read err
+// after observing done closed.
+type stopState struct {
+	done chan struct{}
+	err  error
+}
+
 // Commander manages the lifecycle of an agent process.
 type Commander struct {
-	logger  *zap.Logger
-	logsDir string
-	cfg     Config
-	mu      sync.Mutex // protects cmd, doneCh, recoveryDone, stopRecovery
-	cmd     *exec.Cmd
-	running atomic.Bool
+	logger    *zap.Logger
+	logsDir   string
+	cfg       Config
+	mu        sync.Mutex // protects cmd, doneCh, recoveryDone, stopRecovery, stopState
+	cmd       *exec.Cmd
+	running   atomic.Bool
+	stopState *stopState
 	// doneCh is allocated per process in start() and closed by watch() when
 	// the process exits; consumers (Stop, recoveryLoop) snapshot it under mu.
 	doneCh chan struct{}
@@ -103,7 +112,7 @@ func (c *Commander) Start(ctx context.Context) error {
 
 	c.mu.Lock()
 	c.recoveryDone = make(chan struct{})
-	recoveryCtx, cancel := context.WithCancel(ctx) //nolint:gosec // Cancel func stored in Commander and called later
+	recoveryCtx, cancel := context.WithCancel(ctx)
 	c.stopRecovery = cancel
 	c.mu.Unlock()
 
@@ -254,12 +263,20 @@ func (c *Commander) watch(cmd *exec.Cmd, doneCh chan struct{}) {
 }
 
 // Stop stops the agent process gracefully.
-func (c *Commander) Stop(ctx context.Context) error {
-	defer c.closeLogWriter()
-
-	// Cancel recovery loop if running
+// Concurrent callers piggyback on the in-flight stop and observe its result.
+func (c *Commander) Stop(ctx context.Context) (err error) { //nolint:nonamedreturns
 	c.mu.Lock()
 	stopRecovery := c.stopRecovery
+	// Another Stop is already in flight; piggyback on it and return the
+	// same result instead of issuing a duplicate SIGTERM / log line / etc.
+	// The primary's defer will close state.done and populate state.err.
+	if c.stopState != nil {
+		state := c.stopState
+		c.mu.Unlock()
+		return c.waitForStop(ctx, state)
+	}
+	state := &stopState{done: make(chan struct{})}
+	c.stopState = state
 	cmd := c.cmd
 	doneCh := c.doneCh
 	c.mu.Unlock()
@@ -267,6 +284,20 @@ func (c *Commander) Stop(ctx context.Context) error {
 	if stopRecovery != nil {
 		stopRecovery()
 	}
+
+	// Publish this Stop's result to any piggyback callers waiting in
+	// waitForStop, then clear c.stopState so a later Stop can start fresh.
+	// err is the named return: by the time defer runs, it holds whatever
+	// value Stop is about to return, which we copy into state.err before
+	// closing state.done.
+	defer func() {
+		c.closeLogWriter()
+		c.mu.Lock()
+		c.stopState = nil
+		state.err = err
+		close(state.done)
+		c.mu.Unlock()
+	}()
 
 	if !c.running.Load() {
 		return nil
@@ -309,6 +340,15 @@ func (c *Commander) Stop(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (c *Commander) waitForStop(ctx context.Context, state *stopState) error {
+	select {
+	case <-state.done:
+		return state.err
+	case <-ctx.Done():
+		return fmt.Errorf("waiting for process: %w", ctx.Err())
+	}
 }
 
 func (c *Commander) closeLogWriter() {
