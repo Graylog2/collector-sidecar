@@ -8,8 +8,6 @@ on:
       - "opened"
       - "reopened"
       - "synchronize"
-      - "edited"
-      - "labeled"
 
 defaults:
   run:
@@ -30,11 +28,11 @@ jobs:
         with:
           go-version: "1.26"
 
-      - name: "Run tests"
-        run: "make v2test"
-
       - name: "Build binaries"
-        run: "make v2all"
+        run: "go tool task all"
+
+      - name: "Run tests"
+        run: "go tool task test"
 
       - name: "Setup env"
         run: |
@@ -50,7 +48,7 @@ jobs:
       - name: "Build packages"
         env:
           TIMESTAMP: "${{ env.timestamp }}"
-        run: "nfpm package -f dist/v2/nfpm.yaml -p deb"
+        run: "nfpm package -f dist/linux/nfpm.yaml -p deb"
 
       - name: "Upload build artifacts to S3"
         env:
