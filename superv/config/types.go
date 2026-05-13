@@ -35,6 +35,7 @@ type Config struct {
 	Logging     LoggingConfig     `koanf:"logging"`
 	Telemetry   TelemetryConfig   `koanf:"telemetry"`
 	Debug       bool              `koanf:"debug"`
+	Shutdown    ShutdownConfig    `koanf:"shutdown"`
 }
 
 // ServerConfig configures the upstream OpAMP server connection.
@@ -369,6 +370,9 @@ func DefaultConfig() Config {
 				darwin:  filepath.Join(unixDataPathPrefix, "supervisor"),
 				windows: filepath.Join(WindowsDataPathPrefix, "supervisor"),
 			}),
+		},
+		Shutdown: ShutdownConfig{
+			GracefulTimeout: 30 * time.Second,
 		},
 		Telemetry: TelemetryConfig{
 			Logs: TelemetryLogsConfig{

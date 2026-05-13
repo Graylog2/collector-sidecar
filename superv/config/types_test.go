@@ -39,6 +39,8 @@ func TestConfigDefaults(t *testing.T) {
 	assert.Empty(t, cfg.Server.Auth.EnrollmentEndpoint)
 	assert.Empty(t, cfg.Server.Auth.EnrollmentToken)
 
+	assert.Equal(t, 30*time.Second, cfg.Shutdown.GracefulTimeout)
+
 	assert.Equal(t, "localhost:0", cfg.LocalServer.Endpoint)
 
 	assert.Equal(t, []string{"--config", "{{ .ConfigPath }}"}, cfg.Agent.Args)

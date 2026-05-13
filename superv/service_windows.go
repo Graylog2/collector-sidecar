@@ -84,7 +84,7 @@ func (s *supervisorService) Execute(_ []string, r <-chan svc.ChangeRequest, chan
 	}
 	_ = elog.Info(serviceStarted, "Collector service started")
 
-	shutdownTimeoutMs := cfg.Agent.Shutdown.GracefulTimeout.Milliseconds()
+	shutdownTimeoutMs := cfg.Shutdown.GracefulTimeout.Milliseconds()
 	shutdownTimeoutMs = min(max(shutdownTimeoutMs, 1), int64(math.MaxUint32))
 	waitHint := uint32(shutdownTimeoutMs)
 

@@ -21,7 +21,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"time"
 
 	"github.com/Graylog2/collector-sidecar/superv/config"
 	"github.com/Graylog2/collector-sidecar/superv/ownlogs"
@@ -93,7 +92,7 @@ func Run(ctx context.Context, cfg config.Config, events []func(*zap.Logger)) err
 
 	<-ctx.Done()
 
-	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 30*time.Second)
+	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), cfg.Shutdown.GracefulTimeout)
 	defer cancelShutdown()
 	defer ownLogsManager.Shutdown(shutdownCtx)
 	if err := sv.Stop(shutdownCtx); err != nil {
