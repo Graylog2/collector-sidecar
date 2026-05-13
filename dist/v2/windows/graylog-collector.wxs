@@ -49,7 +49,7 @@
          For details see: https://docs.firegiant.com/wix/schema/wxs/majorupgrade/ -->
     <MajorUpgrade
         DowngradeErrorMessage="A newer version of Graylog Collector is already installed."
-        Schedule="afterInstallExecute" />
+        Schedule="afterInstallValidate" />
 
     <MediaTemplate EmbedCab="yes" />
 
