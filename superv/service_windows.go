@@ -44,6 +44,7 @@ const (
 	serviceStopped
 	serviceStopError
 	serviceError
+	serviceEventLogError
 )
 
 // NewSvcHandler returns a Windows service handler for the supervisor.
@@ -58,6 +59,12 @@ func (s *supervisorService) Execute(_ []string, r <-chan svc.ChangeRequest, chan
 
 	elog, err := eventlog.Open(eventLogSourceName)
 	if err != nil {
+		// Fall back to the generic Application source so we can still record the problem with the app-specific event log.
+		elog, err = eventlog.Open("")
+		if err != nil {
+			return true, 1
+		}
+		_ = elog.Error(serviceEventLogError, fmt.Sprintf("Unable to open event log source %q: %v", eventLogSourceName, err))
 		return true, 1
 	}
 	defer elog.Close()
