@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -401,4 +402,16 @@ func TestValidateReloadMethod(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValidateShutdownTimeouts(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.Server.Endpoint = "ws://localhost:4320"
+	cfg.Agent.Executable = "/bin/test"
+	cfg.Shutdown.GracefulTimeout = 1 * time.Second
+	cfg.Agent.Shutdown.GracefulTimeout = 10 * time.Second
+
+	err := cfg.Validate()
+	assert.Error(t, err)
+	assert.ErrorContains(t, err, "shutdown.timeout cannot be smaller than agent.shutdown.graceful_timeout")
 }
