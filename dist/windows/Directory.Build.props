@@ -1,0 +1,5 @@
+<Project>
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)../../target/obj/</BaseIntermediateOutputPath>
+  </PropertyGroup>
+</Project>

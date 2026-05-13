@@ -1,6 +1,0 @@
-type = "added"
-message = "Provide -TAGS= support for windows silent installer"
-
-issues = ["460"]
-pulls = ["464"]
-

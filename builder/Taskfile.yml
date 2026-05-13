@@ -37,7 +37,8 @@ tasks:
     desc: 'Build the collector for the host OS/arch'
     cmds:
       - task: generate
-      - go build -ldflags "{{.GO_LDFLAGS}}" -o {{.OUT_DIR}}/graylog-collector .
+      - mkdir -p target
+      - go build -ldflags "{{.GO_LDFLAGS}}" -o {{.OUT_DIR}}/target/graylog-collector .
 
   build:do:
     internal: true
@@ -47,7 +48,8 @@ tasks:
       CGO_ENABLED: '{{if ne .CGO_ENABLED "1"}}0{{else}}1{{end}}'
     deps: [generate]
     cmds:
-      - go build -ldflags "{{.GO_LDFLAGS}}" -o {{.OUT_DIR}}/graylog-collector-{{.BUILD_OS}}-{{.BUILD_ARCH}}{{.BIN_SUFFIX}} .
+      - mkdir -p target
+      - go build -ldflags "{{.GO_LDFLAGS}}" -o {{.OUT_DIR}}/target/graylog-collector-{{.BUILD_OS}}-{{.BUILD_ARCH}}{{.BIN_SUFFIX}} .
 
   build:linux:amd64:
     desc: 'Cross-compile collector for linux/amd64'
@@ -103,6 +105,7 @@ tasks:
         -ver-patch="{{.COLLECTOR_VERSION_PATCH}}"
         -ver-build="{{.COLLECTOR_REVISION}}"
         -o {{.TASKFILE_DIR}}/resource_windows.syso
+        "{{.ROOT_DIR}}/dist/windows/versioninfo.json"
 
       - task: build:do
         vars:

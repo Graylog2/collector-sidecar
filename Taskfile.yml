@@ -19,7 +19,7 @@ vars:
   WINDOWS_INSTALLER_VERSION: '{{.COLLECTOR_VERSION}}-{{.COLLECTOR_REVISION}}{{.COLLECTOR_VERSION_SUFFIX | replace "-" "."}}'
   FMT_ARGS: >-
     -f .license.template
-    -ignore '{.github,.idea,changelog,dist/pkg,dist/v2,out}/**'
+    -ignore '{.github,.idea,changelog,dist,out}/**'
     -ignore '**/*.{yml,yaml}'
     .
   FMT_ARGS_OTEL: >-
@@ -50,10 +50,8 @@ tasks:
   clean:
     desc: "Cleanup artifacts and build directories"
     cmds:
-      - rm -vf graylog-collector*
+      - rm -vrf target
       - rm -vf builder/resource_windows.syso
-      - rm -vrf dist/v2/windows/obj
-      - rm -vrf dist/pkg
 
   fmt:
     desc: 'Format Go sources and apply license headers'
@@ -99,23 +97,22 @@ tasks:
   package:windows:exe:sign:
     desc: 'Sign Windows MSI'
     cmds:
-      - codesigntool sign {{.ROOT_DIR}}/graylog-collector-windows-amd64.exe
+      - codesigntool sign {{.ROOT_DIR}}/target/graylog-collector-windows-amd64.exe
 
   package:windows:msi:
     desc: 'Build Windows MSI installer (Windows only; requires dotnet SDK + WiX 7)'
     platforms: [windows]
     deps: [builder:build:windows:amd64]
     cmds:
-      - mkdir -p dist/pkg
       # TODO: Enable .exe signing?
       #- task: package:windows:exe:sign
       - >-
-        dotnet build dist/v2/windows/graylog-collector.wixproj
+        dotnet build dist/windows/graylog-collector.wixproj
         -c Release
         -p:Version={{.COLLECTOR_VERSION}}
-        -p:SourceExe={{.ROOT_DIR}}/graylog-collector-windows-amd64.exe
+        -p:SourceExe={{.ROOT_DIR}}/target/graylog-collector-windows-amd64.exe
         -p:LicenseFile={{.ROOT_DIR}}/LICENSE
-        -p:OutputPath={{.ROOT_DIR}}/dist/pkg/
+        -p:OutputPath={{.ROOT_DIR}}/target/
 
   package:windows:msi:sign:
     desc: 'Sign Windows MSI'

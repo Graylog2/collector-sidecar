@@ -26,32 +26,13 @@ _testmain.go
 *.swp
 
 /.idea/
-/config/
-/vendor/
-/.vendor/
-/nxlog/
-/log/
-/build/
-
-misc/nxmock/nxlog
-misc/nxmock/nxlog.exe
 
 builder/builder
 builder/builder.exe
 
-dist/cache
-dist/pkg
-dist/tmp-build
-dist/tmp-dest
-dist/collectors/
-dist/**/obj
+/target/
 
-.filebeat
-
-/collector-config.yaml
-/collector-config.yml
 /graylog-collector*
-/sidecar.yml
 /data
 resource_windows.syso
 .claude/

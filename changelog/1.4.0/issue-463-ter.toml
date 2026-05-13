@@ -1,6 +1,0 @@
-type = "changed"
-message = "Terminate collector processes by killing the process group instead of just the PID."
-
-issues = ["463"]
-pulls = ["462"]
-

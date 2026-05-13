@@ -1,6 +1,0 @@
-type = "added"
-message = "Bundle Filebeat and Auditbeat for Linux. Add default tag to config file."
-
-issues = ["graylog2-server#15570"]
-pulls = ["472"]
-

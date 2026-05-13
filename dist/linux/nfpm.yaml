@@ -17,21 +17,21 @@ homepage: "https://www.graylog.org/"
 license: "SSPL-1"
 
 contents:
-  - src: "graylog-collector-linux-amd64"
+  - src: "target/graylog-collector-linux-amd64"
     dst: "/usr/bin/graylog-collector"
     file_info:
       owner: "root"
       group: "root"
       mode: 0555
 
-  - src: "dist/v2/graylog-collector.service"
+  - src: "dist/linux/graylog-collector.service"
     dst: "/usr/lib/systemd/system/graylog-collector.service"
     file_info:
       owner: "root"
       group: "root"
       mode: 0444
 
-  - src: "dist/v2/enrollment.env.example"
+  - src: "dist/linux/enrollment.env.example"
     dst: "/etc/graylog/collector/enrollment.env.example"
     type: "config"
     file_info:
@@ -40,7 +40,7 @@ contents:
       mode: 0444
 
 scripts:
-  preinstall: "dist/v2/preinstall.sh"
-  postinstall: "dist/v2/postinstall.sh"
-  preremove: "dist/v2/preremove.sh"
-  postremove: "dist/v2/postremove.sh"
+  preinstall: "dist/linux/preinstall.sh"
+  postinstall: "dist/linux/postinstall.sh"
+  preremove: "dist/linux/preremove.sh"
+  postremove: "dist/linux/postremove.sh"
