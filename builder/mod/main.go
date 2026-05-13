@@ -102,16 +102,18 @@ func addSupervisorDispatch(path string) error {
 		// Remove comments inside the function body that would be misplaced
 		// by the AST insertion. Go's formatter associates comments by position,
 		// so prepending a statement shifts everything.
-		bodyStart := fn.Body.Lbrace
-		firstStmtPos := fn.Body.List[0].Pos()
-		var kept []*ast.CommentGroup
-		for _, cg := range f.Comments {
-			if cg.Pos() > bodyStart && cg.End() < firstStmtPos {
-				continue
+		if len(fn.Body.List) > 0 {
+			bodyStart := fn.Body.Lbrace
+			firstStmtPos := fn.Body.List[0].Pos()
+			var kept []*ast.CommentGroup
+			for _, cg := range f.Comments {
+				if cg.Pos() > bodyStart && cg.End() < firstStmtPos {
+					continue
+				}
+				kept = append(kept, cg)
 			}
-			kept = append(kept, cg)
+			f.Comments = kept
 		}
-		f.Comments = kept
 
 		// Build:
 		//   if handled, triedSCM := maybeSupervisorService(params); handled {
