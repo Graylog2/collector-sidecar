@@ -28,6 +28,21 @@ import (
 	"github.com/Graylog2/collector-sidecar/superv/config"
 	"go.uber.org/zap"
 	"golang.org/x/sys/windows/svc"
+	"golang.org/x/sys/windows/svc/eventlog"
+)
+
+// The source name needs to match the Name parameter in util:EventSource in graylog-collector.wxs.
+// TODO: Branding
+const eventLogSourceName = "graylog-collector"
+
+const (
+	serviceStarting uint32 = iota + 1
+	serviceStarted
+	serviceStartError
+	serviceStopping
+	serviceStopped
+	serviceStopError
+	serviceError
 )
 
 // NewSvcHandler returns a Windows service handler for the supervisor.
@@ -40,10 +55,17 @@ type supervisorService struct{}
 func (s *supervisorService) Execute(_ []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (bool, uint32) {
 	changes <- svc.Status{State: svc.StartPending}
 
+	elog, err := eventlog.Open(eventLogSourceName)
+	if err != nil {
+		return true, 1
+	}
+	defer elog.Close()
+
+	_ = elog.Info(serviceStarting, "Starting Collector service")
+
 	cfg, events, err := buildServiceConfig()
 	if err != nil {
-		// Cannot log yet (logger depends on config). The SCM will record the
-		// failed start and the exit code.
+		_ = elog.Error(serviceStartError, "Invalid configuration: "+err.Error())
 		return true, 1
 	}
 
@@ -59,6 +81,7 @@ func (s *supervisorService) Execute(_ []string, r <-chan svc.ChangeRequest, chan
 		State:   svc.Running,
 		Accepts: svc.AcceptStop | svc.AcceptShutdown,
 	}
+	_ = elog.Info(serviceStarted, "Collector service started")
 
 	for {
 		select {
@@ -67,13 +90,19 @@ func (s *supervisorService) Execute(_ []string, r <-chan svc.ChangeRequest, chan
 			case svc.Interrogate:
 				changes <- c.CurrentStatus
 			case svc.Stop, svc.Shutdown:
+				_ = elog.Info(serviceStopping, "Stopping Collector service")
 				changes <- svc.Status{State: svc.StopPending}
 				cancel()
-				<-errCh
+				if err := <-errCh; err != nil {
+					_ = elog.Error(serviceStopError, "Shutdown error: "+err.Error())
+					return true, 1
+				}
+				_ = elog.Info(serviceStopped, "Collector service stopped")
 				return false, 0
 			}
 		case err := <-errCh:
 			if err != nil {
+				_ = elog.Error(serviceError, "Service error: "+err.Error())
 				return true, 1
 			}
 			return false, 0

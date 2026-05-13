@@ -17,7 +17,7 @@
 
  SPDX-License-Identifier: SSPL-1.0
 -->
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
 
   <!-- UpgradeCode: MINT ONCE, NEVER CHANGE. -->
   <?define UpgradeCode = "C57C74A4-E5B1-4014-A0FC-17E9A4DB5A2B" ?>
@@ -82,6 +82,16 @@
             <File Id="graylog_collector_exe"
                   Source="$(var.SourceExe)"
                   KeyPath="yes" />
+
+            <!-- EventCreate.exe is a built-in message provider that we use because we don't ship a custom message DLL for rendering. -->
+            <!-- The Name needs to match the eventLogSourceName in superv/service_windows.go -->
+            <util:EventSource
+                    Log="Application"
+                    Name="graylog-collector"
+                    EventMessageFile="%SystemRoot%\System32\EventCreate.exe"
+                    SupportsInformationals="yes"
+                    SupportsWarnings="yes"
+                    SupportsErrors="yes" />
 
             <ServiceInstall
                 Id="GraylogCollectorService"
