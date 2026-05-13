@@ -22,6 +22,7 @@ package superv
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 
@@ -83,6 +84,10 @@ func (s *supervisorService) Execute(_ []string, r <-chan svc.ChangeRequest, chan
 	}
 	_ = elog.Info(serviceStarted, "Collector service started")
 
+	shutdownTimeoutMs := cfg.Agent.Shutdown.GracefulTimeout.Milliseconds()
+	shutdownTimeoutMs = min(max(shutdownTimeoutMs, 1), int64(math.MaxUint32))
+	waitHint := uint32(shutdownTimeoutMs)
+
 	for {
 		select {
 		case c := <-r:
@@ -91,7 +96,9 @@ func (s *supervisorService) Execute(_ []string, r <-chan svc.ChangeRequest, chan
 				changes <- c.CurrentStatus
 			case svc.Stop, svc.Shutdown:
 				_ = elog.Info(serviceStopping, "Stopping Collector service")
-				changes <- svc.Status{State: svc.StopPending}
+				// Ideally we would also send periodic heartbeats with a monotonically increasing CheckPoint for
+				// full spec compliance.
+				changes <- svc.Status{State: svc.StopPending, WaitHint: waitHint}
 				cancel()
 				if err := <-errCh; err != nil {
 					_ = elog.Error(serviceStopError, "Shutdown error: "+err.Error())
