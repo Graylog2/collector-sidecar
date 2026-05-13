@@ -324,12 +324,17 @@ func (s *Supervisor) Start(parentCtx context.Context) error {
 	}
 
 	// Create commander for agent process management
-	cmd, err := keen.New(s.logger, s.persistenceDir, keen.Config{
+	cmd, err := keen.New(s.logger, keen.Config{
 		Executable:      s.agentCfg.Executable,
 		Args:            expandedArgs,
 		Env:             s.buildCollectorEnv(),
 		PassthroughLogs: s.agentCfg.PassthroughLogs,
-		Logging:         s.agentCfg.Logging,
+		Logging: keen.LoggingConfig{
+			File:       s.agentCfg.Logging.File,
+			MaxSize:    s.agentCfg.Logging.FileRotation.MaxSize,
+			MaxBackups: s.agentCfg.Logging.FileRotation.MaxBackups,
+			MaxAge:     s.agentCfg.Logging.FileRotation.MaxAge,
+		},
 	}, keen.NewBackoff(keen.BackoffConfig{
 		InitialInterval:     s.agentCfg.Restart.InitialInterval,
 		MaxInterval:         s.agentCfg.Restart.MaxInterval,

@@ -59,9 +59,10 @@ func TestCreateOpAMPCallbacks_OnRemoteConfig_DoesNotRollbackOnShutdownCancellati
 		args = []string{"-NoProfile", "-Command", "Start-Sleep -Seconds 30"}
 	}
 
-	cmd, err := keen.New(logger, t.TempDir(), keen.Config{
+	cmd, err := keen.New(logger, keen.Config{
 		Executable: executable,
 		Args:       args,
+		Logging:    keen.LoggingConfig{File: filepath.Join(t.TempDir(), "agent.log")},
 	}, keen.NewBackoff(keen.BackoffConfig{}))
 	require.NoError(t, err)
 
