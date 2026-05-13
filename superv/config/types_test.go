@@ -57,7 +57,7 @@ func TestConfigDefaults(t *testing.T) {
 	assert.Greater(t, cfg.Agent.Shutdown.GracefulTimeout, 5*time.Second)
 
 	assert.False(t, cfg.Agent.Sidecar.Enabled)
-	assert.True(t, cfg.Agent.Sidecar.Autodetect)
+	assert.False(t, cfg.Agent.Sidecar.Autodetect)
 
 	// See platform-specific test files for directory default value tests
 }
