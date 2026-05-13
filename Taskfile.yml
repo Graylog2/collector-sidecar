@@ -104,7 +104,6 @@ tasks:
     platforms: [windows]
     deps: [builder:build:windows:amd64]
     cmds:
-      - mkdir -p target/pkg
       # TODO: Enable .exe signing?
       #- task: package:windows:exe:sign
       - >-

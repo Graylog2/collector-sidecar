@@ -57,6 +57,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_S3_SNAPSHOTS_SECRET_ACCESS_KEY }}
           AWS_S3_BUCKET: "${{ secrets.AWS_S3_SNAPSHOTS_BUCKET }}"
           TIMESTAMP: "${{ env.timestamp }}"
+        working-directory: "target"
         run: |
           printf -- "## Artifacts\n\n" >> "$GITHUB_STEP_SUMMARY"
 
