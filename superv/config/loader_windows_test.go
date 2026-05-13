@@ -28,5 +28,5 @@ import (
 func TestDefaultConfigPaths(t *testing.T) {
 	paths := DefaultConfigPaths()
 
-	require.Contains(t, paths, "C:\\ProgramData\\Graylog\\collector\\config\\supervisor.yaml")
+	require.Contains(t, paths, "C:\\ProgramData\\Graylog\\Collector\\config\\supervisor.yaml")
 }
