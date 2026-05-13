@@ -7,4 +7,4 @@
 - Use `cmp.Or(val, fallback)` instead of `if val == zero { val = fallback }` for defaulting zero values.
 - Use `go fix` after each code change.
 - Use `github.com/goccy/go-yaml` instead of `gopkg.in/yaml.v3`
-- Use `make fmt` to format the source files.
+- Use `go tool task fmt` to format the source files.
