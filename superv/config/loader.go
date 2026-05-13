@@ -40,6 +40,23 @@ func DefaultConfigPaths() []string {
 	return []string{"/etc/graylog/collector/supervisor.yaml", "./supervisor.yaml"}
 }
 
+func DefaultSidecarConfigPaths(customPath string) []string {
+	if runtime.GOOS == "windows" {
+		// Default Sidecar path on Windows.
+		paths := []string{filepath.Join(`C:\`, "Program Files", "graylog", "sidecar", "sidecar.yml")}
+		if customPath != "" {
+			return append(paths, customPath)
+		}
+		return paths
+	}
+	// Default Sidecar path on Unix.
+	paths := []string{"/etc/graylog/sidecar/sidecar.yml"}
+	if customPath != "" {
+		return append(paths, customPath)
+	}
+	return paths
+}
+
 // Load loads configuration from a YAML file, merging with defaults.
 // Environment variables with the GLC_ prefix override config values
 // (e.g., GLC_SERVER_ENDPOINT overrides server.endpoint).

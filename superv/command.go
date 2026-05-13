@@ -93,7 +93,7 @@ func buildConfig(cmd *cobra.Command) (config.Config, []func(logger *zap.Logger),
 			logger.Debug("Using config file path from command line flag", zap.String("config", configFile))
 		})
 	} else {
-		file, err := findConfigFile(append(config.DefaultConfigPaths(), configFile))
+		file, err := findConfigFile(config.DefaultConfigPaths())
 		if err != nil {
 			return config.Config{}, nil, fmt.Errorf("supervisor: %w", err)
 		}
@@ -163,10 +163,7 @@ func buildConfig(cmd *cobra.Command) (config.Config, []func(logger *zap.Logger),
 	if cfg.Agent.Sidecar.Autodetect {
 		// We take an existing Sidecar config in the same directory as the supervisor config as an indicator to start the
 		// Sidecar extension (when auto-detection is enabled)
-		sidecarConfigPath, err := findConfigFile([]string{
-			"/etc/graylog/sidecar/sidecar.yml", // This was the default Sidecar path
-			filepath.Join(filepath.Dir(configFile), "sidecar.yml"),
-		})
+		sidecarConfigPath, err := findConfigFile(config.DefaultSidecarConfigPaths(filepath.Join(filepath.Dir(configFile), "sidecar.yml")))
 		if err != nil {
 			return config.Config{}, nil, fmt.Errorf("sidecar: %w", err)
 		}
