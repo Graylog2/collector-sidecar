@@ -97,7 +97,7 @@ tasks:
   package:windows:exe:sign:
     desc: 'Sign Windows MSI'
     cmds:
-      - codesigntool sign {{.ROOT_DIR}}/graylog-collector-windows-amd64.exe
+      - codesigntool sign {{.ROOT_DIR}}/target/graylog-collector-windows-amd64.exe
 
   package:windows:msi:
     desc: 'Build Windows MSI installer (Windows only; requires dotnet SDK + WiX 7)'
