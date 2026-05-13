@@ -48,7 +48,7 @@ jobs:
       - name: "Build packages"
         env:
           TIMESTAMP: "${{ env.timestamp }}"
-        run: "nfpm package -f dist/linux/nfpm.yaml -p deb"
+        run: "nfpm package -f dist/linux/nfpm.yaml -p deb -t target/"
 
       - name: "Upload build artifacts to S3"
         env:
