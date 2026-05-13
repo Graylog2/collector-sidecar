@@ -74,6 +74,37 @@ func TestValidateAgentStorageDir(t *testing.T) {
 	require.Contains(t, err.Error(), "agent.storage_dir")
 }
 
+func TestValidateAgentLoggingLevel(t *testing.T) {
+	tests := []struct {
+		name      string
+		level     string
+		expectErr bool
+	}{
+		{"debug", "debug", false},
+		{"info", "info", false},
+		{"warn", "warn", false},
+		{"error", "error", false},
+		{"empty", "", true},
+		{"invalid", "trace", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := DefaultConfig()
+			cfg.Server.Endpoint = "ws://localhost:4320"
+			cfg.Agent.Executable = "/bin/test"
+			cfg.Agent.Logging.Level = tt.level
+			err := cfg.Validate()
+			if tt.expectErr {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "agent.logging.level")
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestValidateHealthEndpoint(t *testing.T) {
 	tests := []struct {
 		name      string

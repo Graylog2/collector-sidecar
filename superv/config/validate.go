@@ -146,6 +146,10 @@ func (a AgentConfig) Validate() error {
 		return errors.New("agent.executable: is required")
 	}
 
+	if !slices.Contains(validLogLevels, a.Logging.Level) {
+		return fmt.Errorf("agent.logging.level must be one of %v, got %q", validLogLevels, a.Logging.Level)
+	}
+
 	if !slices.Contains(validReloadMethods, a.Reload.Method) {
 		return fmt.Errorf("agent.reload.method: must be one of %v, got %q", validReloadMethods, a.Reload.Method)
 	}
