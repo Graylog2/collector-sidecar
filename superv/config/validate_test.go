@@ -74,6 +74,25 @@ func TestValidateAgentStorageDir(t *testing.T) {
 	require.Contains(t, err.Error(), "agent.storage_dir")
 }
 
+func TestValidateAgentShutdownTimeout(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.Agent.Executable = "test"
+
+	t.Run("zero", func(t *testing.T) {
+		cfg.Agent.Shutdown.GracefulTimeout = 0
+		err := cfg.Validate()
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "agent.shutdown.graceful_timeout: must be greater than zero")
+
+	})
+	t.Run("negative", func(t *testing.T) {
+		cfg.Agent.Shutdown.GracefulTimeout = -10
+		err := cfg.Validate()
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "agent.shutdown.graceful_timeout: must be greater than zero")
+	})
+}
+
 func TestValidateAgentLoggingLevel(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -439,10 +458,29 @@ func TestValidateShutdownTimeouts(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.Server.Endpoint = "ws://localhost:4320"
 	cfg.Agent.Executable = "/bin/test"
-	cfg.Shutdown.GracefulTimeout = 1 * time.Second
-	cfg.Agent.Shutdown.GracefulTimeout = 10 * time.Second
 
-	err := cfg.Validate()
-	assert.Error(t, err)
-	assert.ErrorContains(t, err, "shutdown.graceful_timeout cannot be smaller than agent.shutdown.graceful_timeout")
+	t.Run("zero_value", func(t *testing.T) {
+		cfg.Shutdown.GracefulTimeout = 0
+
+		err := cfg.Validate()
+		assert.Error(t, err)
+		assert.ErrorContains(t, err, "shutdown.graceful_timeout: must be greater than zero")
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		cfg.Shutdown.GracefulTimeout = -5
+
+		err := cfg.Validate()
+		assert.Error(t, err)
+		assert.ErrorContains(t, err, "shutdown.graceful_timeout: must be greater than zero")
+	})
+
+	t.Run("compare_to_agent_timeout", func(t *testing.T) {
+		cfg.Shutdown.GracefulTimeout = 1 * time.Second
+		cfg.Agent.Shutdown.GracefulTimeout = 10 * time.Second
+
+		err := cfg.Validate()
+		assert.Error(t, err)
+		assert.ErrorContains(t, err, "shutdown.graceful_timeout cannot be smaller than agent.shutdown.graceful_timeout")
+	})
 }
