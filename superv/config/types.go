@@ -312,7 +312,7 @@ func DefaultConfig() Config {
 			},
 			Sidecar: Sidecar{
 				Enabled:    false,
-				Autodetect: true,
+				Autodetect: false,
 			},
 		},
 		Packages: PackagesConfig{
