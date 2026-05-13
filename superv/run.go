@@ -93,7 +93,6 @@ func Run(ctx context.Context, cfg config.Config, events []func(*zap.Logger)) err
 
 	<-ctx.Done()
 
-	// Reduce
 	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), cfg.Shutdown.GracefulTimeout)
 	defer cancelShutdown()
 	defer func() {
