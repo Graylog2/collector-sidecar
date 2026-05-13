@@ -95,11 +95,10 @@ func Run(ctx context.Context, cfg config.Config, events []func(*zap.Logger)) err
 
 	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancelShutdown()
+	defer ownLogsManager.Shutdown(shutdownCtx)
 	if err := sv.Stop(shutdownCtx); err != nil {
 		return fmt.Errorf("shutdown timeout: %w", err)
 	}
-
-	_ = ownLogsManager.Shutdown(shutdownCtx)
 
 	return nil
 }
