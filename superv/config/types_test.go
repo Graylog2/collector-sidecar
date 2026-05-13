@@ -39,6 +39,8 @@ func TestConfigDefaults(t *testing.T) {
 	assert.Empty(t, cfg.Server.Auth.EnrollmentEndpoint)
 	assert.Empty(t, cfg.Server.Auth.EnrollmentToken)
 
+	assert.Equal(t, 30*time.Second, cfg.Shutdown.GracefulTimeout)
+
 	assert.Equal(t, "localhost:0", cfg.LocalServer.Endpoint)
 
 	assert.Equal(t, []string{"--config", "{{ .ConfigPath }}"}, cfg.Agent.Args)
@@ -57,7 +59,7 @@ func TestConfigDefaults(t *testing.T) {
 	assert.Greater(t, cfg.Agent.Shutdown.GracefulTimeout, 5*time.Second)
 
 	assert.False(t, cfg.Agent.Sidecar.Enabled)
-	assert.True(t, cfg.Agent.Sidecar.Autodetect)
+	assert.False(t, cfg.Agent.Sidecar.Autodetect)
 
 	// See platform-specific test files for directory default value tests
 }

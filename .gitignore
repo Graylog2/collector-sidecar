@@ -36,11 +36,15 @@ _testmain.go
 misc/nxmock/nxlog
 misc/nxmock/nxlog.exe
 
+builder/builder
+builder/builder.exe
+
 dist/cache
 dist/pkg
 dist/tmp-build
 dist/tmp-dest
 dist/collectors/
+dist/**/obj
 
 .filebeat
 

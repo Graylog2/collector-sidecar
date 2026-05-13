@@ -502,3 +502,43 @@ service:
 	require.Contains(t, serviceExtensions, "zpages")
 	require.Contains(t, serviceExtensions, "health_check")
 }
+
+func TestInjectTelemetryLogs(t *testing.T) {
+	config := []byte(`
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+exporters:
+  debug: {}
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [debug]
+`)
+
+	result, err := InjectTelemetryLogs(config, "debug")
+	require.NoError(t, err)
+
+	var parsed map[string]any
+	err = yaml.Unmarshal(result, &parsed)
+	require.NoError(t, err)
+
+	// Verify service.telemetry.logs.level is set to "debug"
+	service, ok := parsed["service"].(map[string]any)
+	require.True(t, ok, "service should exist")
+
+	telemetry, ok := service["telemetry"].(map[string]any)
+	require.True(t, ok, "service.telemetry should exist")
+
+	metrics, ok := telemetry["logs"].(map[string]any)
+	require.True(t, ok, "service.telemetry.logs should exist")
+
+	require.Equal(t, "debug", metrics["level"])
+
+	// Verify original config is preserved
+	require.Contains(t, parsed, "receivers")
+	require.Contains(t, parsed, "exporters")
+}

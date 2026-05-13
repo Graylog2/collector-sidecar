@@ -21,6 +21,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -51,9 +52,17 @@ func TestCreateOpAMPCallbacks_OnRemoteConfig_DoesNotRollbackOnShutdownCancellati
 		InstanceUID:   "test-instance",
 	})
 
-	cmd, err := keen.New(logger, t.TempDir(), keen.Config{
-		Executable: "/bin/sleep",
-		Args:       []string{"30"},
+	executable := "/bin/sleep"
+	args := []string{"30"}
+	if runtime.GOOS == "windows" {
+		executable = "powershell"
+		args = []string{"-NoProfile", "-Command", "Start-Sleep -Seconds 30"}
+	}
+
+	cmd, err := keen.New(logger, keen.Config{
+		Executable: executable,
+		Args:       args,
+		Logging:    keen.LoggingConfig{File: filepath.Join(t.TempDir(), "agent.log")},
 	}, keen.NewBackoff(keen.BackoffConfig{}))
 	require.NoError(t, err)
 

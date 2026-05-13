@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -71,6 +72,56 @@ func TestValidateAgentStorageDir(t *testing.T) {
 	err := cfg.Validate()
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "agent.storage_dir")
+}
+
+func TestValidateAgentShutdownTimeout(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.Agent.Executable = "test"
+
+	t.Run("zero", func(t *testing.T) {
+		cfg.Agent.Shutdown.GracefulTimeout = 0
+		err := cfg.Validate()
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "agent.shutdown.graceful_timeout: must be greater than zero")
+
+	})
+	t.Run("negative", func(t *testing.T) {
+		cfg.Agent.Shutdown.GracefulTimeout = -10
+		err := cfg.Validate()
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "agent.shutdown.graceful_timeout: must be greater than zero")
+	})
+}
+
+func TestValidateAgentLoggingLevel(t *testing.T) {
+	tests := []struct {
+		name      string
+		level     string
+		expectErr bool
+	}{
+		{"debug", "debug", false},
+		{"info", "info", false},
+		{"warn", "warn", false},
+		{"error", "error", false},
+		{"empty", "", true},
+		{"invalid", "trace", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := DefaultConfig()
+			cfg.Server.Endpoint = "ws://localhost:4320"
+			cfg.Agent.Executable = "/bin/test"
+			cfg.Agent.Logging.Level = tt.level
+			err := cfg.Validate()
+			if tt.expectErr {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "agent.logging.level")
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
 }
 
 func TestValidateHealthEndpoint(t *testing.T) {
@@ -401,4 +452,35 @@ func TestValidateReloadMethod(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValidateShutdownTimeouts(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.Server.Endpoint = "ws://localhost:4320"
+	cfg.Agent.Executable = "/bin/test"
+
+	t.Run("zero_value", func(t *testing.T) {
+		cfg.Shutdown.GracefulTimeout = 0
+
+		err := cfg.Validate()
+		assert.Error(t, err)
+		assert.ErrorContains(t, err, "shutdown.graceful_timeout: must be greater than zero")
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		cfg.Shutdown.GracefulTimeout = -5
+
+		err := cfg.Validate()
+		assert.Error(t, err)
+		assert.ErrorContains(t, err, "shutdown.graceful_timeout: must be greater than zero")
+	})
+
+	t.Run("compare_to_agent_timeout", func(t *testing.T) {
+		cfg.Shutdown.GracefulTimeout = 1 * time.Second
+		cfg.Agent.Shutdown.GracefulTimeout = 10 * time.Second
+
+		err := cfg.Validate()
+		assert.Error(t, err)
+		assert.ErrorContains(t, err, "shutdown.graceful_timeout cannot be smaller than agent.shutdown.graceful_timeout")
+	})
 }

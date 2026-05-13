@@ -19,15 +19,29 @@ package keen
 
 import (
 	"context"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
+	"go.uber.org/zap/zaptest/observer"
 )
+
+func lookPath(t *testing.T, name string) string {
+	t.Helper()
+	path, err := exec.LookPath(name)
+	if err != nil {
+		t.Skipf("%s not found in PATH: %v", name, err)
+	}
+	return path
+}
 
 func TestCommander_StartStop(t *testing.T) {
 	if runtime.GOOS == "windows" {
@@ -35,11 +49,10 @@ func TestCommander_StartStop(t *testing.T) {
 	}
 
 	logger := zaptest.NewLogger(t)
-	logsDir := t.TempDir()
-
-	cmd, err := New(logger, logsDir, Config{
-		Executable: "/bin/sleep",
+	cmd, err := New(logger, Config{
+		Executable: lookPath(t, "sleep"),
 		Args:       []string{"60"},
+		Logging:    LoggingConfig{File: filepath.Join(t.TempDir(), "agent.log")},
 	}, NewBackoff(DefaultBackoffConfig()))
 	require.NoError(t, err)
 
@@ -60,11 +73,11 @@ func TestCommander_StartAlreadyRunning(t *testing.T) {
 	}
 
 	logger := zaptest.NewLogger(t)
-	logsDir := t.TempDir()
 
-	cmd, err := New(logger, logsDir, Config{
-		Executable: "/bin/sleep",
+	cmd, err := New(logger, Config{
+		Executable: lookPath(t, "sleep"),
 		Args:       []string{"60"},
+		Logging:    LoggingConfig{File: filepath.Join(t.TempDir(), "agent.log")},
 	}, NewBackoff(DefaultBackoffConfig()))
 	require.NoError(t, err)
 
@@ -80,11 +93,11 @@ func TestCommander_StartAlreadyRunning(t *testing.T) {
 
 func TestCommander_StopNotRunning(t *testing.T) {
 	logger := zaptest.NewLogger(t)
-	logsDir := t.TempDir()
 
-	cmd, err := New(logger, logsDir, Config{
-		Executable: "/bin/sleep",
+	cmd, err := New(logger, Config{
+		Executable: lookPath(t, "sleep"),
 		Args:       []string{"60"},
+		Logging:    LoggingConfig{File: filepath.Join(t.TempDir(), "agent.log")},
 	}, NewBackoff(DefaultBackoffConfig()))
 	require.NoError(t, err)
 
@@ -99,11 +112,11 @@ func TestCommander_ExitedChannel(t *testing.T) {
 	}
 
 	logger := zaptest.NewLogger(t)
-	logsDir := t.TempDir()
 
-	cmd, err := New(logger, logsDir, Config{
+	cmd, err := New(logger, Config{
 		Executable: "/bin/sh",
 		Args:       []string{"-c", "exit 0"},
+		Logging:    LoggingConfig{File: filepath.Join(t.TempDir(), "agent.log")},
 	}, NewBackoff(DefaultBackoffConfig()))
 	require.NoError(t, err)
 
@@ -131,11 +144,11 @@ func TestCommander_Restart(t *testing.T) {
 	}
 
 	logger := zaptest.NewLogger(t)
-	logsDir := t.TempDir()
 
-	cmd, err := New(logger, logsDir, Config{
-		Executable: "/bin/sleep",
+	cmd, err := New(logger, Config{
+		Executable: lookPath(t, "sleep"),
 		Args:       []string{"60"},
+		Logging:    LoggingConfig{File: filepath.Join(t.TempDir(), "agent.log")},
 	}, NewBackoff(BackoffConfig{MaxRetries: 0})) // Disable restart so we don't have to take care of the async recovery look startup
 	require.NoError(t, err)
 
@@ -160,36 +173,100 @@ func TestCommander_StopConcurrentCallers(t *testing.T) {
 		t.Skip("Skipping on Windows")
 	}
 
-	logger := zaptest.NewLogger(t)
-	logsDir := t.TempDir()
+	core, observed := observer.New(zap.DebugLevel)
+	logger := zap.New(core)
 
-	cmd, err := New(logger, logsDir, Config{
+	cmd, err := New(logger, Config{
 		Executable: "/bin/sh",
 		Args: []string{
 			"-c",
 			`trap 'sleep 0.2; exit 0' TERM; while true; do sleep 1; done`,
 		},
+		Logging: LoggingConfig{File: filepath.Join(t.TempDir(), "agent.log")},
 	}, NewBackoff(BackoffConfig{MaxRetries: 0}))
 	require.NoError(t, err)
 
 	require.NoError(t, cmd.start(context.Background()))
 
+	start := make(chan struct{})
 	errCh := make(chan error, 2)
 	var wg sync.WaitGroup
 	for range 2 {
 		wg.Go(func() {
+			<-start
 			stopCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
 			errCh <- cmd.Stop(stopCtx)
 		})
 	}
 
+	close(start)
 	wg.Wait()
 	close(errCh)
 
 	for err := range errCh {
 		require.NoError(t, err)
 	}
+	require.Equal(t, 1, observed.FilterMessage("Stopping agent process").Len())
+}
+
+func TestCommander_StopAfterRecoveryCancellationSharesInFlightStop(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows")
+	}
+
+	core, observed := observer.New(zap.DebugLevel)
+	logger := zap.New(core)
+
+	// The trap signals readiness via a file so the test can wait until the
+	// SIGTERM handler is installed. Without this, SIGTERM may arrive before
+	// the trap is in place, sh dies immediately, and Stop returns too fast
+	// to deterministically observe the in-flight state.
+	readyFile := filepath.Join(t.TempDir(), "ready")
+	cmd, err := New(logger, Config{
+		Executable: "/bin/sh",
+		Args: []string{
+			"-c",
+			`trap 'sleep 0.5; exit 0' TERM; touch "$1"; while true; do sleep 0.1; done`,
+			"--",
+			readyFile,
+		},
+		Logging: LoggingConfig{File: filepath.Join(t.TempDir(), "agent.log")},
+	}, NewBackoff(BackoffConfig{MaxRetries: 0}))
+	require.NoError(t, err)
+
+	require.NoError(t, cmd.Start(context.Background()))
+	require.Eventually(t, func() bool {
+		_, err := os.Stat(readyFile)
+		return err == nil && cmd.IsRunning() && cmd.Pid() > 0
+	}, 2*time.Second, 10*time.Millisecond)
+
+	cmd.mu.Lock()
+	stopRecovery := cmd.stopRecovery
+	recoveryDone := cmd.recoveryDone
+	cmd.mu.Unlock()
+	require.NotNil(t, stopRecovery)
+
+	stopRecovery()
+	// Wait until the recovery loop has entered its own Stop call so the
+	// manual Stop below deterministically takes the piggyback path.
+	require.Eventually(t, func() bool {
+		cmd.mu.Lock()
+		defer cmd.mu.Unlock()
+		return cmd.stopState != nil
+	}, time.Second, 10*time.Millisecond)
+
+	stopCtx, stopCancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer stopCancel()
+	require.NoError(t, cmd.Stop(stopCtx))
+
+	select {
+	case <-recoveryDone:
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for recovery loop to stop")
+	}
+
+	require.Equal(t, 1, observed.FilterMessage("Stopping agent process").Len())
 }
 
 func TestCommander_CrashRecovery(t *testing.T) {
@@ -200,9 +277,10 @@ func TestCommander_CrashRecovery(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 
 	// Use a command that exits immediately (simulates crash)
-	cmd, err := New(logger, t.TempDir(), Config{
-		Executable: "/bin/false", // Always exits with code 1
+	cmd, err := New(logger, Config{
+		Executable: lookPath(t, "false"), // Always exits with code 1
 		Args:       []string{},
+		Logging:    LoggingConfig{File: filepath.Join(t.TempDir(), "agent.log")},
 	}, NewBackoff(BackoffConfig{ // Configure backoff with short delays for testing
 		InitialInterval:     10 * time.Millisecond,
 		MaxInterval:         20 * time.Millisecond,
@@ -238,9 +316,10 @@ func TestCommander_CrashRecovery_GracefulExit(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 
 	// Use a command that exits cleanly (exit code 0)
-	cmd, err := New(logger, t.TempDir(), Config{
-		Executable: "/bin/true", // Always exits with code 0
+	cmd, err := New(logger, Config{
+		Executable: lookPath(t, "true"), // Always exits with code 0
 		Args:       []string{},
+		Logging:    LoggingConfig{File: filepath.Join(t.TempDir(), "agent.log")},
 	}, NewBackoff(BackoffConfig{
 		InitialInterval:     10 * time.Millisecond,
 		RandomizationFactor: 0,
@@ -277,9 +356,10 @@ func TestCommander_Stop_DuringAsyncStartup(t *testing.T) {
 	// With recovery enabled, Start() returns immediately and start() runs
 	// asynchronously. Calling Stop() before cmd.Start() populates cmd.Process
 	// must not panic.
-	cmd, err := New(logger, t.TempDir(), Config{
-		Executable: "/bin/sleep",
+	cmd, err := New(logger, Config{
+		Executable: lookPath(t, "sleep"),
 		Args:       []string{"60"},
+		Logging:    LoggingConfig{File: filepath.Join(t.TempDir(), "agent.log")},
 	}, NewBackoff(BackoffConfig{
 		InitialInterval:     10 * time.Millisecond,
 		RandomizationFactor: 0,
@@ -301,6 +381,31 @@ func TestCommander_Stop_DuringAsyncStartup(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestCommander_New_PassthroughLogsAllowsEmptyLoggingFile(t *testing.T) {
+	logger := zaptest.NewLogger(t)
+
+	cmd, err := New(logger, Config{
+		Executable:      lookPath(t, "true"),
+		PassthroughLogs: true,
+		Logging:         LoggingConfig{},
+	}, NewBackoff(DefaultBackoffConfig()))
+	require.NoError(t, err)
+	require.NotNil(t, cmd)
+}
+
+func TestCommander_New_WithoutPassthroughLogsRequiresLoggingFile(t *testing.T) {
+	logger := zaptest.NewLogger(t)
+
+	cmd, err := New(logger, Config{
+		Executable:      lookPath(t, "true"),
+		PassthroughLogs: false,
+		Logging:         LoggingConfig{},
+	}, NewBackoff(DefaultBackoffConfig()))
+	require.Error(t, err)
+	assert.Nil(t, cmd)
+	assert.ErrorContains(t, err, "Logging.File is required")
+}
+
 func TestCommander_CrashRecovery_StopDuringRecovery(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping on Windows")
@@ -309,9 +414,10 @@ func TestCommander_CrashRecovery_StopDuringRecovery(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 
 	// Use a command that exits immediately but would retry forever
-	cmd, err := New(logger, t.TempDir(), Config{
-		Executable: "/bin/false",
+	cmd, err := New(logger, Config{
+		Executable: lookPath(t, "false"),
 		Args:       []string{},
+		Logging:    LoggingConfig{File: filepath.Join(t.TempDir(), "agent.log")},
 	}, NewBackoff(BackoffConfig{
 		InitialInterval:     50 * time.Millisecond,
 		MaxInterval:         50 * time.Millisecond,

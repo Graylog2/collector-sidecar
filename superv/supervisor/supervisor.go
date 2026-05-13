@@ -196,6 +196,7 @@ func New(logger *zap.Logger, cfg config.Config, instanceUID string) (*Supervisor
 		LocalEndpoint:  cfg.LocalServer.Endpoint,
 		InstanceUID:    instanceUID,
 		HealthCheck:    healthCheck,
+		AgentLogLevel:  cfg.Agent.Logging.Level,
 	})
 
 	// Restore the last applied config hash so ApplyRemoteConfig can skip
@@ -322,11 +323,17 @@ func (s *Supervisor) Start(parentCtx context.Context) error {
 	}
 
 	// Create commander for agent process management
-	cmd, err := keen.New(s.logger, s.persistenceDir, keen.Config{
+	cmd, err := keen.New(s.logger, keen.Config{
 		Executable:      s.agentCfg.Executable,
 		Args:            expandedArgs,
 		Env:             s.buildCollectorEnv(),
 		PassthroughLogs: s.agentCfg.PassthroughLogs,
+		Logging: keen.LoggingConfig{
+			File:       s.agentCfg.Logging.File,
+			MaxSize:    s.agentCfg.Logging.FileRotation.MaxSize,
+			MaxBackups: s.agentCfg.Logging.FileRotation.MaxBackups,
+			MaxAge:     s.agentCfg.Logging.FileRotation.MaxAge,
+		},
 	}, keen.NewBackoff(keen.BackoffConfig{
 		InitialInterval:     s.agentCfg.Restart.InitialInterval,
 		MaxInterval:         s.agentCfg.Restart.MaxInterval,
@@ -512,13 +519,16 @@ func (s *Supervisor) Stop(ctx context.Context) error {
 	}
 	s.healthWg.Wait()
 
+	// Disconnect the local OpAMP clients before stopping the collector process to avoid error logs.
+	if server != nil {
+		server.DisconnectAll()
+	}
+
 	if s.commander != nil {
 		if err := s.commander.Stop(ctx); err != nil {
 			s.logger.Error("Error stopping agent", zap.Error(err))
 		}
 	}
-
-	server.DisconnectAll()
 
 	if client != nil {
 		if err := client.Stop(ctx); err != nil {

@@ -1,0 +1,10 @@
+version: '3'
+
+vars:
+  GOTEST_FLAGS: '-vet=all{{if ne OS "windows"}} -race{{end}}{{if .CI}} -v{{end}}'
+
+tasks:
+  test:
+    desc: 'Run unit tests for the windowseventlogreceiver module'
+    cmds:
+      - go test {{.GOTEST_FLAGS}} ./...
