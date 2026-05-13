@@ -1,24 +1,20 @@
-# Graylog Sidecar
+# Graylog Collector
 
 [![Go Report Card](https://goreportcard.com/badge/Github.com/graylog2/collector-sidecar)](https://goreportcard.com/report/github.com/Graylog2/collector-sidecar)
 
-The Graylog Sidecar is a supervisor process for 3rd party log collectors like NXLog and filebeat.
-The Sidecar program is able to fetch and validate configuration files from a Graylog server for various log collectors.
-You can think of it like a centralized configuration and process management system for your log collectors.
+Graylog Collector is a log shipper that ships logs from your hosts to a Graylog server.
+It runs and supervises an embedded [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/)
+and is managed remotely by Graylog using the [Open Agent Management Protocol (OpAMP)](https://opentelemetry.io/docs/specs/opamp/).
+Configuration, certificates, and updates are delivered from the server after
+the agent is enrolled with an enrollment endpoint and token.
 
-The master branch is tracking the development version of the Sidecar.
+The Collector is distributed as native Linux packages (deb, rpm) and a
+Windows MSI installer that registers a Windows Service.
 
-## Documentation
+## Build
 
-Please check our official [documentation](https://docs.graylog.org/docs/sidecar) for more information.
-
-## Installation
-
-Please check our [installation documentation](https://docs.graylog.org/docs/sidecar#installation) for more information.
-
-
-## Compile
+This repository uses [Task](https://taskfile.dev) as its build tool.
 
   * Clone the repository
-  * Run `make` to install the dependencies and build the binary for the local platform
-  * Run `make help` to see more targets
+  * Run `go tool task build` to build the binary for the local platform
+  * Run `go tool task --list` to see all available targets
