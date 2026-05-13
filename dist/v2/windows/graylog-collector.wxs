@@ -29,7 +29,7 @@
   <Package
       Name="Graylog Collector"
       Manufacturer="Graylog, Inc."
-      Version="$(Version)"
+      Version="$(var.Version)"
       UpgradeCode="$(var.UpgradeCode)"
       Scope="perMachine"
       Language="1033"
