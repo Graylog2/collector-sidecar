@@ -55,7 +55,11 @@ func NewSvcHandler() svc.Handler {
 type supervisorService struct{}
 
 func (s *supervisorService) Execute(_ []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (bool, uint32) {
-	changes <- svc.Status{State: svc.StartPending}
+	// Give SCM a generous WaitHint so it doesn't decide the service is hung
+	// while Run is doing its synchronous startup (auth, OpAMP, collector).
+	// Ideally we'd also send periodic StartPending heartbeats with a monotonically
+	// increasing CheckPoint for full spec compliance.
+	changes <- svc.Status{State: svc.StartPending, WaitHint: uint32((30 * time.Second).Milliseconds())}
 
 	elog, err := eventlog.Open(eventLogSourceName)
 	if err != nil {
@@ -76,9 +80,24 @@ func (s *supervisorService) Execute(_ []string, r <-chan svc.ChangeRequest, chan
 	defer cancel()
 
 	errCh := make(chan error, 1)
+	startedCh := make(chan struct{})
 	go func() {
-		errCh <- Run(ctx, cfg, events)
+		errCh <- Run(ctx, cfg, events, startedCh)
 	}()
+
+	// Stay in StartPending until Run signals that synchronous startup has
+	// completed, or returns early with a startup error. Reporting Running to
+	// SCM before this point would falsely advertise the service as healthy.
+	select {
+	case <-startedCh:
+	case err := <-errCh:
+		if err != nil {
+			_ = elog.Error(serviceStartError, "Startup error: "+err.Error())
+			return true, 1
+		}
+		// Run returned nil before signaling start — treat as a clean exit.
+		return false, 0
+	}
 
 	changes <- svc.Status{
 		State:   svc.Running,

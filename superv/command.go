@@ -289,5 +289,5 @@ func runSupervisor(cmd *cobra.Command, _ []string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	return Run(ctx, cfg, events)
+	return Run(ctx, cfg, events, nil)
 }
