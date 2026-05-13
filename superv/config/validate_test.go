@@ -413,5 +413,5 @@ func TestValidateShutdownTimeouts(t *testing.T) {
 
 	err := cfg.Validate()
 	assert.Error(t, err)
-	assert.ErrorContains(t, err, "shutdown.timeout cannot be smaller than agent.shutdown.graceful_timeout")
+	assert.ErrorContains(t, err, "shutdown.graceful_timeout cannot be smaller than agent.shutdown.graceful_timeout")
 }

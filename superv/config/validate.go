@@ -38,7 +38,7 @@ var (
 // Validate checks the configuration for errors.
 func (c *Config) Validate() error {
 	if c.Shutdown.GracefulTimeout < c.Agent.Shutdown.GracefulTimeout {
-		return errors.New("shutdown.timeout cannot be smaller than agent.shutdown.graceful_timeout")
+		return errors.New("shutdown.graceful_timeout cannot be smaller than agent.shutdown.graceful_timeout")
 	}
 
 	return errors.Join(
