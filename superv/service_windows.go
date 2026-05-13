@@ -66,6 +66,7 @@ func (s *supervisorService) Execute(_ []string, r <-chan svc.ChangeRequest, chan
 		if err != nil {
 			return true, 1
 		}
+		defer elog.Close()
 		_ = elog.Error(serviceEventLogError, fmt.Sprintf("Unable to open event log source %q: %v", eventLogSourceName, openErr))
 		return true, 1
 	}
