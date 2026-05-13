@@ -20,16 +20,16 @@
     },
     "StringFileInfo": {
         "Comments": "",
-        "CompanyName": "Graylog, Inc.",
-        "FileDescription": "Graylog Sidecar",
+        "CompanyName": "",
+        "FileDescription": "",
         "FileVersion": "",
         "InternalName": "",
-        "LegalCopyright": "Graylog, Inc.",
+        "LegalCopyright": "",
         "LegalTrademarks": "",
         "OriginalFilename": "",
         "PrivateBuild": "",
-        "ProductName": "Graylog Sidecar",
-        "ProductVersion": "v1.0.0.0",
+        "ProductName": "",
+        "ProductVersion": "",
         "SpecialBuild": ""
     },
     "VarFileInfo": {
@@ -37,7 +37,5 @@
             "LangID": "0409",
             "CharsetID": "04B0"
         }
-    },
-    "IconPath": "dist/graylog.ico",
-    "ManifestPath": ""
+    }
 }

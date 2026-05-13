@@ -57,8 +57,9 @@ func TestSupervisor_HandleOwnLogs(t *testing.T) {
 			KeysDir: keysDir,
 		})
 
-		cmd, err := keen.New(logger, t.TempDir(), keen.Config{
+		cmd, err := keen.New(logger, keen.Config{
 			Executable: "/bin/true",
+			Logging:    keen.LoggingConfig{File: filepath.Join(t.TempDir(), "agent.log")},
 		}, keen.NewBackoff(keen.BackoffConfig{}))
 		require.NoError(t, err)
 

@@ -36,11 +36,12 @@ import (
 	"go.uber.org/zap"
 )
 
-// LogRotationConfig holds configuration for agent log file rotation.
-type LogRotationConfig struct {
-	MaxSize    int // Maximum size in megabytes before rotation (default: 100)
-	MaxBackups int // Maximum number of rotated log files to keep (default: 5)
-	MaxAge     int // Maximum age in days to retain old log files (default: 30)
+// LoggingConfig holds configuration for agent log files.
+type LoggingConfig struct {
+	File       string // The log file path (required)
+	MaxSize    int    // Maximum size in megabytes before rotation (default: 25)
+	MaxBackups int    // Maximum number of rotated log files to keep (default: 5)
+	MaxAge     int    // Maximum age in days to retain old log files (default: 30)
 }
 
 // Config holds the configuration for the commander.
@@ -49,7 +50,7 @@ type Config struct {
 	Args            []string
 	Env             map[string]string
 	PassthroughLogs bool
-	LogRotation     LogRotationConfig
+	Logging         LoggingConfig
 }
 
 // stopState tracks an in-flight Stop call so concurrent callers can piggyback.
@@ -63,7 +64,6 @@ type stopState struct {
 // Commander manages the lifecycle of an agent process.
 type Commander struct {
 	logger    *zap.Logger
-	logsDir   string
 	cfg       Config
 	mu        sync.Mutex // protects cmd, doneCh, recoveryDone, stopRecovery, stopState
 	cmd       *exec.Cmd
@@ -73,7 +73,7 @@ type Commander struct {
 	// the process exits; consumers (Stop, recoveryLoop) snapshot it under mu.
 	doneCh chan struct{}
 
-	// Log rotation writer (persists across restarts)
+	// Log rotation writer; reused across crash-recovery restarts but closed and reset on Stop.
 	logWriter *timberjack.Logger
 
 	// Crash recovery fields
@@ -84,18 +84,24 @@ type Commander struct {
 	stopRecovery context.CancelFunc
 }
 
-// New creates a new Commander instance.
-func New(logger *zap.Logger, logsDir string, cfg Config, backoff *Backoff) (*Commander, error) {
+// New creates a new Commander instance. The function creates the log directory for Config.Logging.File.
+func New(logger *zap.Logger, cfg Config, backoff *Backoff) (*Commander, error) {
+	if logger == nil {
+		return nil, errors.New("logger is required")
+	}
 	if backoff == nil {
 		return nil, errors.New("backoff is required")
 	}
-	logsDir = filepath.Join(logsDir, "logs")
-	if err := os.MkdirAll(logsDir, 0o750); err != nil {
-		return nil, fmt.Errorf("failed to create logs directory: %w", err)
+	if !cfg.PassthroughLogs {
+		if cfg.Logging.File == "" {
+			return nil, errors.New("Logging.File is required when PassthroughLogs is false")
+		}
+		if err := os.MkdirAll(filepath.Dir(cfg.Logging.File), 0o750); err != nil {
+			return nil, fmt.Errorf("failed to create logs directory: %w", err)
+		}
 	}
 	return &Commander{
 		logger:  logger,
-		logsDir: logsDir,
 		cfg:     cfg,
 		backoff: backoff,
 	}, nil
@@ -158,12 +164,11 @@ func (c *Commander) buildEnv() []string {
 func (c *Commander) startNormal() error {
 	c.mu.Lock()
 	if c.logWriter == nil {
-		rot := c.cfg.LogRotation
 		c.logWriter = &timberjack.Logger{
-			Filename:   filepath.Join(c.logsDir, "agent.log"),
-			MaxSize:    cmp.Or(rot.MaxSize, 100),
-			MaxBackups: cmp.Or(rot.MaxBackups, 5),
-			MaxAge:     cmp.Or(rot.MaxAge, 30),
+			Filename:   c.cfg.Logging.File,
+			MaxSize:    cmp.Or(c.cfg.Logging.MaxSize, 25),
+			MaxBackups: cmp.Or(c.cfg.Logging.MaxBackups, 5),
+			MaxAge:     cmp.Or(c.cfg.Logging.MaxAge, 30),
 			LocalTime:  true,
 		}
 	}
@@ -310,22 +315,27 @@ func (c *Commander) Stop(ctx context.Context) (err error) { //nolint:nonamedretu
 	pid := cmd.Process.Pid
 	c.logger.Debug("Stopping agent process", zap.Int("pid", pid))
 
+	// default graceful shutdown timeout, we set it to zero in case the signal failed.
+	gracefulTimeout := 10 * time.Second
 	if err := sendShutdownSignal(cmd.Process); err != nil {
 		if errors.Is(err, os.ErrProcessDone) || !c.running.Load() {
 			// Process already exited, nothing to do.
 			return nil
 		}
-		return fmt.Errorf("failed to send shutdown signal: %w", err)
+
+		// intentional immediate kill in this case, we cannot signal the process
+		gracefulTimeout = 0 * time.Second
+		c.logger.Warn("Failed to send shutdown signal, force-killing the agent process immediately", zap.Int("pid", pid), zap.Error(err))
 	}
 
 	// Wait with timeout for graceful shutdown
-	waitCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	waitCtx, cancel := context.WithTimeout(ctx, gracefulTimeout)
 	defer cancel()
 
 	go func() {
 		<-waitCtx.Done()
 		if errors.Is(waitCtx.Err(), context.DeadlineExceeded) {
-			c.logger.Debug("Agent not responding to SIGTERM, sending SIGKILL", zap.Int("pid", pid))
+			c.logger.Debug("Agent did not shut down, force-killing the process", zap.Int("pid", pid))
 			if err := cmd.Process.Kill(); err != nil {
 				c.logger.Warn("Couldn't kill process", zap.Int("pid", pid))
 			}

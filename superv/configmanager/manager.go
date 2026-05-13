@@ -40,6 +40,7 @@ type Config struct {
 	LocalEndpoint  string                        // Local OpAMP server endpoint for injection
 	InstanceUID    string                        // Instance UID for injection
 	HealthCheck    configmerge.HealthCheckConfig // Health check extension injection settings
+	AgentLogLevel  string                        // Log level the agent should log at
 }
 
 // ApplyResult contains the result of applying a remote config.
@@ -407,6 +408,12 @@ func (m *Manager) injectExtensions(config []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to inject disabled telemetry metrics: %w", err)
 	}
 	m.logger.Debug("Injected telemetry metrics deactivation")
+
+	mergedConfig, err = configmerge.InjectTelemetryLogs(mergedConfig, m.cfg.AgentLogLevel)
+	if err != nil {
+		return nil, fmt.Errorf("failed to inject telemetry logs: %w", err)
+	}
+	m.logger.Debug("Injected telemetry logs settings")
 
 	return mergedConfig, nil
 }

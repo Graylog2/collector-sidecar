@@ -38,6 +38,15 @@ var (
 // Validate checks the configuration for errors.
 func (c *Config) Validate() error {
 	return errors.Join(
+		func() error {
+			if c.Shutdown.GracefulTimeout < 1 {
+				return fmt.Errorf("shutdown.graceful_timeout: must be greater than zero")
+			}
+			if c.Shutdown.GracefulTimeout < c.Agent.Shutdown.GracefulTimeout {
+				return errors.New("shutdown.graceful_timeout cannot be smaller than agent.shutdown.graceful_timeout")
+			}
+			return nil
+		}(),
 		c.Server.Validate(),
 		c.Server.Auth.Validate(),
 		c.Keys.Validate(),
@@ -140,6 +149,14 @@ func (k KeysConfig) Validate() error {
 func (a AgentConfig) Validate() error {
 	if a.Executable == "" {
 		return errors.New("agent.executable: is required")
+	}
+
+	if a.Shutdown.GracefulTimeout < 1 {
+		return errors.New("agent.shutdown.graceful_timeout: must be greater than zero")
+	}
+
+	if !slices.Contains(validLogLevels, a.Logging.Level) {
+		return fmt.Errorf("agent.logging.level must be one of %v, got %q", validLogLevels, a.Logging.Level)
 	}
 
 	if !slices.Contains(validReloadMethods, a.Reload.Method) {
