@@ -13,10 +13,8 @@ import (
 )
 
 func run(params otelcol.CollectorSettings) error {
-	if handled, triedSCM := maybeSupervisorService(params); handled {
-		return nil
-	} else if triedSCM {
-		return runInteractive(params)
+	if handled, err := runSupervisorService(params); handled {
+		return err
 	}
 
 	if err := svc.Run("", otelcol.NewSvcHandler(params)); err != nil {

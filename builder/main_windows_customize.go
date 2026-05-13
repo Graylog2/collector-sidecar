@@ -30,25 +30,24 @@ import (
 	"golang.org/x/sys/windows/svc"
 )
 
-// maybeSupervisorService checks whether this process was started as a Windows
-// service with the "supervisor" argument. If so, it runs the supervisor's
-// service handler and returns (true, nil) on clean exit or (true, err) on
-// failure. If this is not a supervisor invocation, it returns (false, false).
-// If the SCM connection fails (interactive mode), it returns (false, true) so
-// the caller skips any further svc.Run calls (StartServiceCtrlDispatcher can
-// only be called once per process).
-func maybeSupervisorService(_ otelcol.CollectorSettings) (handled bool, triedSCM bool) {
+// runSupervisorService checks whether this process was started as a Windows service with the "supervisor" argument. If
+// so, it runs the supervisor's service handler and returns (true, nil) on clean exit or (true, err) on failure. If this
+// is not a supervisor invocation, it returns (false, nil). If the SCM connection fails, it calls runInteractive and
+// returns (true, (return of runInteractive)) so the caller skips any further svc.Run calls (StartServiceCtrlDispatcher
+// can only be called once per process).
+func runSupervisorService(params otelcol.CollectorSettings) (bool, error) {
 	if len(os.Args) <= 1 || os.Args[1] != "supervisor" {
-		return false, false
+		return false, nil
 	}
 	err := svc.Run("", superv.NewSvcHandler())
 	if errors.Is(err, windows.ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) {
-		return false, true
+		// Per https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-startservicectrldispatchera#return-value
+		// this means that the process is not running as a service, so run interactively.
+		return true, runInteractive(params)
 	}
 	if err != nil {
 		// Service handler failed — treat as handled so the process exits.
-		fmt.Fprintf(os.Stderr, "supervisor service error: %v\n", err)
-		return true, true
+		return true, fmt.Errorf("supervisor service error: %w", err)
 	}
-	return true, true
+	return true, nil
 }

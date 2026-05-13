@@ -60,7 +60,7 @@ func main() {
 	}
 }
 
-const supervisorDispatchCallback = "maybeSupervisorService"
+const supervisorDispatchCallback = "runSupervisorService"
 
 // addSupervisorDispatch inserts a supervisor dispatch call at the beginning of
 // the run() function in main_windows.go. This allows the supervisor's Windows
@@ -116,13 +116,11 @@ func addSupervisorDispatch(path string) error {
 		}
 
 		// Build:
-		//   if handled, triedSCM := maybeSupervisorService(params); handled {
-		//       return nil
-		//   } else if triedSCM {
-		//       return runInteractive(params)
+		//   if handled, err := runSupervisorService(params); handled {
+		//       return err
 		//   }
 		dispatchCall := &ast.AssignStmt{
-			Lhs: []ast.Expr{ast.NewIdent("handled"), ast.NewIdent("triedSCM")},
+			Lhs: []ast.Expr{ast.NewIdent("handled"), ast.NewIdent("err")},
 			Tok: token.DEFINE,
 			Rhs: []ast.Expr{
 				&ast.CallExpr{
@@ -138,22 +136,7 @@ func addSupervisorDispatch(path string) error {
 			Body: &ast.BlockStmt{
 				List: []ast.Stmt{
 					&ast.ReturnStmt{
-						Results: []ast.Expr{ast.NewIdent("nil")},
-					},
-				},
-			},
-			Else: &ast.IfStmt{
-				Cond: ast.NewIdent("triedSCM"),
-				Body: &ast.BlockStmt{
-					List: []ast.Stmt{
-						&ast.ReturnStmt{
-							Results: []ast.Expr{
-								&ast.CallExpr{
-									Fun:  ast.NewIdent("runInteractive"),
-									Args: []ast.Expr{ast.NewIdent("params")},
-								},
-							},
-						},
+						Results: []ast.Expr{ast.NewIdent("err")},
 					},
 				},
 			},

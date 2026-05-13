@@ -228,14 +228,14 @@ func TestAddSupervisorDispatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !strings.Contains(string(content), "maybeSupervisorService(params)") {
-		t.Errorf("expected maybeSupervisorService(params) call to be inserted")
+	if !strings.Contains(string(content), "runSupervisorService(params)") {
+		t.Errorf("expected runSupervisorService(params) call to be inserted")
 	}
 
-	dispatchIdx := strings.Index(string(content), "maybeSupervisorService(params)")
+	dispatchIdx := strings.Index(string(content), "runSupervisorService(params)")
 	svcRunIdx := strings.Index(string(content), "svc.Run")
 	if dispatchIdx >= svcRunIdx {
-		t.Errorf("maybeSupervisorService should appear before svc.Run")
+		t.Errorf("runSupervisorService should appear before svc.Run")
 	}
 }
 
@@ -258,9 +258,9 @@ func TestAddSupervisorDispatchIdempotent(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	count := strings.Count(string(content), "maybeSupervisorService(params)")
+	count := strings.Count(string(content), "runSupervisorService(params)")
 	if count != 1 {
-		t.Errorf("expected exactly 1 maybeSupervisorService call, found %d", count)
+		t.Errorf("expected exactly 1 runSupervisorService call, found %d", count)
 	}
 }
 
