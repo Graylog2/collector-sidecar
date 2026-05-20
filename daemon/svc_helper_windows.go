@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/Graylog2/collector-sidecar/backends"
+	"github.com/Graylog2/collector-sidecar/common"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/eventlog"
 	"golang.org/x/sys/windows/svc/mgr"
@@ -34,9 +35,9 @@ func CleanOldServices(assignedBackends []*backends.Backend) {
 	}
 	for _, service := range registeredServices {
 		if strings.Contains(service, ServiceNamePrefix()) {
-			log.Debugf("Found graylog service %s", service)
+			log.Debugf("Found %s service %s", common.LowerFullName(), service)
 			if !serviceIsAssigned(assignedBackends, service) {
-				log.Infof("Removing stale graylog service %s", service)
+				log.Infof("Removing stale %s service %s", common.LowerFullName(), service)
 				uninstallService(service)
 			}
 		}
