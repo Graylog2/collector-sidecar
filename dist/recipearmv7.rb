@@ -10,7 +10,7 @@ class GraylogSidecar < FPM::Cookery::Recipe
   homepage Branding.homepage_url
   arch     'armv7'
 
-  source   "file:../../build/#{version}/linux/armv7/graylog-sidecar"
+  source   "file:../../build/#{version}/linux/armv7/#{Branding.product_lower}"
 
   maintainer Branding.maintainer
   vendor     Branding.vendor_lower
@@ -24,7 +24,7 @@ class GraylogSidecar < FPM::Cookery::Recipe
   end
 
   def install
-    bin.install 'graylog-sidecar', Branding.product_lower
+    bin.install Branding.product_lower
     etc(Branding.etc_path).install '../../../sidecar-example.yml', 'sidecar.yml'
     etc("#{Branding.etc_path}/sidecar.yml").chmod(0600)
     var("lib/#{Branding.product_lower}/generated").mkdir

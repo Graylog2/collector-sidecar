@@ -10,7 +10,7 @@ class GraylogSidecar < FPM::Cookery::Recipe
   homepage Branding.homepage_url
   arch     'arm64'
 
-  source   "file:../../build/#{version}/linux/arm64/graylog-sidecar"
+  source   "file:../../build/#{version}/linux/arm64/#{Branding.product_lower}"
 
   maintainer Branding.maintainer
   vendor     Branding.vendor_lower
@@ -24,7 +24,7 @@ class GraylogSidecar < FPM::Cookery::Recipe
   end
 
   def install
-    bin.install 'graylog-sidecar', Branding.product_lower
+    bin.install Branding.product_lower
     lib(Branding.product_lower).install '../../collectors/filebeat/linux/arm64/filebeat'
     lib(Branding.product_lower).install '../../collectors/auditbeat/linux/arm64/auditbeat'
     etc(Branding.etc_path).install '../../../sidecar-example.yml', 'sidecar.yml'
