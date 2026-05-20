@@ -94,7 +94,7 @@ func RequestBackendList(httpClient *http.Client, checksum string, ctx *context.C
 			backendResponse.NotModified = true
 			log.Debug("[RequestBackendList] No update available.")
 		case resp.StatusCode != 200:
-			msg := "Bad response status from Graylog server"
+			msg := "Bad response status from server"
 			system.GlobalStatus.Set(backends.StatusError, msg)
 			log.Errorf("[RequestBackendList] %s: %s", msg, resp.Status)
 			return graylog.ResponseBackendList{}, err
