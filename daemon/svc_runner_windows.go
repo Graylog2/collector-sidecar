@@ -92,7 +92,7 @@ func (r *SvcRunner) Running() bool {
 		return false
 	}
 
-	return status.State == svc.Running
+	return status.State == svc.Running || status.State == svc.StopPending
 }
 
 func (r *SvcRunner) Supervised() bool {
