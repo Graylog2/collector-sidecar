@@ -269,7 +269,7 @@ func (r *SvcRunner) restart() error {
 		if err := r.stop(); err != nil {
 			log.Errorf("[%s] Failed to stop: %v", r.Name(), err)
 		}
-		for timeout := 0; r.Running() && timeout < 5; timeout++ {
+		for timeout := 0; r.Running() && timeout < 20; timeout++ {
 			log.Debugf("[%s] waiting for process to finish...", r.Name())
 			time.Sleep(1 * time.Second)
 		}
