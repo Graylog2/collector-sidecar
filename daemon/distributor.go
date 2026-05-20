@@ -55,8 +55,13 @@ func (dist *Distributor) Stop(s service.Service) error {
 	for _, runner := range Daemon.Runner {
 		runner.Shutdown()
 	}
+	deadline := time.Now().Add(30 * time.Second)
 	for _, runner := range Daemon.Runner {
 		for runner.Running() {
+			if time.Now().After(deadline) {
+				log.Warnf("[%s] Timed out waiting for runner to finish", runner.Name())
+				break
+			}
 			log.Debugf("[%s] Waiting for runner to finish", runner.Name())
 			time.Sleep(100 * time.Millisecond)
 		}
