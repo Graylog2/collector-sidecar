@@ -57,7 +57,7 @@
   Var SendStatus
   Var Dialog
   Var Label
-  Var GraylogDir
+  Var VendorDir
   Var IsUpgrade
   Var LogFile
   Var LogMsgText
@@ -68,8 +68,8 @@
 
   !define MUI_ICON "${BRAND_ICON_FILE}"
   !define MUI_WELCOMEPAGE_TITLE "${BRAND_PRODUCT_DISPLAY} ${VERSION}-${REVISION}${SUFFIX} Installation / Upgrade"
-  !define MUI_WELCOMEPAGE_TEXT  "This setup is gonna guide you through the installation / upgrade of the Graylog Sidecar.\r\n\r\n \
-		  If an already configured Sidecar is detected ('sidecar.yml' present), it will perform an upgrade.\r\n \r\n\
+  !define MUI_WELCOMEPAGE_TEXT  "This setup is gonna guide you through the installation / upgrade of the ${BRAND_PRODUCT_DISPLAY}.\r\n\r\n \
+		  If an already configured ${BRAND_PRODUCT_NAME} is detected ('sidecar.yml' present), it will perform an upgrade.\r\n \r\n\
 		  Click Next to continue."
 
   !insertmacro MUI_PAGE_WELCOME
@@ -110,12 +110,12 @@
   !macro Check_X64
     ${If} ${RunningX64}
       SetRegView 64
-      Strcpy $GraylogDir "$PROGRAMFILES64\${BRAND_WIN_VENDOR_DIR}"
+      Strcpy $VendorDir "$PROGRAMFILES64\${BRAND_WIN_VENDOR_DIR}"
     ${Else}
       SetRegView 32
-      Strcpy $GraylogDir "$PROGRAMFILES32\${BRAND_WIN_VENDOR_DIR}"
+      Strcpy $VendorDir "$PROGRAMFILES32\${BRAND_WIN_VENDOR_DIR}"
     ${EndIf}
-    Strcpy $INSTDIR "$GraylogDir\${BRAND_WIN_PRODUCT_DIR}"
+    Strcpy $INSTDIR "$VendorDir\${BRAND_WIN_PRODUCT_DIR}"
     CreateDirectory $INSTDIR
   !macroend
 
@@ -163,9 +163,9 @@ Section "Install"
   ${EndIf}
 
   ${If} ${RunningX64}
-    File /oname=${BRAND_PRODUCT_LOWER}.exe "../build/${VERSION}/windows/amd64/graylog-sidecar.exe"
+    File /oname=${BRAND_PRODUCT_LOWER}.exe "../build/${VERSION}/windows/amd64/${BRAND_PRODUCT_LOWER}.exe"
   ${Else}
-    File /oname=${BRAND_PRODUCT_LOWER}.exe "../build/${VERSION}/windows/386/graylog-sidecar.exe"
+    File /oname=${BRAND_PRODUCT_LOWER}.exe "../build/${VERSION}/windows/386/${BRAND_PRODUCT_LOWER}.exe"
   ${EndIf}
 
   ; Install beats collectors
@@ -317,7 +317,7 @@ Section "Uninstall"
   ;Remove the installation directory
   SetOutPath $TEMP
   RMDir "$INSTDIR"
-  RMDir $GraylogDir
+  RMDir $VendorDir
 
   ;Remove uninstall entries in the registry
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BRAND_REGISTRY_KEY}"
@@ -374,7 +374,7 @@ Function nsDialogsPage
      Abort
   ${EndIf}
 
-  ${NSD_CreateLabel} 0 0 100% 12u "Enter the URL to your Graylog API:"
+  ${NSD_CreateLabel} 0 0 100% 12u "Enter the URL to your ${BRAND_VENDOR_NAME} API:"
   Pop $Label
   ${NSD_CreateText} 50 20 75% 12u "http://127.0.0.1:9000/api"
   Pop $InputServerUrl
@@ -400,7 +400,7 @@ Function nsDialogsPageLeave
   ${NSD_GetText} $InputApiToken $ApiToken
 
   ${If} $ServerUrl == ""
-      MessageBox MB_OK "Please enter a valid address to your Graylog server!"
+      MessageBox MB_OK "Please enter a valid address to your ${BRAND_VENDOR_NAME} server!"
       Abort
   ${EndIf}
   ${If} $ApiToken == ""
