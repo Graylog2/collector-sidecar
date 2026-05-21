@@ -15,9 +15,6 @@ BRAND_PRODUCT_LOWER ?= $(shell echo "$(BRAND_VENDOR_NAME)-$(BRAND_PRODUCT_NAME)"
 # URLs
 BRAND_HOMEPAGE_URL ?= https://www.graylog.org
 BRAND_DOCS_URL ?= https://docs.graylog.org/
-BRAND_DOWNLOADS_URL ?= https://downloads.graylog.org/releases/graylog-collector-sidecar
-BRAND_GITHUB_URL ?= https://github.com/Graylog2/collector-sidecar
-BRAND_ICON_URL ?= https://rawcdn.githack.com/Graylog2/collector-sidecar/c32a05ba052815ebbdeb8588395451dd5b2c1378/images/graylog-icon.png
 
 # File names
 BRAND_ICON_FILE ?= dist/graylog.ico
