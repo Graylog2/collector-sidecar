@@ -2,7 +2,7 @@ require_relative 'tools'
 require_relative 'branding'
 
 class GraylogSidecar < FPM::Cookery::Recipe
-  description "#{Branding.vendor_name} collector sidecar"
+  description "#{Branding.vendor_name} Sidecar"
 
   name     Branding.product_lower
   version  data.version
