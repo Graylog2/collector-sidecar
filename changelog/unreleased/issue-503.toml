@@ -1,0 +1,5 @@
+type = "fixed"
+message = "Update gosigar version to fix reading long mtab lines."
+
+issues = ["503"]
+pulls = ["533"]

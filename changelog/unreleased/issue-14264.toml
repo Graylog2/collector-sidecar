@@ -1,0 +1,5 @@
+type = "fixed"
+message = "Fix infinite loop in Windows service runner restart that could permanently block configuration updates."
+
+issues = ["Graylog2/graylog-plugin-enterprise#14264"]
+pulls = ["554"]

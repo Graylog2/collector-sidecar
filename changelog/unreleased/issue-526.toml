@@ -1,0 +1,5 @@
+type = "c"
+message = "Don't log expanded environment variables."
+
+issues = ["526"]
+pulls = ["529"]

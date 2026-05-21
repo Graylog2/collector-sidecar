@@ -11,7 +11,7 @@ pipeline
 
   tools
   {
-    go 'Go 1.21'
+    go 'Go 1.25'
   }
 
   environment

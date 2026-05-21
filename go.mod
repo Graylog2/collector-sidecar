@@ -1,11 +1,11 @@
 module github.com/Graylog2/collector-sidecar
 
-go 1.19
+go 1.22.9
 
 require (
 	github.com/docker/go-units v0.5.0
 	github.com/elastic/go-ucfg v0.8.6
-	github.com/elastic/gosigar v0.14.2
+	github.com/elastic/gosigar v0.14.4
 	github.com/flynn-archive/go-shlex v0.0.0-20150515145356-3f9db97f8568
 	github.com/hashicorp/go-version v1.6.0
 	github.com/kardianos/service v1.2.2
@@ -13,7 +13,7 @@ require (
 	github.com/pborman/uuid v1.2.1
 	github.com/rifflock/lfshook v0.0.0-20180920164130-b9218ef580f5
 	github.com/sirupsen/logrus v1.9.3
-	golang.org/x/sys v0.13.0
+	golang.org/x/sys v0.26.0
 )
 
 require (
