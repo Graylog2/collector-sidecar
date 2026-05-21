@@ -264,12 +264,6 @@ sign-windows-installer:
 .PHONY: package-chocolatey
 package-chocolatey: ## Create Chocolatey .nupkg file
 	# This needs to run in a Docker container based on the Dockerfile.chocolatey image!
-	BRAND_PRODUCT_LOWER="$(BRAND_PRODUCT_LOWER)" \
-	BRAND_PRODUCT_DISPLAY="$(BRAND_PRODUCT_DISPLAY)" \
-	BRAND_VENDOR_NAME="$(BRAND_VENDOR_NAME)" \
-	BRAND_DOCS_URL="$(BRAND_DOCS_URL)" \
-	BRAND_HOMEPAGE_URL="$(BRAND_HOMEPAGE_URL)" \
-	BRAND_MAINTAINER="$(BRAND_MAINTAINER)" \
 	dist/chocolatey/gensha.sh $(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX) $(WINDOWS_INSTALLER_VERSION)
 	# The fourth number in Chocolatey (NuGet) is the revision.
 	# See: https://learn.microsoft.com/en-us/nuget/concepts/package-versioning#where-nugetversion-diverges-from-semantic-versioning
