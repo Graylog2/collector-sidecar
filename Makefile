@@ -29,9 +29,7 @@ ifeq ($(strip $(COLLECTOR_VERSION)),)
 $(error COLLECTOR_VERSION is not set)
 endif
 
-BUILD_DIR ?= build
-
-targets = $(BRAND_BINARY_NAME) sidecar-collector $(BUILD_DIR) dist/cache dist/tmp-build dist/tmp-dest dist/pkg dist/collectors resource_windows.syso dist/chocolatey/tools/chocolateyinstall.ps1 versioninfo.json
+targets = $(BRAND_BINARY_NAME) sidecar-collector build dist/cache dist/tmp-build dist/tmp-dest dist/pkg dist/collectors resource_windows.syso dist/chocolatey/tools/chocolateyinstall.ps1 versioninfo.json
 dist_targets = vendor
 
 GIT_REV=$(shell git rev-parse --short HEAD)
@@ -85,55 +83,55 @@ build-all: build-windows-amd64 build-windows32
 
 .PHONY: build-linux-amd64
 build-linux-amd64: ## Build sidecar binary for linux-amd64
-	@mkdir -p $(BUILD_DIR)/$(COLLECTOR_VERSION)/linux/amd64
-	GOOS=linux GOARCH=amd64 $(GO) build $(BUILD_OPTS) -o $(BUILD_DIR)/$(COLLECTOR_VERSION)/linux/amd64/$(BRAND_BINARY_NAME)
+	@mkdir -p build/$(COLLECTOR_VERSION)/linux/amd64
+	GOOS=linux GOARCH=amd64 $(GO) build $(BUILD_OPTS) -o build/$(COLLECTOR_VERSION)/linux/amd64/$(BRAND_BINARY_NAME)
 
 .PHONY: build-linux-arm64
 build-linux-arm64: ## Build sidecar binary for linux-arm64
-	@mkdir -p $(BUILD_DIR)/$(COLLECTOR_VERSION)/linux/arm64
-	GOOS=linux GOARCH=arm64 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_linux-arm64  -o $(BUILD_DIR)/$(COLLECTOR_VERSION)/linux/arm64/$(BRAND_BINARY_NAME)
+	@mkdir -p build/$(COLLECTOR_VERSION)/linux/arm64
+	GOOS=linux GOARCH=arm64 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_linux-arm64  -o build/$(COLLECTOR_VERSION)/linux/arm64/$(BRAND_BINARY_NAME)
 
 .PHONY: build-linux-armv7
 build-linux-armv7: ## Build sidecar binary for linux-armv7
-	@mkdir -p $(BUILD_DIR)/$(COLLECTOR_VERSION)/linux/armv7
-	GOOS=linux GOARCH=arm GOARM=7 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_linux-armv7  -o $(BUILD_DIR)/$(COLLECTOR_VERSION)/linux/armv7/$(BRAND_BINARY_NAME)
+	@mkdir -p build/$(COLLECTOR_VERSION)/linux/armv7
+	GOOS=linux GOARCH=arm GOARM=7 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_linux-armv7  -o build/$(COLLECTOR_VERSION)/linux/armv7/$(BRAND_BINARY_NAME)
 
 .PHONY: build-linux32
 build-linux32: ## Build sidecar binary for Linux 32bit
-	@mkdir -p $(BUILD_DIR)/$(COLLECTOR_VERSION)/linux/386
-	GOOS=linux GOARCH=386 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_linux32  -o $(BUILD_DIR)/$(COLLECTOR_VERSION)/linux/386/$(BRAND_BINARY_NAME)
+	@mkdir -p build/$(COLLECTOR_VERSION)/linux/386
+	GOOS=linux GOARCH=386 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_linux32  -o build/$(COLLECTOR_VERSION)/linux/386/$(BRAND_BINARY_NAME)
 
 .PHONY: build-darwin-amd64
 build-darwin-amd64: ## Build sidecar binary for OSX
-	@mkdir -p $(BUILD_DIR)/$(COLLECTOR_VERSION)/darwin/amd64
-	GOOS=darwin GOARCH=amd64 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_darwin -o $(BUILD_DIR)/$(COLLECTOR_VERSION)/darwin/amd64/$(BRAND_BINARY_NAME)
+	@mkdir -p build/$(COLLECTOR_VERSION)/darwin/amd64
+	GOOS=darwin GOARCH=amd64 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_darwin -o build/$(COLLECTOR_VERSION)/darwin/amd64/$(BRAND_BINARY_NAME)
 
 .PHONY: build-darwin-arm64
 build-darwin-arm64: ## Build sidecar binary for OSX
-	@mkdir -p $(BUILD_DIR)/$(COLLECTOR_VERSION)/darwin/arm64
-	GOOS=darwin GOARCH=arm64 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_darwin-arm64 -o $(BUILD_DIR)/$(COLLECTOR_VERSION)/darwin/arm64/$(BRAND_BINARY_NAME)
+	@mkdir -p build/$(COLLECTOR_VERSION)/darwin/arm64
+	GOOS=darwin GOARCH=arm64 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_darwin-arm64 -o build/$(COLLECTOR_VERSION)/darwin/arm64/$(BRAND_BINARY_NAME)
 
 .PHONY: build-freebsd-amd64
 build-freebsd-amd64: ## Build sidecar binary for FreeBSD
-	@mkdir -p $(BUILD_DIR)/$(COLLECTOR_VERSION)/freebsd/amd64
-	GOOS=freebsd GOARCH=amd64 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_freebsd -o $(BUILD_DIR)/$(COLLECTOR_VERSION)/freebsd/amd64/$(BRAND_BINARY_NAME)
+	@mkdir -p build/$(COLLECTOR_VERSION)/freebsd/amd64
+	GOOS=freebsd GOARCH=amd64 $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_freebsd -o build/$(COLLECTOR_VERSION)/freebsd/amd64/$(BRAND_BINARY_NAME)
 
 .PHONY: build-windows-amd64
 build-windows-amd64: install-goversioninfo versioninfo.json ## Build sidecar binary for Windows
-	@mkdir -p $(BUILD_DIR)/$(COLLECTOR_VERSION)/windows/amd64
+	@mkdir -p build/$(COLLECTOR_VERSION)/windows/amd64
 	$(GOVERSIONINFO_BIN) -64 -product-version="$(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)" -ver-major="$(COLLECTOR_VERSION_MAJOR)" -product-ver-minor="$(COLLECTOR_VERSION_MINOR)" -product-ver-patch="$(COLLECTOR_VERSION_PATCH)" -product-ver-build="$(COLLECTOR_REVISION)" -file-version="$(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)" -ver-major="$(COLLECTOR_VERSION_MAJOR)" -ver-minor="$(COLLECTOR_VERSION_MINOR)" -ver-patch="$(COLLECTOR_VERSION_PATCH)" -ver-build="$(COLLECTOR_REVISION)" -o resource_windows.syso
-	GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_win -o $(BUILD_DIR)/$(COLLECTOR_VERSION)/windows/amd64/$(BRAND_BINARY_NAME).exe
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_win -o build/$(COLLECTOR_VERSION)/windows/amd64/$(BRAND_BINARY_NAME).exe
 
 .PHONY: build-windows32
 build-windows32: install-goversioninfo versioninfo.json ## Build sidecar binary for Windows 32bit
-	@mkdir -p $(BUILD_DIR)/$(COLLECTOR_VERSION)/windows/386
+	@mkdir -p build/$(COLLECTOR_VERSION)/windows/386
 	$(GOVERSIONINFO_BIN) -64=false -product-version="$(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)" -ver-major="$(COLLECTOR_VERSION_MAJOR)" -product-ver-minor="$(COLLECTOR_VERSION_MINOR)" -product-ver-patch="$(COLLECTOR_VERSION_PATCH)" -product-ver-build="$(COLLECTOR_REVISION)" -file-version="$(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)" -ver-major="$(COLLECTOR_VERSION_MAJOR)" -ver-minor="$(COLLECTOR_VERSION_MINOR)" -ver-patch="$(COLLECTOR_VERSION_PATCH)" -ver-build="$(COLLECTOR_REVISION)" -o resource_windows.syso
-	GOOS=windows GOARCH=386 CGO_ENABLED=1 CC=i686-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_win32 -o $(BUILD_DIR)/$(COLLECTOR_VERSION)/windows/386/$(BRAND_BINARY_NAME).exe
+	GOOS=windows GOARCH=386 CGO_ENABLED=1 CC=i686-w64-mingw32-gcc $(GO) build $(BUILD_OPTS) -pkgdir $(GOPATH)/go_win32 -o build/$(COLLECTOR_VERSION)/windows/386/$(BRAND_BINARY_NAME).exe
 
 .PHONY: build-solaris
 build-solaris: ## Build sidecar binary for Solaris/OmniOS/Illumos
-	@mkdir -p $(BUILD_DIR)/$(COLLECTOR_VERSION)/solaris/amd64
-	GOOS=solaris GOARCH=amd64 $(GO) build $(BUILD_OPTS) -o $(BUILD_DIR)/$(COLLECTOR_VERSION)/solaris/amd64/$(BRAND_BINARY_NAME)
+	@mkdir -p build/$(COLLECTOR_VERSION)/solaris/amd64
+	GOOS=solaris GOARCH=amd64 $(GO) build $(BUILD_OPTS) -o build/$(COLLECTOR_VERSION)/solaris/amd64/$(BRAND_BINARY_NAME)
 
 .PHONY: sign-binaries
 sign-binaries: sign-binary-windows-amd64 sign-binary-windows-386
@@ -141,12 +139,12 @@ sign-binaries: sign-binary-windows-amd64 sign-binary-windows-386
 .PHONY: sign-binary-windows-amd64
 sign-binary-windows-amd64:
 	# This needs to run in a Docker container with the graylog/internal-codesigntool image
-	codesigntool sign $(BUILD_DIR)/$(COLLECTOR_VERSION)/windows/amd64/$(BRAND_BINARY_NAME).exe
+	codesigntool sign build/$(COLLECTOR_VERSION)/windows/amd64/$(BRAND_BINARY_NAME).exe
 
 .PHONY: sign-binary-windows-386
 sign-binary-windows-386:
 	# This needs to run in a Docker container with the graylog/internal-codesigntool image
-	codesigntool sign $(BUILD_DIR)/$(COLLECTOR_VERSION)/windows/386/$(BRAND_BINARY_NAME).exe
+	codesigntool sign build/$(COLLECTOR_VERSION)/windows/386/$(BRAND_BINARY_NAME).exe
 
 ## Adds version info to Windows executable
 .PHONY: install-goversioninfo
@@ -242,7 +240,7 @@ package-windows-msi-amd64: prepare-package ## Create Windows MSI package (requir
 	wixl -v -a x64 \
 		-D Version=$(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX) \
 		-D LicensePath=LICENSE \
-		-D SidecarEXEPath=$(BUILD_DIR)/$(COLLECTOR_VERSION)/windows/amd64/$(BRAND_BINARY_NAME).exe \
+		-D SidecarEXEPath=build/$(COLLECTOR_VERSION)/windows/amd64/$(BRAND_BINARY_NAME).exe \
 		-D SidecarConfigPath=sidecar-windows-msi-example.yml \
 		-D FilebeatEXEPath=dist/collectors/filebeat/windows/x86_64/filebeat.exe \
 		-D WinlogbeatEXEPath=dist/collectors/winlogbeat/windows/x86_64/winlogbeat.exe \
