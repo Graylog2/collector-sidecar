@@ -29,7 +29,7 @@
 ;General
 
   !searchreplace SUFFIX '${VERSION_SUFFIX}' "-" "."
-  OutFile "pkg/${BRAND_PRODUCT_LOWER}_installer_${VERSION}-${REVISION}${SUFFIX}.exe"
+  OutFile "pkg/${BRAND_PRODUCT_LOWER_UNDERSCORE}_installer_${VERSION}-${REVISION}${SUFFIX}.exe"
   RequestExecutionLevel admin ;Require admin rights
   ShowInstDetails "show"
   ShowUninstDetails "show"

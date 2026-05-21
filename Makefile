@@ -227,6 +227,7 @@ package-windows-exe-amd64: prepare-package ## Create Windows installer
 		-DBRAND_PRODUCT_NAME="$(BRAND_PRODUCT_NAME)" \
 		-DBRAND_PRODUCT_DISPLAY="$(BRAND_PRODUCT_DISPLAY)" \
 		-DBRAND_PRODUCT_LOWER="$(BRAND_PRODUCT_LOWER)" \
+		-DBRAND_PRODUCT_LOWER_UNDERSCORE="$(BRAND_PRODUCT_LOWER_UNDERSCORE)" \
 		-DBRAND_HOMEPAGE_URL="$(BRAND_HOMEPAGE_URL)" \
 		-DBRAND_ICON_FILE="$(BRAND_ICON_FILE_ABS)" \
 		-DBRAND_REGISTRY_KEY="$(BRAND_REGISTRY_KEY)" \
@@ -259,7 +260,7 @@ package-windows-msi-amd64: prepare-package ## Create Windows MSI package (requir
 .PHONY: sign-windows-installer
 sign-windows-installer:
 	# This needs to run in a Docker container with the graylog/internal-codesigntool image
-	codesigntool sign dist/pkg/$(BRAND_PRODUCT_LOWER)_installer_$(WINDOWS_INSTALLER_VERSION).exe
+	codesigntool sign dist/pkg/$(BRAND_PRODUCT_LOWER_UNDERSCORE)_installer_$(WINDOWS_INSTALLER_VERSION).exe
 	codesigntool sign dist/pkg/$(BRAND_PRODUCT_LOWER)-$(WINDOWS_INSTALLER_VERSION).msi
 
 .PHONY: package-chocolatey

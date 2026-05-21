@@ -11,6 +11,7 @@ BRAND_PRODUCT_NAME ?= Sidecar
 # Derived names (computed from core names)
 BRAND_PRODUCT_DISPLAY ?= $(BRAND_VENDOR_NAME) $(BRAND_PRODUCT_NAME)
 BRAND_PRODUCT_LOWER ?= $(shell echo "$(BRAND_VENDOR_NAME)-$(BRAND_PRODUCT_NAME)" | tr '[:upper:]' '[:lower:]')
+BRAND_PRODUCT_LOWER_UNDERSCORE ?= $(shell echo "$(BRAND_PRODUCT_LOWER)" | tr '-' '_')
 
 # URLs
 BRAND_HOMEPAGE_URL ?= https://www.graylog.org
