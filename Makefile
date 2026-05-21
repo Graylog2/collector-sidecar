@@ -267,13 +267,13 @@ package-chocolatey: ## Create Chocolatey .nupkg file
 	dist/chocolatey/gensha.sh $(COLLECTOR_VERSION)$(COLLECTOR_VERSION_SUFFIX) $(WINDOWS_INSTALLER_VERSION)
 	# The fourth number in Chocolatey (NuGet) is the revision.
 	# See: https://learn.microsoft.com/en-us/nuget/concepts/package-versioning#where-nugetversion-diverges-from-semantic-versioning
-	cd dist/chocolatey && choco pack $(BRAND_PRODUCT_LOWER).nuspec --version $(CHOCOLATEY_VERSION) --out ../pkg
+	cd dist/chocolatey && choco pack graylog-sidecar.nuspec --version $(CHOCOLATEY_VERSION) --out ../pkg
 
 .PHONY: push-chocolatey
 push-chocolatey: ## Push Chocolatey .nupkg file
 	# This needs to run in a Docker container based on the Dockerfile.chocolatey image!
 	# Escape the CHOCO_API_KEY to avoid printing it in the logs!
-	choco push dist/pkg/$(BRAND_PRODUCT_LOWER).$(CHOCOLATEY_VERSION).nupkg -k=$$CHOCO_API_KEY
+	choco push dist/pkg/graylog-sidecar.$(CHOCOLATEY_VERSION).nupkg -k=$$CHOCO_API_KEY
 
 .PHONY: package-tar
 package-tar: ## Create tar archive for all platforms
