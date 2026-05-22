@@ -21,20 +21,14 @@ import (
 	"strings"
 )
 
-var basePath string
-
-func init() {
-	basePath = filepath.Join(os.Getenv("SystemDrive")+"\\", "Program Files", strings.ToLower(VendorName), strings.ToLower(ProductName))
-}
-
 func configBasePathPlatform() string {
-	return basePath
+	return filepath.Join(os.Getenv("SystemDrive")+"\\", "Program Files", strings.ToLower(VendorName), strings.ToLower(ProductName))
 }
 
 func configFilePathPlatform() string {
-	return filepath.Join(basePath, "sidecar.yml")
+	return filepath.Join(configBasePathPlatform(), "sidecar.yml")
 }
 
 func cachePathPlatform() string {
-	return filepath.Join(basePath, "cache")
+	return filepath.Join(configBasePathPlatform(), "cache")
 }
