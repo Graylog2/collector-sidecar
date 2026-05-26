@@ -56,7 +56,7 @@ func NewConfig() *DaemonConfig {
 	dc := &DaemonConfig{
 		Name:        common.LowerFullName(),
 		DisplayName: common.DisplayFullName(),
-		Description: fmt.Sprintf("Wrapper service for %s controlled collector", common.VendorName), // TODO should this be ProductName?
+		Description: fmt.Sprintf("Wrapper service for %s controlled collector", common.VendorName),
 		Dir:         rootDir,
 		Env:         []string{},
 		Runner:      map[string]Runner{},
