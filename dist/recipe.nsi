@@ -150,7 +150,7 @@ Section "Install"
   SetOverwrite on
   File /oname=sidecar.yml.dist "../sidecar-windows-example.yml"
   File "../LICENSE"
-  File "${BRAND_ICON_FILE}"
+  File /oname=icon.ico "${BRAND_ICON_FILE}"
 
   ;Stop service to allow binary upgrade
   !insertmacro _IfKeyExists HKLM "SYSTEM\CurrentControlSet\Services" "${BRAND_PRODUCT_LOWER}"
@@ -192,7 +192,7 @@ Section "Install"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BRAND_REGISTRY_KEY}" \
                  "UninstallString" "$\"$INSTDIR\uninstall.exe$\""
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BRAND_REGISTRY_KEY}" \
-                 "DisplayIcon" "$\"$INSTDIR\${BRAND_ICON_FILE}$\""
+                 "DisplayIcon" "$\"$INSTDIR\icon.ico$\""
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BRAND_REGISTRY_KEY}" \
                  "QuietUninstallString" "$\"$INSTDIR\uninstall.exe$\" /S"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BRAND_REGISTRY_KEY}" \
