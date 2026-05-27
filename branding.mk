@@ -10,7 +10,9 @@ BRAND_PRODUCT_NAME ?= Sidecar
 
 # Derived names (computed from core names)
 BRAND_PRODUCT_DISPLAY ?= $(BRAND_VENDOR_NAME) $(BRAND_PRODUCT_NAME)
-BRAND_PRODUCT_LOWER ?= $(shell echo "$(BRAND_VENDOR_NAME)-$(BRAND_PRODUCT_NAME)" | tr '[:upper:]' '[:lower:]')
+# Lowercase, space-free identifier (spaces become hyphens) so multi-word brand
+# names yield valid path/binary/package names. Must match common.ToIdentifier in Go.
+BRAND_PRODUCT_LOWER ?= $(shell echo "$(BRAND_VENDOR_NAME)-$(BRAND_PRODUCT_NAME)" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
 BRAND_PRODUCT_LOWER_UNDERSCORE ?= $(shell echo "$(BRAND_PRODUCT_LOWER)" | tr '-' '_')
 
 # URLs
@@ -22,8 +24,8 @@ BRAND_ICON_FILE ?= dist/graylog.ico
 BRAND_BINARY_NAME ?= $(BRAND_PRODUCT_LOWER)
 
 # Paths (Unix)
-BRAND_VENDOR_LOWER ?= $(shell echo "$(BRAND_VENDOR_NAME)" | tr '[:upper:]' '[:lower:]')
-BRAND_PRODUCT_NAME_LOWER ?= $(shell echo "$(BRAND_PRODUCT_NAME)" | tr '[:upper:]' '[:lower:]')
+BRAND_VENDOR_LOWER ?= $(shell echo "$(BRAND_VENDOR_NAME)" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
+BRAND_PRODUCT_NAME_LOWER ?= $(shell echo "$(BRAND_PRODUCT_NAME)" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
 BRAND_CONFIG_DIR_UNIX ?= /etc/$(BRAND_VENDOR_LOWER)/$(BRAND_PRODUCT_NAME_LOWER)
 BRAND_LIB_DIR_UNIX ?= /usr/lib/$(BRAND_PRODUCT_LOWER)
 BRAND_LOG_DIR_UNIX ?= /var/log/$(BRAND_PRODUCT_LOWER)

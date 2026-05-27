@@ -40,11 +40,19 @@ var (
 )
 
 func init() {
-	lowerFullName = fmt.Sprintf("%s-%s", strings.ToLower(VendorName), strings.ToLower(ProductName))
+	lowerFullName = fmt.Sprintf("%s-%s", ToIdentifier(VendorName), ToIdentifier(ProductName))
 	displayFullName = fmt.Sprintf("%s %s", VendorName, ProductName)
 	configBasePath = configBasePathPlatform()
 	configFilePath = configFilePathPlatform()
 	cachePath = cachePathPlatform()
+}
+
+// ToIdentifier converts a brand name into a lowercase, space-free token suitable
+// for use in file paths, binary names, and service names. Spaces become hyphens
+// so multi-word brand names (e.g. "Acme Corp") yield valid identifiers
+// ("acme-corp"). Single-word names are unaffected.
+func ToIdentifier(s string) string {
+	return strings.ReplaceAll(strings.ToLower(s), " ", "-")
 }
 
 func LowerFullName() string {

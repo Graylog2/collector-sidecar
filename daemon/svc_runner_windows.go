@@ -18,7 +18,6 @@ package daemon
 import (
 	"fmt"
 	"os/exec"
-	"strings"
 	"sync/atomic"
 	"time"
 
@@ -32,7 +31,7 @@ import (
 )
 
 func ServiceNamePrefix() string {
-	return fmt.Sprintf("%s-collector-", strings.ToLower(common.VendorName))
+	return fmt.Sprintf("%s-collector-", common.ToIdentifier(common.VendorName))
 }
 
 type SvcRunner struct {

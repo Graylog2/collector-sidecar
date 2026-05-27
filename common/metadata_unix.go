@@ -19,11 +19,10 @@ package common
 
 import (
 	"path/filepath"
-	"strings"
 )
 
 func configBasePathPlatform() string {
-	return filepath.Join("/etc", strings.ToLower(VendorName), strings.ToLower(ProductName))
+	return filepath.Join("/etc", ToIdentifier(VendorName), ToIdentifier(ProductName))
 }
 
 func configFilePathPlatform() string {

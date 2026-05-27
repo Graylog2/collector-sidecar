@@ -37,10 +37,10 @@ GIT_REV=$(shell git rev-parse --short HEAD)
 # Branding ldflags
 BRANDING_OPTS =
 ifneq ($(strip $(BRAND_VENDOR_NAME)),)
-BRANDING_OPTS += -X github.com/Graylog2/collector-sidecar/common.VendorName=$(BRAND_VENDOR_NAME)
+BRANDING_OPTS += -X 'github.com/Graylog2/collector-sidecar/common.VendorName=$(BRAND_VENDOR_NAME)'
 endif
 ifneq ($(strip $(BRAND_PRODUCT_NAME)),)
-BRANDING_OPTS += -X github.com/Graylog2/collector-sidecar/common.ProductName=$(BRAND_PRODUCT_NAME)
+BRANDING_OPTS += -X 'github.com/Graylog2/collector-sidecar/common.ProductName=$(BRAND_PRODUCT_NAME)'
 endif
 
 BUILD_OPTS = -ldflags "-s -X github.com/Graylog2/collector-sidecar/common.GitRevision=$(GIT_REV) -X github.com/Graylog2/collector-sidecar/common.CollectorVersion=$(COLLECTOR_VERSION) -X github.com/Graylog2/collector-sidecar/common.CollectorVersionSuffix=$(COLLECTOR_VERSION_SUFFIX) $(BRANDING_OPTS)"
