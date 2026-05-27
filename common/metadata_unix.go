@@ -31,5 +31,5 @@ func configFilePathPlatform() string {
 }
 
 func cachePathPlatform() string {
-	return filepath.Join("/var", "cache", strings.ToLower(VendorName), strings.ToLower(ProductName))
+	return filepath.Join("/var", "cache", LowerFullName())
 }
