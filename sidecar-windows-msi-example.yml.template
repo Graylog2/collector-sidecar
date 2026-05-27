@@ -1,8 +1,8 @@
-# The URL to the Graylog server API.
+# The URL to the %%BRAND_VENDOR_NAME%% server API.
 # Default: "http://127.0.0.1:9000/api/"
 server_url: "http://127.0.0.1:9000/api/"
 
-# The API token to use to authenticate against the Graylog server API.
+# The API token to use to authenticate against the %%BRAND_VENDOR_NAME%% server API.
 # Default: none
 server_api_token: ""
 
@@ -10,13 +10,13 @@ server_api_token: ""
 # If set to a file and the file doesn't exist, the sidecar will generate an
 # unique ID and writes it to the configured path.
 #
-# Example file path: "file:C:\\Program Files\\Graylog\\sidecar\\node-id"
+# Example file path: "file:C:\\Program Files\\%%BRAND_VENDOR_NAME%%\\sidecar\\node-id"
 # Example ID string: "6033137e-d56b-47fc-9762-cd699c11a5a9"
 #
 # ATTENTION: Every sidecar instance needs a unique ID!
 #
-# Default: "file:C:\\Program Files\\Graylog\\sidecar\\node-id"
-node_id: "file:C:\\Program Files\\Graylog\\sidecar\\node-id"
+# Default: "file:C:\\Program Files\\%%BRAND_VENDOR_NAME%%\\sidecar\\node-id"
+node_id: "file:C:\\Program Files\\%%BRAND_VENDOR_NAME%%\\sidecar\\node-id"
 
 # The node name of the sidecar. If this is empty, the sidecar will use the
 # hostname of the host it is running on.
@@ -24,7 +24,7 @@ node_id: "file:C:\\Program Files\\Graylog\\sidecar\\node-id"
 node_name: ""
 
 # The update interval in secods. This configures how often the sidecar will
-# contact the Graylog server for keep-alive and configuration update requests.
+# contact the %%BRAND_VENDOR_NAME%% server for keep-alive and configuration update requests.
 # Default: 10
 update_interval: 10
 
@@ -34,7 +34,7 @@ tls_skip_verify: false
 
 # This enables/disables the transmission of detailed sidecar information like
 # collector statues, metrics and log file lists. It can be disabled to reduce
-# load on the Graylog server if needed. (disables some features in the server UI)
+# load on the %%BRAND_VENDOR_NAME%% server if needed. (disables some features in the server UI)
 # Default: true
 send_status: true
 
@@ -50,10 +50,10 @@ send_status: true
 #list_log_files: []
 
 # Directory where the sidecar stores internal data.
-#cache_path: "C:\\Program Files\\Graylog\\sidecar\\cache"
+#cache_path: "C:\\Program Files\\%%BRAND_VENDOR_NAME%%\\sidecar\\cache"
 
 # Directory where the sidecar stores logs for collectors and the sidecar itself.
-#log_path: "C:\\Program Files\\Graylog\\sidecar\\logs"
+#log_path: "C:\\Program Files\\%%BRAND_VENDOR_NAME%%\\sidecar\\logs"
 
 # The maximum size of the log file before it gets rotated.
 #log_rotate_max_file_size: "10MiB"
@@ -65,10 +65,10 @@ send_status: true
 #collector_validation_timeout: "1m"
 
 # Directory where the sidecar generates configurations for collectors.
-#collector_configuration_directory: "C:\\Program Files\\Graylog\\sidecar\\generated"
+#collector_configuration_directory: "C:\\Program Files\\%%BRAND_VENDOR_NAME%%\\sidecar\\generated"
 
 # Range of windows drives which are checked for disk usage. If their usage extends 75% they will be reported
-# in the sidecar's status report to the Graylog server. Set to "" to disable disk scanning.
+# in the sidecar's status report to the %%BRAND_VENDOR_NAME%% server. Set to "" to disable disk scanning.
 # Default:
 # windows_drive_range: "CDEFGHIJKLMNOPQRSTUVWXYZ"
 
@@ -86,7 +86,7 @@ tags: []
 # Wildcards can be used, for a full pattern description see https://golang.org/pkg/path/filepath/#Match
 # Example:
 #     collector_binaries_accesslist:
-#       - "C:\\Program Files\\Graylog\\sidecar\\winlogbeat.exe"
+#       - "C:\\Program Files\\%%BRAND_VENDOR_NAME%%\\sidecar\\winlogbeat.exe"
 #       - "C:\\Program Files\\Filebeat\\filebeat.exe"
 #
 # Example disable access listing:
@@ -94,8 +94,8 @@ tags: []
 #
 # Default:
 # collector_binaries_accesslist:
-#  - "C:\\Program Files\\Graylog\\sidecar\\filebeat.exe"
-#  - "C:\\Program Files\\Graylog\\sidecar\\winlogbeat.exe"
+#  - "C:\\Program Files\\%%BRAND_VENDOR_NAME%%\\sidecar\\filebeat.exe"
+#  - "C:\\Program Files\\%%BRAND_VENDOR_NAME%%\\sidecar\\winlogbeat.exe"
 #  - "C:\\Program Files\\Filebeat\\filebeat.exe"
 #  - "C:\\Program Files\\Packetbeat\\packetbeat.exe"
 #  - "C:\\Program Files\\Metricbeat\\metricbeat.exe"

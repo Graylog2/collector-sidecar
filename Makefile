@@ -29,8 +29,10 @@ ifeq ($(strip $(COLLECTOR_VERSION)),)
 $(error COLLECTOR_VERSION is not set)
 endif
 
-targets = $(BRAND_BINARY_NAME) sidecar-collector build dist/cache dist/tmp-build dist/tmp-dest dist/pkg dist/collectors resource_windows.syso dist/chocolatey/tools/chocolateyinstall.ps1 versioninfo.json
+targets = $(BRAND_BINARY_NAME) sidecar-collector build dist/cache dist/tmp-build dist/tmp-dest dist/pkg dist/collectors resource_windows.syso dist/chocolatey/tools/chocolateyinstall.ps1 versioninfo.json $(YML_EXAMPLES)
 dist_targets = vendor
+
+YML_EXAMPLES = sidecar-example.yml sidecar-windows-example.yml sidecar-windows-msi-example.yml
 
 GIT_REV=$(shell git rev-parse --short HEAD)
 
@@ -72,7 +74,7 @@ test: ## Run tests
 	$(GO) test -v $(TEST_SUITE)
 
 .PHONY: build
-build: ## Build sidecar binary for local target system
+build: branding-files ## Build sidecar binary for local target system
 	$(GO) build $(BUILD_OPTS) -o $(BRAND_BINARY_NAME)
 
 .PHONY: build-all
@@ -152,11 +154,26 @@ install-goversioninfo:
 	go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
 
 ## Generate versioninfo.json from template with branding
-versioninfo.json: versioninfo.json.template branding.mk
+versioninfo.json: versioninfo.json.template
 	sed -e 's|%%BRAND_VENDOR_DISPLAY%%|$(BRAND_VENDOR_DISPLAY)|g' \
 	    -e 's|%%BRAND_PRODUCT_DISPLAY%%|$(BRAND_PRODUCT_DISPLAY)|g' \
 	    -e 's|%%BRAND_ICON_FILE%%|$(BRAND_ICON_FILE_ABS)|g' \
 	    $< > $@
+
+$(YML_EXAMPLES): %.yml: %.yml.template FORCE
+	sed -e 's|%%BRAND_VENDOR_NAME%%|$(BRAND_VENDOR_NAME)|g' \
+	    -e 's|%%BRAND_VENDOR_LOWER%%|$(BRAND_VENDOR_LOWER)|g' \
+	    -e 's|%%BRAND_PRODUCT_LOWER%%|$(BRAND_PRODUCT_LOWER)|g' \
+	    $< > $@
+
+# Aggregate of all files rendered from templates with the active branding.
+# Depends on FORCE (above rules) so they always reflect the current branding
+# values, which may be overridden via the environment.
+.PHONY: branding-files
+branding-files: $(YML_EXAMPLES)
+
+.PHONY: FORCE
+FORCE:
 
 .PHONY: package-all
 package-all: prepare-package
@@ -165,7 +182,7 @@ package-all: package-windows-exe-amd64 package-windows-msi-amd64
 package-all: package-tar
 
 .PHONY: prepare-package
-prepare-package:
+prepare-package: branding-files
 	dist/fetch_collectors.sh
 
 # Export branding variables for FPM recipes
