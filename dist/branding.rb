@@ -26,7 +26,7 @@ module Branding
   end
 
   def self.homepage_url
-    ENV.fetch('BRAND_HOMEPAGE_URL', 'https://graylog.org')
+    ENV.fetch('BRAND_HOMEPAGE_URL', 'https://www.graylog.org')
   end
 
   def self.maintainer

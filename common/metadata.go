@@ -55,7 +55,7 @@ func DisplayFullName() string {
 	return displayFullName
 }
 
-// ConfigBasePath use for individual paths inside the default config path, e.g. `ConfigBasePath("node-id")` for `"/etc/graylog-sidecar/node-id"`
+// ConfigBasePath use for individual paths inside the default config path, e.g. `ConfigBasePath("node-id")` for `"/etc/graylog/sidecar/node-id"`
 // call without arguments to just get the base path itself
 func ConfigBasePath(elem ...string) string {
 	if len(elem) == 0 {
