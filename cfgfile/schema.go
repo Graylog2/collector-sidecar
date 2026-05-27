@@ -37,7 +37,7 @@ type SidecarConfig struct {
 	SendStatus                       bool          `config:"send_status"`
 	ListLogFiles                     []string      `config:"list_log_files"`
 	CollectorBinariesWhitelist       []string      `config:"collector_binaries_whitelist"`
-	CollectorBinariesAccesslist      []string      `config:"collector_binaries_accesslist"`
+	CollectorBinariesAccesslist      []string      `config:"collector_binaries_accesslist,replace"`
 	Tags                             []string      `config:"tags"`
 	WindowsDriveRange                string        `config:"windows_drive_range"`
 }
