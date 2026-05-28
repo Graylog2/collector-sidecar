@@ -15,8 +15,67 @@
 
 package common
 
+import (
+	"fmt"
+	"path/filepath"
+	"strings"
+)
+
 var (
+	// buildinfo set by ldflags
 	CollectorVersion       string
 	CollectorVersionSuffix string
 	GitRevision            string
+
+	// base branding set by ldflags
+	VendorName  string = "Graylog"
+	ProductName string = "Sidecar"
+
+	// computed values from above
+	lowerFullName   string
+	displayFullName string
+	configBasePath  string
+	configFilePath  string
+	cachePath       string
 )
+
+func init() {
+	lowerFullName = fmt.Sprintf("%s-%s", ToIdentifier(VendorName), ToIdentifier(ProductName))
+	displayFullName = fmt.Sprintf("%s %s", VendorName, ProductName)
+	configBasePath = configBasePathPlatform()
+	configFilePath = configFilePathPlatform()
+	cachePath = cachePathPlatform()
+}
+
+// ToIdentifier converts a brand name into a lowercase, space-free token suitable
+// for use in file paths, binary names, and service names. Spaces become hyphens
+// so multi-word brand names (e.g. "Acme Corp") yield valid identifiers
+// ("acme-corp"). Single-word names are unaffected.
+func ToIdentifier(s string) string {
+	return strings.ReplaceAll(strings.ToLower(s), " ", "-")
+}
+
+func LowerFullName() string {
+	return lowerFullName
+}
+
+func DisplayFullName() string {
+	return displayFullName
+}
+
+// ConfigBasePath use for individual paths inside the default config path, e.g. `ConfigBasePath("node-id")` for `"/etc/graylog/sidecar/node-id"`
+// call without arguments to just get the base path itself
+func ConfigBasePath(elem ...string) string {
+	if len(elem) == 0 {
+		return configBasePath
+	}
+	return filepath.Join(append([]string{configBasePath}, elem...)...)
+}
+
+func ConfigFilePath() string {
+	return configFilePath
+}
+
+func CachePath() string {
+	return cachePath
+}

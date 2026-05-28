@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -35,7 +34,7 @@ import (
 
 var (
 	log                 = logger.Log()
-	userAgent           = "Graylog Collector v" + common.CollectorVersion
+	userAgent           = fmt.Sprintf("%s Collector v%s", common.ProductName, common.CollectorVersion)
 	customRequestHeader = "sidecar"
 )
 
@@ -132,7 +131,7 @@ func (c *Client) NewRequest(method, urlStr string, params map[string]string, bod
 	req.Header.Add("Content-Type", mediaType)
 	req.Header.Add("Accept", mediaType)
 	req.Header.Add("User-Agent", userAgent)
-	req.Header.Add("X-Graylog-Sidecar-Version", common.CollectorVersion)
+	req.Header.Add("X-Graylog-Sidecar-Version", common.CollectorVersion) // don't use common.VendorName here
 	req.Header.Add("X-Requested-By", customRequestHeader)
 	req.SetBasicAuth(c.ApiToken, "token")
 	return req, nil
@@ -167,7 +166,7 @@ func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
 	}
 
 	defer func() {
-		io.Copy(ioutil.Discard, resp.Body)
+		io.Copy(io.Discard, resp.Body)
 		if rerr := resp.Body.Close(); err == nil {
 			err = rerr
 		}
