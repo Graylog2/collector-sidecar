@@ -16,8 +16,11 @@
 package daemon
 
 import (
+	"fmt"
+
 	"github.com/Graylog2/collector-sidecar/assignments"
 	"github.com/Graylog2/collector-sidecar/backends"
+	"github.com/Graylog2/collector-sidecar/common"
 	"github.com/Graylog2/collector-sidecar/context"
 	"github.com/Graylog2/collector-sidecar/helpers"
 	"github.com/Graylog2/collector-sidecar/logger"
@@ -51,9 +54,9 @@ func NewConfig() *DaemonConfig {
 	}
 
 	dc := &DaemonConfig{
-		Name:        "graylog-sidecar",
-		DisplayName: "Graylog Sidecar",
-		Description: "Wrapper service for Graylog controlled collector",
+		Name:        common.LowerFullName(),
+		DisplayName: common.DisplayFullName(),
+		Description: fmt.Sprintf("Wrapper service for %s controlled collector", common.VendorName),
 		Dir:         rootDir,
 		Env:         []string{},
 		Runner:      map[string]Runner{},

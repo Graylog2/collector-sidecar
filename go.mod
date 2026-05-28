@@ -1,6 +1,6 @@
 module github.com/Graylog2/collector-sidecar
 
-go 1.22.9
+go 1.25
 
 require (
 	github.com/docker/go-units v0.5.0

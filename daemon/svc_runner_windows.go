@@ -16,10 +16,12 @@
 package daemon
 
 import (
+	"fmt"
 	"os/exec"
 	"sync/atomic"
 	"time"
 
+	"github.com/Graylog2/collector-sidecar/common"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/eventlog"
 	"golang.org/x/sys/windows/svc/mgr"
@@ -28,7 +30,9 @@ import (
 	"github.com/Graylog2/collector-sidecar/context"
 )
 
-const ServiceNamePrefix = "graylog-collector-"
+func ServiceNamePrefix() string {
+	return fmt.Sprintf("%s-collector-", common.ToIdentifier(common.VendorName))
+}
 
 type SvcRunner struct {
 	RunnerCommon
@@ -56,7 +60,7 @@ func NewSvcRunner(backend backends.Backend, context *context.Ctx) Runner {
 		exec:        backend.ExecutablePath,
 		args:        backend.ExecuteParameters,
 		signals:     make(chan string),
-		serviceName: ServiceNamePrefix + backend.Name,
+		serviceName: ServiceNamePrefix() + backend.Name,
 	}
 
 	// set default state
@@ -114,7 +118,7 @@ func (r *SvcRunner) GetBackend() *backends.Backend {
 func (r *SvcRunner) SetBackend(b backends.Backend) {
 	r.backend = b
 	r.name = b.Name
-	r.serviceName = ServiceNamePrefix + b.Name
+	r.serviceName = ServiceNamePrefix() + b.Name
 	r.exec = b.ExecutablePath
 	r.args = b.ExecuteParameters
 }
@@ -137,8 +141,8 @@ func (r *SvcRunner) ValidateBeforeStart() error {
 	defer m.Disconnect()
 
 	serviceConfig := mgr.Config{
-		DisplayName:    "Graylog collector sidecar - " + r.name + " backend",
-		Description:    "Wrapper service for the " + r.name + " backend",
+		DisplayName:    fmt.Sprintf("%s collector sidecar - %s backend", common.VendorName, r.name),
+		Description:    fmt.Sprintf("Wrapper service for the %s backend", r.name),
 		BinaryPathName: "\"" + r.exec + "\" " + r.args}
 
 	s, err := m.OpenService(r.serviceName)
