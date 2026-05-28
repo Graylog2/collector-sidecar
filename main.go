@@ -52,7 +52,7 @@ func init() {
 	debug = flag.Bool("debug", false, "Set log level to debug")
 
 	flag.Usage = func() {
-		_, _ = fmt.Fprintln(os.Stderr, fmt.Sprintf("Usage: %s -c [CONFIGURATION FILE]", common.LowerFullName()))
+		_, _ = fmt.Fprintf(os.Stderr, "Usage: %s -c [CONFIGURATION FILE]\n", common.LowerFullName())
 		flag.PrintDefaults()
 	}
 
