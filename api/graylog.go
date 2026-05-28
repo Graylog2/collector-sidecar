@@ -147,7 +147,7 @@ func RequestConfiguration(
 			log.Debug("[RequestConfiguration] No update available, skipping update.")
 			configurationResponse.NotModified = true
 		case resp.StatusCode != 200:
-			msg := fmt.Sprintf("Bad response status from server")
+			msg := "Bad response status from server"
 			system.GlobalStatus.Set(backends.StatusError, fmt.Sprintf("%s: %v", msg, err))
 			log.Errorf("[RequestConfiguration] %s: %s", msg, resp.Status)
 			return graylog.ResponseCollectorConfiguration{}, err
