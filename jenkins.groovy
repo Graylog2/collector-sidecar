@@ -91,6 +91,7 @@ pipeline
               image 'graylog/internal-sidecar-packaging:latest'
               args '-u jenkins:jenkins'
               registryCredentialsId 'docker-hub'
+              alwaysPull true
               reuseNode true
             }
           }
