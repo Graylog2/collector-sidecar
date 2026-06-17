@@ -231,25 +231,43 @@ package-linux32: ## Create Linux i386 system package
 	$(FPM_BRAND_ENV) fpm-cook -t deb package dist/recipe32.rb
 	$(FPM_BRAND_ENV) fpm-cook -t rpm package dist/recipe32.rb
 
+# Defines passed to makensis. Shared by both passes of the installer build (see
+# package-windows-exe-amd64) so the inner and outer invocations stay in sync.
+NSIS_DEFINES = -DVERSION=$(COLLECTOR_VERSION) \
+	-DVERSION_SUFFIX=$(COLLECTOR_VERSION_SUFFIX) \
+	-DREVISION=$(COLLECTOR_REVISION) \
+	-DBRAND_VENDOR_NAME="$(BRAND_VENDOR_NAME)" \
+	-DBRAND_VENDOR_DISPLAY="$(BRAND_VENDOR_DISPLAY)" \
+	-DBRAND_PRODUCT_NAME="$(BRAND_PRODUCT_NAME)" \
+	-DBRAND_PRODUCT_DISPLAY="$(BRAND_PRODUCT_DISPLAY)" \
+	-DBRAND_PRODUCT_LOWER="$(BRAND_PRODUCT_LOWER)" \
+	-DBRAND_PRODUCT_LOWER_UNDERSCORE="$(BRAND_PRODUCT_LOWER_UNDERSCORE)" \
+	-DBRAND_HOMEPAGE_URL="$(BRAND_HOMEPAGE_URL)" \
+	-DBRAND_ICON_FILE="$(BRAND_ICON_FILE_ABS)" \
+	-DBRAND_REGISTRY_KEY="$(BRAND_REGISTRY_KEY)" \
+	-DBRAND_WIN_VENDOR_DIR="$(BRAND_WIN_VENDOR_DIR)" \
+	-DBRAND_WIN_PRODUCT_DIR="$(BRAND_WIN_PRODUCT_DIR)"
+
 .PHONY: package-windows-exe-amd64
 package-windows-exe-amd64: prepare-package ## Create Windows installer
 	@mkdir -p dist/pkg
-	makensis -DVERSION=$(COLLECTOR_VERSION) \
-		-DVERSION_SUFFIX=$(COLLECTOR_VERSION_SUFFIX) \
-		-DREVISION=$(COLLECTOR_REVISION) \
-		-DBRAND_VENDOR_NAME="$(BRAND_VENDOR_NAME)" \
-		-DBRAND_VENDOR_DISPLAY="$(BRAND_VENDOR_DISPLAY)" \
-		-DBRAND_PRODUCT_NAME="$(BRAND_PRODUCT_NAME)" \
-		-DBRAND_PRODUCT_DISPLAY="$(BRAND_PRODUCT_DISPLAY)" \
-		-DBRAND_PRODUCT_LOWER="$(BRAND_PRODUCT_LOWER)" \
-		-DBRAND_PRODUCT_LOWER_UNDERSCORE="$(BRAND_PRODUCT_LOWER_UNDERSCORE)" \
-		-DBRAND_HOMEPAGE_URL="$(BRAND_HOMEPAGE_URL)" \
-		-DBRAND_ICON_FILE="$(BRAND_ICON_FILE_ABS)" \
-		-DBRAND_REGISTRY_KEY="$(BRAND_REGISTRY_KEY)" \
-		-DBRAND_WIN_VENDOR_DIR="$(BRAND_WIN_VENDOR_DIR)" \
-		-DBRAND_WIN_PRODUCT_DIR="$(BRAND_WIN_PRODUCT_DIR)" \
-		dist/recipe.nsi
-
+	# Two-pass build so the bundled uninstaller can be code-signed. NSIS only
+	# materializes the uninstaller by *running* an installer, so we:
+	#   1. Build a throwaway "inner" installer that just emits the uninstaller.
+	#   2. Run it (under Wine on Linux) to write dist/pkg/uninstall.exe.
+	#   3. Sign that uninstaller.
+	#   4. Build the real installer, which bundles the signed uninstall.exe.
+	# NOTE: because of step 3, this target now needs the graylog/internal-codesigntool
+	# image and Wine available, not just makensis. On a headless CI host Wine may
+	# need an X server (e.g. wrap the run in xvfb-run).
+	makensis $(NSIS_DEFINES) -DINNER dist/recipe.nsi
+	# The inner installer quits in .onInit with exit code 2 by design; verify the
+	# artifact rather than the exit code, so Wine quirks don't fail the build.
+	xvfb-run wine dist/pkg/tempinstaller.exe /S || true
+	test -f dist/pkg/uninstall.exe
+	codesigntool sign dist/pkg/uninstall.exe # TODO: Needs to run in container
+	makensis $(NSIS_DEFINES) dist/recipe.nsi
+	rm -f dist/pkg/tempinstaller.exe
 
 .PHONY: package-windows-msi-amd64
 package-windows-msi-amd64: prepare-package ## Create Windows MSI package (requires packages: msitools, wixl)
