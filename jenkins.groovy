@@ -99,6 +99,73 @@ pipeline
           steps
           {
             sh 'make package-all'
+            // Build the Windows installer up to the point where the unsigned
+            // uninstall.exe has been emitted (inner NSIS pass + Wine run). The
+            // uninstaller is signed in the next stage (codesign image), then
+            // 'Finalize Windows Installer' bundles it and builds the real
+            // installer back in this packaging image.
+            sh 'make prepare-package-windows-exe-amd64'
+          }
+        }
+
+        // The uninstaller must be signed *before* the real installer is built,
+        // because the installer embeds it (NSIS can't sign a file it generates
+        // at runtime). We sign it here, in the codesign image, in between the
+        // prepare and finalize packaging steps. Skipped on non-tag builds, which
+        // therefore ship an unsigned uninstaller (same as before this change).
+        stage('Sign Windows Uninstaller')
+        {
+          when
+          {
+            buildingTag()
+          }
+
+          agent
+          {
+            docker
+            {
+              image 'graylog/internal-codesigntool:latest'
+              args '-u jenkins:jenkins'
+              registryCredentialsId 'docker-hub'
+              alwaysPull false // Already pulled in the 'Sign Windows Binaries' stage
+              reuseNode true
+            }
+          }
+
+          environment
+          {
+            CODESIGN_USER = credentials('codesign-user')
+            CODESIGN_PASS = credentials('codesign-pass')
+            CODESIGN_TOTP_SECRET = credentials('codesign-totp-secret')
+            CODESIGN_CREDENTIAL_ID = credentials('codesign-credential-id')
+          }
+
+          steps
+          {
+            sh 'make sign-nsis-uninstall-exe-amd64'
+          }
+        }
+
+        // Build the real installer back in the packaging image. It bundles the
+        // uninstall.exe produced above (signed on tag builds, unsigned otherwise).
+        // Runs on every build so PRs still get a complete installer artifact.
+        stage('Finalize Windows Installer')
+        {
+          agent
+          {
+            docker
+            {
+              image 'graylog/internal-sidecar-packaging:latest'
+              args '-u jenkins:jenkins'
+              registryCredentialsId 'docker-hub'
+              alwaysPull false // Already pulled in the 'Package' stage
+              reuseNode true
+            }
+          }
+
+          steps
+          {
+            sh 'make finalize-package-windows-exe-amd64'
           }
         }
 

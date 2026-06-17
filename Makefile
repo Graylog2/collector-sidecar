@@ -178,7 +178,7 @@ FORCE:
 .PHONY: package-all
 package-all: prepare-package
 package-all: package-linux-armv7 package-linux-arm64 package-linux-amd64 package-linux32
-package-all: package-windows-exe-amd64 package-windows-msi-amd64
+package-all: package-windows-msi-amd64 # no longer builds the exe target, would make it awkward in CI
 package-all: package-tar
 
 .PHONY: prepare-package
@@ -232,7 +232,7 @@ package-linux32: ## Create Linux i386 system package
 	$(FPM_BRAND_ENV) fpm-cook -t rpm package dist/recipe32.rb
 
 # Defines passed to makensis. Shared by both passes of the installer build (see
-# package-windows-exe-amd64) so the inner and outer invocations stay in sync.
+# prepare-package-windows-exe-amd64) so the inner and outer invocations stay in sync.
 NSIS_DEFINES = -DVERSION=$(COLLECTOR_VERSION) \
 	-DVERSION_SUFFIX=$(COLLECTOR_VERSION_SUFFIX) \
 	-DREVISION=$(COLLECTOR_REVISION) \
@@ -248,8 +248,13 @@ NSIS_DEFINES = -DVERSION=$(COLLECTOR_VERSION) \
 	-DBRAND_WIN_VENDOR_DIR="$(BRAND_WIN_VENDOR_DIR)" \
 	-DBRAND_WIN_PRODUCT_DIR="$(BRAND_WIN_PRODUCT_DIR)"
 
+
+# Windows exe packaging without codesigning the uninstall.exe
 .PHONY: package-windows-exe-amd64
-package-windows-exe-amd64: prepare-package ## Create Windows installer
+package-windows-exe-amd64: prepare-package-windows-exe-amd64 finalize-package-windows-exe-amd64
+
+.PHONY: prepare-package-windows-exe-amd64
+prepare-package-windows-exe-amd64: prepare-package ## Create Windows installer
 	@mkdir -p dist/pkg
 	# Two-pass build so the bundled uninstaller can be code-signed. NSIS only
 	# materializes the uninstaller by *running* an installer, so we:
@@ -265,7 +270,16 @@ package-windows-exe-amd64: prepare-package ## Create Windows installer
 	# artifact rather than the exit code, so Wine quirks don't fail the build.
 	xvfb-run wine dist/pkg/tempinstaller.exe /S || true
 	test -f dist/pkg/uninstall.exe
-	codesigntool sign dist/pkg/uninstall.exe # TODO: Needs to run in container
+
+# This needs to run in the codesign container, so we don't have a target running the entire package anymore
+.PHONY: sign-nsis-uninstall-exe-amd64
+sign-nsis-uninstall-exe-amd64:
+	test -f dist/pkg/uninstall.exe
+	codesigntool sign dist/pkg/uninstall.exe
+
+.PHONY: finalize-package-windows-exe-amd64
+finalize-package-windows-exe-amd64:
+	test -f dist/pkg/uninstall.exe
 	makensis $(NSIS_DEFINES) dist/recipe.nsi
 	rm -f dist/pkg/tempinstaller.exe
 
