@@ -182,8 +182,11 @@ package-all: package-windows-msi-amd64 # no longer builds the exe target, would 
 package-all: package-tar
 
 .PHONY: prepare-package
-prepare-package: branding-files
+prepare-package: branding-files dist/collectors/.fetched
+
+dist/collectors/.fetched:
 	dist/fetch_collectors.sh
+	@touch $@
 
 # Export branding variables for FPM recipes
 FPM_BRAND_ENV = \
