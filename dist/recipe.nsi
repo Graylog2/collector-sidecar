@@ -29,7 +29,15 @@
 ;General
 
   !searchreplace SUFFIX '${VERSION_SUFFIX}' "-" "."
+!ifdef INNER
+  ; Inner build pass: a throwaway installer whose only purpose is to emit a
+  ; standalone uninstaller (see Function .onInit) so it can be code-signed before
+  ; the real installer is built. Driven by the two-pass logic in the Makefile.
+  OutFile "pkg/tempinstaller.exe"
+  SetCompress off
+!else
   OutFile "pkg/${BRAND_PRODUCT_LOWER_UNDERSCORE}_installer_${VERSION}-${REVISION}${SUFFIX}.exe"
+!endif
   RequestExecutionLevel admin ;Require admin rights
   ShowInstDetails "show"
   ShowUninstDetails "show"
@@ -185,7 +193,14 @@ Section "Install"
     ${LogWrite} "Restarting existing Sidecar Service: [exit $0] Stdout: $1"
   ${EndIf}
 
-  WriteUninstaller "$INSTDIR\uninstall.exe"
+  ; The uninstaller is generated and signed during the inner build pass (see the
+  ; INNER block at the top of this file and the Makefile), then bundled here as a
+  ; signed file instead of being generated with WriteUninstaller. The inner pass
+  ; never reaches this section (it quits in .onInit), and dist/pkg/uninstall.exe
+  ; does not exist yet while the inner installer compiles, so guard it out there.
+!ifndef INNER
+  File "/oname=uninstall.exe" "pkg/uninstall.exe"
+!endif
 
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BRAND_REGISTRY_KEY}" \
                  "DisplayName" "${BRAND_PRODUCT_DISPLAY}"
@@ -329,6 +344,15 @@ SectionEnd
 ;Functions
 
 Function .onInit
+!ifdef INNER
+  ; Inner build pass: emit the uninstaller next to this temp installer (which the
+  ; Makefile placed in dist/pkg/) and quit immediately, before any UI or install
+  ; logic runs. SetErrorLevel 2 follows the NSIS convention for "intentional quit".
+  SetSilent silent
+  WriteUninstaller "$EXEDIR\uninstall.exe"
+  SetErrorLevel 2
+  Quit
+!endif
   !insertmacro Check_X64
 
   FileOpen $LogFile "$INSTDIR\installerlog.txt" w
