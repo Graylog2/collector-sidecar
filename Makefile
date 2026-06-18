@@ -284,7 +284,7 @@ sign-nsis-uninstall-exe-amd64:
 finalize-package-windows-exe-amd64:
 	test -f dist/pkg/uninstall.exe
 	makensis $(NSIS_DEFINES) dist/recipe.nsi
-	rm -f dist/pkg/tempinstaller.exe
+	rm -f dist/pkg/tempinstaller.exe dist/pkg/uninstall.exe
 
 .PHONY: package-windows-msi-amd64
 package-windows-msi-amd64: prepare-package ## Create Windows MSI package (requires packages: msitools, wixl)
