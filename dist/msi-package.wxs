@@ -47,16 +47,16 @@
                 Source='$(var.LicensePath)' />
               <ServiceInstall
                 Id='SidecarServiceInstall'
-                Name='graylog-sidecar'
-                DisplayName='Graylog Sidecar'
-                Description='Wrapper service for Graylog controlled collector'
+                Name='$(var.BrandProductLower)'
+                DisplayName='$(var.BrandProductDisplay)'
+                Description='Wrapper service for $(var.BrandVendorName) controlled collector'
                 Type='ownProcess'
                 Start='auto'
                 ErrorControl='normal'
                 Account='LocalSystem' />
               <ServiceControl
                 Id='SidecarServiceControl'
-                Name='graylog-sidecar'
+                Name='$(var.BrandProductLower)'
                 Stop='both'
                 Remove='uninstall'
                 Wait='yes' />
