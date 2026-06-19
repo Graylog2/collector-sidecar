@@ -1,0 +1,5 @@
+type = "fixed"
+message = "Enable MSI upgrades."
+
+issues = ["560"]
+pulls = ["561", "562"]
