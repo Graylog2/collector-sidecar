@@ -1,12 +1,20 @@
 <?xml version='1.0' encoding='windows-1252'?>
 
-<!-- The Product ID and Upgrade Code MUST not change! -->
-<?define ProductId = 'DC8CA278-14C6-4033-8646-137CF3815627'?>
+<!--
+  Windows Installer upgrade rules:
+    * UpgradeCode identifies the product *family* and MUST stay constant across
+      every release. A newer MSI finds the installed older version by matching it.
+    * The ProductCode (Product/@Id) MUST be a *new* GUID for every release so the
+      installer treats it as a separate package and performs a major upgrade.
+      'Id="*"' (below) tells wixl to generate a fresh ProductCode on each build.
+  Together with the <MajorUpgrade> element below, this lets a newer MSI detect
+  and remove a previously installed version instead of failing with error 1638.
+-->
 <?define UpgradeCode = '716878B0-190F-42A5-A31A-793621AB888E'?>
 
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
   <Product Name='$(var.BrandProductDisplay)'
-    Id='$(var.ProductId)'
+    Id='*'
     UpgradeCode='$(var.UpgradeCode)'
     Language='1033'
     Codepage='1252'
@@ -22,6 +30,20 @@
       Languages='1033'
       Compressed='yes'
       SummaryCodepage='1252' />
+
+    <!--
+      Major-upgrade policy. wixl honors three attributes here:
+        - DowngradeErrorMessage: block installing an older version over a newer one.
+        - AllowSameVersionUpgrades: also replace an install with the SAME 3-field
+          version. MSI only compares the first three version fields, and our MSI
+          ProductVersion is COLLECTOR_VERSION (e.g. 1.6.0) without COLLECTOR_REVISION,
+          so this lets a re-spin/rebuild of the same x.y.z upgrade an existing install.
+      wixl always schedules RemoveExistingProducts after InstallValidate, so the old
+      version is removed early and rolled back automatically if the new install fails.
+    -->
+    <MajorUpgrade
+      AllowSameVersionUpgrades='yes'
+      DowngradeErrorMessage='A newer version of $(var.BrandProductDisplay) is already installed.' />
 
     <Media Id='1' Cabinet='$(var.BrandProductLower).cab' EmbedCab='yes' />
 
