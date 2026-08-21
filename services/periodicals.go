@@ -77,8 +77,14 @@ func StartPeriodicals(context *context.Ctx) {
 				lastBackendResponse = backendResponse
 			}
 
-			if !regResponse.NotModified || !backendResponse.NotModified {
-				modified := assignments.Store.Update(lastRegResponse.Assignments)
+			// assignments.Store.WipePending() keeps the loop entering this block while a grace period is in progress.
+			if !regResponse.NotModified || !backendResponse.NotModified || assignments.Store.WipePending() {
+				modified, graceActive := assignments.Store.Update(lastRegResponse.Assignments, context.UserConfig.UnassignConfirmationCount)
+
+				// Skip the whole sync for this cycle and keep serving the last known-good state.
+				if graceActive {
+					continue
+				}
 
 				backendList := []backends.Backend{}
 				// TODO this is inefficient

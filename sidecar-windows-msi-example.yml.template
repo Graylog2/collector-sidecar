@@ -38,6 +38,14 @@ tls_skip_verify: false
 # Default: true
 send_status: true
 
+# The number of consecutive empty-assignment responses from the server that
+# must be seen before the sidecar removes its locally installed collectors.
+# This protects against removing collectors due to a single spurious empty
+# response, e.g. right after a %%BRAND_VENDOR_NAME%% server outage clears.
+# Set to 1 to remove collectors immediately on the first empty response.
+# Default: 6
+unassign_confirmation_count: 6
+
 # A list of directories to scan for log files. The sidecar will scan each
 # directory for log files and submits them to the server on each update.
 #

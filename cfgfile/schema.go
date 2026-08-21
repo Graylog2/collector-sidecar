@@ -35,6 +35,7 @@ type SidecarConfig struct {
 	LogRotateKeepFiles               int           `config:"log_rotate_keep_files"`
 	UpdateInterval                   int           `config:"update_interval"`
 	SendStatus                       bool          `config:"send_status"`
+	UnassignConfirmationCount        int           `config:"unassign_confirmation_count"`
 	ListLogFiles                     []string      `config:"list_log_files"`
 	CollectorBinariesWhitelist       []string      `config:"collector_binaries_whitelist"`
 	CollectorBinariesAccesslist      []string      `config:"collector_binaries_accesslist,replace"`
@@ -52,6 +53,7 @@ func (config *SidecarConfig) InitDefaults() {
 	config.LogRotateKeepFiles = 10
 	config.UpdateInterval = 10
 	config.SendStatus = true
+	config.UnassignConfirmationCount = 6
 	config.ListLogFiles = []string{}
 	config.Tags = []string{}
 	// these unset values are overridden by the platform defaults, the rest are computed or required:
