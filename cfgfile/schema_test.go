@@ -107,3 +107,25 @@ func TestAccesslistExplicitEmpty(t *testing.T) {
 		t.Fatalf("explicit empty accesslist should stay empty, got %v", cfg.CollectorBinariesAccesslist)
 	}
 }
+
+// TestUnassignConfirmationCountDefault guards the default grace period used
+// before the sidecar removes locally installed collectors after receiving an
+// empty assignment response.
+func TestUnassignConfirmationCountDefault(t *testing.T) {
+	cfg := &SidecarConfig{}
+	cfg.InitDefaults()
+
+	if cfg.UnassignConfirmationCount != 6 {
+		t.Fatalf("want default UnassignConfirmationCount of 6, got %d", cfg.UnassignConfirmationCount)
+	}
+}
+
+// TestUnassignConfirmationCountOverride verifies the option is configurable
+// via sidecar.yml.
+func TestUnassignConfirmationCountOverride(t *testing.T) {
+	cfg := unpackConfig(t, "unassign_confirmation_count: 5\n")
+
+	if cfg.UnassignConfirmationCount != 5 {
+		t.Fatalf("want configured UnassignConfirmationCount of 5, got %d", cfg.UnassignConfirmationCount)
+	}
+}

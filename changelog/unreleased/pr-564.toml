@@ -1,0 +1,5 @@
+type = "added"
+message = "Added unassign_confirmation_count configuration option to prevent immediate uninstallation of services on a transient empty assignment response from Graylog."
+
+issues = ["Graylog2/graylog-plugin-enterprise#14693"]
+pulls = ["564"]
