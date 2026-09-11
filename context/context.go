@@ -156,6 +156,11 @@ func (ctx *Ctx) LoadConfig(path *string) error {
 		log.Fatal("Please set update interval > 0 seconds.")
 	}
 
+	// unassign_confirmation_count
+	if ctx.UserConfig.UnassignConfirmationCount < 1 {
+		log.Fatal("Please set unassign_confirmation_count >= 1.")
+	}
+
 	// collector binary accesslist
 	if ctx.UserConfig.CollectorBinariesAccesslist == nil && ctx.UserConfig.CollectorBinariesWhitelist == nil {
 		log.Fatal("`collector_binaries_accesslist` is not set. Explicitly allow to execute all binaries by setting it to an empty list" +
