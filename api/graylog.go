@@ -20,7 +20,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -97,6 +96,11 @@ func RequestBackendList(httpClient *http.Client, checksum string, ctx *context.C
 			msg := "Bad response status from server"
 			system.GlobalStatus.Set(backends.StatusError, msg)
 			log.Errorf("[RequestBackendList] %s: %s", msg, resp.Status)
+			return graylog.ResponseBackendList{}, unexpectedStatusError(resp, err)
+		case err != nil:
+			msg := "Invalid backend list response"
+			system.GlobalStatus.Set(backends.StatusError, msg)
+			log.Errorf("[RequestBackendList] %s: %v", msg, err)
 			return graylog.ResponseBackendList{}, err
 		}
 	}
@@ -150,6 +154,11 @@ func RequestConfiguration(
 			msg := "Bad response status from server"
 			system.GlobalStatus.Set(backends.StatusError, fmt.Sprintf("%s: %v", msg, err))
 			log.Errorf("[RequestConfiguration] %s: %s", msg, resp.Status)
+			return graylog.ResponseCollectorConfiguration{}, unexpectedStatusError(resp, err)
+		case err != nil:
+			msg := "Invalid configuration response"
+			system.GlobalStatus.Set(backends.StatusError, msg+": "+err.Error())
+			log.Errorf("[RequestConfiguration] %s: %v", msg, err)
 			return graylog.ResponseCollectorConfiguration{}, err
 		}
 	}
@@ -215,13 +224,14 @@ func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.C
 			log.Error("[UpdateRegistration] Disabling `send_status` as fallback.")
 			ctx.UserConfig.SendStatus = false
 		}
+		return graylog.ResponseCollectorRegistration{}, err
 	} else if resp != nil && resp.StatusCode == 304 {
 		log.Debug("[UpdateRegistration] No update available.")
 		respBody.NotModified = true
 	} else if resp != nil && resp.StatusCode != 202 {
 		log.Errorf("[UpdateRegistration] Bad response from server: %v", resp.Status)
-		return graylog.ResponseCollectorRegistration{}, err
-	} else if err != nil && err != io.EOF { // err is nil for GL 2.2 and EOF for 2.1 and earlier
+		return graylog.ResponseCollectorRegistration{}, unexpectedStatusError(resp, err)
+	} else if err != nil {
 		log.Error("[UpdateRegistration] Failed to report collector status to server: ", err)
 		return graylog.ResponseCollectorRegistration{}, err
 	}
@@ -238,6 +248,15 @@ func UpdateRegistration(httpClient *http.Client, checksum string, ctx *context.C
 	}
 
 	return *respBody, nil
+}
+
+// unexpectedStatusError makes sure an unexpected response status is reported as an error,
+// even if the status is in the 2xx range and the REST client did not return one.
+func unexpectedStatusError(resp *rest.Response, err error) error {
+	if err != nil {
+		return err
+	}
+	return fmt.Errorf("unexpected response status: %s", resp.Status)
 }
 
 func updateRuntimeConfiguration(respBody *graylog.ResponseCollectorRegistration, ctx *context.Ctx) error {

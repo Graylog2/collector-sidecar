@@ -1,0 +1,4 @@
+type = "fixed"
+message = "Fix removal of all collectors when the Graylog server or a proxy returns an empty or invalid response."
+
+pulls = ["565"]
