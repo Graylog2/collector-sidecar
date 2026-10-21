@@ -24,6 +24,11 @@ pipeline
   {
     stage('Build')
     {
+      when
+      {
+        buildingTag()
+      }
+
       agent
       {
         // Select the node for all nested stages.
