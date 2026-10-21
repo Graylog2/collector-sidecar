@@ -125,7 +125,7 @@ func (r *ExecRunner) ResetRestartCounter() {
 func (r *ExecRunner) ValidateBeforeStart() error {
 	err := r.backend.CheckExecutableAgainstAccesslist(r.context)
 	if err != nil {
-		r.backend.SetStatusLogErrorf(err.Error())
+		r.backend.SetStatusLogErrorf("%s", err)
 		return err
 	}
 
