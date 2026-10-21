@@ -31,6 +31,8 @@ jobs:
       - name: "Setup tools"
         run: |
           sudo gem install fpm-cookery
+          sudo apt-get update
+          sudo apt-get install -y wixl
 
       - name: "Setup Go environment"
         uses: "actions/setup-go@v7"
@@ -51,3 +53,6 @@ jobs:
 
       - name: "Build packages"
         run: "make package-all"
+
+      - name: "List packages"
+        run: "ls -lh dist/pkg/"
