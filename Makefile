@@ -47,9 +47,6 @@ endif
 
 BUILD_OPTS = -ldflags "-s -X github.com/Graylog2/collector-sidecar/common.GitRevision=$(GIT_REV) -X github.com/Graylog2/collector-sidecar/common.CollectorVersion=$(COLLECTOR_VERSION) -X github.com/Graylog2/collector-sidecar/common.CollectorVersionSuffix=$(COLLECTOR_VERSION_SUFFIX) $(BRANDING_OPTS)"
 
-TEST_SUITE = \
-	github.com/Graylog2/collector-sidecar/common
-
 WINDOWS_INSTALLER_VERSION = $(COLLECTOR_VERSION)-$(COLLECTOR_REVISION)$(subst -,.,$(COLLECTOR_VERSION_SUFFIX))
 # Removing the dot to comply with NuGet versioning (beta.1 -> beta2)
 CHOCOLATEY_VERSION = $(COLLECTOR_VERSION).$(COLLECTOR_REVISION)$(subst .,,$(COLLECTOR_VERSION_SUFFIX))
@@ -71,7 +68,8 @@ distclean: clean
 
 .PHONY: test
 test: ## Run tests
-	$(GO) test -v $(TEST_SUITE)
+	$(GO) test -v -vet=all -race -count=1 ./...
+	$(GO) vet ./...
 
 .PHONY: build
 build: branding-files ## Build sidecar binary for local target system
