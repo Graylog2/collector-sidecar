@@ -156,7 +156,7 @@ func checkForUpdateAndRestart(httpClient *http.Client, checksums map[string]stri
 
 		if backend.RenderOnChange(backends.Backend{Template: response.Template}, context) {
 			if err, output := backend.ValidateConfigurationFile(context); err != nil {
-				backend.SetStatusLogErrorf(err.Error())
+				backend.SetStatusLogErrorf("%s", err)
 				if output != "" {
 					log.Errorf("[%s] Validation command output: %s", backend.Name, output)
 					backend.SetVerboseStatus(output)

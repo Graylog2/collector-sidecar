@@ -38,7 +38,7 @@ func (b *Backend) SetVerboseStatus(verbose string) {
 func (b *Backend) SetStatusLogErrorf(format string, args ...interface{}) error {
 	b.SetStatus(StatusError, fmt.Sprintf(format, args...), "")
 	log.Errorf(fmt.Sprintf("[%s] ", b.Name)+format, args...)
-	return fmt.Errorf(format, args)
+	return fmt.Errorf(format, args...)
 }
 
 func (b *Backend) Status() system.VerboseStatus {
