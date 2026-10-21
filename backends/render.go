@@ -35,7 +35,7 @@ func (b *Backend) render() []byte {
 func (b *Backend) renderToFile(context *context.Ctx) error {
 	if !b.CheckConfigPathAgainstAccesslist(context) {
 		err := fmt.Errorf("Configuration path violates `collector_binaries_accesslist' config option.")
-		b.SetStatusLogErrorf(err.Error())
+		b.SetStatusLogErrorf("%s", err)
 		return err
 	}
 	stringConfig := b.render()
