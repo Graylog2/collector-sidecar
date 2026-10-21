@@ -56,3 +56,51 @@ jobs:
 
       - name: "List packages"
         run: "ls -lh dist/pkg/"
+
+      - name: "Create checksums"
+        working-directory: "dist/pkg"
+        run: "sha256sum graylog-sidecar* | tee CHECKSUMS-SHA256.txt"
+
+      - name: "Setup env"
+        run: |
+          timestamp="$(date --utc '+%Y%m%d-%H%M%S')"
+
+          {
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              echo "SNAPSHOT_PATH=pull-request/${timestamp}-run-${{ github.run_id }}-pr-${{ github.event.number }}"
+            else
+              echo "SNAPSHOT_PATH=$BRANCH_NAME/${timestamp}-run-${{ github.run_id }}"
+            fi
+          } | tee -a "$GITHUB_ENV"
+        env:
+          # See: https://docs.github.com/en/actions/reference/security/secure-use#good-practices-for-mitigating-script-injection-attacks
+          BRANCH_NAME: "${{ github.head_ref || github.ref_name }}"
+
+      - name: "Upload build artifacts to S3"
+        # Dependabot doesn't have access to the S3 secrets.
+        if: "github.event_name != 'pull_request' || (github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]')"
+        env:
+          AWS_DEFAULT_REGION: "eu-west-1"
+          AWS_ACCESS_KEY_ID: "${{ secrets.AWS_TORCH_S3_GRAYLOG_SNAPSHOTS_ACCESS_KEY_ID }}"
+          AWS_SECRET_ACCESS_KEY: "${{ secrets.AWS_TORCH_S3_GRAYLOG_SNAPSHOTS_SECRET_ACCESS_KEY }}"
+          AWS_S3_BUCKET: "${{ secrets.AWS_TORCH_S3_GRAYLOG_SNAPSHOTS_BUCKET }}"
+        working-directory: "dist/pkg"
+        run: |
+          printf -- "## Artifacts\n\n" >> "$GITHUB_STEP_SUMMARY"
+
+          for file in $(find . -maxdepth 1 -name 'graylog-sidecar*' -type f | sort -V); do
+            aws s3 cp --no-progress "$file" "s3://${AWS_S3_BUCKET}/sidecar/${SNAPSHOT_PATH}/"
+            printf -- "- https://downloads.graylog.org/snapshots/sidecar/%s/%s\n" "$SNAPSHOT_PATH" "$(basename "$file")" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+          aws s3 cp --no-progress CHECKSUMS-SHA256.txt "s3://${AWS_S3_BUCKET}/sidecar/${SNAPSHOT_PATH}/"
+          printf -- "- https://downloads.graylog.org/snapshots/sidecar/%s/CHECKSUMS-SHA256.txt\n" "$SNAPSHOT_PATH" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: "Upload artifacts"
+        # Dependabot can't upload to S3, let's archive the artifacts for testing.
+        if: "github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]'"
+        uses: "actions/upload-artifact@v7"
+        with:
+          name: "collector-build-artifacts"
+          path: "dist/pkg/graylog-sidecar*"
+          retention-days: 7

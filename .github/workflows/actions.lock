@@ -6,6 +6,7 @@ workflows:
     '.github/workflows/build.yml':
         - 'actions/checkout@v7'
         - 'actions/setup-go@v7'
+        - 'actions/upload-artifact@v7'
     '.github/workflows/changelog.yml':
         - 'graylog2/actions@main'
 dependencies:
@@ -24,6 +25,11 @@ dependencies:
         commit: 'sha1-b7ad1dad31e06c5925ef5d2fc7ad053ef454303e'
         owner_id: 44036562
         repo_id: 192624594
+    'actions/upload-artifact@v7':
+        ref: 'v7'
+        commit: 'sha1-cf430e030ddbb5b0abf93d22962f4752f3646cd9'
+        owner_id: 44036562
+        repo_id: 192625955
     'graylog2/actions@main':
         ref: 'main'
         commit: 'sha1-a0e0af9f2162c951482830c21305b21ad0c42539'
